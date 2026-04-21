@@ -11628,5 +11628,93 @@ refreshDerived();
   };
 })();
   </script>
+  <script>
+(function(){
+  if (window.__coachUiFinalPatchInstalled) return;
+  window.__coachUiFinalPatchInstalled = true;
+
+  const originalFetch = window.fetch.bind(window);
+
+  function cleanText(s){
+    return String(s || '')
+      .replace(/\\n/g, '\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+  }
+
+  function applyNextActionPreview(data){
+    if (!data || typeof data !== 'object') return;
+    if (!data.next_action_title && !data.next_action_sub && !data.priority) return;
+
+    const host = document.getElementById('next-action');
+    const label = document.getElementById('na-label');
+    const countdown = document.getElementById('na-countdown');
+    const title = document.getElementById('na-title');
+    const sub = document.getElementById('na-sub');
+    const startBtn = document.getElementById('na-start');
+    const snoozeBtn = document.getElementById('na-snooze');
+    const skipBtn = document.getElementById('na-skip');
+
+    if (!host || !label || !countdown || !title || !sub) return;
+
+    host.style.borderColor = 'rgba(255,107,53,.45)';
+    host.style.boxShadow = '0 0 0 1px rgba(255,107,53,.12) inset';
+
+    label.textContent = 'Suggestion IA';
+    countdown.textContent = String(data.priority || 'medium').toUpperCase();
+    title.textContent = cleanText(data.next_action_title || 'Action suggérée');
+
+    const parts = [];
+    if (data.next_action_sub) parts.push(cleanText(data.next_action_sub));
+    if (data.focus_area) parts.push('Focus : ' + cleanText(data.focus_area));
+    if (data.warning) parts.push('Alerte : ' + cleanText(data.warning));
+    sub.textContent = parts.join(' • ') || '—';
+
+    if (startBtn){
+      startBtn.textContent = 'Suggestion IA';
+      startBtn.disabled = true;
+      startBtn.style.opacity = '0.85';
+    }
+    if (snoozeBtn) snoozeBtn.disabled = true;
+    if (skipBtn) skipBtn.disabled = true;
+  }
+
+  window.fetch = async function(resource, init){
+    const res = await originalFetch(resource, init);
+    const url = typeof resource === 'string' ? resource : (resource && resource.url) || '';
+
+    if (!url.includes('/.netlify/functions/coach')) return res;
+
+    try {
+      const clone = res.clone();
+      const contentType = clone.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) return res;
+
+      const data = await clone.json();
+      if (!data || typeof data !== 'object') return res;
+
+      const merged = { ...data };
+      if (typeof merged.answer === 'string') merged.answer = cleanText(merged.answer);
+      if (typeof merged.warning === 'string') merged.warning = cleanText(merged.warning);
+      if (typeof merged.next_action_title === 'string') merged.next_action_title = cleanText(merged.next_action_title);
+      if (typeof merged.next_action_sub === 'string') merged.next_action_sub = cleanText(merged.next_action_sub);
+      if (typeof merged.focus_area === 'string') merged.focus_area = cleanText(merged.focus_area);
+
+      applyNextActionPreview(merged);
+
+      const headers = new Headers(res.headers);
+      headers.set('content-type', 'application/json');
+
+      return new Response(JSON.stringify(merged), {
+        status: res.status,
+        statusText: res.statusText,
+        headers
+      });
+    } catch (_) {
+      return res;
+    }
+  };
+})();
+  </script>
 </body>
 </html>
