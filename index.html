@@ -11535,5 +11535,98 @@ refreshDerived();
   };
 })();
 </script>
+  <script>
+(function(){
+  if (window.__coachContextPatchInstalled) return;
+  window.__coachContextPatchInstalled = true;
+
+  function readText(id){
+    return document.getElementById(id)?.textContent?.trim() || '';
+  }
+
+  function safeGet(key, fallback){
+    try {
+      if (typeof _g === 'function') return _g(key, fallback);
+      return fallback;
+    } catch (_) {
+      return fallback;
+    }
+  }
+
+  function getBookmarksSummary(){
+    const candidates = [
+      'bookmark_history',
+      'bookmarks',
+      'resume_points',
+      'last_positions',
+      'social_bookmarks',
+      'link_bookmarks'
+    ];
+
+    const out = {};
+    for (const key of candidates){
+      const val = safeGet(key, null);
+      if (val && typeof val === 'object') {
+        out[key] = val;
+      }
+    }
+    return out;
+  }
+
+  function getNextActionSummary(){
+    return {
+      label: readText('na-label'),
+      countdown: readText('na-countdown'),
+      title: readText('na-title'),
+      sub: readText('na-sub')
+    };
+  }
+
+  function getCurrentHomeSummary(){
+    return {
+      today_card_title: readText('today-main-title'),
+      today_card_sub: readText('today-main-sub'),
+      current_block: readText('current-block') || readText('now-title') || '',
+      current_block_sub: readText('current-block-sub') || readText('now-sub') || ''
+    };
+  }
+
+  function compactRecent(logs){
+    if (!Array.isArray(logs)) return [];
+    return logs.slice(-7).map(x => ({
+      date: x.date,
+      epfc: x.epfc || 0,
+      code: x.code || 0,
+      nl: x.nl || 0,
+      sport: x.sport || 0,
+      flex: x.flex || 0,
+      mood: x.mood || null,
+      sleep: x.sleep || null,
+      note: x.note || x.notes || ''
+    }));
+  }
+
+  const originalBuildContext = window.buildContext;
+
+  window.buildContext = function(){
+    const base = typeof originalBuildContext === 'function'
+      ? originalBuildContext()
+      : {};
+
+    const enriched = {
+      ...base,
+      next_action: getNextActionSummary(),
+      home_now: getCurrentHomeSummary(),
+      bookmarks_summary: getBookmarksSummary()
+    };
+
+    if (Array.isArray(base.recent)) {
+      enriched.recent_7d_compact = compactRecent(base.recent);
+    }
+
+    return enriched;
+  };
+})();
+  </script>
 </body>
 </html>
