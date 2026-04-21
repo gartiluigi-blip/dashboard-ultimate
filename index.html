@@ -12577,5 +12577,121 @@ refreshDerived();
   };
 })();
   </script>
+  <script>
+(function(){
+  if (window.__weeklyReviewAiInstalled) return;
+  window.__weeklyReviewAiInstalled = true;
+
+  function txt(sel){
+    return document.querySelector(sel)?.textContent?.trim() || '';
+  }
+
+  function getBookmarksMini(){
+    return Array.from(document.querySelectorAll('#bookmark-list .bm-row'))
+      .map(row => {
+        const domain = (row.querySelector('.bm-domain')?.textContent || '')
+          .replace(/\s*·\s*\d+\s*archivé[s]?/i, '')
+          .trim();
+        const text = (row.querySelector('.bm-where')?.textContent || '').trim();
+        return domain && text ? `${domain}: ${text}` : '';
+      })
+      .filter(Boolean)
+      .slice(0, 6);
+  }
+
+  function buildWeeklyPrompt(){
+    const stats = {
+      study: txt('[data-rev="study"]'),
+      sport: txt('[data-rev="sport"]'),
+      flex: txt('[data-rev="flex"]'),
+      pages: txt('[data-rev="pages"]'),
+      chess: txt('[data-rev="chess"]'),
+      vinted: txt('[data-rev="vinted"]'),
+      mood: txt('[data-rev="mood"]'),
+      active: txt('[data-rev="active"]')
+    };
+
+    const bookmarks = getBookmarksMini();
+
+    return [
+      "Fais-moi ma weekly review.",
+      "",
+      "Contraintes de réponse :",
+      "- Réponds de façon directe, concrète, sans blabla.",
+      "- Donne 1 point faible principal.",
+      "- Donne 3 priorités de la semaine.",
+      "- Donne 1 chose à couper.",
+      "- Donne 1 chose à renforcer.",
+      "- Termine par une next action immédiate.",
+      "",
+      "Stats de la semaine :",
+      `- Étude: ${stats.study || '—'}`,
+      `- Sport: ${stats.sport || '—'}`,
+      `- Mobilité/Flex: ${stats.flex || '—'}`,
+      `- Lecture: ${stats.pages || '—'}`,
+      `- Échecs: ${stats.chess || '—'}`,
+      `- Vinted: ${stats.vinted || '—'}`,
+      `- Humeur moyenne: ${stats.mood || '—'}`,
+      `- Jours actifs: ${stats.active || '—'}`,
+      "",
+      "Bookmarks utiles :",
+      ...(bookmarks.length ? bookmarks.map(x => `- ${x}`) : ["- Aucun bookmark utile détecté"]),
+      "",
+      "Format attendu :",
+      "1) Diagnostic brutal",
+      "2) 3 priorités",
+      "3) 1 chose à couper",
+      "4) 1 chose à renforcer",
+      "5) Next action maintenant"
+    ].join('\n');
+  }
+
+  function openCoachAndSendWeeklyReview(){
+    const modal = document.getElementById('ask-claude');
+    const input = document.getElementById('ac-input');
+    const sendBtn = document.getElementById('ac-send');
+    const fab = document.getElementById('ask-claude-fab');
+
+    if (!modal || !input || !sendBtn) return;
+
+    if (fab) fab.click();
+
+    const analyseBtn = Array.from(document.querySelectorAll('#ac-modes button'))
+      .find(b => /analyse/i.test(b.textContent || ''));
+    if (analyseBtn) analyseBtn.click();
+
+    input.value = buildWeeklyPrompt();
+    sendBtn.click();
+  }
+
+  function installButton(){
+    const title = document.getElementById('review-title');
+    if (!title) return;
+
+    if (document.getElementById('weekly-review-ai-btn')) return;
+
+    const btn = document.createElement('button');
+    btn.id = 'weekly-review-ai-btn';
+    btn.type = 'button';
+    btn.textContent = 'Review IA';
+    btn.style.marginLeft = '10px';
+    btn.style.padding = '8px 12px';
+    btn.style.borderRadius = '999px';
+    btn.style.border = '1px solid rgba(167,139,250,.28)';
+    btn.style.background = 'rgba(167,139,250,.10)';
+    btn.style.color = 'var(--violet-2)';
+    btn.style.fontSize = '11px';
+    btn.style.fontWeight = '700';
+    btn.style.cursor = 'pointer';
+
+    btn.addEventListener('click', openCoachAndSendWeeklyReview);
+
+    title.insertAdjacentElement('afterend', btn);
+  }
+
+  installButton();
+  setTimeout(installButton, 600);
+})();
+  </script>
 </body>
 </html>
