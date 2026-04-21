@@ -12273,5 +12273,62 @@ refreshDerived();
   };
 })();
   </script>
+  <script>
+(function(){
+  if (window.__coachBookmarkInjectInstalled) return;
+  window.__coachBookmarkInjectInstalled = true;
+
+  const oldFetch = window.fetch.bind(window);
+
+  function getVisibleBookmarks(){
+    const rows = Array.from(document.querySelectorAll('#bookmark-list .bm-row'));
+    return rows.map(row => {
+      const domain = (row.querySelector('.bm-domain')?.textContent || '')
+        .replace(/\s*·\s*\d+\s*archivé[s]?/i, '')
+        .trim();
+
+      const text = (row.querySelector('.bm-where')?.textContent || '').trim();
+
+      return { domain, text };
+    }).filter(x => x.domain && x.text);
+  }
+
+  window.fetch = async function(resource, init){
+    const url = typeof resource === 'string' ? resource : (resource && resource.url) || '';
+
+    if (
+      url.includes('/.netlify/functions/coach') &&
+      init &&
+      typeof init.body === 'string'
+    ){
+      try {
+        const payload = JSON.parse(init.body);
+        const visible = getVisibleBookmarks();
+
+        if (visible.length){
+          payload.context = payload.context || {};
+          payload.context.bookmarks_visible_ui = visible;
+          payload.context.bookmarks_summary_text =
+            visible.map(x => `${x.domain}: ${x.text}`).join(' | ');
+
+          const injectText =
+            "\n\nBOOKMARKS VISIBLES DANS L'APP:\n" +
+            visible.map(x => `- ${x.domain}: ${x.text}`).join('\n') +
+            "\n\nRÈGLE: si des bookmarks visibles sont fournis ci-dessus, tu dois t'appuyer dessus concrètement et ne jamais dire qu'ils sont absents.";
+
+          payload.question = String(payload.question || '') + injectText;
+        }
+
+        init = {
+          ...init,
+          body: JSON.stringify(payload)
+        };
+      } catch (_) {}
+    }
+
+    return oldFetch(resource, init);
+  };
+})();
+  </script>
 </body>
 </html>
