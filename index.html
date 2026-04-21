@@ -11419,5 +11419,55 @@ refreshDerived();
   };
 })();
   </script>
+  <script>
+(function(){
+  if (window.__coachJsonVisibleInstalled) return;
+  window.__coachJsonVisibleInstalled = true;
+
+  const originalFetch = window.fetch.bind(window);
+
+  window.fetch = async function(resource, init){
+    const url = typeof resource === 'string' ? resource : (resource && resource.url) || '';
+    const res = await originalFetch(resource, init);
+
+    if (!url.includes('/.netlify/functions/coach')) return res;
+
+    try {
+      const clone = res.clone();
+      const contentType = clone.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) return res;
+
+      const data = await clone.json();
+      if (!data || typeof data !== 'object') return res;
+      if (!data.answer) return res;
+
+      const extra = [];
+      if (data.priority) extra.push('Priorité : ' + data.priority);
+      if (data.focus_area) extra.push('Focus : ' + data.focus_area);
+      if (data.next_action_title) extra.push('Action : ' + data.next_action_title);
+      if (data.next_action_sub) extra.push(data.next_action_sub);
+      if (data.warning) extra.push('Alerte : ' + data.warning);
+
+      if (!extra.length) return res;
+
+      const merged = {
+        ...data,
+        answer: data.answer + '\\n\\n—\\n' + extra.join(' • ')
+      };
+
+      const headers = new Headers(res.headers);
+      headers.set('content-type', 'application/json');
+
+      return new Response(JSON.stringify(merged), {
+        status: res.status,
+        statusText: res.statusText,
+        headers
+      });
+    } catch (_) {
+      return res;
+    }
+  };
+})();
+  </script>
 </body>
 </html>
