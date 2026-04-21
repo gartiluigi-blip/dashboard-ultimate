@@ -11716,5 +11716,182 @@ refreshDerived();
   };
 })();
   </script>
+  <script>
+(function(){
+  if (window.__coachApplyIgnoreInstalled) return;
+  window.__coachApplyIgnoreInstalled = true;
+
+  const STORE_KEY = 'coach_next_action_saved_v1';
+  const originalFetch = window.fetch.bind(window);
+
+  function clean(s){
+    return String(s || '').replace(/\\n/g, '\n').trim();
+  }
+
+  function getHost(){
+    return document.getElementById('next-action');
+  }
+
+  function getEls(){
+    return {
+      host: document.getElementById('next-action'),
+      label: document.getElementById('na-label'),
+      countdown: document.getElementById('na-countdown'),
+      title: document.getElementById('na-title'),
+      sub: document.getElementById('na-sub'),
+      startBtn: document.getElementById('na-start'),
+      snoozeBtn: document.getElementById('na-snooze'),
+      skipBtn: document.getElementById('na-skip')
+    };
+  }
+
+  function ensureBar(){
+    const host = getHost();
+    if (!host) return null;
+
+    let bar = document.getElementById('coach-na-bar');
+    if (bar) return bar;
+
+    bar = document.createElement('div');
+    bar.id = 'coach-na-bar';
+    bar.style.display = 'none';
+    bar.style.gap = '8px';
+    bar.style.marginTop = '10px';
+    bar.style.flexWrap = 'wrap';
+
+    const apply = document.createElement('button');
+    apply.id = 'coach-na-apply';
+    apply.type = 'button';
+    apply.textContent = 'Appliquer';
+    apply.style.padding = '10px 14px';
+    apply.style.borderRadius = '10px';
+    apply.style.border = '1px solid rgba(52,211,153,.35)';
+    apply.style.background = 'rgba(52,211,153,.12)';
+    apply.style.color = 'var(--jade)';
+    apply.style.fontWeight = '700';
+    apply.style.cursor = 'pointer';
+
+    const ignore = document.createElement('button');
+    ignore.id = 'coach-na-ignore';
+    ignore.type = 'button';
+    ignore.textContent = 'Ignorer';
+    ignore.style.padding = '10px 14px';
+    ignore.style.borderRadius = '10px';
+    ignore.style.border = '1px solid rgba(248,113,113,.35)';
+    ignore.style.background = 'rgba(248,113,113,.10)';
+    ignore.style.color = 'var(--coral)';
+    ignore.style.fontWeight = '700';
+    ignore.style.cursor = 'pointer';
+
+    bar.appendChild(apply);
+    bar.appendChild(ignore);
+
+    const actions = host.querySelector('.na-actions');
+    if (actions) actions.insertAdjacentElement('afterend', bar);
+    else host.appendChild(bar);
+
+    apply.addEventListener('click', () => {
+      if (!window.__lastCoachSuggestion) return;
+      try {
+        localStorage.setItem(STORE_KEY, JSON.stringify(window.__lastCoachSuggestion));
+      } catch (_) {}
+      applySavedSuggestion(window.__lastCoachSuggestion, true);
+    });
+
+    ignore.addEventListener('click', () => {
+      try { localStorage.removeItem(STORE_KEY); } catch (_) {}
+      window.__lastCoachSuggestion = null;
+      hideBar();
+      if (typeof renderNextAction === 'function') {
+        renderNextAction();
+      }
+    });
+
+    return bar;
+  }
+
+  function showBar(){
+    const bar = ensureBar();
+    if (bar) bar.style.display = 'flex';
+  }
+
+  function hideBar(){
+    const bar = document.getElementById('coach-na-bar');
+    if (bar) bar.style.display = 'none';
+  }
+
+  function applySavedSuggestion(data, locked){
+    const { host, label, countdown, title, sub, startBtn, snoozeBtn, skipBtn } = getEls();
+    if (!host || !label || !countdown || !title || !sub) return;
+    if (!data) return;
+
+    host.style.borderColor = locked ? 'rgba(52,211,153,.45)' : 'rgba(255,107,53,.45)';
+    host.style.boxShadow = locked
+      ? '0 0 0 1px rgba(52,211,153,.12) inset'
+      : '0 0 0 1px rgba(255,107,53,.12) inset';
+
+    label.textContent = locked ? 'IA appliquée' : 'Suggestion IA';
+    countdown.textContent = String(data.priority || 'medium').toUpperCase();
+    title.textContent = clean(data.next_action_title || 'Action suggérée');
+
+    const parts = [];
+    if (data.next_action_sub) parts.push(clean(data.next_action_sub));
+    if (data.focus_area) parts.push('Focus : ' + clean(data.focus_area));
+    if (data.warning) parts.push('Alerte : ' + clean(data.warning));
+    sub.textContent = parts.join(' • ') || '—';
+
+    if (startBtn){
+      startBtn.textContent = locked ? 'IA appliquée' : 'Suggestion IA';
+      startBtn.disabled = true;
+      startBtn.style.opacity = '0.85';
+    }
+    if (snoozeBtn) snoozeBtn.disabled = true;
+    if (skipBtn) skipBtn.disabled = true;
+
+    if (locked) hideBar();
+    else showBar();
+  }
+
+  function isUsableSuggestion(data){
+    return !!(
+      data &&
+      typeof data === 'object' &&
+      (data.next_action_title || data.next_action_sub || data.priority)
+    );
+  }
+
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (raw) {
+      const saved = JSON.parse(raw);
+      if (isUsableSuggestion(saved)) {
+        window.__lastCoachSuggestion = saved;
+        setTimeout(() => applySavedSuggestion(saved, true), 300);
+      }
+    }
+  } catch (_) {}
+
+  window.fetch = async function(resource, init){
+    const res = await originalFetch(resource, init);
+    const url = typeof resource === 'string' ? resource : (resource && resource.url) || '';
+
+    if (!url.includes('/.netlify/functions/coach')) return res;
+
+    try {
+      const clone = res.clone();
+      const contentType = clone.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) return res;
+
+      const data = await clone.json();
+      if (!isUsableSuggestion(data)) return res;
+
+      window.__lastCoachSuggestion = data;
+      applySavedSuggestion(data, false);
+    } catch (_) {}
+
+    return res;
+  };
+})();
+  </script>
 </body>
 </html>
