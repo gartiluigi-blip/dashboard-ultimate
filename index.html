@@ -12036,5 +12036,103 @@ refreshDerived();
   setInterval(refreshBar, 800);
 })();
   </script>
+  <script>
+(function(){
+  if (window.__coachBookmarksContextInstalled) return;
+  window.__coachBookmarksContextInstalled = true;
+
+  function safeCall(fn, fallback){
+    try {
+      return typeof fn === 'function' ? fn() : fallback;
+    } catch (_) {
+      return fallback;
+    }
+  }
+
+  function safeHistory(key){
+    try {
+      if (typeof loadBookmarkHistory === 'function') {
+        return loadBookmarkHistory(key) || [];
+      }
+    } catch (_) {}
+    return [];
+  }
+
+  function getCurrentBookmarks(){
+    const raw = safeCall(window.loadBookmarks, {});
+    if (!raw || typeof raw !== 'object') return {};
+
+    const out = {};
+    Object.entries(raw).forEach(([key, val]) => {
+      if (!val) return;
+      out[key] = {
+        text: typeof val.text === 'string' ? val.text : '',
+        updatedAt: val.updatedAt || ''
+      };
+    });
+    return out;
+  }
+
+  function getBookmarkHistoryCompact(){
+    const out = {};
+    try {
+      if (!Array.isArray(window.BOOKMARK_DOMAINS)) return out;
+
+      window.BOOKMARK_DOMAINS.forEach(d => {
+        const hist = safeHistory(d.key)
+          .slice(-3)
+          .map(x => ({
+            text: x?.text || '',
+            updatedAt: x?.updatedAt || '',
+            archivedAt: x?.archivedAt || ''
+          }));
+        if (hist.length) out[d.key] = hist;
+      });
+    } catch (_) {}
+    return out;
+  }
+
+  function getBookmarkDomainsMeta(){
+    try {
+      if (!Array.isArray(window.BOOKMARK_DOMAINS)) return [];
+      return window.BOOKMARK_DOMAINS.map(d => ({
+        key: d.key,
+        label: d.label,
+        icon: d.icon
+      }));
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function getResumeHint(){
+    const box = document.getElementById('now-resume');
+    const domain = document.getElementById('now-resume-domain')?.textContent?.trim() || '';
+    const text = document.getElementById('now-resume-text')?.textContent?.trim() || '';
+
+    return {
+      visible: !!box && !box.classList.contains('hidden'),
+      domain,
+      text
+    };
+  }
+
+  const oldBuildContext = window.buildContext;
+
+  window.buildContext = function(){
+    const base = typeof oldBuildContext === 'function'
+      ? oldBuildContext()
+      : {};
+
+    return {
+      ...base,
+      bookmarks_current: getCurrentBookmarks(),
+      bookmarks_recent_history: getBookmarkHistoryCompact(),
+      bookmark_domains_meta: getBookmarkDomainsMeta(),
+      resume_hint: getResumeHint()
+    };
+  };
+})();
+  </script>
 </body>
 </html>
