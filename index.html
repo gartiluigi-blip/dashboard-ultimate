@@ -11323,5 +11323,101 @@ refreshDerived();
 })();
   </script>
 
+  <script>
+(function(){
+  if (window.__coachModesInstalled) return;
+  window.__coachModesInstalled = true;
+
+  const intro = document.querySelector('.ac-intro');
+  const suggestions = document.getElementById('ac-suggestions');
+  const input = document.getElementById('ac-input');
+
+  if (!intro || !input) return;
+
+  const MODES = {
+    coach: {
+      label: 'Coach',
+      placeholder: 'Ex. où mettre ma priorité cette semaine ?',
+      prompt: "Tu es le coach personnel de l'utilisateur. Réponds en français. Ton direct, concret, utile. Maximum 150 mots. Donne une direction claire, priorisée, sans blabla."
+    },
+    analyse: {
+      label: 'Analyse',
+      placeholder: 'Ex. analyse mes points faibles actuels',
+      prompt: "Tu es un analyste de performance personnelle. Réponds en français. Identifie les tendances, les faiblesses, les incohérences et les dérives à partir du contexte. Sois direct. Maximum 180 mots."
+    },
+    plan: {
+      label: 'Plan du jour',
+      placeholder: 'Ex. fais-moi mon plan jusqu’à ce soir',
+      prompt: "Tu es un planificateur opérationnel. Réponds en français. Transforme le contexte en plan d’action concret pour aujourd’hui, avec ordre clair, durée indicative et priorité. Maximum 180 mots."
+    }
+  };
+
+  let currentMode = 'coach';
+  window.__coachMode = currentMode;
+
+  const wrap = document.createElement('div');
+  wrap.id = 'ac-modes';
+  wrap.style.display = 'flex';
+  wrap.style.gap = '8px';
+  wrap.style.padding = '12px 18px 0';
+  wrap.style.flexWrap = 'wrap';
+
+  function styleBtn(btn, active){
+    btn.style.padding = '8px 12px';
+    btn.style.borderRadius = '999px';
+    btn.style.border = '1px solid ' + (active ? 'rgba(255,107,53,.45)' : 'var(--border)');
+    btn.style.background = active ? 'rgba(255,107,53,.12)' : 'rgba(255,255,255,.03)';
+    btn.style.color = active ? 'var(--flame-2)' : 'var(--text-dim)';
+    btn.style.fontSize = '11px';
+    btn.style.fontWeight = '700';
+    btn.style.cursor = 'pointer';
+  }
+
+  const buttons = {};
+
+  Object.entries(MODES).forEach(([key, conf]) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = conf.label;
+    styleBtn(btn, key === currentMode);
+    btn.addEventListener('click', () => {
+      currentMode = key;
+      window.__coachMode = key;
+      input.placeholder = conf.placeholder;
+      Object.entries(buttons).forEach(([k, b]) => styleBtn(b, k === key));
+    });
+    buttons[key] = btn;
+    wrap.appendChild(btn);
+  });
+
+  intro.insertAdjacentElement('afterend', wrap);
+  input.placeholder = MODES[currentMode].placeholder;
+
+  const originalFetch = window.fetch.bind(window);
+
+  window.fetch = async function(resource, init){
+    const url = typeof resource === 'string' ? resource : (resource && resource.url) || '';
+
+    if (
+      url.includes('/.netlify/functions/coach') &&
+      init &&
+      typeof init.body === 'string'
+    ){
+      try {
+        const payload = JSON.parse(init.body);
+        const mode = window.__coachMode || 'coach';
+        payload.mode = mode;
+        payload.systemPrompt = MODES[mode].prompt;
+        init = {
+          ...init,
+          body: JSON.stringify(payload)
+        };
+      } catch (_) {}
+    }
+
+    return originalFetch(resource, init);
+  };
+})();
+  </script>
 </body>
 </html>
