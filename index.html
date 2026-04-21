@@ -12134,5 +12134,97 @@ refreshDerived();
   };
 })();
   </script>
+  <script>
+(function(){
+  if (window.__coachBookmarksContextFixV2) return;
+  window.__coachBookmarksContextFixV2 = true;
+
+  function getBookmarksDirect(){
+    try {
+      if (typeof loadBookmarks === 'function') return loadBookmarks() || {};
+    } catch (_) {}
+    try {
+      if (typeof S !== 'undefined' && S && typeof S.get === 'function') {
+        return S.get('bookmarks', {}) || {};
+      }
+    } catch (_) {}
+    return {};
+  }
+
+  function getBookmarkHistoryDirect(key){
+    try {
+      if (typeof loadBookmarkHistory === 'function') return loadBookmarkHistory(key) || [];
+    } catch (_) {}
+    try {
+      if (typeof S !== 'undefined' && S && typeof S.get === 'function') {
+        return S.get('bm_hist_' + key, []) || [];
+      }
+    } catch (_) {}
+    return [];
+  }
+
+  function getDomainsDirect(){
+    try {
+      if (typeof BOOKMARK_DOMAINS !== 'undefined' && Array.isArray(BOOKMARK_DOMAINS)) {
+        return BOOKMARK_DOMAINS;
+      }
+    } catch (_) {}
+    return [];
+  }
+
+  function getVisibleBookmarkRows(){
+    const rows = Array.from(document.querySelectorAll('#bookmark-list .bm-row'));
+    return rows.map(row => {
+      const domain = row.querySelector('.bm-domain')?.textContent?.trim() || '';
+      const input = row.querySelector('input, textarea');
+      const text = input ? (input.value || '').trim() : '';
+      return { domain, text };
+    }).filter(x => x.text);
+  }
+
+  const oldBuildContext = window.buildContext;
+
+  window.buildContext = function(){
+    const base = typeof oldBuildContext === 'function' ? oldBuildContext() : {};
+
+    const domains = getDomainsDirect();
+    const current = getBookmarksDirect();
+
+    const currentMapped = {};
+    domains.forEach(d => {
+      const entry = current[d.key];
+      if (!entry || !entry.text) return;
+      currentMapped[d.key] = {
+        label: d.label,
+        text: entry.text,
+        updatedAt: entry.updatedAt || ''
+      };
+    });
+
+    const historyMapped = {};
+    domains.forEach(d => {
+      const hist = getBookmarkHistoryDirect(d.key)
+        .slice(-3)
+        .map(x => ({
+          text: x?.text || '',
+          updatedAt: x?.updatedAt || '',
+          archivedAt: x?.archivedAt || ''
+        }))
+        .filter(x => x.text);
+      if (hist.length) historyMapped[d.key] = hist;
+    });
+
+    const visibleRows = getVisibleBookmarkRows();
+
+    return {
+      ...base,
+      bookmarks_current: currentMapped,
+      bookmarks_recent_history: historyMapped,
+      bookmarks_visible_ui: visibleRows,
+      bookmarks_summary_text: visibleRows.map(x => `${x.domain}: ${x.text}`).join(' | ')
+    };
+  };
+})();
+  </script>
 </body>
 </html>
