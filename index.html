@@ -12226,5 +12226,52 @@ refreshDerived();
   };
 })();
   </script>
+  <script>
+(function(){
+  if (window.__coachBookmarksDomFixInstalled) return;
+  window.__coachBookmarksDomFixInstalled = true;
+
+  function getVisibleBookmarksFromDom(){
+    const rows = Array.from(document.querySelectorAll('#bookmark-list .bm-row'));
+    return rows.map(row => {
+      const domain = (row.querySelector('.bm-domain')?.textContent || '')
+        .replace(/\s*·\s*\d+\s*archivé[s]?/i, '')
+        .trim();
+
+      const field = row.querySelector('.bm-where,[data-bm]');
+      const key = field?.dataset?.bm || '';
+      const text = (field?.textContent || '').trim();
+
+      return { key, domain, text };
+    }).filter(x => x.text);
+  }
+
+  const oldBuildContext = window.buildContext;
+
+  window.buildContext = function(){
+    const base = typeof oldBuildContext === 'function' ? oldBuildContext() : {};
+    const visible = getVisibleBookmarksFromDom();
+
+    const mapped = {};
+    visible.forEach(x => {
+      if (!x.key) return;
+      mapped[x.key] = {
+        label: x.domain,
+        text: x.text
+      };
+    });
+
+    return {
+      ...base,
+      bookmarks_visible_ui: visible,
+      bookmarks_current: {
+        ...(base.bookmarks_current || {}),
+        ...mapped
+      },
+      bookmarks_summary_text: visible.map(x => `${x.domain}: ${x.text}`).join(' | ')
+    };
+  };
+})();
+  </script>
 </body>
 </html>
