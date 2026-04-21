@@ -12908,5 +12908,183 @@ refreshDerived();
   document.body.appendChild(btn);
 })();
   </script>
+  <script>
+(function(){
+  if (window.__weeklyReviewInlineInstalled) return;
+  window.__weeklyReviewInlineInstalled = true;
+
+  function txt(sel){
+    return document.querySelector(sel)?.textContent?.trim() || '';
+  }
+
+  function removeOldButtons(){
+    [
+      'weekly-review-fab',
+      'weekly-review-ai-btn',
+      'weekly-review-ai-btn-v2',
+      'weekly-review-inline'
+    ].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.remove();
+    });
+  }
+
+  function getBookmarksMini(){
+    return Array.from(document.querySelectorAll('#bookmark-list .bm-row'))
+      .map(row => {
+        const domain = (row.querySelector('.bm-domain')?.textContent || '')
+          .replace(/\s*·\s*\d+\s*archivé[s]?/i, '')
+          .trim();
+        const text = (row.querySelector('.bm-where,[data-bm]')?.textContent || '').trim();
+        return domain && text ? `${domain}: ${text}` : '';
+      })
+      .filter(Boolean)
+      .slice(0, 6);
+  }
+
+  function buildWeeklyPrompt(){
+    const stats = {
+      study: txt('[data-rev="study"]'),
+      sport: txt('[data-rev="sport"]'),
+      flex: txt('[data-rev="flex"]'),
+      pages: txt('[data-rev="pages"]'),
+      chess: txt('[data-rev="chess"]'),
+      vinted: txt('[data-rev="vinted"]'),
+      mood: txt('[data-rev="mood"]'),
+      active: txt('[data-rev="active"]')
+    };
+
+    const bookmarks = getBookmarksMini();
+
+    return [
+      "WEEKLY REVIEW IA",
+      "",
+      "Tu fais une revue hebdomadaire stricte.",
+      "Réponds en français, direct, concret, sans blabla.",
+      "Format OBLIGATOIRE :",
+      "WEEKLY REVIEW",
+      "1. Point faible principal",
+      "2. Trois priorités de la semaine",
+      "3. Une chose à couper",
+      "4. Une chose à renforcer",
+      "5. Next action immédiate",
+      "",
+      "Stats hebdo :",
+      `- Étude: ${stats.study || '—'}`,
+      `- Sport: ${stats.sport || '—'}`,
+      `- Flex: ${stats.flex || '—'}`,
+      `- Lecture: ${stats.pages || '—'}`,
+      `- Échecs: ${stats.chess || '—'}`,
+      `- Vinted: ${stats.vinted || '—'}`,
+      `- Humeur: ${stats.mood || '—'}`,
+      `- Jours actifs: ${stats.active || '—'}`,
+      "",
+      "Bookmarks utiles :",
+      ...(bookmarks.length ? bookmarks.map(x => `- ${x}`) : ["- Aucun bookmark utile détecté"]),
+      "",
+      "Interdiction de répondre comme un simple coach générique.",
+      "Tu dois exploiter les chiffres et les bookmarks s'ils existent."
+    ].join('\\n');
+  }
+
+  function launchWeeklyReview(){
+    const fab = document.getElementById('ask-claude-fab');
+    const input = document.getElementById('ac-input');
+    const sendBtn = document.getElementById('ac-send');
+
+    if (fab) fab.click();
+
+    setTimeout(() => {
+      const analyseBtn = Array.from(document.querySelectorAll('#ac-modes button'))
+        .find(b => /analyse/i.test(b.textContent || ''));
+      if (analyseBtn) analyseBtn.click();
+
+      if (input && sendBtn) {
+        input.value = buildWeeklyPrompt();
+        sendBtn.click();
+      }
+    }, 320);
+  }
+
+  function findStatsMount(){
+    const study = document.querySelector('[data-rev="study"]');
+    if (!study) return null;
+
+    let node = study;
+    while (node && node !== document.body) {
+      try {
+        if (node.querySelectorAll && node.querySelectorAll('[data-rev]').length >= 4) {
+          return node;
+        }
+      } catch (_) {}
+      node = node.parentElement;
+    }
+
+    return study.parentElement || null;
+  }
+
+  function installButton(){
+    removeOldButtons();
+
+    const mount = findStatsMount();
+    if (!mount) return;
+    if (document.getElementById('weekly-review-inline')) return;
+
+    const wrap = document.createElement('div');
+    wrap.id = 'weekly-review-inline';
+    wrap.style.display = 'flex';
+    wrap.style.alignItems = 'center';
+    wrap.style.justifyContent = 'space-between';
+    wrap.style.gap = '12px';
+    wrap.style.margin = '0 0 14px 0';
+    wrap.style.padding = '12px 14px';
+    wrap.style.borderRadius = '16px';
+    wrap.style.border = '1px solid rgba(167,139,250,.20)';
+    wrap.style.background = 'rgba(167,139,250,.08)';
+
+    const left = document.createElement('div');
+    left.style.minWidth = '0';
+
+    const title = document.createElement('div');
+    title.textContent = 'Weekly Review IA';
+    title.style.fontWeight = '800';
+    title.style.fontSize = '14px';
+    title.style.color = 'var(--violet-2)';
+
+    const sub = document.createElement('div');
+    sub.textContent = 'Bilan hebdo en 1 clic';
+    sub.style.fontSize = '11px';
+    sub.style.color = 'var(--text-dim)';
+
+    left.appendChild(title);
+    left.appendChild(sub);
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = 'Lancer';
+    btn.style.padding = '10px 14px';
+    btn.style.borderRadius = '999px';
+    btn.style.border = '1px solid rgba(167,139,250,.30)';
+    btn.style.background = 'rgba(167,139,250,.14)';
+    btn.style.color = 'var(--violet-2)';
+    btn.style.fontSize = '12px';
+    btn.style.fontWeight = '800';
+    btn.style.cursor = 'pointer';
+    btn.style.flexShrink = '0';
+
+    btn.addEventListener('click', launchWeeklyReview);
+
+    wrap.appendChild(left);
+    wrap.appendChild(btn);
+
+    mount.insertAdjacentElement('beforebegin', wrap);
+  }
+
+  installButton();
+  setTimeout(installButton, 500);
+  setTimeout(installButton, 1500);
+  setInterval(installButton, 3000);
+})();
+  </script>
 </body>
 </html>
