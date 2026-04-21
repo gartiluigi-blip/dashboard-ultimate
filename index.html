@@ -11893,5 +11893,148 @@ refreshDerived();
   };
 })();
   </script>
+  <script>
+(function(){
+  if (window.__coachApplyIgnoreV2Installed) return;
+  window.__coachApplyIgnoreV2Installed = true;
+
+  const STORE_KEY = 'coach_next_action_saved_v2';
+
+  function el(id){
+    return document.getElementById(id);
+  }
+
+  function readCard(){
+    return {
+      label: el('na-label')?.textContent?.trim() || '',
+      countdown: el('na-countdown')?.textContent?.trim() || '',
+      title: el('na-title')?.textContent?.trim() || '',
+      sub: el('na-sub')?.textContent?.trim() || ''
+    };
+  }
+
+  function writeCard(data, applied){
+    const host = el('next-action');
+    const label = el('na-label');
+    const countdown = el('na-countdown');
+    const title = el('na-title');
+    const sub = el('na-sub');
+    const startBtn = el('na-start');
+    const snoozeBtn = el('na-snooze');
+    const skipBtn = el('na-skip');
+
+    if (!host || !label || !countdown || !title || !sub) return;
+
+    label.textContent = applied ? 'IA appliquée' : 'Suggestion IA';
+    countdown.textContent = data.countdown || 'MEDIUM';
+    title.textContent = data.title || 'Action suggérée';
+    sub.textContent = data.sub || '—';
+
+    host.style.borderColor = applied
+      ? 'rgba(52,211,153,.45)'
+      : 'rgba(255,107,53,.45)';
+    host.style.boxShadow = applied
+      ? '0 0 0 1px rgba(52,211,153,.12) inset'
+      : '0 0 0 1px rgba(255,107,53,.12) inset';
+
+    if (startBtn){
+      startBtn.textContent = applied ? 'IA appliquée' : 'Suggestion IA';
+      startBtn.disabled = true;
+      startBtn.style.opacity = '0.85';
+    }
+    if (snoozeBtn) snoozeBtn.disabled = true;
+    if (skipBtn) skipBtn.disabled = true;
+  }
+
+  function ensureBar(){
+    const host = el('next-action');
+    if (!host) return null;
+
+    let bar = el('coach-na-bar-v2');
+    if (bar) return bar;
+
+    bar = document.createElement('div');
+    bar.id = 'coach-na-bar-v2';
+    bar.style.display = 'none';
+    bar.style.gap = '8px';
+    bar.style.marginTop = '10px';
+    bar.style.flexWrap = 'wrap';
+
+    const apply = document.createElement('button');
+    apply.id = 'coach-na-apply-v2';
+    apply.type = 'button';
+    apply.textContent = 'Appliquer';
+    apply.style.padding = '10px 14px';
+    apply.style.borderRadius = '10px';
+    apply.style.border = '1px solid rgba(52,211,153,.35)';
+    apply.style.background = 'rgba(52,211,153,.12)';
+    apply.style.color = 'var(--jade)';
+    apply.style.fontWeight = '700';
+    apply.style.cursor = 'pointer';
+
+    const ignore = document.createElement('button');
+    ignore.id = 'coach-na-ignore-v2';
+    ignore.type = 'button';
+    ignore.textContent = 'Ignorer';
+    ignore.style.padding = '10px 14px';
+    ignore.style.borderRadius = '10px';
+    ignore.style.border = '1px solid rgba(248,113,113,.35)';
+    ignore.style.background = 'rgba(248,113,113,.10)';
+    ignore.style.color = 'var(--coral)';
+    ignore.style.fontWeight = '700';
+    ignore.style.cursor = 'pointer';
+
+    apply.addEventListener('click', function(){
+      const current = readCard();
+      try {
+        localStorage.setItem(STORE_KEY, JSON.stringify(current));
+      } catch (_) {}
+      writeCard(current, true);
+      bar.style.display = 'none';
+    });
+
+    ignore.addEventListener('click', function(){
+      try {
+        localStorage.removeItem(STORE_KEY);
+      } catch (_) {}
+      bar.style.display = 'none';
+      if (typeof renderNextAction === 'function') {
+        renderNextAction();
+      }
+    });
+
+    bar.appendChild(apply);
+    bar.appendChild(ignore);
+    host.appendChild(bar);
+    return bar;
+  }
+
+  function refreshBar(){
+    const bar = ensureBar();
+    if (!bar) return;
+
+    const label = el('na-label')?.textContent?.trim() || '';
+    if (label === 'Suggestion IA') {
+      bar.style.display = 'flex';
+    } else {
+      bar.style.display = 'none';
+    }
+  }
+
+  try {
+    const saved = localStorage.getItem(STORE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed && parsed.title) {
+        setTimeout(() => writeCard(parsed, true), 300);
+      }
+    }
+  } catch (_) {}
+
+  ensureBar();
+  refreshBar();
+  setInterval(refreshBar, 800);
+})();
+  </script>
 </body>
 </html>
