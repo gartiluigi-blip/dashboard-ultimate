@@ -11184,5 +11184,144 @@ refreshDerived();
 })();
 </script>
 
+  <script>
+(function(){
+  const modal = document.getElementById('ask-claude');
+  const fab = document.getElementById('ask-claude-fab');
+  const closeBtn = document.getElementById('ac-close');
+  const input = document.getElementById('ac-input');
+  const sendBtn = document.getElementById('ac-send');
+  const messages = document.getElementById('ac-messages');
+  const suggestions = document.getElementById('ac-suggestions');
+  const apiInput = document.getElementById('ac-api-key');
+  const saveKeyBtn = document.getElementById('ac-save-key');
+
+  if (!modal || !fab || !input || !sendBtn || !messages) return;
+
+  function toast(text){
+    if (typeof window.showToast === 'function') {
+      window.showToast(text);
+      return;
+    }
+    alert(text);
+  }
+
+  function addMessage(role, text){
+    const el = document.createElement('div');
+    el.style.margin = '8px 0';
+    el.style.padding = '10px 12px';
+    el.style.borderRadius = '10px';
+    el.style.whiteSpace = 'pre-wrap';
+    el.style.lineHeight = '1.5';
+    el.style.fontSize = '12.5px';
+    el.style.border = '1px solid var(--border, #333)';
+    el.style.background = role === 'user'
+      ? 'rgba(255,107,53,.10)'
+      : 'rgba(255,255,255,.04)';
+    el.style.color = 'var(--text, #fff)';
+    el.innerHTML = '<strong style="display:block;margin-bottom:4px;">' +
+      (role === 'user' ? 'Toi' : 'Coach') +
+      '</strong>';
+    const body = document.createElement('div');
+    body.textContent = text;
+    el.appendChild(body);
+    messages.appendChild(el);
+    messages.scrollTop = messages.scrollHeight;
+    return body;
+  }
+
+  function setServerMode(){
+    sendBtn.disabled = false;
+
+    if (saveKeyBtn){
+      saveKeyBtn.textContent = '✓ Clé gérée côté serveur';
+      saveKeyBtn.style.background = 'rgba(52,211,153,.15)';
+      saveKeyBtn.style.color = 'var(--jade)';
+      saveKeyBtn.style.borderColor = 'rgba(52,211,153,.4)';
+    }
+
+    if (apiInput){
+      apiInput.value = '';
+      apiInput.placeholder = 'Clé gérée côté serveur';
+      apiInput.disabled = true;
+    }
+  }
+
+  async function sendServer(question){
+    addMessage('user', question);
+    if (suggestions) suggestions.style.display = 'none';
+    const thinking = addMessage('assistant', '…');
+
+    const context = (typeof buildContext === 'function') ? buildContext() : {};
+    const systemPrompt = "Tu es le coach personnel de l'utilisateur. Il a un dashboard qui track : EPFC (études), code, néerlandais, sport, souplesse, lecture, échecs, Vinted, humeur, pomodoros. Il est à Bruxelles, travaille en shifts rotatifs, prépare un bachelor dev pour sept. 2026, a une contrainte C7 (cervicales). Réponds en français, ton direct mais chaleureux, concret. Maximum 150 mots. Utilise les chiffres réels de son contexte. Si tu détectes un problème, dis-le clairement sans édulcorer.";
+
+    try {
+      const res = await fetch('/.netlify/functions/coach', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question,
+          context,
+          systemPrompt,
+          max_tokens: 400
+        })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data?.error || 'Erreur serveur');
+      }
+
+      thinking.textContent = data.answer || 'Pas de réponse.';
+    } catch (e) {
+      thinking.textContent = '❌ ' + e.message;
+    }
+  }
+
+  if (saveKeyBtn){
+    saveKeyBtn.addEventListener('click', function(e){
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      toast('✓ La clé est maintenant gérée côté serveur sur Netlify.');
+      setServerMode();
+    }, true);
+  }
+
+  sendBtn.addEventListener('click', function(e){
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    const q = input.value.trim();
+    if (!q) return;
+    input.value = '';
+    sendServer(q);
+  }, true);
+
+  input.addEventListener('keydown', function(e){
+    if (e.key === 'Enter'){
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      const q = input.value.trim();
+      if (!q) return;
+      input.value = '';
+      sendServer(q);
+    }
+  }, true);
+
+  if (suggestions){
+    suggestions.addEventListener('click', function(e){
+      const b = e.target.closest('[data-q]');
+      if (!b) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      sendServer(b.dataset.q);
+    }, true);
+  }
+
+  setServerMode();
+  setTimeout(setServerMode, 300);
+})();
+  </script>
+
 </body>
 </html>
