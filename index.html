@@ -11469,5 +11469,71 @@ refreshDerived();
   };
 })();
   </script>
+<script>
+(function(){
+  if (window.__coachNextActionPreviewInstalled) return;
+  window.__coachNextActionPreviewInstalled = true;
+
+  const originalFetch = window.fetch.bind(window);
+
+  function applyCoachPreview(data){
+    if (!data || typeof data !== 'object') return;
+    if (!data.next_action_title && !data.next_action_sub) return;
+
+    const host = document.getElementById('next-action');
+    const label = document.getElementById('na-label');
+    const countdown = document.getElementById('na-countdown');
+    const title = document.getElementById('na-title');
+    const sub = document.getElementById('na-sub');
+    const startBtn = document.getElementById('na-start');
+    const snoozeBtn = document.getElementById('na-snooze');
+    const skipBtn = document.getElementById('na-skip');
+
+    if (!host || !label || !countdown || !title || !sub) return;
+
+    host.classList.remove('rest', 'idle');
+    host.style.borderColor = 'rgba(255,107,53,.45)';
+    host.style.boxShadow = '0 0 0 1px rgba(255,107,53,.12) inset';
+
+    label.textContent = 'Suggestion IA';
+    countdown.classList.remove('live');
+    countdown.textContent = (data.priority || 'medium').toUpperCase();
+
+    title.textContent = data.next_action_title || 'Action suggérée';
+    sub.textContent =
+      [
+        data.next_action_sub || '',
+        data.focus_area ? ('Focus : ' + data.focus_area) : '',
+        data.warning ? ('Alerte : ' + data.warning) : ''
+      ].filter(Boolean).join(' • ');
+
+    if (startBtn){
+      startBtn.textContent = 'Suggestion IA';
+      startBtn.disabled = true;
+      startBtn.style.opacity = '0.85';
+    }
+    if (snoozeBtn) snoozeBtn.disabled = true;
+    if (skipBtn) skipBtn.disabled = true;
+  }
+
+  window.fetch = async function(resource, init){
+    const res = await originalFetch(resource, init);
+    const url = typeof resource === 'string' ? resource : (resource && resource.url) || '';
+
+    if (!url.includes('/.netlify/functions/coach')) return res;
+
+    try {
+      const clone = res.clone();
+      const contentType = clone.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) return res;
+
+      const data = await clone.json();
+      applyCoachPreview(data);
+    } catch (_) {}
+
+    return res;
+  };
+})();
+</script>
 </body>
 </html>
