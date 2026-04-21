@@ -12330,5 +12330,252 @@ refreshDerived();
   };
 })();
   </script>
+  <script>
+(function(){
+  if (window.__coachCostGuardInstalled) return;
+  window.__coachCostGuardInstalled = true;
+
+  const DAY_LIMIT = 20;           // max requêtes IA / jour
+  const COOLDOWN_MS = 15000;      // 15 sec entre 2 requêtes
+  const CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6h
+  const MAX_TOKENS_HARD = 220;    // coupe les réponses trop longues
+
+  const K = {
+    usage: 'dashv2_coach_usage_v1',
+    lastTs: 'dashv2_coach_last_ts_v1',
+    inflight: 'dashv2_coach_inflight_v1',
+    cache: 'dashv2_coach_cache_v1'
+  };
+
+  const oldFetch = window.fetch.bind(window);
+
+  function now(){ return Date.now(); }
+  function dayKey(){
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth()+1).padStart(2,'0');
+    const da = String(d.getDate()).padStart(2,'0');
+    return `${y}-${m}-${da}`;
+  }
+
+  function getJson(key, fallback){
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch (_) {
+      return fallback;
+    }
+  }
+
+  function setJson(key, value){
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch (_) {}
+  }
+
+  function toast(msg){
+    try {
+      if (typeof showToast === 'function') return showToast(msg);
+    } catch (_) {}
+  }
+
+  function compactRecent(arr){
+    if (!Array.isArray(arr)) return [];
+    return arr.slice(-7).map(x => ({
+      date: x.date || '',
+      epfc: x.epfc || 0,
+      code: x.code || 0,
+      nl: x.nl || 0,
+      sport: x.sport || 0,
+      flex: x.flex || 0,
+      mood: x.mood ?? null,
+      sleep: x.sleep ?? null
+    }));
+  }
+
+  function compactBookmarks(obj){
+    if (!obj || typeof obj !== 'object') return {};
+    const out = {};
+    Object.entries(obj).slice(0, 8).forEach(([k, v]) => {
+      if (!v) return;
+      out[k] = {
+        label: v.label || '',
+        text: typeof v.text === 'string' ? v.text.slice(0, 120) : ''
+      };
+    });
+    return out;
+  }
+
+  function compactContext(ctx){
+    if (!ctx || typeof ctx !== 'object') return {};
+
+    return {
+      streak: ctx.streak || 0,
+      bestStreak: ctx.bestStreak || 0,
+      achievements: Array.isArray(ctx.achievements) ? ctx.achievements.length : (ctx.achievements || 0),
+
+      trackers: {
+        weight: ctx.weight || null,
+        elo: ctx.elo || null,
+        book: ctx.book || null,
+        debt: ctx.debt || null
+      },
+
+      next_action: ctx.next_action || {},
+      home_now: ctx.home_now || {},
+      resume_hint: ctx.resume_hint || {},
+
+      bookmarks_current: compactBookmarks(ctx.bookmarks_current),
+      bookmarks_visible_ui: Array.isArray(ctx.bookmarks_visible_ui)
+        ? ctx.bookmarks_visible_ui.slice(0, 8).map(x => ({
+            domain: x.domain || '',
+            text: (x.text || '').slice(0, 120)
+          }))
+        : [],
+
+      recent_7d_compact: compactRecent(ctx.recent_7d_compact || ctx.recent || [])
+    };
+  }
+
+  function simpleHash(str){
+    let h = 0, i = 0, len = str.length;
+    while (i < len) {
+      h = ((h << 5) - h + str.charCodeAt(i++)) | 0;
+    }
+    return String(h);
+  }
+
+  function makeFingerprint(payload){
+    const q = String(payload.question || '').trim().toLowerCase();
+    const mode = String(payload.mode || '').trim().toLowerCase();
+    const compact = compactContext(payload.context || {});
+    return simpleHash(JSON.stringify({ q, mode, compact }));
+  }
+
+  function getUsage(){
+    const d = dayKey();
+    const usage = getJson(K.usage, {});
+    if (!usage[d]) usage[d] = 0;
+    return { d, usage };
+  }
+
+  function incUsage(){
+    const { d, usage } = getUsage();
+    usage[d] = (usage[d] || 0) + 1;
+    setJson(K.usage, usage);
+  }
+
+  function currentUsage(){
+    const { d, usage } = getUsage();
+    return usage[d] || 0;
+  }
+
+  function makeJsonResponse(obj){
+    return new Response(JSON.stringify(obj), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  window.fetch = async function(resource, init){
+    const url = typeof resource === 'string' ? resource : (resource && resource.url) || '';
+
+    if (!url.includes('/.netlify/functions/coach') || !init || typeof init.body !== 'string') {
+      return oldFetch(resource, init);
+    }
+
+    try {
+      let payload = JSON.parse(init.body);
+
+      const inflight = getJson(K.inflight, false);
+      if (inflight) {
+        toast('Attends la réponse en cours.');
+        return makeJsonResponse({
+          ok: true,
+          answer: '⏳ Une requête IA est déjà en cours. Attends la fin avant d’en relancer une.',
+          priority: 'low',
+          focus_area: 'Patience',
+          next_action_title: '',
+          next_action_sub: '',
+          warning: ''
+        });
+      }
+
+      const used = currentUsage();
+      if (used >= DAY_LIMIT) {
+        toast('Limite IA du jour atteinte.');
+        return makeJsonResponse({
+          ok: true,
+          answer: `🧱 Limite du jour atteinte : ${used}/${DAY_LIMIT}. Reviens demain ou pose une question vraiment différente et utile demain.`,
+          priority: 'low',
+          focus_area: 'Coût IA',
+          next_action_title: 'Stopper les appels IA',
+          next_action_sub: 'Utilise ce que tu as déjà généré aujourd’hui',
+          warning: 'Quota journalier atteint'
+        });
+      }
+
+      const lastTs = getJson(K.lastTs, 0);
+      const delta = now() - lastTs;
+      if (delta < COOLDOWN_MS) {
+        const sec = Math.ceil((COOLDOWN_MS - delta) / 1000);
+        toast(`Patiente ${sec}s.`);
+        return makeJsonResponse({
+          ok: true,
+          answer: `⏱️ Cooldown actif. Attends encore ${sec} seconde(s) avant une nouvelle requête.`,
+          priority: 'low',
+          focus_area: 'Cooldown',
+          next_action_title: '',
+          next_action_sub: '',
+          warning: ''
+        });
+      }
+
+      payload.context = compactContext(payload.context || {});
+      payload.max_tokens = Math.min(
+        Number(payload.max_tokens) > 0 ? Number(payload.max_tokens) : MAX_TOKENS_HARD,
+        MAX_TOKENS_HARD
+      );
+
+      const fp = makeFingerprint(payload);
+      const cache = getJson(K.cache, {});
+      const hit = cache[fp];
+
+      if (hit && hit.ts && (now() - hit.ts) < CACHE_TTL_MS && hit.data) {
+        toast('Réponse en cache.');
+        return makeJsonResponse({
+          ...hit.data,
+          answer: `♻️ Réponse en cache\n\n${hit.data.answer || ''}`
+        });
+      }
+
+      setJson(K.inflight, true);
+      setJson(K.lastTs, now());
+
+      init = {
+        ...init,
+        body: JSON.stringify(payload)
+      };
+
+      const res = await oldFetch(resource, init);
+
+      try {
+        const clone = res.clone();
+        const contentType = clone.headers.get('content-type') || '';
+        if (res.ok && contentType.includes('application/json')) {
+          const data = await clone.json();
+          cache[fp] = { ts: now(), data };
+          setJson(K.cache, cache);
+          incUsage();
+        }
+      } catch (_) {}
+
+      return res;
+    } catch (_) {
+      return oldFetch(resource, init);
+    } finally {
+      setJson(K.inflight, false);
+    }
+  };
+})();
+  </script>
 </body>
 </html>
