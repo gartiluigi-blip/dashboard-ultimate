@@ -13086,5 +13086,199 @@ refreshDerived();
   setInterval(installButton, 3000);
 })();
   </script>
+  <script>
+(function(){
+  if (window.__weeklyReviewStatsMountV3) return;
+  window.__weeklyReviewStatsMountV3 = true;
+
+  function q(sel, root=document){ return root.querySelector(sel); }
+  function qa(sel, root=document){ return Array.from(root.querySelectorAll(sel)); }
+  function txt(sel){ return q(sel)?.textContent?.trim() || ''; }
+
+  function removeOld(){
+    [
+      'weekly-review-fab',
+      'weekly-review-ai-btn',
+      'weekly-review-ai-btn-v2',
+      'weekly-review-inline',
+      'weekly-review-stats-inline'
+    ].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.remove();
+    });
+  }
+
+  function isStatsTabActive(){
+    const statsTab =
+      qa('button, a, .tab, .chip').find(el => /stats/i.test(el.textContent || ''));
+    if (!statsTab) return false;
+
+    const cls = statsTab.className || '';
+    const aria = statsTab.getAttribute('aria-selected');
+    return (
+      aria === 'true' ||
+      /\bactive\b|\bselected\b|\bcurrent\b/.test(cls) ||
+      getComputedStyle(statsTab).opacity === '1'
+    );
+  }
+
+  function hasWeeklyStats(){
+    return !!q('[data-rev="study"]') || !!q('[data-rev="sport"]') || !!q('[data-rev="active"]');
+  }
+
+  function getBookmarksMini(){
+    return qa('#bookmark-list .bm-row')
+      .map(row => {
+        const domain = (q('.bm-domain', row)?.textContent || '')
+          .replace(/\s*·\s*\d+\s*archivé[s]?/i, '')
+          .trim();
+        const text = (q('.bm-where,[data-bm]', row)?.textContent || '').trim();
+        return domain && text ? `${domain}: ${text}` : '';
+      })
+      .filter(Boolean)
+      .slice(0, 6);
+  }
+
+  function buildWeeklyPrompt(){
+    const stats = {
+      study: txt('[data-rev="study"]'),
+      sport: txt('[data-rev="sport"]'),
+      flex: txt('[data-rev="flex"]'),
+      pages: txt('[data-rev="pages"]'),
+      chess: txt('[data-rev="chess"]'),
+      vinted: txt('[data-rev="vinted"]'),
+      mood: txt('[data-rev="mood"]'),
+      active: txt('[data-rev="active"]')
+    };
+
+    const bookmarks = getBookmarksMini();
+
+    return [
+      "WEEKLY REVIEW IA",
+      "",
+      "Réponds en français.",
+      "Réponse directe, structurée, sans blabla.",
+      "Format strict :",
+      "1. Point faible principal",
+      "2. Trois priorités de la semaine",
+      "3. Une chose à couper",
+      "4. Une chose à renforcer",
+      "5. Next action immédiate",
+      "",
+      "Stats hebdo :",
+      `- Étude: ${stats.study || '—'}`,
+      `- Sport: ${stats.sport || '—'}`,
+      `- Flex: ${stats.flex || '—'}`,
+      `- Lecture: ${stats.pages || '—'}`,
+      `- Échecs: ${stats.chess || '—'}`,
+      `- Vinted: ${stats.vinted || '—'}`,
+      `- Humeur: ${stats.mood || '—'}`,
+      `- Jours actifs: ${stats.active || '—'}`,
+      "",
+      "Bookmarks utiles :",
+      ...(bookmarks.length ? bookmarks.map(x => `- ${x}`) : ["- Aucun bookmark utile détecté"])
+    ].join('\\n');
+  }
+
+  function launchWeeklyReview(){
+    const fab = document.getElementById('ask-claude-fab');
+    const input = document.getElementById('ac-input');
+    const sendBtn = document.getElementById('ac-send');
+
+    if (fab) fab.click();
+
+    setTimeout(() => {
+      const analyseBtn = qa('#ac-modes button').find(b => /analyse/i.test(b.textContent || ''));
+      if (analyseBtn) analyseBtn.click();
+
+      if (input && sendBtn) {
+        input.value = buildWeeklyPrompt();
+        sendBtn.click();
+      }
+    }, 350);
+  }
+
+  function findStatsContainer(){
+    const statNode =
+      q('[data-rev="study"]') ||
+      q('[data-rev="sport"]') ||
+      q('[data-rev="active"]');
+    if (!statNode) return null;
+
+    let node = statNode;
+    while (node && node !== document.body) {
+      if (node.children && node.children.length >= 2) return node;
+      node = node.parentElement;
+    }
+    return statNode.parentElement;
+  }
+
+  function install(){
+    removeOld();
+
+    if (!isStatsTabActive()) return;
+    if (!hasWeeklyStats()) return;
+
+    const mount = findStatsContainer();
+    if (!mount) return;
+    if (document.getElementById('weekly-review-stats-inline')) return;
+
+    const box = document.createElement('div');
+    box.id = 'weekly-review-stats-inline';
+    box.style.display = 'flex';
+    box.style.alignItems = 'center';
+    box.style.justifyContent = 'space-between';
+    box.style.gap = '12px';
+    box.style.margin = '0 0 14px 0';
+    box.style.padding = '12px 14px';
+    box.style.borderRadius = '16px';
+    box.style.border = '1px solid rgba(167,139,250,.20)';
+    box.style.background = 'rgba(167,139,250,.08)';
+
+    const left = document.createElement('div');
+
+    const title = document.createElement('div');
+    title.textContent = 'Weekly Review IA';
+    title.style.fontWeight = '800';
+    title.style.fontSize = '14px';
+    title.style.color = 'var(--violet-2)';
+
+    const sub = document.createElement('div');
+    sub.textContent = 'Bilan hebdo IA depuis Stats';
+    sub.style.fontSize = '11px';
+    sub.style.color = 'var(--text-dim)';
+
+    left.appendChild(title);
+    left.appendChild(sub);
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = 'Lancer';
+    btn.style.padding = '10px 14px';
+    btn.style.borderRadius = '999px';
+    btn.style.border = '1px solid rgba(167,139,250,.30)';
+    btn.style.background = 'rgba(167,139,250,.14)';
+    btn.style.color = 'var(--violet-2)';
+    btn.style.fontSize = '12px';
+    btn.style.fontWeight = '800';
+    btn.style.cursor = 'pointer';
+    btn.style.flexShrink = '0';
+    btn.addEventListener('click', launchWeeklyReview);
+
+    box.appendChild(left);
+    box.appendChild(btn);
+
+    mount.insertAdjacentElement('beforebegin', box);
+  }
+
+  install();
+  setTimeout(install, 500);
+  setTimeout(install, 1200);
+  setTimeout(install, 2500);
+
+  const obs = new MutationObserver(() => install());
+  obs.observe(document.body, { childList: true, subtree: true, attributes: true });
+})();
+  </script>
 </body>
 </html>
