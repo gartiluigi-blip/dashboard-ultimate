@@ -12345,5 +12345,1537 @@ if (document.readyState === 'loading'){
      FIN AI CORE v2.0
      ═══════════════════════════════════════════════════════════ -->
 
+
+<!-- ═══════════════════════════════════════════════════════════
+     TRADING · onglet propfirm (ajouté par AI core extension)
+     ═══════════════════════════════════════════════════════════ -->
+<style id="trading-styles">
+.trd-phase-card{background:linear-gradient(135deg,rgba(167,139,250,.10),rgba(106,165,250,.06));
+  border:1px solid var(--border);border-radius:14px;padding:16px;margin:14px 0 18px;}
+.trd-phase-label{font:600 10px var(--f-mono);color:var(--violet-2);letter-spacing:.08em;text-transform:uppercase}
+.trd-phase-name{font:700 18px var(--f-display);color:var(--text);margin:4px 0 10px}
+.trd-phase-prog{display:flex;align-items:center;gap:10px}
+.trd-phase-bar{flex:1;height:6px;background:var(--surface-2);border-radius:6px;overflow:hidden}
+.trd-phase-fill{height:100%;background:linear-gradient(90deg,var(--violet),var(--sapphire));border-radius:6px;transition:width .5s var(--ease)}
+.trd-phase-pct{font:700 11px var(--f-mono);color:var(--text-dim)}
+.trd-phase-next{font:400 12px var(--f-sans);color:var(--text-faint);margin-top:8px}
+
+.trd-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;margin:12px 0}
+.trd-card-h{font:700 13px var(--f-sans);color:var(--text);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.trd-card-sub{font:400 12px var(--f-sans);color:var(--text-faint);margin-bottom:10px}
+.trd-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.trd-grid-2 label{display:flex;flex-direction:column;font:600 10px var(--f-mono);color:var(--text-faint);text-transform:uppercase;letter-spacing:.04em;gap:4px}
+.trd-grid-2 input,.trd-grid-2 select,.trd-card textarea,.trd-card>input{
+  background:var(--surface-2);border:1px solid var(--border);border-radius:8px;
+  padding:10px;color:var(--text);font:14px var(--f-sans);min-height:40px;
+  width:100%;}
+.trd-card textarea{font:13px var(--f-sans);resize:vertical;min-height:60px;margin-bottom:10px}
+.trd-result{background:var(--bg-deep);border:1px dashed var(--border-strong);border-radius:8px;
+  padding:12px;font:700 18px var(--f-mono);color:var(--flame-2);text-align:center;margin-top:8px}
+.trd-result-sub{font:400 11px var(--f-sans);color:var(--text-faint);text-align:center;margin-top:4px}
+
+.trd-checklist{display:grid;gap:6px;margin:8px 0}
+.trd-checklist label{display:flex;align-items:center;gap:8px;font:400 12px var(--f-sans);color:var(--text-dim);cursor:pointer;min-height:32px;touch-action:manipulation}
+.trd-checklist input{width:18px;height:18px;accent-color:var(--flame)}
+
+.trd-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.trd-btn{padding:10px 16px;border-radius:8px;border:1px solid var(--border);background:transparent;
+  color:var(--text-dim);font:600 12px var(--f-sans);cursor:pointer;touch-action:manipulation;min-height:44px;letter-spacing:.04em;text-transform:uppercase}
+.trd-btn.primary{background:var(--g-flame);color:#0a0a10;border-color:transparent}
+.trd-btn.ghost{background:transparent}
+.trd-btn:disabled{opacity:.5;cursor:not-allowed}
+
+.trd-stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.trd-stat{background:var(--surface-2);border-radius:8px;padding:8px;text-align:center}
+.trd-stat-l{font:600 9px var(--f-mono);color:var(--text-faint);text-transform:uppercase;letter-spacing:.06em}
+.trd-stat-v{font:800 18px var(--f-display);color:var(--text);margin-top:4px}
+.trd-stat-v.win{color:var(--jade)}.trd-stat-v.loss{color:var(--coral)}.trd-stat-v.warn{color:var(--amber)}
+.trd-pnl-line{height:6px;background:var(--surface-2);border-radius:4px;overflow:hidden;margin-top:4px}
+.trd-pnl-fill{height:100%;transition:width .5s var(--ease)}
+
+.trd-pf-bars{display:grid;gap:8px;margin:10px 0}
+.trd-pf-bar{display:grid;grid-template-columns:60px 1fr;gap:10px;align-items:center}
+.trd-pf-l{font:600 10px var(--f-mono);color:var(--text-faint);text-transform:uppercase}
+.trd-pf-track{height:8px;background:var(--surface-2);border-radius:4px;overflow:hidden;position:relative}
+.trd-pf-fill{height:100%;border-radius:4px;transition:width .5s var(--ease)}
+.trd-pf-fill.profit{background:linear-gradient(90deg,var(--jade),var(--jade-2))}
+.trd-pf-fill.dd{background:linear-gradient(90deg,var(--amber),var(--coral))}
+
+.trd-rules{list-style:none;padding:0;margin:0}
+.trd-rules li{padding:8px 0 8px 24px;position:relative;font:400 13px/1.5 var(--f-sans);color:var(--text-dim);border-bottom:1px solid var(--border-soft)}
+.trd-rules li:last-child{border-bottom:none}
+.trd-rules li::before{content:"▸";position:absolute;left:6px;color:var(--flame);font-weight:900}
+
+.trd-ai-out{margin-top:10px;min-height:0}
+
+.trd-warn-banner{background:linear-gradient(135deg,rgba(248,113,113,.10),rgba(251,191,36,.06));
+  border:1px solid rgba(248,113,113,.3);border-radius:12px;padding:12px;margin:14px 0;
+  font:13px/1.5 var(--f-sans);color:var(--coral-2)}
+.trd-warn-banner b{color:var(--coral)}
+
+@media (min-width:600px){
+  .trd-stats-grid{grid-template-columns:repeat(6,1fr)}
+}
+</style>
+
+<script id="trading-module">
+(function(){
+'use strict';
+if (window.__tradingModuleInstalled) return;
+window.__tradingModuleInstalled = true;
+
+const NS = 'dashv2_';
+const sg = (k, d) => { try { return JSON.parse(localStorage.getItem(NS+k)) ?? d; } catch(_) { return d; } };
+const ss = (k, v) => { try { localStorage.setItem(NS+k, JSON.stringify(v)); return true; } catch(_) { return false; } };
+
+const KEYS = {
+  journal: 'trading_journal_v2',
+  pf: 'trading_propfirm_v2',
+  read: 'trading_read_v2',
+  phase: 'trading_phase_v2'
+};
+
+// ─── Position calculator ─────────────────────────────────────
+function calcPosition(){
+  const cap = parseFloat(document.getElementById('trd-cap')?.value) || 0;
+  const risk = parseFloat(document.getElementById('trd-risk')?.value) || 0;
+  const stop = parseFloat(document.getElementById('trd-stop')?.value) || 0;
+  const pv = parseFloat(document.getElementById('trd-pv')?.value) || 0;
+  const out = document.getElementById('trd-result');
+  const sub = document.getElementById('trd-result-sub');
+  if (!out) return;
+  if (!cap || !risk || !stop || !pv){
+    out.textContent = '— Configure pour calculer';
+    sub.textContent = 'Risk by trade is your job. Stop is sacred.';
+    return;
+  }
+  const dollarRisk = cap * (risk / 100);
+  const contracts = dollarRisk / (stop * pv);
+  out.innerHTML = `${contracts.toFixed(2)} contrats · risque <b style="color:var(--coral)">$${dollarRisk.toFixed(0)}</b>`;
+  if (risk > 1){
+    sub.innerHTML = '⚠️ <b style="color:var(--coral)">Risk > 1%</b> — au-dessus de la limite recommandée.';
+  } else if (risk > 0.5){
+    sub.innerHTML = `Risk ${risk}% · OK en swing. Trop pour un challenge propfirm (vise 0.25-0.5%).`;
+  } else {
+    sub.innerHTML = `Risk ${risk}% · zone safe pour propfirm.`;
+  }
+}
+
+// ─── Journal ─────────────────────────────────────────────────
+function saveTrade(){
+  const trade = {
+    ts: new Date().toISOString(),
+    date: document.getElementById('trd-j-date')?.value || new Date().toISOString().slice(0,10),
+    instrument: document.getElementById('trd-j-inst')?.value.trim() || '',
+    setup: document.getElementById('trd-j-setup')?.value.trim() || '',
+    result: document.getElementById('trd-j-res')?.value || '',
+    pnl: parseFloat(document.getElementById('trd-j-pnl')?.value) || 0,
+    r: parseFloat(document.getElementById('trd-j-r')?.value) || 0,
+    notes: document.getElementById('trd-j-notes')?.value.trim() || '',
+    rule: document.getElementById('trd-j-rule')?.checked || false,
+    sized: document.getElementById('trd-j-sized')?.checked || false,
+    stop: document.getElementById('trd-j-stop')?.checked || false
+  };
+  if (!trade.instrument){ alert('Instrument requis'); return; }
+  const arr = sg(KEYS.journal, []);
+  arr.push(trade);
+  ss(KEYS.journal, arr);
+  // Reset form
+  ['trd-j-inst','trd-j-setup','trd-j-pnl','trd-j-r','trd-j-notes'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  ['trd-j-rule','trd-j-sized','trd-j-stop'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.checked = false;
+  });
+  if (window.__aiCore?.Bookmarks){
+    window.__aiCore.Bookmarks.set('trading', `Dernier trade: ${trade.instrument} ${trade.result} ${trade.r}R`, 'Trading');
+  }
+  computeStats();
+  alert('Trade sauvegardé.');
+}
+
+// ─── Stats ───────────────────────────────────────────────────
+function computeStats(){
+  const arr = sg(KEYS.journal, []);
+  const cutoff = Date.now() - 30 * 24 * 3600 * 1000;
+  const recent = arr.filter(t => new Date(t.ts).getTime() >= cutoff && t.result !== 'SKIP');
+  const set = (id, val, cls) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = val;
+    el.className = 'trd-stat-v' + (cls ? ' ' + cls : '');
+  };
+  if (!recent.length){
+    ['trd-s-n','trd-s-wr','trd-s-r','trd-s-e','trd-s-pf','trd-s-dd'].forEach(id => set(id, '—'));
+    return;
+  }
+  const wins = recent.filter(t => t.result === 'W');
+  const losses = recent.filter(t => t.result === 'L');
+  const wr = wins.length / recent.length;
+  const avgR = recent.reduce((s,t) => s + (t.r||0), 0) / recent.length;
+  const expectancy = recent.reduce((s,t) => s + (t.pnl||0), 0) / recent.length;
+  const grossW = wins.reduce((s,t) => s + (t.pnl||0), 0);
+  const grossL = Math.abs(losses.reduce((s,t) => s + (t.pnl||0), 0));
+  const pf = grossL > 0 ? (grossW / grossL) : (grossW > 0 ? Infinity : 0);
+  // Drawdown : equity curve, peak-to-trough
+  let eq = 0, peak = 0, maxDD = 0;
+  recent.slice().sort((a,b) => a.ts.localeCompare(b.ts)).forEach(t => {
+    eq += (t.pnl || 0);
+    if (eq > peak) peak = eq;
+    const dd = peak - eq;
+    if (dd > maxDD) maxDD = dd;
+  });
+  set('trd-s-n', recent.length);
+  set('trd-s-wr', (wr*100).toFixed(0)+'%', wr >= 0.5 ? 'win' : (wr < 0.4 ? 'loss' : 'warn'));
+  set('trd-s-r', avgR.toFixed(2)+'R', avgR >= 1 ? 'win' : (avgR < 0 ? 'loss' : 'warn'));
+  set('trd-s-e', '$'+expectancy.toFixed(0), expectancy > 0 ? 'win' : 'loss');
+  set('trd-s-pf', isFinite(pf) ? pf.toFixed(2) : '∞', pf >= 1.5 ? 'win' : (pf < 1 ? 'loss' : 'warn'));
+  set('trd-s-dd', '$'+maxDD.toFixed(0), maxDD === 0 ? 'win' : 'warn');
+}
+
+// ─── Propfirm tracker ────────────────────────────────────────
+function loadPF(){
+  const pf = sg(KEYS.pf, {});
+  ['firm','acct','target','dd','prog','ddc'].forEach(k => {
+    const el = document.getElementById('trd-pf-'+k);
+    if (el && pf[k] !== undefined) el.value = pf[k];
+  });
+  updatePFBars();
+}
+function savePF(){
+  const pf = {};
+  ['firm','acct','target','dd','prog','ddc'].forEach(k => {
+    const el = document.getElementById('trd-pf-'+k);
+    if (el) pf[k] = el.type === 'number' ? parseFloat(el.value)||0 : el.value;
+  });
+  ss(KEYS.pf, pf);
+  updatePFBars();
+  alert('Challenge sauvegardé.');
+}
+function updatePFBars(){
+  const target = parseFloat(document.getElementById('trd-pf-target')?.value) || 10;
+  const ddmax = parseFloat(document.getElementById('trd-pf-dd')?.value) || 10;
+  const prog = parseFloat(document.getElementById('trd-pf-prog')?.value) || 0;
+  const ddc = parseFloat(document.getElementById('trd-pf-ddc')?.value) || 0;
+  const fp = document.getElementById('trd-pf-fp');
+  const fd = document.getElementById('trd-pf-fd');
+  if (fp) fp.style.width = Math.min(100, (prog/target)*100) + '%';
+  if (fd) fd.style.width = Math.min(100, (ddc/ddmax)*100) + '%';
+}
+
+// ─── AI Review ───────────────────────────────────────────────
+async function aiReview(){
+  const out = document.getElementById('trd-ai-out');
+  const btn = document.getElementById('trd-ai-review');
+  if (!window.__aiCore?.coachAsk){
+    out.textContent = '⚠️ AI core non chargé.';
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = '… analyse en cours';
+  out.innerHTML = '<div style="padding:12px;color:var(--text-faint);font-size:13px">Claude analyse tes 30 derniers trades…</div>';
+
+  const arr = sg(KEYS.journal, []);
+  const cutoff = Date.now() - 7 * 24 * 3600 * 1000;
+  const week = arr.filter(t => new Date(t.ts).getTime() >= cutoff);
+  const month = arr.filter(t => new Date(t.ts).getTime() >= Date.now() - 30*24*3600*1000);
+  const pf = sg(KEYS.pf, {});
+
+  const ctx = {
+    ...(window.__aiCore.buildContextV2()),
+    trading: {
+      week: week.map(t => ({ d:t.date, ins:t.instrument, set:t.setup, res:t.result, r:t.r, pnl:t.pnl, ruleOK: t.rule, sizedOK: t.sized })),
+      monthCount: month.length,
+      propfirm: pf
+    }
+  };
+
+  const data = await window.__aiCore.coachAsk({
+    mode: 'analyse',
+    question: "Analyse mes trades de la semaine. Format strict :\n1. Patterns de comportement (revenge trading, FOMO, etc.)\n2. Ce qui marche dans mon edge\n3. Ce qui me coûte de l'argent\n4. Une règle à ajouter cette semaine\n5. Mon next focus pour les 7 prochains jours",
+    context: ctx,
+    systemPrompt: "Tu es un coach trading senior, ex-prop trader. Réponds en français, ton direct, sans complaisance. Focus discipline et risk, pas hype technique. Cite les chiffres réels du contexte. Maximum 200 mots.",
+    max_tokens: 350
+  });
+
+  out.innerHTML = '';
+  window.__aiCore.renderAIResponse(out, { ...data, _timestamp: new Date().toISOString() }, { allowApply: true });
+  if (!data.blocked && window.__aiCore.History){
+    window.__aiCore.History.add({ mode:'analyse', question: 'trading review', ...data });
+  }
+  btn.disabled = false;
+  btn.textContent = 'Relancer review';
+}
+
+// ─── Reading ─────────────────────────────────────────────────
+function saveReading(){
+  const book = document.getElementById('trd-read-book')?.value.trim();
+  const pages = parseInt(document.getElementById('trd-read-pages')?.value) || 0;
+  if (!book) return;
+  const data = sg(KEYS.read, {}) || {};
+  data.book = book;
+  data.pagesThisWeek = pages;
+  data.updatedAt = new Date().toISOString();
+  ss(KEYS.read, data);
+  if (window.__aiCore?.Bookmarks){
+    window.__aiCore.Bookmarks.set('trading_read', book, 'Lecture trading');
+  }
+  alert('Bookmark trading mis à jour.');
+}
+function loadReading(){
+  const data = sg(KEYS.read, {});
+  if (data.book){
+    const b = document.getElementById('trd-read-book'); if (b) b.value = data.book;
+    const p = document.getElementById('trd-read-pages'); if (p && data.pagesThisWeek) p.value = data.pagesThisWeek;
+  }
+}
+
+// ─── Init ────────────────────────────────────────────────────
+function bind(){
+  // Pré-remplir date du jour
+  const dateEl = document.getElementById('trd-j-date');
+  if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().slice(0,10);
+
+  // Calculator live
+  ['trd-cap','trd-risk','trd-stop','trd-pv'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && !el.dataset.bound){ el.addEventListener('input', calcPosition); el.dataset.bound = '1'; }
+  });
+  calcPosition();
+
+  // Save buttons
+  const sb = document.getElementById('trd-j-save');
+  if (sb && !sb.dataset.bound){ sb.addEventListener('click', saveTrade); sb.dataset.bound='1'; }
+  const cb = document.getElementById('trd-j-clear');
+  if (cb && !cb.dataset.bound){ cb.addEventListener('click', () => {
+    ['trd-j-inst','trd-j-setup','trd-j-pnl','trd-j-r','trd-j-notes'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.value='';
+    });
+  }); cb.dataset.bound='1'; }
+
+  // Propfirm
+  ['trd-pf-target','trd-pf-dd','trd-pf-prog','trd-pf-ddc'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && !el.dataset.bound){ el.addEventListener('input', updatePFBars); el.dataset.bound='1'; }
+  });
+  const pfb = document.getElementById('trd-pf-save');
+  if (pfb && !pfb.dataset.bound){ pfb.addEventListener('click', savePF); pfb.dataset.bound='1'; }
+
+  // Reading
+  const rb = document.getElementById('trd-read-save');
+  if (rb && !rb.dataset.bound){ rb.addEventListener('click', saveReading); rb.dataset.bound='1'; }
+
+  // AI
+  const aib = document.getElementById('trd-ai-review');
+  if (aib && !aib.dataset.bound){ aib.addEventListener('click', aiReview); aib.dataset.bound='1'; }
+
+  loadPF();
+  loadReading();
+  computeStats();
+}
+
+// Re-bind on tab switch
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-tab="trading"]');
+  if (t) setTimeout(bind, 80);
+});
+if (document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', () => setTimeout(bind, 200));
+} else {
+  setTimeout(bind, 200);
+}
+
+window.__trading = { calcPosition, saveTrade, computeStats, savePF, aiReview };
+
+})();
+</script>
+
+<!-- Section Trading injectée dans <main> -->
+<script id="trading-tab-injector">
+(function(){
+if (window.__tradingTabInstalled) return;
+window.__tradingTabInstalled = true;
+
+function inject(){
+  // 1. Tab dans la barre
+  const tabsBar = document.querySelector('.tabs');
+  if (tabsBar && !document.querySelector('[data-tab="trading"]')){
+    const tab = document.createElement('div');
+    tab.className = 'tab';
+    tab.dataset.tab = 'trading';
+    tab.innerHTML = '📈 Trading';
+    tabsBar.appendChild(tab);
+  }
+
+  // 2. Section #p-trading
+  const main = document.querySelector('main') || document.querySelector('.app') || document.body;
+  if (main && !document.getElementById('p-trading')){
+    const section = document.createElement('section');
+    section.id = 'p-trading';
+    section.className = 'page';
+    section.style.display = 'none';
+    section.innerHTML = `
+      <h1 class="page-title">📈 Trading · propfirm path</h1>
+
+      <div class="trd-warn-banner">
+        <b>Réalité froide :</b> ~10% passent le challenge phase 1, ~5% deviennent profitables long terme.
+        Ne pas trader pendant les 30 premiers jours. Theory + sim only.
+      </div>
+
+      <div class="trd-phase-card">
+        <div class="trd-phase-label">Phase actuelle</div>
+        <div class="trd-phase-name" id="trd-phase-name">Phase 0 · Foundations</div>
+        <div class="trd-phase-prog">
+          <div class="trd-phase-bar"><div class="trd-phase-fill" id="trd-phase-fill" style="width:5%"></div></div>
+          <div class="trd-phase-pct" id="trd-phase-pct">5%</div>
+        </div>
+        <div class="trd-phase-next" id="trd-phase-next">Next: lire "Trading in the Zone" · paper trading 30 jours · zéro argent réel</div>
+      </div>
+
+      <div class="trd-card">
+        <div class="trd-card-h">📊 Stats 30 jours</div>
+        <div class="trd-stats-grid">
+          <div class="trd-stat"><div class="trd-stat-l">Trades</div><div class="trd-stat-v" id="trd-s-n">—</div></div>
+          <div class="trd-stat"><div class="trd-stat-l">Winrate</div><div class="trd-stat-v" id="trd-s-wr">—</div></div>
+          <div class="trd-stat"><div class="trd-stat-l">Avg R</div><div class="trd-stat-v" id="trd-s-r">—</div></div>
+          <div class="trd-stat"><div class="trd-stat-l">Expectancy</div><div class="trd-stat-v" id="trd-s-e">—</div></div>
+          <div class="trd-stat"><div class="trd-stat-l">Profit factor</div><div class="trd-stat-v" id="trd-s-pf">—</div></div>
+          <div class="trd-stat"><div class="trd-stat-l">Max DD</div><div class="trd-stat-v" id="trd-s-dd">—</div></div>
+        </div>
+      </div>
+
+      <div class="trd-card">
+        <div class="trd-card-h">🧮 Position calculator</div>
+        <div class="trd-card-sub">Calcule la taille avant chaque trade. Risk &gt; 1% = NO.</div>
+        <div class="trd-grid-2">
+          <label>Capital ($) <input id="trd-cap" type="number" placeholder="50000"></label>
+          <label>Risk (%) <input id="trd-risk" type="number" step="0.05" placeholder="0.5"></label>
+          <label>Stop (points) <input id="trd-stop" type="number" placeholder="10"></label>
+          <label>$/point <input id="trd-pv" type="number" step="0.01" placeholder="5"></label>
+        </div>
+        <div class="trd-result" id="trd-result">— Configure pour calculer</div>
+        <div class="trd-result-sub" id="trd-result-sub">Stop is sacred.</div>
+      </div>
+
+      <div class="trd-card">
+        <div class="trd-card-h">🏆 Challenge propfirm</div>
+        <div class="trd-grid-2">
+          <label>Firme <input id="trd-pf-firm" type="text" placeholder="ex. Apex / Topstep / FTMO"></label>
+          <label>Compte ($) <input id="trd-pf-acct" type="number" placeholder="50000"></label>
+          <label>Profit target ($) <input id="trd-pf-target" type="number" placeholder="3000"></label>
+          <label>Drawdown max ($) <input id="trd-pf-dd" type="number" placeholder="2500"></label>
+          <label>Profit actuel ($) <input id="trd-pf-prog" type="number" placeholder="0"></label>
+          <label>DD utilisé ($) <input id="trd-pf-ddc" type="number" placeholder="0"></label>
+        </div>
+        <div class="trd-pf-bars">
+          <div class="trd-pf-bar">
+            <div class="trd-pf-l">Profit</div>
+            <div class="trd-pf-track"><div class="trd-pf-fill profit" id="trd-pf-fp" style="width:0%"></div></div>
+          </div>
+          <div class="trd-pf-bar">
+            <div class="trd-pf-l">Drawdown</div>
+            <div class="trd-pf-track"><div class="trd-pf-fill dd" id="trd-pf-fd" style="width:0%"></div></div>
+          </div>
+        </div>
+        <div class="trd-actions">
+          <button class="trd-btn primary" id="trd-pf-save">Sauvegarder</button>
+        </div>
+      </div>
+
+      <div class="trd-card">
+        <div class="trd-card-h">📔 Journal de trade</div>
+        <div class="trd-card-sub">Un trade = une entrée. Sans journal, pas de progression.</div>
+        <div class="trd-grid-2">
+          <label>Date <input id="trd-j-date" type="date"></label>
+          <label>Instrument <input id="trd-j-inst" type="text" placeholder="MNQ / EURUSD"></label>
+          <label>Setup <input id="trd-j-setup" type="text" placeholder="ORB / pullback EMA…"></label>
+          <label>Résultat
+            <select id="trd-j-res">
+              <option value="W">Win</option>
+              <option value="L">Loss</option>
+              <option value="BE">Break-even</option>
+              <option value="SKIP">Trade skippé</option>
+            </select>
+          </label>
+          <label>P&L ($) <input id="trd-j-pnl" type="number" step="0.01" placeholder="150"></label>
+          <label>R multiple <input id="trd-j-r" type="number" step="0.1" placeholder="1.5"></label>
+        </div>
+        <textarea id="trd-j-notes" placeholder="Notes : émotion, contexte, ce que j'ai bien fait / mal fait…"></textarea>
+        <div class="trd-checklist">
+          <label><input id="trd-j-rule" type="checkbox"> Trade pris selon mes règles écrites</label>
+          <label><input id="trd-j-sized" type="checkbox"> Position correctement dimensionnée</label>
+          <label><input id="trd-j-stop" type="checkbox"> Stop placé avant l'entrée</label>
+        </div>
+        <div class="trd-actions">
+          <button class="trd-btn primary" id="trd-j-save">Sauvegarder trade</button>
+          <button class="trd-btn ghost" id="trd-j-clear">Effacer</button>
+        </div>
+      </div>
+
+      <div class="trd-card">
+        <div class="trd-card-h">🤖 Review IA hebdo</div>
+        <div class="trd-card-sub">Claude analyse tes trades de la semaine. Patterns, fuites, focus.</div>
+        <button class="trd-btn primary" id="trd-ai-review">Lancer review IA</button>
+        <div class="trd-ai-out" id="trd-ai-out"></div>
+      </div>
+
+      <div class="trd-card">
+        <div class="trd-card-h">📚 Lecture en cours</div>
+        <div class="trd-grid-2">
+          <label>Livre <input id="trd-read-book" type="text" placeholder="Trading in the Zone — ch.4"></label>
+          <label>Pages cette semaine <input id="trd-read-pages" type="number" placeholder="50"></label>
+        </div>
+        <div class="trd-actions">
+          <button class="trd-btn primary" id="trd-read-save">Mettre à jour bookmark</button>
+        </div>
+      </div>
+
+      <div class="trd-card">
+        <div class="trd-card-h">⚖️ Mes règles non négociables</div>
+        <ul class="trd-rules">
+          <li>Risk max par trade : <b>0.5%</b> du compte. Jamais plus.</li>
+          <li>Max 2 trades perdants consécutifs → STOP de la journée.</li>
+          <li>Stop placé <b>avant</b> l'entrée. Sinon pas de trade.</li>
+          <li>Pas de trade dans les 30 min après réveil ou pendant un shift fatigant.</li>
+          <li>Journal rempli pour chaque trade, sinon le trade ne compte pas.</li>
+          <li>Pas plus de 3 trades par jour en challenge.</li>
+          <li>Revenge trading = sortie immédiate, screen off 30 min.</li>
+        </ul>
+      </div>
+
+      <div class="trd-warn-banner" style="background:linear-gradient(135deg,rgba(167,139,250,.10),rgba(106,165,250,.06));border-color:rgba(167,139,250,.3);color:var(--violet-2)">
+        <b>Compatibilité cervicales :</b> max 2h par session devant les écrans, pause toutes les 25 min, écran à hauteur des yeux. Si douleur → STOP.
+      </div>
+    `;
+    main.appendChild(section);
+  }
+}
+if (document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', () => setTimeout(inject, 150));
+} else {
+  setTimeout(inject, 150);
+}
+})();
+</script>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     ULTIMATE ASSISTANT v3.0
+     Today view · Backup · Health · Voice · Offline · IndexedDB · Quick Capture
+     ═══════════════════════════════════════════════════════════ -->
+<style id="ultimate-styles-v3">
+/* ─── TODAY VIEW ─── */
+.today-hero{padding:20px 16px;background:linear-gradient(135deg,rgba(255,107,53,.12),rgba(106,165,250,.06));
+  border-radius:18px;margin:14px 0 18px;border:1px solid var(--border);}
+.today-time{font:600 11px var(--f-mono);color:var(--text-faint);letter-spacing:.08em;text-transform:uppercase}
+.today-now-block{font:800 22px/1.2 var(--f-display);color:var(--text);margin:6px 0 10px;}
+.today-now-sub{font:400 13px/1.4 var(--f-sans);color:var(--text-dim);margin-bottom:14px}
+.today-cta{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+.today-cta button{flex:1;min-width:120px;padding:12px 14px;border-radius:10px;border:none;
+  background:var(--g-flame);color:#0a0a10;font:700 13px var(--f-sans);
+  cursor:pointer;touch-action:manipulation;min-height:48px;letter-spacing:.04em;text-transform:uppercase}
+.today-cta button.ghost{background:transparent;color:var(--text-dim);border:1px solid var(--border)}
+
+.today-prios{margin:14px 0}
+.today-prios-h{font:700 11px var(--f-sans);color:var(--text-faint);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px}
+.today-prio{display:flex;align-items:center;gap:10px;padding:10px 12px;
+  background:var(--surface-2);border-radius:10px;margin-bottom:6px;
+  border:1px solid var(--border);min-height:44px}
+.today-prio-num{width:24px;height:24px;border-radius:50%;background:var(--flame);color:#0a0a10;
+  display:flex;align-items:center;justify-content:center;font:700 12px var(--f-mono);flex-shrink:0}
+.today-prio-text{flex:1;font:500 13px var(--f-sans);color:var(--text)}
+.today-prio-domain{font:600 9px var(--f-mono);color:var(--text-faint);text-transform:uppercase;letter-spacing:.05em}
+
+.today-domains{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:14px 0}
+@media(min-width:600px){.today-domains{grid-template-columns:repeat(4,1fr)}}
+.today-domain-card{padding:10px;background:var(--surface);border:1px solid var(--border);
+  border-radius:10px;cursor:pointer;touch-action:manipulation;min-height:60px}
+.today-domain-card .l{font:600 9px var(--f-mono);color:var(--text-faint);text-transform:uppercase;letter-spacing:.05em}
+.today-domain-card .v{font:700 12px var(--f-sans);color:var(--text);margin-top:4px;line-height:1.3}
+
+/* ─── HEALTH FIELDS ─── */
+.health-fields{display:grid;gap:6px;margin:8px 0;padding:10px;
+  background:rgba(248,113,113,.04);border:1px solid rgba(248,113,113,.15);border-radius:10px}
+.health-fields-h{font:600 10px var(--f-mono);color:var(--coral-2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.health-row{display:grid;grid-template-columns:80px 1fr 40px;gap:8px;align-items:center;font:13px var(--f-sans)}
+.health-row label{color:var(--text-faint);font:600 11px var(--f-sans)}
+.health-row input[type=range]{width:100%;accent-color:var(--coral)}
+.health-row .val{text-align:center;font:700 13px var(--f-mono);color:var(--text)}
+
+/* ─── QUICK CAPTURE FAB ─── */
+.qc-fab{position:fixed;bottom:calc(80px + var(--safe-b));right:14px;
+  width:56px;height:56px;border-radius:50%;background:var(--g-flame);
+  border:none;color:#0a0a10;font-size:24px;cursor:pointer;
+  box-shadow:0 8px 24px rgba(255,107,53,.4);
+  display:flex;align-items:center;justify-content:center;z-index:9990;
+  touch-action:manipulation;transition:transform .15s}
+.qc-fab:active{transform:scale(.92)}
+.qc-fab.recording{background:linear-gradient(135deg,#dc2626,#991b1b);animation:qc-pulse 1.2s infinite}
+@keyframes qc-pulse{0%,100%{box-shadow:0 8px 24px rgba(220,38,38,.5)}50%{box-shadow:0 8px 32px rgba(220,38,38,.9)}}
+
+.qc-modal{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9991;display:none;
+  align-items:flex-end;justify-content:center;padding:20px;backdrop-filter:blur(8px)}
+.qc-modal.open{display:flex}
+.qc-sheet{background:var(--surface);border:1px solid var(--border);border-radius:18px;
+  padding:18px;width:100%;max-width:480px;max-height:80vh;overflow-y:auto}
+.qc-sheet h3{font:700 14px var(--f-sans);color:var(--text);margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+.qc-sheet h3 button{background:none;border:none;color:var(--text-faint);font-size:22px;cursor:pointer;padding:4px 8px}
+.qc-status{font:500 12px var(--f-sans);color:var(--text-faint);margin:8px 0;text-align:center;min-height:20px}
+.qc-status.live{color:var(--coral);font-weight:700}
+.qc-transcript{background:var(--surface-2);border-radius:10px;padding:12px;min-height:80px;
+  font:14px/1.5 var(--f-sans);color:var(--text);margin:10px 0;white-space:pre-wrap;
+  max-height:200px;overflow-y:auto}
+.qc-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.qc-actions button{padding:12px;border-radius:10px;font:600 12px var(--f-sans);
+  cursor:pointer;touch-action:manipulation;min-height:48px;border:1px solid var(--border);
+  background:var(--surface);color:var(--text);text-transform:uppercase;letter-spacing:.04em}
+.qc-actions button.primary{background:var(--g-flame);color:#0a0a10;border-color:transparent}
+
+/* ─── BACKUP UI ─── */
+.bk-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;margin:12px 0}
+.bk-card h4{font:700 12px var(--f-sans);color:var(--text);margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em}
+.bk-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.bk-row button{flex:1;min-width:100px;padding:10px 12px;border-radius:8px;border:1px solid var(--border);
+  background:var(--surface-2);color:var(--text);font:600 12px var(--f-sans);cursor:pointer;
+  touch-action:manipulation;min-height:44px}
+.bk-row button.primary{background:var(--g-flame);color:#0a0a10;border-color:transparent}
+.bk-info{font:11px var(--f-mono);color:var(--text-faint);margin-top:6px}
+.bk-token{width:100%;padding:10px;background:var(--surface-2);border:1px solid var(--border);
+  border-radius:8px;color:var(--text);font:12px var(--f-mono);margin:6px 0;min-height:40px}
+
+/* ─── SETTINGS PAGE ─── */
+.settings-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;margin:12px 0}
+.settings-section h3{font:700 13px var(--f-sans);color:var(--text);margin-bottom:10px;
+  text-transform:uppercase;letter-spacing:.04em;display:flex;align-items:center;gap:8px}
+.settings-row{display:flex;justify-content:space-between;align-items:center;
+  padding:10px 0;border-bottom:1px solid var(--border-soft);min-height:44px;gap:10px}
+.settings-row:last-child{border-bottom:none}
+.settings-row label{font:500 13px var(--f-sans);color:var(--text-dim);flex:1}
+.settings-row .ctrl{flex-shrink:0}
+.toggle{position:relative;width:44px;height:24px;background:var(--surface-2);border-radius:12px;
+  cursor:pointer;border:1px solid var(--border);transition:background .2s}
+.toggle.on{background:var(--flame)}
+.toggle::after{content:'';position:absolute;top:2px;left:2px;width:18px;height:18px;
+  background:white;border-radius:50%;transition:transform .2s}
+.toggle.on::after{transform:translateX(20px)}
+
+/* ─── OFFLINE INDICATOR ─── */
+.offline-bar{position:fixed;top:0;left:0;right:0;background:var(--coral);color:white;
+  text-align:center;padding:6px;font:600 12px var(--f-sans);z-index:9999;display:none}
+.offline-bar.show{display:block}
+</style>
+
+<script id="ultimate-v3">
+(function(){
+'use strict';
+if (window.__ultimateV3) return;
+window.__ultimateV3 = true;
+
+const NS = 'dashv2_';
+const sg = (k, d) => { try { return JSON.parse(localStorage.getItem(NS+k)) ?? d; } catch(_){ return d; } };
+const ss = (k, v) => { try { localStorage.setItem(NS+k, JSON.stringify(v)); return true; } catch(_){ return false; } };
+const log = (...a) => { try { console.warn('[v3]', ...a); } catch(_){} };
+
+// ═══════════════════════════════════════════════════════════
+// 1. INDEXEDDB (large datasets)
+// ═══════════════════════════════════════════════════════════
+const DB = {
+  name: 'ultimate_v3',
+  version: 1,
+  _db: null,
+
+  async open(){
+    if (this._db) return this._db;
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(this.name, this.version);
+      req.onupgradeneeded = (e) => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains('logs'))    db.createObjectStore('logs', { keyPath: 'date' });
+        if (!db.objectStoreNames.contains('trades'))  db.createObjectStore('trades', { keyPath: 'ts' });
+        if (!db.objectStoreNames.contains('aiHist'))  db.createObjectStore('aiHist', { keyPath: 'timestamp' });
+        if (!db.objectStoreNames.contains('captures'))db.createObjectStore('captures', { keyPath: 'ts' });
+      };
+      req.onsuccess = () => { this._db = req.result; resolve(this._db); };
+      req.onerror = () => reject(req.error);
+    });
+  },
+
+  async put(store, value){
+    const db = await this.open();
+    return new Promise((res, rej) => {
+      const tx = db.transaction(store, 'readwrite');
+      tx.objectStore(store).put(value);
+      tx.oncomplete = () => res(true);
+      tx.onerror = () => rej(tx.error);
+    });
+  },
+
+  async getAll(store){
+    const db = await this.open();
+    return new Promise((res, rej) => {
+      const tx = db.transaction(store, 'readonly');
+      const req = tx.objectStore(store).getAll();
+      req.onsuccess = () => res(req.result || []);
+      req.onerror = () => rej(req.error);
+    });
+  },
+
+  async clear(store){
+    const db = await this.open();
+    return new Promise((res, rej) => {
+      const tx = db.transaction(store, 'readwrite');
+      tx.objectStore(store).clear();
+      tx.oncomplete = () => res(true);
+      tx.onerror = () => rej(tx.error);
+    });
+  }
+};
+
+// Migrate localStorage logs/trades/aiHistory to IndexedDB once
+async function migrateToIDB(){
+  if (sg('idb_migrated_v3', false)) return;
+  try {
+    const logs = sg('logs', {}) || {};
+    for (const date in logs){
+      await DB.put('logs', { date, ...logs[date] });
+    }
+    const trades = sg('trading_journal_v2', []) || [];
+    for (const t of trades){ await DB.put('trades', t); }
+    const ai = sg('ai_history_v2', []) || [];
+    for (const e of ai){ await DB.put('aiHist', e); }
+    ss('idb_migrated_v3', true);
+    log('migration IDB OK', { logs: Object.keys(logs).length, trades: trades.length, ai: ai.length });
+  } catch(e){ log('migration failed', e); }
+}
+
+// ═══════════════════════════════════════════════════════════
+// 2. BACKUP / EXPORT / IMPORT
+// ═══════════════════════════════════════════════════════════
+const Backup = {
+  async exportAll(){
+    const data = {
+      version: 'v3',
+      exportedAt: new Date().toISOString(),
+      localStorage: {},
+      idb: {
+        logs:     await DB.getAll('logs').catch(() => []),
+        trades:   await DB.getAll('trades').catch(() => []),
+        aiHist:   await DB.getAll('aiHist').catch(() => []),
+        captures: await DB.getAll('captures').catch(() => [])
+      }
+    };
+    for (let i = 0; i < localStorage.length; i++){
+      const k = localStorage.key(i);
+      if (k && k.startsWith(NS)){
+        data.localStorage[k] = localStorage.getItem(k);
+      }
+    }
+    return data;
+  },
+
+  async download(){
+    const data = await this.exportAll();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ultimate-backup-${new Date().toISOString().slice(0,10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    ss('last_backup_at', Date.now());
+    return true;
+  },
+
+  async restore(file){
+    const text = await file.text();
+    let data;
+    try { data = JSON.parse(text); }
+    catch(e){ throw new Error('Fichier invalide'); }
+    if (!data.version || !data.localStorage){
+      throw new Error('Format de backup non reconnu');
+    }
+    if (!confirm('Restaurer va REMPLACER toutes tes données actuelles. Continuer ?')) return false;
+
+    // localStorage
+    for (const k in data.localStorage){
+      try { localStorage.setItem(k, data.localStorage[k]); } catch(_){}
+    }
+    // IndexedDB
+    if (data.idb){
+      await DB.clear('logs');
+      for (const item of (data.idb.logs || [])) await DB.put('logs', item);
+      await DB.clear('trades');
+      for (const item of (data.idb.trades || [])) await DB.put('trades', item);
+      await DB.clear('aiHist');
+      for (const item of (data.idb.aiHist || [])) await DB.put('aiHist', item);
+    }
+    alert('Restauration terminée. La page va se recharger.');
+    location.reload();
+  },
+
+  // GitHub Gist sync (token saisi par user, stocké local)
+  async pushToGist(){
+    const token = sg('gh_token', '');
+    if (!token) throw new Error('Token GitHub non configuré');
+    const data = await this.exportAll();
+    const gistId = sg('gh_gist_id', '');
+    const body = {
+      description: `Ultimate Dashboard backup ${new Date().toISOString()}`,
+      public: false,
+      files: { 'ultimate-backup.json': { content: JSON.stringify(data, null, 2) } }
+    };
+    const url = gistId ? `https://api.github.com/gists/${gistId}` : 'https://api.github.com/gists';
+    const method = gistId ? 'PATCH' : 'POST';
+    const res = await fetch(url, {
+      method, headers: { 'Authorization': 'token '+token, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) throw new Error('GitHub: ' + res.status + ' — vérifie ton token (scope: gist)');
+    const json = await res.json();
+    if (!gistId) ss('gh_gist_id', json.id);
+    ss('last_gist_push', Date.now());
+    return json.html_url;
+  },
+
+  async pullFromGist(){
+    const token = sg('gh_token', '');
+    const gistId = sg('gh_gist_id', '');
+    if (!token || !gistId) throw new Error('Token ou Gist ID manquant');
+    const res = await fetch(`https://api.github.com/gists/${gistId}`, {
+      headers: { 'Authorization': 'token '+token }
+    });
+    if (!res.ok) throw new Error('GitHub: ' + res.status);
+    const json = await res.json();
+    const file = json.files['ultimate-backup.json'];
+    if (!file) throw new Error('Fichier backup absent du Gist');
+    const blob = new Blob([file.content], { type: 'application/json' });
+    const fakeFile = new File([blob], 'restore.json');
+    return this.restore(fakeFile);
+  }
+};
+
+// Auto-backup local quotidien (silencieux)
+async function autoBackupCheck(){
+  const last = sg('last_auto_backup', 0);
+  const now = Date.now();
+  if (now - last < 24 * 3600 * 1000) return;
+  try {
+    const data = await Backup.exportAll();
+    ss('auto_backup_data', data);  // garde 1 backup en localStorage
+    ss('last_auto_backup', now);
+    log('auto-backup OK');
+  } catch(e){ log('auto-backup fail', e); }
+}
+
+// ═══════════════════════════════════════════════════════════
+// 3. VOICE INPUT (Web Speech API)
+// ═══════════════════════════════════════════════════════════
+const Voice = {
+  rec: null,
+  active: false,
+  onResult: null,
+
+  isSupported(){
+    return 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
+  },
+
+  start(onResult, onEnd){
+    if (!this.isSupported()) throw new Error('Voice non supporté sur ce navigateur');
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    this.rec = new SR();
+    this.rec.lang = 'fr-FR';
+    this.rec.interimResults = true;
+    this.rec.continuous = true;
+    this.active = true;
+    let finalText = '';
+    this.rec.onresult = (e) => {
+      let interim = '';
+      for (let i = e.resultIndex; i < e.results.length; i++){
+        const t = e.results[i][0].transcript;
+        if (e.results[i].isFinal) finalText += t + ' ';
+        else interim += t;
+      }
+      if (onResult) onResult(finalText + interim, finalText);
+    };
+    this.rec.onend = () => {
+      this.active = false;
+      if (onEnd) onEnd(finalText);
+    };
+    this.rec.onerror = (e) => { log('voice error', e.error); this.active = false; };
+    this.rec.start();
+  },
+
+  stop(){
+    if (this.rec && this.active){
+      try { this.rec.stop(); } catch(_){}
+      this.active = false;
+    }
+  }
+};
+
+// ═══════════════════════════════════════════════════════════
+// 4. QUICK CAPTURE (FAB + voice + AI parse + dispatch)
+// ═══════════════════════════════════════════════════════════
+const QuickCapture = {
+  el: null,
+  modal: null,
+
+  install(){
+    if (this.el) return;
+    // FAB
+    const fab = document.createElement('button');
+    fab.className = 'qc-fab';
+    fab.id = 'qc-fab';
+    fab.innerHTML = '🎙';
+    fab.setAttribute('aria-label', 'Quick capture');
+    fab.addEventListener('click', () => this.open());
+    document.body.appendChild(fab);
+    this.el = fab;
+
+    // Modal
+    const modal = document.createElement('div');
+    modal.className = 'qc-modal';
+    modal.id = 'qc-modal';
+    modal.innerHTML = `
+      <div class="qc-sheet">
+        <h3>🎙 Quick capture <button id="qc-close" aria-label="Fermer">✕</button></h3>
+        <div class="qc-status" id="qc-status">Tape sur le micro pour parler, ou écris.</div>
+        <div class="qc-transcript" id="qc-transcript" contenteditable="true" placeholder="Ce que tu veux logger…"></div>
+        <div class="qc-actions">
+          <button id="qc-rec" class="primary">🎙 Démarrer</button>
+          <button id="qc-stop" disabled>⏹ Arrêter</button>
+          <button id="qc-save">💾 Sauver</button>
+          <button id="qc-ai" class="primary">🤖 Envoyer à Claude</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    this.modal = modal;
+
+    modal.addEventListener('click', e => { if (e.target === modal) this.close(); });
+    document.getElementById('qc-close').addEventListener('click', () => this.close());
+    document.getElementById('qc-rec').addEventListener('click', () => this.startRec());
+    document.getElementById('qc-stop').addEventListener('click', () => this.stopRec());
+    document.getElementById('qc-save').addEventListener('click', () => this.save());
+    document.getElementById('qc-ai').addEventListener('click', () => this.askAI());
+  },
+
+  open(){ this.modal.classList.add('open'); },
+  close(){ this.modal.classList.remove('open'); Voice.stop(); this.el.classList.remove('recording'); },
+
+  startRec(){
+    if (!Voice.isSupported()){
+      document.getElementById('qc-status').textContent = '⚠️ Voix non supportée. Tape directement.';
+      return;
+    }
+    const transcriptEl = document.getElementById('qc-transcript');
+    const status = document.getElementById('qc-status');
+    document.getElementById('qc-rec').disabled = true;
+    document.getElementById('qc-stop').disabled = false;
+    this.el.classList.add('recording');
+    status.classList.add('live');
+    status.textContent = '🔴 enregistrement…';
+    Voice.start(
+      (text) => { transcriptEl.textContent = text; },
+      (final) => {
+        document.getElementById('qc-rec').disabled = false;
+        document.getElementById('qc-stop').disabled = true;
+        this.el.classList.remove('recording');
+        status.classList.remove('live');
+        status.textContent = 'Arrêté.';
+      }
+    );
+  },
+
+  stopRec(){ Voice.stop(); },
+
+  async save(){
+    const text = document.getElementById('qc-transcript').textContent.trim();
+    if (!text) return;
+    const capture = { ts: new Date().toISOString(), text, source: 'voice' };
+    await DB.put('captures', capture);
+    document.getElementById('qc-status').textContent = '✓ Capture sauvegardée';
+    setTimeout(() => this.close(), 800);
+  },
+
+  async askAI(){
+    const text = document.getElementById('qc-transcript').textContent.trim();
+    if (!text) return;
+    const status = document.getElementById('qc-status');
+    status.textContent = '🤖 Claude réfléchit…';
+    if (!window.__aiCore?.coachAsk){ status.textContent = '⚠️ AI core non chargé'; return; }
+    const data = await window.__aiCore.coachAsk({
+      mode: 'coach',
+      question: text,
+      context: window.__aiCore.buildContextV2(),
+      max_tokens: 220
+    });
+    const transcript = document.getElementById('qc-transcript');
+    transcript.textContent = (data.answer || '(pas de réponse)') +
+      (data.next_action_title ? '\n\n→ ' + data.next_action_title : '');
+    // Save the capture + response
+    await DB.put('captures', { ts: new Date().toISOString(), text, response: data, source: 'voice+ai' });
+    status.textContent = '✓ Réponse Claude';
+  }
+};
+
+// ═══════════════════════════════════════════════════════════
+// 5. TODAY VIEW (onglet 🏠 par défaut)
+// ═══════════════════════════════════════════════════════════
+const Today = {
+  inject(){
+    const tabsBar = document.querySelector('.tabs');
+    if (tabsBar && !document.querySelector('[data-tab="today"]')){
+      const tab = document.createElement('div');
+      tab.className = 'tab';
+      tab.dataset.tab = 'today';
+      tab.innerHTML = '🏠 Aujourd\'hui';
+      tabsBar.insertBefore(tab, tabsBar.firstChild);
+    }
+
+    const main = document.querySelector('main') || document.querySelector('.app') || document.body;
+    if (main && !document.getElementById('p-today')){
+      const section = document.createElement('section');
+      section.id = 'p-today';
+      section.className = 'page';
+      section.style.display = 'none';
+      section.innerHTML = `
+        <div class="today-hero">
+          <div class="today-time" id="td-time">— · —</div>
+          <div class="today-now-block" id="td-now">Charge en cours…</div>
+          <div class="today-now-sub" id="td-sub">—</div>
+          <div class="today-cta">
+            <button id="td-focus">▶ Démarrer focus</button>
+            <button id="td-ai" class="ghost">🤖 Que faire maintenant ?</button>
+          </div>
+        </div>
+
+        <div class="today-prios">
+          <div class="today-prios-h">⚡ 3 priorités du jour</div>
+          <div id="td-prios"></div>
+        </div>
+
+        <div class="today-prios">
+          <div class="today-prios-h">📌 Reprends où tu t'étais arrêté</div>
+          <div class="today-domains" id="td-domains"></div>
+        </div>
+
+        <div id="td-ai-out"></div>
+      `;
+      main.insertBefore(section, main.firstChild);
+    }
+    this.refresh();
+
+    // Auto-refresh every minute
+    if (!this._timer) this._timer = setInterval(() => this.refresh(), 60000);
+
+    // Bind buttons (rebound safely)
+    setTimeout(() => {
+      const f = document.getElementById('td-focus');
+      const a = document.getElementById('td-ai');
+      if (f && !f.dataset.b){ f.dataset.b='1'; f.addEventListener('click', () => {
+        const pomoBtn = document.querySelector('[data-action="pomo-start"], #pomo-start, .pomo-start');
+        if (pomoBtn) pomoBtn.click();
+        else alert('Pomodoro non trouvé — démarre depuis l\'onglet Routine.');
+      });}
+      if (a && !a.dataset.b){ a.dataset.b='1'; a.addEventListener('click', () => this.askAI()); }
+    }, 100);
+  },
+
+  refresh(){
+    const ctx = (window.__aiCore?.buildContextV2) ? window.__aiCore.buildContextV2() : {};
+    const now = new Date();
+    const time = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    const date = now.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+
+    const t = document.getElementById('td-time');
+    if (t) t.textContent = `${time} · ${date}`;
+
+    const block = ctx.block?.current;
+    const now_ = document.getElementById('td-now');
+    const sub = document.getElementById('td-sub');
+    if (now_){
+      if (block && (block.label || block.title)){
+        now_.textContent = block.label || block.title || 'Bloc actuel';
+        if (sub) sub.textContent = block.detail || block.sub || ctx.shift || '';
+      } else {
+        now_.textContent = 'Pas de bloc actif';
+        if (sub) sub.textContent = 'Choisis ta prochaine action ↓';
+      }
+    }
+
+    // Priorités : depuis bookmarks récents + suggestion AI précédente
+    const prios = document.getElementById('td-prios');
+    if (prios){
+      const items = [];
+      const last = ctx.lastAISuggestion;
+      if (last?.next_action_title){
+        items.push({ text: last.next_action_title, domain: 'IA suggestion' });
+      }
+      const bk = ctx.bookmarks?.current || {};
+      // Priorité aux 3 domaines les plus récemment maj
+      const sorted = Object.values(bk).sort((a,b) => (b.updatedAt||'').localeCompare(a.updatedAt||''));
+      for (const b of sorted.slice(0, 3 - items.length)){
+        items.push({ text: 'Reprendre : ' + b.text, domain: b.label });
+      }
+      while (items.length < 3){
+        items.push({ text: 'Définis une priorité depuis l\'onglet Routine', domain: '—' });
+      }
+      prios.innerHTML = items.slice(0,3).map((it, i) => `
+        <div class="today-prio">
+          <div class="today-prio-num">${i+1}</div>
+          <div style="flex:1;min-width:0">
+            <div class="today-prio-text">${esc(it.text)}</div>
+            <div class="today-prio-domain">${esc(it.domain)}</div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Domaines
+    const dom = document.getElementById('td-domains');
+    if (dom){
+      const bk = ctx.bookmarks?.current || {};
+      const known = ['epfc','code','nl','trading','read','chess','ai','vinted'];
+      dom.innerHTML = known.map(k => {
+        const b = bk[k];
+        const txt = b ? b.text : 'Pas de bookmark';
+        const lbl = b?.label || k.toUpperCase();
+        return `<div class="today-domain-card" data-domain="${k}">
+          <div class="l">${esc(lbl)}</div>
+          <div class="v">${esc(txt.length > 60 ? txt.slice(0,60)+'…' : txt)}</div>
+        </div>`;
+      }).join('');
+    }
+  },
+
+  async askAI(){
+    const out = document.getElementById('td-ai-out');
+    if (!out) return;
+    out.innerHTML = '<div style="padding:12px;color:var(--text-faint);font-size:13px;text-align:center">🤖 Claude réfléchit…</div>';
+    if (!window.__aiCore?.coachAsk){ out.textContent = '⚠️ AI core non chargé'; return; }
+    const data = await window.__aiCore.coachAsk({
+      mode: 'coach',
+      question: 'En tenant compte de mes contraintes (cervicales C7, shifts, EPFC à venir, sick leave) et de mes 8 domaines actifs, quelle est la meilleure action à entreprendre maintenant pour les 25 prochaines minutes ? Ne pas surcharger. Une seule action concrète.',
+      context: window.__aiCore.buildContextV2(),
+      max_tokens: 200
+    });
+    window.__aiCore.renderAIResponse(out, { ...data, _timestamp: new Date().toISOString() }, { allowApply: true });
+  }
+};
+
+// ═══════════════════════════════════════════════════════════
+// 6. HEALTH FIELDS (cervicales / sommeil / énergie)
+// ═══════════════════════════════════════════════════════════
+const Health = {
+  inject(){
+    const saveBtn = document.getElementById('log-save');
+    if (!saveBtn || document.getElementById('health-fields')) return;
+    const wrap = document.createElement('div');
+    wrap.id = 'health-fields';
+    wrap.className = 'health-fields';
+    wrap.innerHTML = `
+      <div class="health-fields-h">🩺 Santé du jour (C7 monitoring)</div>
+      <div class="health-row">
+        <label>Douleur</label>
+        <input type="range" min="0" max="10" step="1" id="hf-pain" value="0">
+        <div class="val" id="hf-pain-v">0</div>
+      </div>
+      <div class="health-row">
+        <label>Sommeil (h)</label>
+        <input type="range" min="0" max="12" step="0.5" id="hf-sleep" value="7">
+        <div class="val" id="hf-sleep-v">7h</div>
+      </div>
+      <div class="health-row">
+        <label>Énergie</label>
+        <input type="range" min="1" max="5" step="1" id="hf-energy" value="3">
+        <div class="val" id="hf-energy-v">3</div>
+      </div>
+      <div class="health-row">
+        <label>Tabac (cig.)</label>
+        <input type="range" min="0" max="20" step="1" id="hf-smoke" value="0">
+        <div class="val" id="hf-smoke-v">0</div>
+      </div>
+    `;
+    saveBtn.parentElement.insertBefore(wrap, saveBtn);
+
+    // Pré-remplir
+    const todayKey = new Date().toISOString().slice(0,10);
+    const saved = sg('health_'+todayKey, null);
+    if (saved){
+      ['pain','sleep','energy','smoke'].forEach(f => {
+        const el = document.getElementById('hf-'+f);
+        if (el && saved[f] !== undefined) el.value = saved[f];
+      });
+    }
+
+    // Live update
+    ['pain','sleep','energy','smoke'].forEach(f => {
+      const el = document.getElementById('hf-'+f);
+      const v = document.getElementById('hf-'+f+'-v');
+      if (el && v){
+        const update = () => {
+          const val = el.value;
+          if (f === 'sleep') v.textContent = val + 'h';
+          else v.textContent = val;
+        };
+        el.addEventListener('input', update);
+        update();
+      }
+    });
+
+    // Hook save
+    saveBtn.addEventListener('click', async () => {
+      const data = {
+        date: todayKey,
+        pain:   parseFloat(document.getElementById('hf-pain').value),
+        sleep:  parseFloat(document.getElementById('hf-sleep').value),
+        energy: parseFloat(document.getElementById('hf-energy').value),
+        smoke:  parseFloat(document.getElementById('hf-smoke').value),
+        savedAt: new Date().toISOString()
+      };
+      ss('health_'+todayKey, data);
+      // Push aussi dans IDB logs
+      try {
+        const existing = (await DB.getAll('logs')).find(l => l.date === todayKey) || { date: todayKey };
+        Object.assign(existing, { health: data });
+        await DB.put('logs', existing);
+      } catch(_){}
+      // Alerte si douleur élevée
+      if (data.pain >= 6){
+        alert('⚠️ Douleur ' + data.pain + '/10 — repos obligatoire. Pas de sport ni longue session écran.');
+      }
+    }, true);
+  }
+};
+
+// ═══════════════════════════════════════════════════════════
+// 7. SETTINGS PAGE (backup, GitHub token, etc.)
+// ═══════════════════════════════════════════════════════════
+const Settings = {
+  inject(){
+    const tabsBar = document.querySelector('.tabs');
+    if (tabsBar && !document.querySelector('[data-tab="settings"]')){
+      const tab = document.createElement('div');
+      tab.className = 'tab';
+      tab.dataset.tab = 'settings';
+      tab.innerHTML = '⚙️';
+      tab.title = 'Paramètres';
+      tabsBar.appendChild(tab);
+    }
+
+    const main = document.querySelector('main') || document.querySelector('.app') || document.body;
+    if (main && !document.getElementById('p-settings')){
+      const section = document.createElement('section');
+      section.id = 'p-settings';
+      section.className = 'page';
+      section.style.display = 'none';
+      section.innerHTML = `
+        <h1 class="page-title">⚙️ Paramètres</h1>
+
+        <div class="settings-section">
+          <h3>💾 Backup local</h3>
+          <div class="settings-row">
+            <label>Télécharger un backup JSON complet (localStorage + IndexedDB)</label>
+            <div class="ctrl"><button id="bk-download" class="trd-btn primary">Télécharger</button></div>
+          </div>
+          <div class="settings-row">
+            <label>Restaurer depuis un fichier JSON</label>
+            <div class="ctrl"><label class="trd-btn" style="cursor:pointer;display:inline-block">📁 Choisir<input type="file" id="bk-restore-file" accept="application/json" style="display:none"></label></div>
+          </div>
+          <div class="bk-info" id="bk-last">Dernier backup : —</div>
+        </div>
+
+        <div class="settings-section">
+          <h3>☁️ Backup GitHub Gist (privé)</h3>
+          <div class="settings-row" style="display:block">
+            <label>Token GitHub (scope <b>gist</b> uniquement)</label>
+            <input type="password" id="bk-token" class="bk-token" placeholder="ghp_...">
+            <div class="bk-info">Stocké uniquement dans ton navigateur. <a href="https://github.com/settings/tokens/new?scopes=gist&description=ultimate-dashboard" target="_blank" rel="noopener" style="color:var(--flame-2)">Créer un token</a></div>
+          </div>
+          <div class="bk-row">
+            <button id="bk-token-save" class="primary">Sauver token</button>
+            <button id="bk-gist-push">⬆️ Push vers Gist</button>
+            <button id="bk-gist-pull">⬇️ Pull depuis Gist</button>
+          </div>
+          <div class="bk-info" id="bk-gist-info">—</div>
+        </div>
+
+        <div class="settings-section">
+          <h3>🔔 Notifications</h3>
+          <div class="settings-row">
+            <label>Autoriser notifications navigateur</label>
+            <div class="ctrl"><button id="notif-permit" class="trd-btn">Demander</button></div>
+          </div>
+          <div class="settings-row">
+            <label>Test notification</label>
+            <div class="ctrl"><button id="notif-test" class="trd-btn">Tester</button></div>
+          </div>
+          <div class="bk-info">Push serveur (rappels automatiques) → nécessite config Netlify (guide à venir)</div>
+        </div>
+
+        <div class="settings-section">
+          <h3>📊 Stockage</h3>
+          <div class="settings-row">
+            <label>Taille localStorage</label>
+            <div class="ctrl" id="st-ls">—</div>
+          </div>
+          <div class="settings-row">
+            <label>Entrées IndexedDB</label>
+            <div class="ctrl" id="st-idb">—</div>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <h3>🎙 Voice & Quick Capture</h3>
+          <div class="settings-row">
+            <label>Voice supporté ?</label>
+            <div class="ctrl" id="st-voice">—</div>
+          </div>
+          <div class="settings-row">
+            <label>Service worker offline</label>
+            <div class="ctrl" id="st-sw">—</div>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <h3>⚠️ Zone dangereuse</h3>
+          <div class="bk-row">
+            <button id="bk-clear-cache">Vider cache AI</button>
+            <button id="bk-reset" style="color:var(--coral);border-color:rgba(248,113,113,.3)">Reset complet</button>
+          </div>
+        </div>
+      `;
+      main.appendChild(section);
+    }
+
+    setTimeout(() => this.bind(), 100);
+  },
+
+  bind(){
+    const $ = id => document.getElementById(id);
+    if ($('bk-download') && !$('bk-download').dataset.b){
+      $('bk-download').dataset.b='1';
+      $('bk-download').addEventListener('click', () => Backup.download().then(() => alert('Backup téléchargé.')));
+    }
+    if ($('bk-restore-file') && !$('bk-restore-file').dataset.b){
+      $('bk-restore-file').dataset.b='1';
+      $('bk-restore-file').addEventListener('change', e => {
+        const f = e.target.files[0]; if (!f) return;
+        Backup.restore(f).catch(err => alert('Erreur: ' + err.message));
+      });
+    }
+    if ($('bk-token') && !$('bk-token').dataset.b){
+      $('bk-token').dataset.b='1';
+      $('bk-token').value = sg('gh_token', '');
+      $('bk-token-save').addEventListener('click', () => {
+        ss('gh_token', $('bk-token').value.trim());
+        alert('Token sauvegardé.');
+      });
+    }
+    if ($('bk-gist-push') && !$('bk-gist-push').dataset.b){
+      $('bk-gist-push').dataset.b='1';
+      $('bk-gist-push').addEventListener('click', async () => {
+        try {
+          $('bk-gist-info').textContent = '… push en cours';
+          const url = await Backup.pushToGist();
+          $('bk-gist-info').innerHTML = '✓ Sauvegardé : <a href="'+url+'" target="_blank" rel="noopener" style="color:var(--flame-2)">voir Gist</a>';
+        } catch(e){ $('bk-gist-info').textContent = '❌ ' + e.message; }
+      });
+    }
+    if ($('bk-gist-pull') && !$('bk-gist-pull').dataset.b){
+      $('bk-gist-pull').dataset.b='1';
+      $('bk-gist-pull').addEventListener('click', async () => {
+        try { await Backup.pullFromGist(); }
+        catch(e){ alert('❌ ' + e.message); }
+      });
+    }
+    if ($('notif-permit') && !$('notif-permit').dataset.b){
+      $('notif-permit').dataset.b='1';
+      $('notif-permit').addEventListener('click', async () => {
+        if (!('Notification' in window)){ alert('Non supporté'); return; }
+        const p = await Notification.requestPermission();
+        alert('Permission: ' + p);
+      });
+    }
+    if ($('notif-test') && !$('notif-test').dataset.b){
+      $('notif-test').dataset.b='1';
+      $('notif-test').addEventListener('click', () => {
+        if (Notification.permission !== 'granted'){ alert('Demande d\'abord la permission'); return; }
+        new Notification('Ultimate Dashboard', { body: 'Test notification ✓', icon: '/favicon.ico' });
+      });
+    }
+    if ($('bk-clear-cache') && !$('bk-clear-cache').dataset.b){
+      $('bk-clear-cache').dataset.b='1';
+      $('bk-clear-cache').addEventListener('click', () => {
+        let n = 0;
+        for (let i = localStorage.length - 1; i >= 0; i--){
+          const k = localStorage.key(i);
+          if (k && k.includes('ai_cache_v2_')){ localStorage.removeItem(k); n++; }
+        }
+        alert(n + ' entrée(s) cache vidée(s)');
+      });
+    }
+    if ($('bk-reset') && !$('bk-reset').dataset.b){
+      $('bk-reset').dataset.b='1';
+      $('bk-reset').addEventListener('click', () => {
+        if (!confirm('Supprimer TOUTES les données ? Irréversible.')) return;
+        if (!confirm('Vraiment ? Dernière chance.')) return;
+        for (let i = localStorage.length - 1; i >= 0; i--){
+          const k = localStorage.key(i);
+          if (k && k.startsWith(NS)) localStorage.removeItem(k);
+        }
+        DB.clear('logs').catch(()=>{});
+        DB.clear('trades').catch(()=>{});
+        DB.clear('aiHist').catch(()=>{});
+        DB.clear('captures').catch(()=>{});
+        location.reload();
+      });
+    }
+
+    // Status info
+    this.refreshStatus();
+  },
+
+  async refreshStatus(){
+    const $ = id => document.getElementById(id);
+    if ($('bk-last')){
+      const last = sg('last_backup_at', 0);
+      $('bk-last').textContent = last ? 'Dernier backup : ' + new Date(last).toLocaleString('fr-FR') : 'Aucun backup encore.';
+    }
+    if ($('st-ls')){
+      let total = 0;
+      for (let i = 0; i < localStorage.length; i++){
+        const k = localStorage.key(i);
+        if (k && k.startsWith(NS)) total += (localStorage.getItem(k) || '').length;
+      }
+      $('st-ls').textContent = (total/1024).toFixed(1) + ' KB';
+    }
+    if ($('st-idb')){
+      try {
+        const c = (await DB.getAll('logs')).length + (await DB.getAll('trades')).length + (await DB.getAll('aiHist')).length;
+        $('st-idb').textContent = c + ' entrées';
+      } catch(_){ $('st-idb').textContent = 'erreur'; }
+    }
+    if ($('st-voice')) $('st-voice').textContent = Voice.isSupported() ? '✓ oui' : '✗ non';
+    if ($('st-sw'))    $('st-sw').textContent = ('serviceWorker' in navigator) ? '✓ activé' : '✗ non supporté';
+  }
+};
+
+// ═══════════════════════════════════════════════════════════
+// 8. SERVICE WORKER (offline) + offline indicator
+// ═══════════════════════════════════════════════════════════
+function setupOffline(){
+  // Indicator
+  const bar = document.createElement('div');
+  bar.className = 'offline-bar';
+  bar.id = 'offline-bar';
+  bar.textContent = '⚠️ Hors-ligne · les données sont sauvegardées localement';
+  document.body.appendChild(bar);
+
+  const update = () => {
+    if (navigator.onLine) bar.classList.remove('show');
+    else bar.classList.add('show');
+  };
+  window.addEventListener('online', update);
+  window.addEventListener('offline', update);
+  update();
+
+  // Service worker registration (le SW lui-même doit être servi à la racine — voir /sw.js)
+  // Pour l'instant on registe en inline via Blob URL — mode dégradé.
+  if ('serviceWorker' in navigator){
+    const swCode = `
+      const CACHE = 'ultimate-v3';
+      self.addEventListener('install', e => self.skipWaiting());
+      self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
+      self.addEventListener('fetch', e => {
+        if (e.request.method !== 'GET') return;
+        if (e.request.url.includes('/.netlify/functions/')) return;
+        e.respondWith(
+          caches.open(CACHE).then(cache =>
+            cache.match(e.request).then(hit => hit || fetch(e.request).then(res => {
+              try { cache.put(e.request, res.clone()); } catch(_){}
+              return res;
+            }).catch(() => hit))
+          )
+        );
+      });
+    `;
+    try {
+      const blob = new Blob([swCode], { type: 'text/javascript' });
+      const url = URL.createObjectURL(blob);
+      navigator.serviceWorker.register(url).catch(e => log('SW register fail (normal en dev local)', e.message));
+    } catch(_){}
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// 9. SMART NOTIFICATIONS (rappels locaux intelligents)
+// ═══════════════════════════════════════════════════════════
+const Notif = {
+  // Rappel si pas de log depuis X jours
+  checkInactivity(){
+    if (Notification.permission !== 'granted') return;
+    const last = sg('last_log_save', 0);
+    const days = (Date.now() - last) / (24*3600*1000);
+    if (days > 3){
+      new Notification('Ultimate Dashboard', {
+        body: `Pas de log depuis ${Math.floor(days)} jours. 30 sec pour reprendre ta routine.`,
+        icon: '/favicon.ico',
+        tag: 'inactivity'
+      });
+    }
+  }
+};
+
+// ═══════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════
+function esc(s){ return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// ═══════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════
+async function init(){
+  await migrateToIDB();
+  Today.inject();
+  Health.inject();
+  Settings.inject();
+  QuickCapture.install();
+  setupOffline();
+  await autoBackupCheck();
+
+  // Re-inject sur switch d'onglet
+  document.addEventListener('click', e => {
+    const tab = e.target.closest('[data-tab]');
+    if (!tab) return;
+    setTimeout(() => {
+      Today.inject();
+      Health.inject();
+      Settings.inject();
+      Today.refresh();
+      Settings.refreshStatus();
+    }, 100);
+  });
+
+  // Check inactivity 1× au load
+  setTimeout(() => Notif.checkInactivity(), 5000);
+
+  // Public API
+  window.__ultimate = { DB, Backup, Voice, QuickCapture, Today, Health, Settings, Notif };
+  log('Ultimate v3 ready');
+}
+
+if (document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', () => setTimeout(init, 250));
+} else {
+  setTimeout(init, 250);
+}
+
+})();
+</script>
+
 </body>
 </html>
