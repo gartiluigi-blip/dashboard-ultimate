@@ -13,7 +13,9 @@
 <meta name="apple-mobile-web-app-title" content="Dashboard">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500..700;1,500..700&family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500..700;1,500..700&family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500..700;1,500..700&family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" media="print" onload="this.media='all';this.onload=null">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500..700;1,500..700&family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet"></noscript>
 <style>
   /* Fallback fonts with size-adjust — eliminates FOIT/FOUT layout shift while web fonts load.
      Numbers tuned by visually matching Outfit/Fraunces against system equivalents. */
@@ -44,6 +46,50 @@
    RESET + TOKENS
    ═══════════════════════════════════════════════════════════ */
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+
+/* ═══════════════════════════════════════════════════════════
+   BOUTONS · CORRECTIFS TAP / TOUCH (injecté)
+   - touch-action: manipulation = supprime le délai 300ms iOS
+   - min-height 44px sur tactile = norme Apple/Google de zone tap
+   - feedback visuel immédiat au :active (pas de wait sur :hover sur mobile)
+   ═══════════════════════════════════════════════════════════ */
+button,[role="button"],[role="tab"],.tab,.btn,.na-btn,.shift-chip,.chip,
+a[data-tab],a[data-go],[data-action],[data-go]{
+  touch-action:manipulation;
+  -webkit-user-select:none;
+  user-select:none;
+  cursor:pointer;
+}
+button:not(:disabled):active,
+[role="button"]:active,
+.tab:active,
+.btn:not(:disabled):active,
+.na-btn:not(:disabled):active,
+.shift-chip:active,
+.chip:active{
+  transform:scale(.97);
+  transition:transform .08s ease-out;
+}
+button:disabled,.btn:disabled,.na-btn:disabled{
+  cursor:not-allowed;opacity:.55;
+}
+/* Sécurité : tout élément .hidden ou [hidden] ne doit jamais bloquer les clics */
+.hidden,[hidden]{ pointer-events:none !important }
+
+/* Sur écrans tactiles uniquement : zone tap minimum 44px */
+@media (pointer:coarse){
+  .tab{
+    padding:12px 14px;            /* +3px vertical → ~44px de hauteur effective */
+    font-size:12px;               /* +1px pour lisibilité */
+    min-height:44px;
+  }
+  .na-btn,.btn,.shift-chip,.chip{
+    min-height:44px;
+  }
+  /* Espace minimum entre boutons proches pour éviter les mis-taps */
+  .na-actions{ gap:10px }
+}
+
 html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
 body{min-height:100vh;min-height:100dvh;overflow-x:hidden}
 button,input,textarea{font:inherit;color:inherit;background:none;border:none;outline:none}
@@ -11067,7 +11113,7 @@ refreshDerived();
       console.warn('⚠️ Dashboard tests:', passed+' passed,', failed+' failed');
       failures.forEach(f => console.warn(' ✗ ' + f));
     } else {
-      console.log('✅ Dashboard tests: all '+passed+' passed');
+
     }
     return { passed, failed, failures };
   }
@@ -11186,6 +11232,8 @@ refreshDerived();
 
   <script>
 (function(){
+  if (window.__askClaudeBound) return;
+  window.__askClaudeBound = true;
   const modal = document.getElementById('ask-claude');
   const fab = document.getElementById('ask-claude-fab');
   const closeBtn = document.getElementById('ac-close');
@@ -11321,578 +11369,7 @@ refreshDerived();
   setServerMode();
   setTimeout(setServerMode, 300);
 })();
-  </script>
-
-  <script>
-(function(){
-  if (window.__coachModesInstalled) return;
-  window.__coachModesInstalled = true;
-
-  const intro = document.querySelector('.ac-intro');
-  const suggestions = document.getElementById('ac-suggestions');
-  const input = document.getElementById('ac-input');
-
-  if (!intro || !input) return;
-
-  const MODES = {
-    coach: {
-      label: 'Coach',
-      placeholder: 'Ex. où mettre ma priorité cette semaine ?',
-      prompt: "Tu es le coach personnel de l'utilisateur. Réponds en français. Ton direct, concret, utile. Maximum 150 mots. Donne une direction claire, priorisée, sans blabla."
-    },
-    analyse: {
-      label: 'Analyse',
-      placeholder: 'Ex. analyse mes points faibles actuels',
-      prompt: "Tu es un analyste de performance personnelle. Réponds en français. Identifie les tendances, les faiblesses, les incohérences et les dérives à partir du contexte. Sois direct. Maximum 180 mots."
-    },
-    plan: {
-      label: 'Plan du jour',
-      placeholder: 'Ex. fais-moi mon plan jusqu’à ce soir',
-      prompt: "Tu es un planificateur opérationnel. Réponds en français. Transforme le contexte en plan d’action concret pour aujourd’hui, avec ordre clair, durée indicative et priorité. Maximum 180 mots."
-    }
-  };
-
-  let currentMode = 'coach';
-  window.__coachMode = currentMode;
-
-  const wrap = document.createElement('div');
-  wrap.id = 'ac-modes';
-  wrap.style.display = 'flex';
-  wrap.style.gap = '8px';
-  wrap.style.padding = '12px 18px 0';
-  wrap.style.flexWrap = 'wrap';
-
-  function styleBtn(btn, active){
-    btn.style.padding = '8px 12px';
-    btn.style.borderRadius = '999px';
-    btn.style.border = '1px solid ' + (active ? 'rgba(255,107,53,.45)' : 'var(--border)');
-    btn.style.background = active ? 'rgba(255,107,53,.12)' : 'rgba(255,255,255,.03)';
-    btn.style.color = active ? 'var(--flame-2)' : 'var(--text-dim)';
-    btn.style.fontSize = '11px';
-    btn.style.fontWeight = '700';
-    btn.style.cursor = 'pointer';
-  }
-
-  const buttons = {};
-
-  Object.entries(MODES).forEach(([key, conf]) => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.textContent = conf.label;
-    styleBtn(btn, key === currentMode);
-    btn.addEventListener('click', () => {
-      currentMode = key;
-      window.__coachMode = key;
-      input.placeholder = conf.placeholder;
-      Object.entries(buttons).forEach(([k, b]) => styleBtn(b, k === key));
-    });
-    buttons[key] = btn;
-    wrap.appendChild(btn);
-  });
-
-  intro.insertAdjacentElement('afterend', wrap);
-  input.placeholder = MODES[currentMode].placeholder;
-
-  const originalFetch = window.fetch.bind(window);
-
-  window.fetch = async function(resource, init){
-    const url = typeof resource === 'string' ? resource : (resource && resource.url) || '';
-
-    if (
-      url.includes('/.netlify/functions/coach') &&
-      init &&
-      typeof init.body === 'string'
-    ){
-      try {
-        const payload = JSON.parse(init.body);
-        const mode = window.__coachMode || 'coach';
-        payload.mode = mode;
-        payload.systemPrompt = MODES[mode].prompt;
-        init = {
-          ...init,
-          body: JSON.stringify(payload)
-        };
-      } catch (_) {}
-    }
-
-    return originalFetch(resource, init);
-  };
-})();
-  </script>
-  <script>
-(function(){
-  if (window.__coachJsonVisibleInstalled) return;
-  window.__coachJsonVisibleInstalled = true;
-
-  const originalFetch = window.fetch.bind(window);
-
-  window.fetch = async function(resource, init){
-    const url = typeof resource === 'string' ? resource : (resource && resource.url) || '';
-    const res = await originalFetch(resource, init);
-
-    if (!url.includes('/.netlify/functions/coach')) return res;
-
-    try {
-      const clone = res.clone();
-      const contentType = clone.headers.get('content-type') || '';
-      if (!contentType.includes('application/json')) return res;
-
-      const data = await clone.json();
-      if (!data || typeof data !== 'object') return res;
-      if (!data.answer) return res;
-
-      const extra = [];
-      if (data.priority) extra.push('Priorité : ' + data.priority);
-      if (data.focus_area) extra.push('Focus : ' + data.focus_area);
-      if (data.next_action_title) extra.push('Action : ' + data.next_action_title);
-      if (data.next_action_sub) extra.push(data.next_action_sub);
-      if (data.warning) extra.push('Alerte : ' + data.warning);
-
-      if (!extra.length) return res;
-
-      const merged = {
-        ...data,
-        answer: data.answer + '\\n\\n—\\n' + extra.join(' • ')
-      };
-
-      const headers = new Headers(res.headers);
-      headers.set('content-type', 'application/json');
-
-      return new Response(JSON.stringify(merged), {
-        status: res.status,
-        statusText: res.statusText,
-        headers
-      });
-    } catch (_) {
-      return res;
-    }
-  };
-})();
-  </script>
-<script>
-(function(){
-  if (window.__coachNextActionPreviewInstalled) return;
-  window.__coachNextActionPreviewInstalled = true;
-
-  const originalFetch = window.fetch.bind(window);
-
-  function applyCoachPreview(data){
-    if (!data || typeof data !== 'object') return;
-    if (!data.next_action_title && !data.next_action_sub) return;
-
-    const host = document.getElementById('next-action');
-    const label = document.getElementById('na-label');
-    const countdown = document.getElementById('na-countdown');
-    const title = document.getElementById('na-title');
-    const sub = document.getElementById('na-sub');
-    const startBtn = document.getElementById('na-start');
-    const snoozeBtn = document.getElementById('na-snooze');
-    const skipBtn = document.getElementById('na-skip');
-
-    if (!host || !label || !countdown || !title || !sub) return;
-
-    host.classList.remove('rest', 'idle');
-    host.style.borderColor = 'rgba(255,107,53,.45)';
-    host.style.boxShadow = '0 0 0 1px rgba(255,107,53,.12) inset';
-
-    label.textContent = 'Suggestion IA';
-    countdown.classList.remove('live');
-    countdown.textContent = (data.priority || 'medium').toUpperCase();
-
-    title.textContent = data.next_action_title || 'Action suggérée';
-    sub.textContent =
-      [
-        data.next_action_sub || '',
-        data.focus_area ? ('Focus : ' + data.focus_area) : '',
-        data.warning ? ('Alerte : ' + data.warning) : ''
-      ].filter(Boolean).join(' • ');
-
-    if (startBtn){
-      startBtn.textContent = 'Suggestion IA';
-      startBtn.disabled = true;
-      startBtn.style.opacity = '0.85';
-    }
-    if (snoozeBtn) snoozeBtn.disabled = true;
-    if (skipBtn) skipBtn.disabled = true;
-  }
-
-  window.fetch = async function(resource, init){
-    const res = await originalFetch(resource, init);
-    const url = typeof resource === 'string' ? resource : (resource && resource.url) || '';
-
-    if (!url.includes('/.netlify/functions/coach')) return res;
-
-    try {
-      const clone = res.clone();
-      const contentType = clone.headers.get('content-type') || '';
-      if (!contentType.includes('application/json')) return res;
-
-      const data = await clone.json();
-      applyCoachPreview(data);
-    } catch (_) {}
-
-    return res;
-  };
-})();
-</script>
-  <script>
-(function(){
-  if (window.__coachContextPatchInstalled) return;
-  window.__coachContextPatchInstalled = true;
-
-  function readText(id){
-    return document.getElementById(id)?.textContent?.trim() || '';
-  }
-
-  function safeGet(key, fallback){
-    try {
-      if (typeof _g === 'function') return _g(key, fallback);
-      return fallback;
-    } catch (_) {
-      return fallback;
-    }
-  }
-
-  function getBookmarksSummary(){
-    const candidates = [
-      'bookmark_history',
-      'bookmarks',
-      'resume_points',
-      'last_positions',
-      'social_bookmarks',
-      'link_bookmarks'
-    ];
-
-    const out = {};
-    for (const key of candidates){
-      const val = safeGet(key, null);
-      if (val && typeof val === 'object') {
-        out[key] = val;
-      }
-    }
-    return out;
-  }
-
-  function getNextActionSummary(){
-    return {
-      label: readText('na-label'),
-      countdown: readText('na-countdown'),
-      title: readText('na-title'),
-      sub: readText('na-sub')
-    };
-  }
-
-  function getCurrentHomeSummary(){
-    return {
-      today_card_title: readText('today-main-title'),
-      today_card_sub: readText('today-main-sub'),
-      current_block: readText('current-block') || readText('now-title') || '',
-      current_block_sub: readText('current-block-sub') || readText('now-sub') || ''
-    };
-  }
-
-  function compactRecent(logs){
-    if (!Array.isArray(logs)) return [];
-    return logs.slice(-7).map(x => ({
-      date: x.date,
-      epfc: x.epfc || 0,
-      code: x.code || 0,
-      nl: x.nl || 0,
-      sport: x.sport || 0,
-      flex: x.flex || 0,
-      mood: x.mood || null,
-      sleep: x.sleep || null,
-      note: x.note || x.notes || ''
-    }));
-  }
-
-  const originalBuildContext = window.buildContext;
-
-  window.buildContext = function(){
-    const base = typeof originalBuildContext === 'function'
-      ? originalBuildContext()
-      : {};
-
-    const enriched = {
-      ...base,
-      next_action: getNextActionSummary(),
-      home_now: getCurrentHomeSummary(),
-      bookmarks_summary: getBookmarksSummary()
-    };
-
-    if (Array.isArray(base.recent)) {
-      enriched.recent_7d_compact = compactRecent(base.recent);
-    }
-
-    return enriched;
-  };
-})();
-  </script>
-  <script>
-(function(){
-  if (window.__coachUiFinalPatchInstalled) return;
-  window.__coachUiFinalPatchInstalled = true;
-
-  const originalFetch = window.fetch.bind(window);
-
-  function cleanText(s){
-    return String(s || '')
-      .replace(/\\n/g, '\n')
-      .replace(/\n{3,}/g, '\n\n')
-      .trim();
-  }
-
-  function applyNextActionPreview(data){
-    if (!data || typeof data !== 'object') return;
-    if (!data.next_action_title && !data.next_action_sub && !data.priority) return;
-
-    const host = document.getElementById('next-action');
-    const label = document.getElementById('na-label');
-    const countdown = document.getElementById('na-countdown');
-    const title = document.getElementById('na-title');
-    const sub = document.getElementById('na-sub');
-    const startBtn = document.getElementById('na-start');
-    const snoozeBtn = document.getElementById('na-snooze');
-    const skipBtn = document.getElementById('na-skip');
-
-    if (!host || !label || !countdown || !title || !sub) return;
-
-    host.style.borderColor = 'rgba(255,107,53,.45)';
-    host.style.boxShadow = '0 0 0 1px rgba(255,107,53,.12) inset';
-
-    label.textContent = 'Suggestion IA';
-    countdown.textContent = String(data.priority || 'medium').toUpperCase();
-    title.textContent = cleanText(data.next_action_title || 'Action suggérée');
-
-    const parts = [];
-    if (data.next_action_sub) parts.push(cleanText(data.next_action_sub));
-    if (data.focus_area) parts.push('Focus : ' + cleanText(data.focus_area));
-    if (data.warning) parts.push('Alerte : ' + cleanText(data.warning));
-    sub.textContent = parts.join(' • ') || '—';
-
-    if (startBtn){
-      startBtn.textContent = 'Suggestion IA';
-      startBtn.disabled = true;
-      startBtn.style.opacity = '0.85';
-    }
-    if (snoozeBtn) snoozeBtn.disabled = true;
-    if (skipBtn) skipBtn.disabled = true;
-  }
-
-  window.fetch = async function(resource, init){
-    const res = await originalFetch(resource, init);
-    const url = typeof resource === 'string' ? resource : (resource && resource.url) || '';
-
-    if (!url.includes('/.netlify/functions/coach')) return res;
-
-    try {
-      const clone = res.clone();
-      const contentType = clone.headers.get('content-type') || '';
-      if (!contentType.includes('application/json')) return res;
-
-      const data = await clone.json();
-      if (!data || typeof data !== 'object') return res;
-
-      const merged = { ...data };
-      if (typeof merged.answer === 'string') merged.answer = cleanText(merged.answer);
-      if (typeof merged.warning === 'string') merged.warning = cleanText(merged.warning);
-      if (typeof merged.next_action_title === 'string') merged.next_action_title = cleanText(merged.next_action_title);
-      if (typeof merged.next_action_sub === 'string') merged.next_action_sub = cleanText(merged.next_action_sub);
-      if (typeof merged.focus_area === 'string') merged.focus_area = cleanText(merged.focus_area);
-
-      applyNextActionPreview(merged);
-
-      const headers = new Headers(res.headers);
-      headers.set('content-type', 'application/json');
-
-      return new Response(JSON.stringify(merged), {
-        status: res.status,
-        statusText: res.statusText,
-        headers
-      });
-    } catch (_) {
-      return res;
-    }
-  };
-})();
-  </script>
-  <script>
-(function(){
-  if (window.__coachApplyIgnoreInstalled) return;
-  window.__coachApplyIgnoreInstalled = true;
-
-  const STORE_KEY = 'coach_next_action_saved_v1';
-  const originalFetch = window.fetch.bind(window);
-
-  function clean(s){
-    return String(s || '').replace(/\\n/g, '\n').trim();
-  }
-
-  function getHost(){
-    return document.getElementById('next-action');
-  }
-
-  function getEls(){
-    return {
-      host: document.getElementById('next-action'),
-      label: document.getElementById('na-label'),
-      countdown: document.getElementById('na-countdown'),
-      title: document.getElementById('na-title'),
-      sub: document.getElementById('na-sub'),
-      startBtn: document.getElementById('na-start'),
-      snoozeBtn: document.getElementById('na-snooze'),
-      skipBtn: document.getElementById('na-skip')
-    };
-  }
-
-  function ensureBar(){
-    const host = getHost();
-    if (!host) return null;
-
-    let bar = document.getElementById('coach-na-bar');
-    if (bar) return bar;
-
-    bar = document.createElement('div');
-    bar.id = 'coach-na-bar';
-    bar.style.display = 'none';
-    bar.style.gap = '8px';
-    bar.style.marginTop = '10px';
-    bar.style.flexWrap = 'wrap';
-
-    const apply = document.createElement('button');
-    apply.id = 'coach-na-apply';
-    apply.type = 'button';
-    apply.textContent = 'Appliquer';
-    apply.style.padding = '10px 14px';
-    apply.style.borderRadius = '10px';
-    apply.style.border = '1px solid rgba(52,211,153,.35)';
-    apply.style.background = 'rgba(52,211,153,.12)';
-    apply.style.color = 'var(--jade)';
-    apply.style.fontWeight = '700';
-    apply.style.cursor = 'pointer';
-
-    const ignore = document.createElement('button');
-    ignore.id = 'coach-na-ignore';
-    ignore.type = 'button';
-    ignore.textContent = 'Ignorer';
-    ignore.style.padding = '10px 14px';
-    ignore.style.borderRadius = '10px';
-    ignore.style.border = '1px solid rgba(248,113,113,.35)';
-    ignore.style.background = 'rgba(248,113,113,.10)';
-    ignore.style.color = 'var(--coral)';
-    ignore.style.fontWeight = '700';
-    ignore.style.cursor = 'pointer';
-
-    bar.appendChild(apply);
-    bar.appendChild(ignore);
-
-    const actions = host.querySelector('.na-actions');
-    if (actions) actions.insertAdjacentElement('afterend', bar);
-    else host.appendChild(bar);
-
-    apply.addEventListener('click', () => {
-      if (!window.__lastCoachSuggestion) return;
-      try {
-        localStorage.setItem(STORE_KEY, JSON.stringify(window.__lastCoachSuggestion));
-      } catch (_) {}
-      applySavedSuggestion(window.__lastCoachSuggestion, true);
-    });
-
-    ignore.addEventListener('click', () => {
-      try { localStorage.removeItem(STORE_KEY); } catch (_) {}
-      window.__lastCoachSuggestion = null;
-      hideBar();
-      if (typeof renderNextAction === 'function') {
-        renderNextAction();
-      }
-    });
-
-    return bar;
-  }
-
-  function showBar(){
-    const bar = ensureBar();
-    if (bar) bar.style.display = 'flex';
-  }
-
-  function hideBar(){
-    const bar = document.getElementById('coach-na-bar');
-    if (bar) bar.style.display = 'none';
-  }
-
-  function applySavedSuggestion(data, locked){
-    const { host, label, countdown, title, sub, startBtn, snoozeBtn, skipBtn } = getEls();
-    if (!host || !label || !countdown || !title || !sub) return;
-    if (!data) return;
-
-    host.style.borderColor = locked ? 'rgba(52,211,153,.45)' : 'rgba(255,107,53,.45)';
-    host.style.boxShadow = locked
-      ? '0 0 0 1px rgba(52,211,153,.12) inset'
-      : '0 0 0 1px rgba(255,107,53,.12) inset';
-
-    label.textContent = locked ? 'IA appliquée' : 'Suggestion IA';
-    countdown.textContent = String(data.priority || 'medium').toUpperCase();
-    title.textContent = clean(data.next_action_title || 'Action suggérée');
-
-    const parts = [];
-    if (data.next_action_sub) parts.push(clean(data.next_action_sub));
-    if (data.focus_area) parts.push('Focus : ' + clean(data.focus_area));
-    if (data.warning) parts.push('Alerte : ' + clean(data.warning));
-    sub.textContent = parts.join(' • ') || '—';
-
-    if (startBtn){
-      startBtn.textContent = locked ? 'IA appliquée' : 'Suggestion IA';
-      startBtn.disabled = true;
-      startBtn.style.opacity = '0.85';
-    }
-    if (snoozeBtn) snoozeBtn.disabled = true;
-    if (skipBtn) skipBtn.disabled = true;
-
-    if (locked) hideBar();
-    else showBar();
-  }
-
-  function isUsableSuggestion(data){
-    return !!(
-      data &&
-      typeof data === 'object' &&
-      (data.next_action_title || data.next_action_sub || data.priority)
-    );
-  }
-
-  try {
-    const raw = localStorage.getItem(STORE_KEY);
-    if (raw) {
-      const saved = JSON.parse(raw);
-      if (isUsableSuggestion(saved)) {
-        window.__lastCoachSuggestion = saved;
-        setTimeout(() => applySavedSuggestion(saved, true), 300);
-      }
-    }
-  } catch (_) {}
-
-  window.fetch = async function(resource, init){
-    const res = await originalFetch(resource, init);
-    const url = typeof resource === 'string' ? resource : (resource && resource.url) || '';
-
-    if (!url.includes('/.netlify/functions/coach')) return res;
-
-    try {
-      const clone = res.clone();
-      const contentType = clone.headers.get('content-type') || '';
-      if (!contentType.includes('application/json')) return res;
-
-      const data = await clone.json();
-      if (!isUsableSuggestion(data)) return res;
-
-      window.__lastCoachSuggestion = data;
-      applySavedSuggestion(data, false);
-    } catch (_) {}
-
-    return res;
-  };
-})();
-  </script>
+  </script><!-- T1 v2 · bloc supprimé : remplacé par window.__aiCore (XHR + buildContextV2 + Bookmarks + History + Cost guard) --><!-- T1 v2 · bloc supprimé : remplacé par window.__aiCore (XHR + buildContextV2 + Bookmarks + History + Cost guard) --><!-- T1 v2 · bloc supprimé : remplacé par window.__aiCore (XHR + buildContextV2 + Bookmarks + History + Cost guard) --><!-- T1 v2 · bloc supprimé : remplacé par window.__aiCore (XHR + buildContextV2 + Bookmarks + History + Cost guard) --><!-- T1 v2 · bloc supprimé : remplacé par window.__aiCore (XHR + buildContextV2 + Bookmarks + History + Cost guard) --><!-- T1 v2 · bloc supprimé : remplacé par window.__aiCore (XHR + buildContextV2 + Bookmarks + History + Cost guard) -->
   <script>
 (function(){
   if (window.__coachApplyIgnoreV2Installed) return;
@@ -12035,1250 +11512,838 @@ refreshDerived();
   refreshBar();
   setInterval(refreshBar, 800);
 })();
-  </script>
-  <script>
+  </script><!-- T1 v2 · bloc supprimé : remplacé par window.__aiCore (XHR + buildContextV2 + Bookmarks + History + Cost guard) --><!-- T1 v2 · bloc supprimé : remplacé par window.__aiCore (XHR + buildContextV2 + Bookmarks + History + Cost guard) --><!-- T1 v2 · bloc supprimé : remplacé par window.__aiCore (XHR + buildContextV2 + Bookmarks + History + Cost guard) --><!-- T1 v2 · bloc supprimé : remplacé par window.__aiCore (XHR + buildContextV2 + Bookmarks + History + Cost guard) --><!-- T1 v2 · bloc supprimé : remplacé par window.__aiCore (XHR + buildContextV2 + Bookmarks + History + Cost guard) --><!-- T1 v2 · bloc supprimé : remplacé par window.__aiCore (XHR + buildContextV2 + Bookmarks + History + Cost guard) --><!-- T1 v2 · bloc supprimé : remplacé par window.__aiCore (XHR + buildContextV2 + Bookmarks + History + Cost guard) --><!-- T1 v2 · bloc supprimé : remplacé par window.__aiCore (XHR + buildContextV2 + Bookmarks + History + Cost guard) --><!-- T1 v2 · bloc supprimé : remplacé par window.__aiCore (XHR + buildContextV2 + Bookmarks + History + Cost guard) --><!-- T1 v2 · bloc supprimé : remplacé par window.__aiCore (XHR + buildContextV2 + Bookmarks + History + Cost guard) -->
+
+<!-- ═══════════════════════════════════════════════════════════
+     CONSOLIDATED AI CORE · v2.0 (T1→T10)
+     Tout-en-un. Anti-double-bind. Bypass des wrappers via XHR.
+     Backward-compat avec localStorage existant.
+     ═══════════════════════════════════════════════════════════ -->
+<style id="ai-core-styles-v2">
+/* T10 — Hiérarchie z-index claire pour éviter les overlaps */
+.ai-core-debug-panel{z-index:9998}
+.ai-core-toast{z-index:9999}
+
+/* T10 — Cache les anciens boutons Weekly Review dupliqués */
+#weekly-review-ai-btn,
+#weekly-review-ai-btn-v2,
+#weekly-review-fab{display:none !important}
+
+/* T4 — Weekly Review block dans Stats */
+.wr-block{
+  background:linear-gradient(135deg,rgba(255,107,53,.08),rgba(106,165,250,.06));
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:18px;
+  margin:14px 0 22px;
+}
+.wr-block-head{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-bottom:10px;gap:12px;flex-wrap:wrap;
+}
+.wr-block-title{
+  font:600 14px var(--f-sans);letter-spacing:.04em;
+  text-transform:uppercase;color:var(--text);
+}
+.wr-block-sub{font:400 11px var(--f-sans);color:var(--text-faint)}
+.wr-block-btn{
+  background:var(--g-flame);color:#0a0a10;
+  border:none;border-radius:10px;
+  padding:10px 18px;
+  font:700 12px var(--f-sans);letter-spacing:.06em;
+  text-transform:uppercase;cursor:pointer;
+  touch-action:manipulation;min-height:44px;
+}
+.wr-block-btn:disabled{opacity:.5;cursor:not-allowed}
+.wr-block-output{
+  margin-top:14px;padding:14px;background:var(--surface-2);
+  border-radius:10px;font:14px/1.6 var(--f-sans);
+  color:var(--text-dim);white-space:pre-wrap;display:none;
+}
+.wr-block-output.show{display:block}
+
+/* T6 — Cost guard chip dans la modal */
+.ai-quota-chip{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:4px 10px;border-radius:999px;
+  background:rgba(106,165,250,.12);color:var(--sapphire-2);
+  font:600 10px var(--f-mono);letter-spacing:.04em;
+  border:1px solid rgba(106,165,250,.3);
+}
+.ai-quota-chip.warn{background:rgba(251,191,36,.12);color:var(--amber);border-color:rgba(251,191,36,.3)}
+.ai-quota-chip.full{background:rgba(248,113,113,.12);color:var(--coral);border-color:rgba(248,113,113,.3)}
+
+/* T5 — Rendu structuré des réponses AI */
+.ai-resp{padding:12px 14px;background:rgba(255,255,255,.03);
+  border:1px solid var(--border);border-radius:12px;margin:6px 0;}
+.ai-resp-priority{display:inline-block;padding:2px 8px;border-radius:6px;
+  font:700 10px var(--f-mono);letter-spacing:.05em;text-transform:uppercase;margin-right:6px;}
+.ai-resp-priority.high{background:rgba(248,113,113,.15);color:var(--coral)}
+.ai-resp-priority.medium{background:rgba(251,191,36,.15);color:var(--amber)}
+.ai-resp-priority.low{background:rgba(52,211,153,.15);color:var(--jade)}
+.ai-resp-focus{font:600 11px var(--f-sans);color:var(--text-faint);text-transform:uppercase;letter-spacing:.04em;margin:8px 0 4px}
+.ai-resp-answer{font:14px/1.55 var(--f-sans);color:var(--text);margin:8px 0}
+.ai-resp-action{margin-top:10px;padding:8px 10px;background:rgba(255,107,53,.08);border-left:3px solid var(--flame);border-radius:0 8px 8px 0}
+.ai-resp-action-title{font:700 12px var(--f-sans);color:var(--flame-2)}
+.ai-resp-action-sub{font:400 12px var(--f-sans);color:var(--text-dim);margin-top:2px}
+.ai-resp-warn{margin-top:10px;padding:8px 10px;background:rgba(248,113,113,.08);border-left:3px solid var(--coral);border-radius:0 8px 8px 0;font:13px var(--f-sans);color:var(--coral-2)}
+.ai-resp-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.ai-resp-actions button{padding:6px 12px;border-radius:8px;border:1px solid var(--border);
+  background:transparent;color:var(--text-dim);font:600 11px var(--f-sans);cursor:pointer;
+  touch-action:manipulation;min-height:36px}
+.ai-resp-actions button.primary{background:var(--flame);color:#0a0a10;border-color:var(--flame)}
+
+/* T8 — Champs supplémentaires dans le log */
+.log-fields-v2{display:grid;gap:6px;margin:8px 0;padding:8px;
+  background:rgba(255,255,255,.02);border-radius:8px;border:1px dashed var(--border-soft);}
+.log-fields-v2 input,.log-fields-v2 select{
+  width:100%;padding:8px 10px;background:var(--surface);
+  border:1px solid var(--border);border-radius:6px;
+  color:var(--text);font:13px var(--f-sans);min-height:36px;}
+.log-fields-v2 label{font:600 10px var(--f-sans);color:var(--text-faint);
+  text-transform:uppercase;letter-spacing:.04em;margin-top:4px;}
+
+/* T7 — Debug panel */
+.ai-core-debug-panel{
+  position:fixed;inset:auto 12px 12px 12px;max-height:80vh;overflow:auto;
+  background:var(--surface);border:1px solid var(--flame);border-radius:14px;
+  padding:16px;box-shadow:var(--sh-lg);display:none;font:12px var(--f-mono);}
+.ai-core-debug-panel.open{display:block}
+.ai-core-debug-panel h4{font:700 12px var(--f-sans);color:var(--flame-2);
+  margin:10px 0 4px;text-transform:uppercase;letter-spacing:.04em;}
+.ai-core-debug-panel pre{background:var(--bg);padding:8px;border-radius:6px;
+  overflow:auto;max-height:200px;font-size:10px;color:var(--text-dim);
+  white-space:pre-wrap;word-break:break-word;}
+.ai-core-debug-close{position:absolute;top:8px;right:10px;background:none;border:none;
+  color:var(--text-faint);font-size:18px;cursor:pointer;padding:4px 8px;}
+
+/* T10 — Padding bottom du body si beaucoup de FABs */
+@media (max-width:600px){
+  .app{padding-bottom:calc(120px + var(--safe-b))}
+}
+</style>
+
+<script id="ai-core-v2">
 (function(){
-  if (window.__coachBookmarksContextInstalled) return;
-  window.__coachBookmarksContextInstalled = true;
+'use strict';
 
-  function safeCall(fn, fallback){
-    try {
-      return typeof fn === 'function' ? fn() : fallback;
-    } catch (_) {
-      return fallback;
-    }
-  }
+// Anti-double-install (dev refresh, hot reload, etc.)
+if (window.__aiCoreV2Installed) return;
+window.__aiCoreV2Installed = true;
 
-  function safeHistory(key){
-    try {
-      if (typeof loadBookmarkHistory === 'function') {
-        return loadBookmarkHistory(key) || [];
-      }
-    } catch (_) {}
-    return [];
-  }
+const NS = 'dashv2_';
+const sg = (k, d) => { try { return JSON.parse(localStorage.getItem(NS+k)) ?? d; } catch(_) { return d; } };
+const ss = (k, v) => { try { localStorage.setItem(NS+k, JSON.stringify(v)); return true; } catch(_) { return false; } };
+const log = (...args) => { try { console.warn('[aiCore]', ...args); } catch(_){} };
 
-  function getCurrentBookmarks(){
-    const raw = safeCall(window.loadBookmarks, {});
-    if (!raw || typeof raw !== 'object') return {};
+// ─────────────────────────────────────────────────────────────
+// T6 · COST GUARD officiel
+// ─────────────────────────────────────────────────────────────
+const COST = {
+  DAILY_LIMIT: 20,
+  COOLDOWN_MS: 15000,
+  CACHE_TTL_MS: 6 * 3600 * 1000,
+  MAX_TOKENS: 220,
 
-    const out = {};
-    Object.entries(raw).forEach(([key, val]) => {
-      if (!val) return;
-      out[key] = {
-        text: typeof val.text === 'string' ? val.text : '',
-        updatedAt: val.updatedAt || ''
-      };
+  todayKey(){
+    const d = new Date(), p = n => String(n).padStart(2,'0');
+    return 'ai_quota_v2_' + d.getFullYear() + p(d.getMonth()+1) + p(d.getDate());
+  },
+  getUsedToday(){ return sg(this.todayKey(), 0) || 0; },
+  getRemaining(){ return Math.max(0, this.DAILY_LIMIT - this.getUsedToday()); },
+  bump(){ ss(this.todayKey(), this.getUsedToday() + 1); },
+
+  cooldownLeftMs(){
+    const last = sg('ai_last_call_v2', 0);
+    return Math.max(0, this.COOLDOWN_MS - (Date.now() - last));
+  },
+  markCall(){ ss('ai_last_call_v2', Date.now()); },
+
+  cacheKey(payload){
+    // Hash stable du payload (question + mode + 1500 premiers chars de contexte)
+    const ctx = JSON.stringify(payload.context || {}).slice(0, 1500);
+    const raw = (payload.mode||'') + '|' + (payload.question||'') + '|' + ctx;
+    let h = 0;
+    for (let i = 0; i < raw.length; i++){ h = ((h << 5) - h + raw.charCodeAt(i)) | 0; }
+    return 'ai_cache_v2_' + (h >>> 0).toString(36);
+  },
+  cacheGet(payload){
+    const entry = sg(this.cacheKey(payload), null);
+    if (!entry || (Date.now() - entry.t) > this.CACHE_TTL_MS) return null;
+    return entry.v;
+  },
+  cachePut(payload, value){
+    ss(this.cacheKey(payload), { t: Date.now(), v: value });
+  },
+
+  // Chip d'affichage du quota dans le UI
+  updateChip(){
+    const chips = document.querySelectorAll('.ai-quota-chip');
+    const used = this.getUsedToday(), rem = this.getRemaining();
+    chips.forEach(c => {
+      c.textContent = `${used}/${this.DAILY_LIMIT} appels · cache 6h`;
+      c.classList.remove('warn','full');
+      if (rem === 0) c.classList.add('full');
+      else if (rem <= 5) c.classList.add('warn');
     });
-    return out;
+  }
+};
+
+// ─────────────────────────────────────────────────────────────
+// T1 · FETCH COACH via XHR (bypass des 7 wrappers empilés sur fetch)
+// ─────────────────────────────────────────────────────────────
+function coachFetchRaw(payload){
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/.netlify/functions/coach', true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.timeout = 30000;
+    xhr.onload = () => {
+      try {
+        const data = JSON.parse(xhr.responseText || '{}');
+        if (xhr.status >= 200 && xhr.status < 300) resolve(data);
+        else reject(new Error(data.error || ('HTTP ' + xhr.status)));
+      } catch(e){ reject(new Error('Réponse invalide')); }
+    };
+    xhr.onerror = () => reject(new Error('Erreur réseau'));
+    xhr.ontimeout = () => reject(new Error('Timeout 30s'));
+    xhr.send(JSON.stringify(payload));
+  });
+}
+
+// Wrapper officiel avec cost guard intégré
+async function coachAsk(payload){
+  payload = payload || {};
+  payload.max_tokens = Math.min(Number(payload.max_tokens) || COST.MAX_TOKENS, COST.MAX_TOKENS);
+
+  // Cache hit ? (pas de quota consommé, pas de cooldown)
+  const cached = COST.cacheGet(payload);
+  if (cached){
+    Debug.lastResponse = { ...cached, _cacheHit: true };
+    return { ...cached, _cacheHit: true };
   }
 
-  function getBookmarkHistoryCompact(){
-    const out = {};
-    try {
-      if (!Array.isArray(window.BOOKMARK_DOMAINS)) return out;
+  // Cooldown ?
+  const cdLeft = COST.cooldownLeftMs();
+  if (cdLeft > 0){
+    const sec = Math.ceil(cdLeft / 1000);
+    return {
+      ok: false, blocked: 'cooldown',
+      answer: `⏱️ Attends encore ${sec}s avant une nouvelle requête.`,
+      priority:'low', focus_area:'Cooldown',
+      next_action_title:'', next_action_sub:'', warning:''
+    };
+  }
 
-      window.BOOKMARK_DOMAINS.forEach(d => {
-        const hist = safeHistory(d.key)
-          .slice(-3)
-          .map(x => ({
-            text: x?.text || '',
-            updatedAt: x?.updatedAt || '',
-            archivedAt: x?.archivedAt || ''
-          }));
-        if (hist.length) out[d.key] = hist;
+  // Quota ?
+  if (COST.getRemaining() === 0){
+    return {
+      ok: false, blocked: 'quota',
+      answer: `🚫 Quota atteint (${COST.DAILY_LIMIT}/jour). Reset à minuit.`,
+      priority:'low', focus_area:'Quota',
+      next_action_title:'', next_action_sub:'', warning:''
+    };
+  }
+
+  // Vraie requête
+  Debug.lastPayload = payload;
+  COST.markCall();
+  COST.bump();
+  COST.updateChip();
+  try {
+    const res = await coachFetchRaw(payload);
+    Debug.lastResponse = res;
+    COST.cachePut(payload, res);
+    return res;
+  } catch(e){
+    Debug.lastResponse = { error: e.message };
+    return {
+      ok: false, blocked: 'error',
+      answer: '❌ ' + e.message,
+      priority:'low', focus_area:'Erreur',
+      next_action_title:'', next_action_sub:'', warning:''
+    };
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// T3 · BOOKMARK ENGINE officiel
+// ─────────────────────────────────────────────────────────────
+const KNOWN_DOMAINS = {
+  epfc:'EPFC', code:'Code', nl:'Néerlandais',
+  read:'Lecture', chess:'Échecs', ai:'IA', vinted:'Vinted'
+};
+const Bookmarks = {
+  STORE_KEY: 'bk_v2',
+
+  getAll(){
+    const data = sg(this.STORE_KEY, {}) || {};
+    // Backward compat : lire aussi anciennes clés
+    try {
+      const old = sg('bookmarks', {}) || {};
+      Object.keys(old).forEach(k => {
+        if (!data[k] && typeof old[k] === 'string'){
+          data[k] = { key:k, label: KNOWN_DOMAINS[k]||k, text: old[k], updatedAt:'', history:[] };
+        }
       });
-    } catch (_) {}
+    } catch(_){}
+    return data;
+  },
+
+  set(key, text, label){
+    if (!key || !text) return null;
+    const all = this.getAll();
+    const prev = all[key];
+    const entry = {
+      key,
+      label: label || (prev && prev.label) || KNOWN_DOMAINS[key] || key,
+      text: String(text).trim(),
+      updatedAt: new Date().toISOString(),
+      history: prev ? [{ text: prev.text, updatedAt: prev.updatedAt }, ...(prev.history||[])].slice(0, 10) : []
+    };
+    all[key] = entry;
+    ss(this.STORE_KEY, all);
+    return entry;
+  },
+
+  // Ce que voit l'utilisateur : on essaie de scrape du DOM les bookmarks affichés
+  visibleInUI(){
+    const out = [];
+    try {
+      document.querySelectorAll('[data-bookmark-key]').forEach(el => {
+        out.push({ key: el.dataset.bookmarkKey, label: el.dataset.bookmarkLabel || '', text: (el.textContent||'').trim() });
+      });
+    } catch(_){}
     return out;
+  },
+
+  recentHistory(n=5){
+    const out = [];
+    const all = this.getAll();
+    Object.values(all).forEach(b => {
+      (b.history||[]).slice(0,2).forEach(h => out.push({ key:b.key, label:b.label, text:h.text, updatedAt:h.updatedAt }));
+    });
+    return out.sort((a,b)=> (b.updatedAt||'').localeCompare(a.updatedAt||'')).slice(0, n);
+  },
+
+  resumeHint(){
+    const all = this.getAll();
+    const epfc = all.epfc, code = all.code, nl = all.nl;
+    const parts = [];
+    if (epfc) parts.push(`EPFC: ${epfc.text}`);
+    if (code) parts.push(`Code: ${code.text}`);
+    if (nl)   parts.push(`NL: ${nl.text}`);
+    return parts.join(' · ') || '';
   }
+};
 
-  function getBookmarkDomainsMeta(){
-    try {
-      if (!Array.isArray(window.BOOKMARK_DOMAINS)) return [];
-      return window.BOOKMARK_DOMAINS.map(d => ({
-        key: d.key,
-        label: d.label,
-        icon: d.icon
-      }));
-    } catch (_) {
-      return [];
-    }
-  }
+// ─────────────────────────────────────────────────────────────
+// T2 · buildContextV2 officielle
+// ─────────────────────────────────────────────────────────────
+function buildContextV2(){
+  const now = new Date();
+  const iso = now.toISOString();
+  const dow = ['dim','lun','mar','mer','jeu','ven','sam'][now.getDay()];
 
-  function getResumeHint(){
-    const box = document.getElementById('now-resume');
-    const domain = document.getElementById('now-resume-domain')?.textContent?.trim() || '';
-    const text = document.getElementById('now-resume-text')?.textContent?.trim() || '';
-
-    return {
-      visible: !!box && !box.classList.contains('hidden'),
-      domain,
-      text
-    };
-  }
-
-  const oldBuildContext = window.buildContext;
-
-  window.buildContext = function(){
-    const base = typeof oldBuildContext === 'function'
-      ? oldBuildContext()
-      : {};
-
-    return {
-      ...base,
-      bookmarks_current: getCurrentBookmarks(),
-      bookmarks_recent_history: getBookmarkHistoryCompact(),
-      bookmark_domains_meta: getBookmarkDomainsMeta(),
-      resume_hint: getResumeHint()
-    };
-  };
-})();
-  </script>
-  <script>
-(function(){
-  if (window.__coachBookmarksContextFixV2) return;
-  window.__coachBookmarksContextFixV2 = true;
-
-  function getBookmarksDirect(){
-    try {
-      if (typeof loadBookmarks === 'function') return loadBookmarks() || {};
-    } catch (_) {}
-    try {
-      if (typeof S !== 'undefined' && S && typeof S.get === 'function') {
-        return S.get('bookmarks', {}) || {};
-      }
-    } catch (_) {}
-    return {};
-  }
-
-  function getBookmarkHistoryDirect(key){
-    try {
-      if (typeof loadBookmarkHistory === 'function') return loadBookmarkHistory(key) || [];
-    } catch (_) {}
-    try {
-      if (typeof S !== 'undefined' && S && typeof S.get === 'function') {
-        return S.get('bm_hist_' + key, []) || [];
-      }
-    } catch (_) {}
-    return [];
-  }
-
-  function getDomainsDirect(){
-    try {
-      if (typeof BOOKMARK_DOMAINS !== 'undefined' && Array.isArray(BOOKMARK_DOMAINS)) {
-        return BOOKMARK_DOMAINS;
-      }
-    } catch (_) {}
-    return [];
-  }
-
-  function getVisibleBookmarkRows(){
-    const rows = Array.from(document.querySelectorAll('#bookmark-list .bm-row'));
-    return rows.map(row => {
-      const domain = row.querySelector('.bm-domain')?.textContent?.trim() || '';
-      const input = row.querySelector('input, textarea');
-      const text = input ? (input.value || '').trim() : '';
-      return { domain, text };
-    }).filter(x => x.text);
-  }
-
-  const oldBuildContext = window.buildContext;
-
-  window.buildContext = function(){
-    const base = typeof oldBuildContext === 'function' ? oldBuildContext() : {};
-
-    const domains = getDomainsDirect();
-    const current = getBookmarksDirect();
-
-    const currentMapped = {};
-    domains.forEach(d => {
-      const entry = current[d.key];
-      if (!entry || !entry.text) return;
-      currentMapped[d.key] = {
-        label: d.label,
-        text: entry.text,
-        updatedAt: entry.updatedAt || ''
+  // Logs (compact 7 jours, summary 30 jours)
+  let last7 = [], last30Sum = { count: 0, totalMin: 0 };
+  try {
+    const logs = sg('logs', {}) || sg('daily_logs', {}) || {};
+    const dates = Object.keys(logs).sort().reverse();
+    last7 = dates.slice(0, 7).map(d => {
+      const e = logs[d] || {};
+      return {
+        date: d,
+        topic: (e.topic||e.subject||'').slice(0, 80),
+        notes: (e.notes||'').slice(0, 100),
+        quality: e.quality || e.session_quality || null,
+        chapter: e.exact_chapter_or_exercise || e.chapter || null,
+        resume: e.resume_tomorrow_here || null,
+        blocking: e.blocking_reason || null
       };
     });
+    last30Sum.count = dates.slice(0, 30).length;
+  } catch(_){}
 
-    const historyMapped = {};
-    domains.forEach(d => {
-      const hist = getBookmarkHistoryDirect(d.key)
-        .slice(-3)
-        .map(x => ({
-          text: x?.text || '',
-          updatedAt: x?.updatedAt || '',
-          archivedAt: x?.archivedAt || ''
-        }))
-        .filter(x => x.text);
-      if (hist.length) historyMapped[d.key] = hist;
-    });
-
-    const visibleRows = getVisibleBookmarkRows();
-
-    return {
-      ...base,
-      bookmarks_current: currentMapped,
-      bookmarks_recent_history: historyMapped,
-      bookmarks_visible_ui: visibleRows,
-      bookmarks_summary_text: visibleRows.map(x => `${x.domain}: ${x.text}`).join(' | ')
-    };
-  };
-})();
-  </script>
-  <script>
-(function(){
-  if (window.__coachBookmarksDomFixInstalled) return;
-  window.__coachBookmarksDomFixInstalled = true;
-
-  function getVisibleBookmarksFromDom(){
-    const rows = Array.from(document.querySelectorAll('#bookmark-list .bm-row'));
-    return rows.map(row => {
-      const domain = (row.querySelector('.bm-domain')?.textContent || '')
-        .replace(/\s*·\s*\d+\s*archivé[s]?/i, '')
-        .trim();
-
-      const field = row.querySelector('.bm-where,[data-bm]');
-      const key = field?.dataset?.bm || '';
-      const text = (field?.textContent || '').trim();
-
-      return { key, domain, text };
-    }).filter(x => x.text);
-  }
-
-  const oldBuildContext = window.buildContext;
-
-  window.buildContext = function(){
-    const base = typeof oldBuildContext === 'function' ? oldBuildContext() : {};
-    const visible = getVisibleBookmarksFromDom();
-
-    const mapped = {};
-    visible.forEach(x => {
-      if (!x.key) return;
-      mapped[x.key] = {
-        label: x.domain,
-        text: x.text
+  // Pomodoro state (best-effort)
+  let pomo = { active: false };
+  try {
+    if (typeof window.pomoState !== 'undefined' && window.pomoState){
+      pomo = {
+        active: !!window.pomoState.active,
+        tag: window.pomoState.tag || sg('pomo_last_tag', null),
+        startedAt: window.pomoState.startedAt || null
       };
+    } else {
+      pomo.tag = sg('pomo_last_tag', null);
+    }
+  } catch(_){}
+
+  // Bookmarks (T3)
+  const bkAll = Bookmarks.getAll();
+  const bkCurrent = {};
+  Object.keys(bkAll).forEach(k => {
+    bkCurrent[k] = { label: bkAll[k].label, text: bkAll[k].text, updatedAt: bkAll[k].updatedAt };
+  });
+
+  // Last AI suggestion
+  const lastSugg = sg('ai_last_suggestion_v2', null);
+
+  // Trackers (best-effort)
+  const trackers = sg('trackers', {}) || {};
+
+  return {
+    now: { iso, dateISO: iso.slice(0,10), dayOfWeek: dow, hour: now.getHours() },
+    shift: sg('shift', 'auto'),
+    block: {
+      current: (typeof window.getCurrentBlock === 'function') ? safeCall(window.getCurrentBlock) : null,
+      next:    (typeof window.getNextBlock    === 'function') ? safeCall(window.getNextBlock)    : null
+    },
+    pomodoro: pomo,
+    logs: { last7, last30Summary: last30Sum },
+    weeklyStats: sg('weekly_stats_cache', null),
+    trackers,
+    bookmarks: {
+      current: bkCurrent,
+      visibleInUI: Bookmarks.visibleInUI(),
+      recentHistory: Bookmarks.recentHistory(5)
+    },
+    resumeHint: Bookmarks.resumeHint(),
+    lastAISuggestion: lastSugg
+  };
+}
+function safeCall(fn){ try { return fn(); } catch(_) { return null; } }
+
+window.buildContextV2 = buildContextV2;
+
+// ─────────────────────────────────────────────────────────────
+// T9 · AI HISTORY (apply / ignore + journal)
+// ─────────────────────────────────────────────────────────────
+const History = {
+  KEY: 'ai_history_v2',
+  MAX: 50,
+
+  list(){ return sg(this.KEY, []) || []; },
+
+  add(entry){
+    const arr = this.list();
+    arr.unshift({
+      timestamp: new Date().toISOString(),
+      mode: entry.mode || 'coach',
+      question: entry.question || '',
+      answer: entry.answer || '',
+      priority: entry.priority || 'medium',
+      focus_area: entry.focus_area || '',
+      next_action_title: entry.next_action_title || '',
+      next_action_sub: entry.next_action_sub || '',
+      warning: entry.warning || '',
+      status: entry.status || 'pending'
+    });
+    while (arr.length > this.MAX) arr.pop();
+    ss(this.KEY, arr);
+  },
+
+  setStatus(timestamp, status){
+    const arr = this.list();
+    const i = arr.findIndex(x => x.timestamp === timestamp);
+    if (i >= 0){ arr[i].status = status; ss(this.KEY, arr); }
+  }
+};
+
+// ─────────────────────────────────────────────────────────────
+// T5 · RENDU PROPRE des réponses AI (pas de \n, pas de séparateurs)
+// ─────────────────────────────────────────────────────────────
+function renderAIResponse(target, data, opts){
+  if (!target || !data) return;
+  opts = opts || {};
+  const html = [];
+
+  if (data._cacheHit){
+    html.push('<div class="ai-quota-chip" style="margin-bottom:6px">📦 réponse en cache</div>');
+  }
+
+  if (data.priority || data.focus_area){
+    html.push('<div>');
+    if (data.priority) html.push(`<span class="ai-resp-priority ${esc(data.priority)}">${esc(data.priority)}</span>`);
+    if (data.focus_area) html.push(`<span class="ai-resp-focus" style="display:inline">· ${esc(data.focus_area)}</span>`);
+    html.push('</div>');
+  }
+
+  if (data.answer){
+    html.push(`<div class="ai-resp-answer">${esc(data.answer).replace(/\n+/g,'<br>')}</div>`);
+  }
+
+  if (data.next_action_title){
+    html.push('<div class="ai-resp-action">');
+    html.push(`<div class="ai-resp-action-title">→ ${esc(data.next_action_title)}</div>`);
+    if (data.next_action_sub) html.push(`<div class="ai-resp-action-sub">${esc(data.next_action_sub)}</div>`);
+    html.push('</div>');
+  }
+
+  if (data.warning){
+    html.push(`<div class="ai-resp-warn">⚠️ ${esc(data.warning)}</div>`);
+  }
+
+  // Apply / Ignore (T9)
+  if (opts.allowApply && (data.next_action_title || data.answer)){
+    const ts = data._timestamp || new Date().toISOString();
+    html.push('<div class="ai-resp-actions">');
+    html.push(`<button class="primary" data-aih-apply="${esc(ts)}">Appliquer</button>`);
+    html.push(`<button data-aih-ignore="${esc(ts)}">Ignorer</button>`);
+    html.push('</div>');
+  }
+
+  target.innerHTML = `<div class="ai-resp">${html.join('')}</div>`;
+}
+function esc(s){ return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// Délégation pour Apply/Ignore
+document.addEventListener('click', e => {
+  const apply = e.target.closest('[data-aih-apply]');
+  const ignore = e.target.closest('[data-aih-ignore]');
+  if (apply){
+    History.setStatus(apply.dataset.aihApply, 'applied');
+    apply.parentElement.innerHTML = '<span style="font:600 11px var(--f-mono);color:var(--jade)">✓ IA appliquée</span>';
+    showToast('IA appliquée — sauvegardée dans l\'historique');
+  } else if (ignore){
+    History.setStatus(ignore.dataset.aihIgnore, 'ignored');
+    ignore.parentElement.innerHTML = '<span style="font:400 11px var(--f-mono);color:var(--text-faint)">✕ ignoré</span>';
+  }
+});
+
+// ─────────────────────────────────────────────────────────────
+// T7 · DEBUG PANEL
+// ─────────────────────────────────────────────────────────────
+const Debug = {
+  lastPayload: null,
+  lastResponse: null,
+
+  open(){
+    let panel = document.getElementById('__ai_debug');
+    if (!panel){
+      panel = document.createElement('div');
+      panel.id = '__ai_debug';
+      panel.className = 'ai-core-debug-panel';
+      panel.innerHTML = `
+        <button class="ai-core-debug-close" aria-label="Fermer">✕</button>
+        <h4>État AI Core</h4>
+        <pre id="__ai_dbg_state"></pre>
+        <h4>Dernier contexte (V2)</h4>
+        <pre id="__ai_dbg_ctx"></pre>
+        <h4>Dernier payload envoyé</h4>
+        <pre id="__ai_dbg_pl"></pre>
+        <h4>Dernière réponse Claude</h4>
+        <pre id="__ai_dbg_res"></pre>
+        <h4>Historique (5 derniers)</h4>
+        <pre id="__ai_dbg_hist"></pre>
+      `;
+      document.body.appendChild(panel);
+      panel.querySelector('.ai-core-debug-close').addEventListener('click', () => panel.classList.remove('open'));
+    }
+    panel.querySelector('#__ai_dbg_state').textContent = JSON.stringify({
+      version: 'aiCore v2.0',
+      endpoint: '/.netlify/functions/coach',
+      transport: 'XMLHttpRequest (bypass fetch wrappers)',
+      quotaUsed: COST.getUsedToday(),
+      quotaRemaining: COST.getRemaining(),
+      cooldownLeftMs: COST.cooldownLeftMs(),
+      maxTokens: COST.MAX_TOKENS
+    }, null, 2);
+    panel.querySelector('#__ai_dbg_ctx').textContent = JSON.stringify(buildContextV2(), null, 2);
+    panel.querySelector('#__ai_dbg_pl').textContent = JSON.stringify(this.lastPayload || '(aucun)', null, 2);
+    panel.querySelector('#__ai_dbg_res').textContent = JSON.stringify(this.lastResponse || '(aucune)', null, 2);
+    panel.querySelector('#__ai_dbg_hist').textContent = JSON.stringify(History.list().slice(0, 5), null, 2);
+    panel.classList.add('open');
+  }
+};
+
+// Long-press sur ⚡ (brand mark) = ouvre le debug panel
+function setupDebugTrigger(){
+  const mark = document.querySelector('.brand-mark');
+  if (!mark) return;
+  let timer = null;
+  const start = (e) => {
+    timer = setTimeout(() => { Debug.open(); }, 1200);
+  };
+  const cancel = () => { if (timer){ clearTimeout(timer); timer = null; } };
+  mark.addEventListener('mousedown', start);
+  mark.addEventListener('touchstart', start, { passive: true });
+  ['mouseup','mouseleave','touchend','touchcancel'].forEach(ev => mark.addEventListener(ev, cancel));
+}
+
+// ─────────────────────────────────────────────────────────────
+// T4 · WEEKLY REVIEW BLOCK dans Stats (pas de FAB)
+// ─────────────────────────────────────────────────────────────
+function injectWeeklyReview(){
+  const stats = document.getElementById('p-stats');
+  if (!stats || stats.querySelector('.wr-block')) return;
+
+  const block = document.createElement('div');
+  block.className = 'wr-block';
+  block.innerHTML = `
+    <div class="wr-block-head">
+      <div>
+        <div class="wr-block-title">📋 Weekly Review IA</div>
+        <div class="wr-block-sub">Dimanche · synthèse semaine + 3 priorités à venir</div>
+      </div>
+      <button class="wr-block-btn" id="wr-go">Lancer Review IA</button>
+    </div>
+    <div class="ai-quota-chip" style="margin-top:6px">— appels · cache 6h</div>
+    <div class="wr-block-output" id="wr-output"></div>
+  `;
+  // Insérer en haut du contenu de Stats, après la page-title si elle existe
+  const title = stats.querySelector('.page-title');
+  if (title && title.nextSibling) stats.insertBefore(block, title.nextSibling);
+  else stats.insertBefore(block, stats.firstChild);
+
+  block.querySelector('#wr-go').addEventListener('click', async () => {
+    const btn = block.querySelector('#wr-go');
+    const out = block.querySelector('#wr-output');
+    btn.disabled = true; btn.textContent = '… analyse en cours';
+    out.classList.add('show'); out.textContent = 'Analyse de ta semaine…';
+
+    const ctx = buildContextV2();
+    const data = await coachAsk({
+      mode: 'analyse',
+      question: "Fais ma weekly review. Format strict :\n1. Point faible principal\n2. Trois priorités de la semaine\n3. Une chose à couper\n4. Une chose à renforcer\n5. Next action immédiate",
+      context: ctx,
+      systemPrompt: "Tu es un analyste de performance. Réponds en français, ton direct, sans édulcorer. Cite les chiffres réels du contexte. Maximum 200 mots.",
+      max_tokens: 350
     });
 
-    return {
-      ...base,
-      bookmarks_visible_ui: visible,
-      bookmarks_current: {
-        ...(base.bookmarks_current || {}),
-        ...mapped
-      },
-      bookmarks_summary_text: visible.map(x => `${x.domain}: ${x.text}`).join(' | ')
+    out.innerHTML = '';
+    renderAIResponse(out, { ...data, _timestamp: new Date().toISOString() }, { allowApply: true });
+    if (!data.blocked) History.add({ ...data, mode: 'analyse', question: 'weekly review' });
+
+    btn.disabled = false; btn.textContent = 'Relancer Review IA';
+    COST.updateChip();
+  });
+  COST.updateChip();
+}
+
+// ─────────────────────────────────────────────────────────────
+// T8 · NOUVEAUX CHAMPS DE LOG
+// ─────────────────────────────────────────────────────────────
+function injectLogFields(){
+  const saveBtn = document.getElementById('log-save');
+  if (!saveBtn || document.getElementById('log-fields-v2')) return;
+
+  const wrap = document.createElement('div');
+  wrap.id = 'log-fields-v2';
+  wrap.className = 'log-fields-v2';
+  wrap.innerHTML = `
+    <label for="log-subj">Sujet étudié</label>
+    <input id="log-subj" type="text" placeholder="ex. Java POO, NL grammaire, Think Python ch.4…">
+    <label for="log-chap">Chapitre / exercice exact</label>
+    <input id="log-chap" type="text" placeholder="ex. ch.4 exo 12, A2 leçon 6…">
+    <label for="log-qual">Qualité de session</label>
+    <select id="log-qual">
+      <option value="">—</option>
+      <option value="5">5 · excellent</option>
+      <option value="4">4 · bon</option>
+      <option value="3">3 · correct</option>
+      <option value="2">2 · faible</option>
+      <option value="1">1 · perdu</option>
+    </select>
+    <label for="log-block">Blocage rencontré</label>
+    <input id="log-block" type="text" placeholder="ex. fatigue, cervicales, distraction…">
+    <label for="log-resume">Reprendre demain ici</label>
+    <input id="log-resume" type="text" placeholder="ex. revoir héritage Java, A2 leçon 7…">
+  `;
+  saveBtn.parentElement.insertBefore(wrap, saveBtn);
+
+  // Pré-remplit avec valeurs sauvegardées
+  const todayKey = new Date().toISOString().slice(0,10);
+  const saved = sg('log_fields_v2_' + todayKey, {});
+  if (saved.subj)   wrap.querySelector('#log-subj').value = saved.subj;
+  if (saved.chap)   wrap.querySelector('#log-chap').value = saved.chap;
+  if (saved.qual)   wrap.querySelector('#log-qual').value = saved.qual;
+  if (saved.block_) wrap.querySelector('#log-block').value = saved.block_;
+  if (saved.resume) wrap.querySelector('#log-resume').value = saved.resume;
+
+  // Hook sur Save : on sauve nos champs en plus + on enrichit le log existant
+  saveBtn.addEventListener('click', () => {
+    const data = {
+      subj:   wrap.querySelector('#log-subj').value.trim(),
+      chap:   wrap.querySelector('#log-chap').value.trim(),
+      qual:   wrap.querySelector('#log-qual').value,
+      block_: wrap.querySelector('#log-block').value.trim(),
+      resume: wrap.querySelector('#log-resume').value.trim()
     };
-  };
-})();
-  </script>
-  <script>
-(function(){
-  if (window.__coachBookmarkInjectInstalled) return;
-  window.__coachBookmarkInjectInstalled = true;
+    ss('log_fields_v2_' + todayKey, data);
 
-  const oldFetch = window.fetch.bind(window);
-
-  function getVisibleBookmarks(){
-    const rows = Array.from(document.querySelectorAll('#bookmark-list .bm-row'));
-    return rows.map(row => {
-      const domain = (row.querySelector('.bm-domain')?.textContent || '')
-        .replace(/\s*·\s*\d+\s*archivé[s]?/i, '')
-        .trim();
-
-      const text = (row.querySelector('.bm-where')?.textContent || '').trim();
-
-      return { domain, text };
-    }).filter(x => x.domain && x.text);
-  }
-
-  window.fetch = async function(resource, init){
-    const url = typeof resource === 'string' ? resource : (resource && resource.url) || '';
-
-    if (
-      url.includes('/.netlify/functions/coach') &&
-      init &&
-      typeof init.body === 'string'
-    ){
-      try {
-        const payload = JSON.parse(init.body);
-        const visible = getVisibleBookmarks();
-
-        if (visible.length){
-          payload.context = payload.context || {};
-          payload.context.bookmarks_visible_ui = visible;
-          payload.context.bookmarks_summary_text =
-            visible.map(x => `${x.domain}: ${x.text}`).join(' | ');
-
-          const injectText =
-            "\n\nBOOKMARKS VISIBLES DANS L'APP:\n" +
-            visible.map(x => `- ${x.domain}: ${x.text}`).join('\n') +
-            "\n\nRÈGLE: si des bookmarks visibles sont fournis ci-dessus, tu dois t'appuyer dessus concrètement et ne jamais dire qu'ils sont absents.";
-
-          payload.question = String(payload.question || '') + injectText;
-        }
-
-        init = {
-          ...init,
-          body: JSON.stringify(payload)
-        };
-      } catch (_) {}
-    }
-
-    return oldFetch(resource, init);
-  };
-})();
-  </script>
-  <script>
-(function(){
-  if (window.__coachCostGuardInstalled) return;
-  window.__coachCostGuardInstalled = true;
-
-  const DAY_LIMIT = 20;           // max requêtes IA / jour
-  const COOLDOWN_MS = 15000;      // 15 sec entre 2 requêtes
-  const CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6h
-  const MAX_TOKENS_HARD = 220;    // coupe les réponses trop longues
-
-  const K = {
-    usage: 'dashv2_coach_usage_v1',
-    lastTs: 'dashv2_coach_last_ts_v1',
-    inflight: 'dashv2_coach_inflight_v1',
-    cache: 'dashv2_coach_cache_v1'
-  };
-
-  const oldFetch = window.fetch.bind(window);
-
-  function now(){ return Date.now(); }
-  function dayKey(){
-    const d = new Date();
-    const y = d.getFullYear();
-    const m = String(d.getMonth()+1).padStart(2,'0');
-    const da = String(d.getDate()).padStart(2,'0');
-    return `${y}-${m}-${da}`;
-  }
-
-  function getJson(key, fallback){
+    // Enrichit le log "logs" si le shape existe
     try {
-      const raw = localStorage.getItem(key);
-      return raw ? JSON.parse(raw) : fallback;
-    } catch (_) {
-      return fallback;
-    }
+      const logs = sg('logs', {}) || {};
+      logs[todayKey] = logs[todayKey] || {};
+      logs[todayKey].subject_studied         = data.subj;
+      logs[todayKey].exact_chapter_or_exercise = data.chap;
+      logs[todayKey].session_quality         = data.qual ? Number(data.qual) : null;
+      logs[todayKey].blocking_reason         = data.block_;
+      logs[todayKey].resume_tomorrow_here    = data.resume;
+      ss('logs', logs);
+
+      // Si sujet+chap renseignés, alimente le bookmark (T3)
+      if (data.subj && data.chap){
+        // Détection naïve du domaine via mot-clés
+        const t = (data.subj + ' ' + data.chap).toLowerCase();
+        let key = null;
+        if (/epfc|java|cisco|sap/.test(t)) key = 'epfc';
+        else if (/python|js|html|css|code|leetcode|exercism/.test(t)) key = 'code';
+        else if (/néerlandais|nl|nederlands|taalgarage/.test(t)) key = 'nl';
+        else if (/lecture|read|livre/.test(t)) key = 'read';
+        else if (/echec|chess/.test(t)) key = 'chess';
+        if (key) Bookmarks.set(key, data.chap, KNOWN_DOMAINS[key]);
+      }
+    } catch(e){ log('log enrichment failed', e); }
+  }, true);
+}
+
+// ─────────────────────────────────────────────────────────────
+// T1 · REBIND modal Coach pour passer par coachAsk (au lieu du fetch wrappé 7x)
+// ─────────────────────────────────────────────────────────────
+function rebindCoachModal(){
+  const sendBtn = document.getElementById('ac-send');
+  const input = document.getElementById('ac-input');
+  const messages = document.getElementById('ac-messages');
+  if (!sendBtn || !input || !messages) return;
+  if (sendBtn.dataset.aiV2Bound) return;
+  sendBtn.dataset.aiV2Bound = '1';
+
+  // Clone le bouton pour retirer TOUS les anciens listeners
+  const cleanSend = sendBtn.cloneNode(true);
+  sendBtn.parentNode.replaceChild(cleanSend, sendBtn);
+  cleanSend.dataset.aiV2Bound = '1';
+
+  // Idem input
+  const cleanInput = input.cloneNode(true);
+  input.parentNode.replaceChild(cleanInput, input);
+
+  // Détecte le mode actif (Coach/Analyse/Plan) si présent
+  function currentMode(){
+    const active = document.querySelector('[data-coach-mode].active');
+    if (active) return active.dataset.coachMode;
+    return 'coach';
   }
 
-  function setJson(key, value){
-    try { localStorage.setItem(key, JSON.stringify(value)); } catch (_) {}
+  // Ajoute le chip quota dans la modal si absent
+  const modal = document.getElementById('ask-claude');
+  if (modal && !modal.querySelector('.ai-quota-chip')){
+    const chip = document.createElement('div');
+    chip.className = 'ai-quota-chip';
+    chip.style.cssText = 'margin:8px 12px';
+    chip.textContent = '— / — appels · cache 6h';
+    const head = modal.querySelector('.ac-head, header, h2, h3');
+    if (head && head.parentNode) head.parentNode.insertBefore(chip, head.nextSibling);
+    else modal.insertBefore(chip, modal.firstChild);
+  }
+  COST.updateChip();
+
+  function addUserMsg(text){
+    const el = document.createElement('div');
+    el.style.cssText = 'margin:8px 0;padding:10px 12px;border-radius:10px;background:rgba(255,107,53,.1);border:1px solid var(--border);';
+    el.innerHTML = `<strong style="display:block;margin-bottom:4px;font-size:12px;color:var(--flame-2)">Toi</strong><div></div>`;
+    el.querySelector('div').textContent = text;
+    messages.appendChild(el);
+    messages.scrollTop = messages.scrollHeight;
+  }
+  function addAssistantSlot(){
+    const el = document.createElement('div');
+    el.style.cssText = 'margin:8px 0';
+    el.innerHTML = `<strong style="display:block;margin-bottom:4px;font-size:12px;color:var(--text-faint)">Coach</strong><div class="__slot"></div>`;
+    messages.appendChild(el);
+    messages.scrollTop = messages.scrollHeight;
+    return el.querySelector('.__slot');
   }
 
-  function toast(msg){
-    try {
-      if (typeof showToast === 'function') return showToast(msg);
-    } catch (_) {}
-  }
+  async function send(){
+    const q = cleanInput.value.trim();
+    if (!q) return;
+    cleanInput.value = '';
+    addUserMsg(q);
+    const slot = addAssistantSlot();
+    slot.innerHTML = '<div style="opacity:.6">…</div>';
 
-  function compactRecent(arr){
-    if (!Array.isArray(arr)) return [];
-    return arr.slice(-7).map(x => ({
-      date: x.date || '',
-      epfc: x.epfc || 0,
-      code: x.code || 0,
-      nl: x.nl || 0,
-      sport: x.sport || 0,
-      flex: x.flex || 0,
-      mood: x.mood ?? null,
-      sleep: x.sleep ?? null
-    }));
-  }
-
-  function compactBookmarks(obj){
-    if (!obj || typeof obj !== 'object') return {};
-    const out = {};
-    Object.entries(obj).slice(0, 8).forEach(([k, v]) => {
-      if (!v) return;
-      out[k] = {
-        label: v.label || '',
-        text: typeof v.text === 'string' ? v.text.slice(0, 120) : ''
-      };
+    const mode = currentMode();
+    const ctx = buildContextV2();
+    const data = await coachAsk({
+      mode,
+      question: q,
+      context: ctx,
+      max_tokens: 220
     });
-    return out;
+
+    renderAIResponse(slot, { ...data, _timestamp: new Date().toISOString() }, { allowApply: true });
+    if (!data.blocked) History.add({ mode, question: q, ...data });
+    COST.updateChip();
+    messages.scrollTop = messages.scrollHeight;
   }
 
-  function compactContext(ctx){
-    if (!ctx || typeof ctx !== 'object') return {};
+  cleanSend.addEventListener('click', e => { e.preventDefault(); send(); });
+  cleanInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter'){ e.preventDefault(); send(); }
+  });
+}
 
-    return {
-      streak: ctx.streak || 0,
-      bestStreak: ctx.bestStreak || 0,
-      achievements: Array.isArray(ctx.achievements) ? ctx.achievements.length : (ctx.achievements || 0),
-
-      trackers: {
-        weight: ctx.weight || null,
-        elo: ctx.elo || null,
-        book: ctx.book || null,
-        debt: ctx.debt || null
-      },
-
-      next_action: ctx.next_action || {},
-      home_now: ctx.home_now || {},
-      resume_hint: ctx.resume_hint || {},
-
-      bookmarks_current: compactBookmarks(ctx.bookmarks_current),
-      bookmarks_visible_ui: Array.isArray(ctx.bookmarks_visible_ui)
-        ? ctx.bookmarks_visible_ui.slice(0, 8).map(x => ({
-            domain: x.domain || '',
-            text: (x.text || '').slice(0, 120)
-          }))
-        : [],
-
-      recent_7d_compact: compactRecent(ctx.recent_7d_compact || ctx.recent || [])
-    };
+// ─────────────────────────────────────────────────────────────
+// Helpers UI
+// ─────────────────────────────────────────────────────────────
+function showToast(text){
+  if (typeof window.showToast === 'function' && window.showToast !== showToast) {
+    try { return window.showToast(text); } catch(_){}
   }
+  const t = document.createElement('div');
+  t.className = 'ai-core-toast';
+  t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--surface);color:var(--text);padding:10px 16px;border-radius:10px;border:1px solid var(--border);font:600 12px var(--f-sans);box-shadow:var(--sh);';
+  t.textContent = text;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
 
-  function simpleHash(str){
-    let h = 0, i = 0, len = str.length;
-    while (i < len) {
-      h = ((h << 5) - h + str.charCodeAt(i++)) | 0;
-    }
-    return String(h);
-  }
+// ─────────────────────────────────────────────────────────────
+// INIT — pas d'appel AI au chargement (T6)
+// ─────────────────────────────────────────────────────────────
+function init(){
+  try { rebindCoachModal(); } catch(e){ log('rebindCoachModal', e); }
+  try { injectWeeklyReview(); } catch(e){ log('injectWeeklyReview', e); }
+  try { injectLogFields(); }   catch(e){ log('injectLogFields', e); }
+  try { setupDebugTrigger(); } catch(e){ log('setupDebugTrigger', e); }
+  try { COST.updateChip(); }   catch(e){}
 
-  function makeFingerprint(payload){
-    const q = String(payload.question || '').trim().toLowerCase();
-    const mode = String(payload.mode || '').trim().toLowerCase();
-    const compact = compactContext(payload.context || {});
-    return simpleHash(JSON.stringify({ q, mode, compact }));
-  }
+  // Re-tente l'injection si l'utilisateur switch d'onglet (Stats peut être vide initialement)
+  document.addEventListener('click', e => {
+    const tab = e.target.closest('[data-tab]');
+    if (!tab) return;
+    setTimeout(() => {
+      try { injectWeeklyReview(); } catch(_){}
+      try { injectLogFields(); } catch(_){}
+    }, 100);
+  });
 
-  function getUsage(){
-    const d = dayKey();
-    const usage = getJson(K.usage, {});
-    if (!usage[d]) usage[d] = 0;
-    return { d, usage };
-  }
-
-  function incUsage(){
-    const { d, usage } = getUsage();
-    usage[d] = (usage[d] || 0) + 1;
-    setJson(K.usage, usage);
-  }
-
-  function currentUsage(){
-    const { d, usage } = getUsage();
-    return usage[d] || 0;
-  }
-
-  function makeJsonResponse(obj){
-    return new Response(JSON.stringify(obj), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
-  }
-
-  window.fetch = async function(resource, init){
-    const url = typeof resource === 'string' ? resource : (resource && resource.url) || '';
-
-    if (!url.includes('/.netlify/functions/coach') || !init || typeof init.body !== 'string') {
-      return oldFetch(resource, init);
-    }
-
-    try {
-      let payload = JSON.parse(init.body);
-
-      const inflight = getJson(K.inflight, false);
-      if (inflight) {
-        toast('Attends la réponse en cours.');
-        return makeJsonResponse({
-          ok: true,
-          answer: '⏳ Une requête IA est déjà en cours. Attends la fin avant d’en relancer une.',
-          priority: 'low',
-          focus_area: 'Patience',
-          next_action_title: '',
-          next_action_sub: '',
-          warning: ''
-        });
-      }
-
-      const used = currentUsage();
-      if (used >= DAY_LIMIT) {
-        toast('Limite IA du jour atteinte.');
-        return makeJsonResponse({
-          ok: true,
-          answer: `🧱 Limite du jour atteinte : ${used}/${DAY_LIMIT}. Reviens demain ou pose une question vraiment différente et utile demain.`,
-          priority: 'low',
-          focus_area: 'Coût IA',
-          next_action_title: 'Stopper les appels IA',
-          next_action_sub: 'Utilise ce que tu as déjà généré aujourd’hui',
-          warning: 'Quota journalier atteint'
-        });
-      }
-
-      const lastTs = getJson(K.lastTs, 0);
-      const delta = now() - lastTs;
-      if (delta < COOLDOWN_MS) {
-        const sec = Math.ceil((COOLDOWN_MS - delta) / 1000);
-        toast(`Patiente ${sec}s.`);
-        return makeJsonResponse({
-          ok: true,
-          answer: `⏱️ Cooldown actif. Attends encore ${sec} seconde(s) avant une nouvelle requête.`,
-          priority: 'low',
-          focus_area: 'Cooldown',
-          next_action_title: '',
-          next_action_sub: '',
-          warning: ''
-        });
-      }
-
-      payload.context = compactContext(payload.context || {});
-      payload.max_tokens = Math.min(
-        Number(payload.max_tokens) > 0 ? Number(payload.max_tokens) : MAX_TOKENS_HARD,
-        MAX_TOKENS_HARD
-      );
-
-      const fp = makeFingerprint(payload);
-      const cache = getJson(K.cache, {});
-      const hit = cache[fp];
-
-      if (hit && hit.ts && (now() - hit.ts) < CACHE_TTL_MS && hit.data) {
-        toast('Réponse en cache.');
-        return makeJsonResponse({
-          ...hit.data,
-          answer: `♻️ Réponse en cache\n\n${hit.data.answer || ''}`
-        });
-      }
-
-      setJson(K.inflight, true);
-      setJson(K.lastTs, now());
-
-      init = {
-        ...init,
-        body: JSON.stringify(payload)
-      };
-
-      const res = await oldFetch(resource, init);
-
-      try {
-        const clone = res.clone();
-        const contentType = clone.headers.get('content-type') || '';
-        if (res.ok && contentType.includes('application/json')) {
-          const data = await clone.json();
-          cache[fp] = { ts: now(), data };
-          setJson(K.cache, cache);
-          incUsage();
-        }
-      } catch (_) {}
-
-      return res;
-    } catch (_) {
-      return oldFetch(resource, init);
-    } finally {
-      setJson(K.inflight, false);
-    }
+  // Expose le namespace public
+  window.__aiCore = {
+    version: 'v2.0',
+    coachAsk,
+    buildContextV2,
+    Bookmarks,
+    History,
+    Cost: COST,
+    Debug,
+    renderAIResponse
   };
+}
+
+if (document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  setTimeout(init, 100);
+}
+
 })();
-  </script>
-  <script>
-(function(){
-  if (window.__weeklyReviewAiInstalled) return;
-  window.__weeklyReviewAiInstalled = true;
+</script>
+<!-- ═══════════════════════════════════════════════════════════
+     FIN AI CORE v2.0
+     ═══════════════════════════════════════════════════════════ -->
 
-  function txt(sel){
-    return document.querySelector(sel)?.textContent?.trim() || '';
-  }
-
-  function getBookmarksMini(){
-    return Array.from(document.querySelectorAll('#bookmark-list .bm-row'))
-      .map(row => {
-        const domain = (row.querySelector('.bm-domain')?.textContent || '')
-          .replace(/\s*·\s*\d+\s*archivé[s]?/i, '')
-          .trim();
-        const text = (row.querySelector('.bm-where')?.textContent || '').trim();
-        return domain && text ? `${domain}: ${text}` : '';
-      })
-      .filter(Boolean)
-      .slice(0, 6);
-  }
-
-  function buildWeeklyPrompt(){
-    const stats = {
-      study: txt('[data-rev="study"]'),
-      sport: txt('[data-rev="sport"]'),
-      flex: txt('[data-rev="flex"]'),
-      pages: txt('[data-rev="pages"]'),
-      chess: txt('[data-rev="chess"]'),
-      vinted: txt('[data-rev="vinted"]'),
-      mood: txt('[data-rev="mood"]'),
-      active: txt('[data-rev="active"]')
-    };
-
-    const bookmarks = getBookmarksMini();
-
-    return [
-      "Fais-moi ma weekly review.",
-      "",
-      "Contraintes de réponse :",
-      "- Réponds de façon directe, concrète, sans blabla.",
-      "- Donne 1 point faible principal.",
-      "- Donne 3 priorités de la semaine.",
-      "- Donne 1 chose à couper.",
-      "- Donne 1 chose à renforcer.",
-      "- Termine par une next action immédiate.",
-      "",
-      "Stats de la semaine :",
-      `- Étude: ${stats.study || '—'}`,
-      `- Sport: ${stats.sport || '—'}`,
-      `- Mobilité/Flex: ${stats.flex || '—'}`,
-      `- Lecture: ${stats.pages || '—'}`,
-      `- Échecs: ${stats.chess || '—'}`,
-      `- Vinted: ${stats.vinted || '—'}`,
-      `- Humeur moyenne: ${stats.mood || '—'}`,
-      `- Jours actifs: ${stats.active || '—'}`,
-      "",
-      "Bookmarks utiles :",
-      ...(bookmarks.length ? bookmarks.map(x => `- ${x}`) : ["- Aucun bookmark utile détecté"]),
-      "",
-      "Format attendu :",
-      "1) Diagnostic brutal",
-      "2) 3 priorités",
-      "3) 1 chose à couper",
-      "4) 1 chose à renforcer",
-      "5) Next action maintenant"
-    ].join('\n');
-  }
-
-  function openCoachAndSendWeeklyReview(){
-    const modal = document.getElementById('ask-claude');
-    const input = document.getElementById('ac-input');
-    const sendBtn = document.getElementById('ac-send');
-    const fab = document.getElementById('ask-claude-fab');
-
-    if (!modal || !input || !sendBtn) return;
-
-    if (fab) fab.click();
-
-    const analyseBtn = Array.from(document.querySelectorAll('#ac-modes button'))
-      .find(b => /analyse/i.test(b.textContent || ''));
-    if (analyseBtn) analyseBtn.click();
-
-    input.value = buildWeeklyPrompt();
-    sendBtn.click();
-  }
-
-  function installButton(){
-    const title = document.getElementById('review-title');
-    if (!title) return;
-
-    if (document.getElementById('weekly-review-ai-btn')) return;
-
-    const btn = document.createElement('button');
-    btn.id = 'weekly-review-ai-btn';
-    btn.type = 'button';
-    btn.textContent = 'Review IA';
-    btn.style.marginLeft = '10px';
-    btn.style.padding = '8px 12px';
-    btn.style.borderRadius = '999px';
-    btn.style.border = '1px solid rgba(167,139,250,.28)';
-    btn.style.background = 'rgba(167,139,250,.10)';
-    btn.style.color = 'var(--violet-2)';
-    btn.style.fontSize = '11px';
-    btn.style.fontWeight = '700';
-    btn.style.cursor = 'pointer';
-
-    btn.addEventListener('click', openCoachAndSendWeeklyReview);
-
-    title.insertAdjacentElement('afterend', btn);
-  }
-
-  installButton();
-  setTimeout(installButton, 600);
-})();
-  </script>
-  <script>
-(function(){
-  if (window.__weeklyReviewAiV2Installed) return;
-  window.__weeklyReviewAiV2Installed = true;
-
-  function txt(sel){
-    return document.querySelector(sel)?.textContent?.trim() || '';
-  }
-
-  function getBookmarksMini(){
-    return Array.from(document.querySelectorAll('#bookmark-list .bm-row'))
-      .map(row => {
-        const domain = (row.querySelector('.bm-domain')?.textContent || '')
-          .replace(/\s*·\s*\d+\s*archivé[s]?/i, '')
-          .trim();
-        const text = (row.querySelector('.bm-where')?.textContent || '').trim();
-        return domain && text ? `${domain}: ${text}` : '';
-      })
-      .filter(Boolean)
-      .slice(0, 6);
-  }
-
-  function buildWeeklyPrompt(){
-    const stats = {
-      study: txt('[data-rev="study"]'),
-      sport: txt('[data-rev="sport"]'),
-      flex: txt('[data-rev="flex"]'),
-      pages: txt('[data-rev="pages"]'),
-      chess: txt('[data-rev="chess"]'),
-      vinted: txt('[data-rev="vinted"]'),
-      mood: txt('[data-rev="mood"]'),
-      active: txt('[data-rev="active"]')
-    };
-
-    const bookmarks = getBookmarksMini();
-
-    return [
-      "Fais-moi ma weekly review.",
-      "",
-      "Réponds de façon directe, concrète, sans blabla.",
-      "Donne 1 point faible principal.",
-      "Donne 3 priorités de la semaine.",
-      "Donne 1 chose à couper.",
-      "Donne 1 chose à renforcer.",
-      "Termine par 1 next action immédiate.",
-      "",
-      "Stats hebdo :",
-      `- Étude: ${stats.study || '—'}`,
-      `- Sport: ${stats.sport || '—'}`,
-      `- Flex: ${stats.flex || '—'}`,
-      `- Lecture: ${stats.pages || '—'}`,
-      `- Échecs: ${stats.chess || '—'}`,
-      `- Vinted: ${stats.vinted || '—'}`,
-      `- Humeur: ${stats.mood || '—'}`,
-      `- Jours actifs: ${stats.active || '—'}`,
-      "",
-      "Bookmarks utiles :",
-      ...(bookmarks.length ? bookmarks.map(x => `- ${x}`) : ["- Aucun bookmark utile détecté"])
-    ].join('\n');
-  }
-
-  function launchWeeklyReview(){
-    const fab = document.getElementById('ask-claude-fab');
-    const input = document.getElementById('ac-input');
-    const sendBtn = document.getElementById('ac-send');
-
-    if (fab) fab.click();
-
-    setTimeout(() => {
-      const analyseBtn = Array.from(document.querySelectorAll('#ac-modes button'))
-        .find(b => /analyse/i.test(b.textContent || ''));
-      if (analyseBtn) analyseBtn.click();
-
-      if (input && sendBtn) {
-        input.value = buildWeeklyPrompt();
-        sendBtn.click();
-      }
-    }, 250);
-  }
-
-  function installBtn(){
-    const card = document.querySelector('.review-card');
-    if (!card) return;
-    if (document.getElementById('weekly-review-ai-btn-v2')) return;
-
-    const btn = document.createElement('button');
-    btn.id = 'weekly-review-ai-btn-v2';
-    btn.type = 'button';
-    btn.textContent = 'Review IA';
-    btn.style.display = 'inline-flex';
-    btn.style.alignItems = 'center';
-    btn.style.justifyContent = 'center';
-    btn.style.margin = '0 0 12px 0';
-    btn.style.padding = '10px 14px';
-    btn.style.borderRadius = '999px';
-    btn.style.border = '1px solid rgba(167,139,250,.30)';
-    btn.style.background = 'rgba(167,139,250,.10)';
-    btn.style.color = 'var(--violet-2)';
-    btn.style.fontSize = '12px';
-    btn.style.fontWeight = '700';
-    btn.style.cursor = 'pointer';
-
-    btn.addEventListener('click', launchWeeklyReview);
-
-    card.insertAdjacentElement('afterbegin', btn);
-  }
-
-  installBtn();
-  setTimeout(installBtn, 500);
-  setTimeout(installBtn, 1200);
-  setInterval(installBtn, 3000);
-})();
-  </script>
-  <script>
-(function(){
-  if (window.__weeklyReviewFabInstalled) return;
-  window.__weeklyReviewFabInstalled = true;
-
-  function txt(sel){
-    return document.querySelector(sel)?.textContent?.trim() || '';
-  }
-
-  function getBookmarksMini(){
-    return Array.from(document.querySelectorAll('#bookmark-list .bm-row'))
-      .map(row => {
-        const domain = (row.querySelector('.bm-domain')?.textContent || '')
-          .replace(/\s*·\s*\d+\s*archivé[s]?/i, '')
-          .trim();
-        const text = (row.querySelector('.bm-where,[data-bm]')?.textContent || '').trim();
-        return domain && text ? `${domain}: ${text}` : '';
-      })
-      .filter(Boolean)
-      .slice(0, 6);
-  }
-
-  function buildWeeklyPrompt(){
-    const stats = {
-      study: txt('[data-rev="study"]'),
-      sport: txt('[data-rev="sport"]'),
-      flex: txt('[data-rev="flex"]'),
-      pages: txt('[data-rev="pages"]'),
-      chess: txt('[data-rev="chess"]'),
-      vinted: txt('[data-rev="vinted"]'),
-      mood: txt('[data-rev="mood"]'),
-      active: txt('[data-rev="active"]')
-    };
-
-    const bookmarks = getBookmarksMini();
-
-    return [
-      "Fais-moi ma weekly review.",
-      "",
-      "Réponds de façon directe, concrète, sans blabla.",
-      "Donne 1 point faible principal.",
-      "Donne 3 priorités de la semaine.",
-      "Donne 1 chose à couper.",
-      "Donne 1 chose à renforcer.",
-      "Termine par 1 next action immédiate.",
-      "",
-      "Stats hebdo :",
-      `- Étude: ${stats.study || '—'}`,
-      `- Sport: ${stats.sport || '—'}`,
-      `- Flex: ${stats.flex || '—'}`,
-      `- Lecture: ${stats.pages || '—'}`,
-      `- Échecs: ${stats.chess || '—'}`,
-      `- Vinted: ${stats.vinted || '—'}`,
-      `- Humeur: ${stats.mood || '—'}`,
-      `- Jours actifs: ${stats.active || '—'}`,
-      "",
-      "Bookmarks utiles :",
-      ...(bookmarks.length ? bookmarks.map(x => `- ${x}`) : ["- Aucun bookmark utile détecté"])
-    ].join('\n');
-  }
-
-  function launchWeeklyReview(){
-    const fab = document.getElementById('ask-claude-fab');
-    const input = document.getElementById('ac-input');
-    const sendBtn = document.getElementById('ac-send');
-
-    if (fab) fab.click();
-
-    setTimeout(() => {
-      const analyseBtn = Array.from(document.querySelectorAll('#ac-modes button'))
-        .find(b => /analyse/i.test(b.textContent || ''));
-      if (analyseBtn) analyseBtn.click();
-
-      if (input && sendBtn) {
-        input.value = buildWeeklyPrompt();
-        sendBtn.click();
-      }
-    }, 300);
-  }
-
-  const btn = document.createElement('button');
-  btn.id = 'weekly-review-fab';
-  btn.type = 'button';
-  btn.textContent = 'Review IA';
-  btn.style.position = 'fixed';
-  btn.style.right = '20px';
-  btn.style.bottom = '86px';
-  btn.style.zIndex = '91';
-  btn.style.padding = '12px 14px';
-  btn.style.borderRadius = '999px';
-  btn.style.border = '1px solid rgba(167,139,250,.30)';
-  btn.style.background = 'rgba(167,139,250,.14)';
-  btn.style.color = 'var(--violet-2)';
-  btn.style.fontSize = '12px';
-  btn.style.fontWeight = '800';
-  btn.style.cursor = 'pointer';
-  btn.style.boxShadow = '0 6px 18px rgba(0,0,0,.35)';
-
-  btn.addEventListener('click', launchWeeklyReview);
-  document.body.appendChild(btn);
-})();
-  </script>
-  <script>
-(function(){
-  if (window.__weeklyReviewInlineInstalled) return;
-  window.__weeklyReviewInlineInstalled = true;
-
-  function txt(sel){
-    return document.querySelector(sel)?.textContent?.trim() || '';
-  }
-
-  function removeOldButtons(){
-    [
-      'weekly-review-fab',
-      'weekly-review-ai-btn',
-      'weekly-review-ai-btn-v2',
-      'weekly-review-inline'
-    ].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.remove();
-    });
-  }
-
-  function getBookmarksMini(){
-    return Array.from(document.querySelectorAll('#bookmark-list .bm-row'))
-      .map(row => {
-        const domain = (row.querySelector('.bm-domain')?.textContent || '')
-          .replace(/\s*·\s*\d+\s*archivé[s]?/i, '')
-          .trim();
-        const text = (row.querySelector('.bm-where,[data-bm]')?.textContent || '').trim();
-        return domain && text ? `${domain}: ${text}` : '';
-      })
-      .filter(Boolean)
-      .slice(0, 6);
-  }
-
-  function buildWeeklyPrompt(){
-    const stats = {
-      study: txt('[data-rev="study"]'),
-      sport: txt('[data-rev="sport"]'),
-      flex: txt('[data-rev="flex"]'),
-      pages: txt('[data-rev="pages"]'),
-      chess: txt('[data-rev="chess"]'),
-      vinted: txt('[data-rev="vinted"]'),
-      mood: txt('[data-rev="mood"]'),
-      active: txt('[data-rev="active"]')
-    };
-
-    const bookmarks = getBookmarksMini();
-
-    return [
-      "WEEKLY REVIEW IA",
-      "",
-      "Tu fais une revue hebdomadaire stricte.",
-      "Réponds en français, direct, concret, sans blabla.",
-      "Format OBLIGATOIRE :",
-      "WEEKLY REVIEW",
-      "1. Point faible principal",
-      "2. Trois priorités de la semaine",
-      "3. Une chose à couper",
-      "4. Une chose à renforcer",
-      "5. Next action immédiate",
-      "",
-      "Stats hebdo :",
-      `- Étude: ${stats.study || '—'}`,
-      `- Sport: ${stats.sport || '—'}`,
-      `- Flex: ${stats.flex || '—'}`,
-      `- Lecture: ${stats.pages || '—'}`,
-      `- Échecs: ${stats.chess || '—'}`,
-      `- Vinted: ${stats.vinted || '—'}`,
-      `- Humeur: ${stats.mood || '—'}`,
-      `- Jours actifs: ${stats.active || '—'}`,
-      "",
-      "Bookmarks utiles :",
-      ...(bookmarks.length ? bookmarks.map(x => `- ${x}`) : ["- Aucun bookmark utile détecté"]),
-      "",
-      "Interdiction de répondre comme un simple coach générique.",
-      "Tu dois exploiter les chiffres et les bookmarks s'ils existent."
-    ].join('\\n');
-  }
-
-  function launchWeeklyReview(){
-    const fab = document.getElementById('ask-claude-fab');
-    const input = document.getElementById('ac-input');
-    const sendBtn = document.getElementById('ac-send');
-
-    if (fab) fab.click();
-
-    setTimeout(() => {
-      const analyseBtn = Array.from(document.querySelectorAll('#ac-modes button'))
-        .find(b => /analyse/i.test(b.textContent || ''));
-      if (analyseBtn) analyseBtn.click();
-
-      if (input && sendBtn) {
-        input.value = buildWeeklyPrompt();
-        sendBtn.click();
-      }
-    }, 320);
-  }
-
-  function findStatsMount(){
-    const study = document.querySelector('[data-rev="study"]');
-    if (!study) return null;
-
-    let node = study;
-    while (node && node !== document.body) {
-      try {
-        if (node.querySelectorAll && node.querySelectorAll('[data-rev]').length >= 4) {
-          return node;
-        }
-      } catch (_) {}
-      node = node.parentElement;
-    }
-
-    return study.parentElement || null;
-  }
-
-  function installButton(){
-    removeOldButtons();
-
-    const mount = findStatsMount();
-    if (!mount) return;
-    if (document.getElementById('weekly-review-inline')) return;
-
-    const wrap = document.createElement('div');
-    wrap.id = 'weekly-review-inline';
-    wrap.style.display = 'flex';
-    wrap.style.alignItems = 'center';
-    wrap.style.justifyContent = 'space-between';
-    wrap.style.gap = '12px';
-    wrap.style.margin = '0 0 14px 0';
-    wrap.style.padding = '12px 14px';
-    wrap.style.borderRadius = '16px';
-    wrap.style.border = '1px solid rgba(167,139,250,.20)';
-    wrap.style.background = 'rgba(167,139,250,.08)';
-
-    const left = document.createElement('div');
-    left.style.minWidth = '0';
-
-    const title = document.createElement('div');
-    title.textContent = 'Weekly Review IA';
-    title.style.fontWeight = '800';
-    title.style.fontSize = '14px';
-    title.style.color = 'var(--violet-2)';
-
-    const sub = document.createElement('div');
-    sub.textContent = 'Bilan hebdo en 1 clic';
-    sub.style.fontSize = '11px';
-    sub.style.color = 'var(--text-dim)';
-
-    left.appendChild(title);
-    left.appendChild(sub);
-
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.textContent = 'Lancer';
-    btn.style.padding = '10px 14px';
-    btn.style.borderRadius = '999px';
-    btn.style.border = '1px solid rgba(167,139,250,.30)';
-    btn.style.background = 'rgba(167,139,250,.14)';
-    btn.style.color = 'var(--violet-2)';
-    btn.style.fontSize = '12px';
-    btn.style.fontWeight = '800';
-    btn.style.cursor = 'pointer';
-    btn.style.flexShrink = '0';
-
-    btn.addEventListener('click', launchWeeklyReview);
-
-    wrap.appendChild(left);
-    wrap.appendChild(btn);
-
-    mount.insertAdjacentElement('beforebegin', wrap);
-  }
-
-  installButton();
-  setTimeout(installButton, 500);
-  setTimeout(installButton, 1500);
-  setInterval(installButton, 3000);
-})();
-  </script>
-  <script>
-(function(){
-  if (window.__weeklyReviewStatsMountV3) return;
-  window.__weeklyReviewStatsMountV3 = true;
-
-  function q(sel, root=document){ return root.querySelector(sel); }
-  function qa(sel, root=document){ return Array.from(root.querySelectorAll(sel)); }
-  function txt(sel){ return q(sel)?.textContent?.trim() || ''; }
-
-  function removeOld(){
-    [
-      'weekly-review-fab',
-      'weekly-review-ai-btn',
-      'weekly-review-ai-btn-v2',
-      'weekly-review-inline',
-      'weekly-review-stats-inline'
-    ].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.remove();
-    });
-  }
-
-  function isStatsTabActive(){
-    const statsTab =
-      qa('button, a, .tab, .chip').find(el => /stats/i.test(el.textContent || ''));
-    if (!statsTab) return false;
-
-    const cls = statsTab.className || '';
-    const aria = statsTab.getAttribute('aria-selected');
-    return (
-      aria === 'true' ||
-      /\bactive\b|\bselected\b|\bcurrent\b/.test(cls) ||
-      getComputedStyle(statsTab).opacity === '1'
-    );
-  }
-
-  function hasWeeklyStats(){
-    return !!q('[data-rev="study"]') || !!q('[data-rev="sport"]') || !!q('[data-rev="active"]');
-  }
-
-  function getBookmarksMini(){
-    return qa('#bookmark-list .bm-row')
-      .map(row => {
-        const domain = (q('.bm-domain', row)?.textContent || '')
-          .replace(/\s*·\s*\d+\s*archivé[s]?/i, '')
-          .trim();
-        const text = (q('.bm-where,[data-bm]', row)?.textContent || '').trim();
-        return domain && text ? `${domain}: ${text}` : '';
-      })
-      .filter(Boolean)
-      .slice(0, 6);
-  }
-
-  function buildWeeklyPrompt(){
-    const stats = {
-      study: txt('[data-rev="study"]'),
-      sport: txt('[data-rev="sport"]'),
-      flex: txt('[data-rev="flex"]'),
-      pages: txt('[data-rev="pages"]'),
-      chess: txt('[data-rev="chess"]'),
-      vinted: txt('[data-rev="vinted"]'),
-      mood: txt('[data-rev="mood"]'),
-      active: txt('[data-rev="active"]')
-    };
-
-    const bookmarks = getBookmarksMini();
-
-    return [
-      "WEEKLY REVIEW IA",
-      "",
-      "Réponds en français.",
-      "Réponse directe, structurée, sans blabla.",
-      "Format strict :",
-      "1. Point faible principal",
-      "2. Trois priorités de la semaine",
-      "3. Une chose à couper",
-      "4. Une chose à renforcer",
-      "5. Next action immédiate",
-      "",
-      "Stats hebdo :",
-      `- Étude: ${stats.study || '—'}`,
-      `- Sport: ${stats.sport || '—'}`,
-      `- Flex: ${stats.flex || '—'}`,
-      `- Lecture: ${stats.pages || '—'}`,
-      `- Échecs: ${stats.chess || '—'}`,
-      `- Vinted: ${stats.vinted || '—'}`,
-      `- Humeur: ${stats.mood || '—'}`,
-      `- Jours actifs: ${stats.active || '—'}`,
-      "",
-      "Bookmarks utiles :",
-      ...(bookmarks.length ? bookmarks.map(x => `- ${x}`) : ["- Aucun bookmark utile détecté"])
-    ].join('\\n');
-  }
-
-  function launchWeeklyReview(){
-    const fab = document.getElementById('ask-claude-fab');
-    const input = document.getElementById('ac-input');
-    const sendBtn = document.getElementById('ac-send');
-
-    if (fab) fab.click();
-
-    setTimeout(() => {
-      const analyseBtn = qa('#ac-modes button').find(b => /analyse/i.test(b.textContent || ''));
-      if (analyseBtn) analyseBtn.click();
-
-      if (input && sendBtn) {
-        input.value = buildWeeklyPrompt();
-        sendBtn.click();
-      }
-    }, 350);
-  }
-
-  function findStatsContainer(){
-    const statNode =
-      q('[data-rev="study"]') ||
-      q('[data-rev="sport"]') ||
-      q('[data-rev="active"]');
-    if (!statNode) return null;
-
-    let node = statNode;
-    while (node && node !== document.body) {
-      if (node.children && node.children.length >= 2) return node;
-      node = node.parentElement;
-    }
-    return statNode.parentElement;
-  }
-
-  function install(){
-    removeOld();
-
-    if (!isStatsTabActive()) return;
-    if (!hasWeeklyStats()) return;
-
-    const mount = findStatsContainer();
-    if (!mount) return;
-    if (document.getElementById('weekly-review-stats-inline')) return;
-
-    const box = document.createElement('div');
-    box.id = 'weekly-review-stats-inline';
-    box.style.display = 'flex';
-    box.style.alignItems = 'center';
-    box.style.justifyContent = 'space-between';
-    box.style.gap = '12px';
-    box.style.margin = '0 0 14px 0';
-    box.style.padding = '12px 14px';
-    box.style.borderRadius = '16px';
-    box.style.border = '1px solid rgba(167,139,250,.20)';
-    box.style.background = 'rgba(167,139,250,.08)';
-
-    const left = document.createElement('div');
-
-    const title = document.createElement('div');
-    title.textContent = 'Weekly Review IA';
-    title.style.fontWeight = '800';
-    title.style.fontSize = '14px';
-    title.style.color = 'var(--violet-2)';
-
-    const sub = document.createElement('div');
-    sub.textContent = 'Bilan hebdo IA depuis Stats';
-    sub.style.fontSize = '11px';
-    sub.style.color = 'var(--text-dim)';
-
-    left.appendChild(title);
-    left.appendChild(sub);
-
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.textContent = 'Lancer';
-    btn.style.padding = '10px 14px';
-    btn.style.borderRadius = '999px';
-    btn.style.border = '1px solid rgba(167,139,250,.30)';
-    btn.style.background = 'rgba(167,139,250,.14)';
-    btn.style.color = 'var(--violet-2)';
-    btn.style.fontSize = '12px';
-    btn.style.fontWeight = '800';
-    btn.style.cursor = 'pointer';
-    btn.style.flexShrink = '0';
-    btn.addEventListener('click', launchWeeklyReview);
-
-    box.appendChild(left);
-    box.appendChild(btn);
-
-    mount.insertAdjacentElement('beforebegin', box);
-  }
-
-  install();
-  setTimeout(install, 500);
-  setTimeout(install, 1200);
-  setTimeout(install, 2500);
-
-  const obs = new MutationObserver(() => install());
-  obs.observe(document.body, { childList: true, subtree: true, attributes: true });
-})();
-  </script>
 </body>
 </html>
