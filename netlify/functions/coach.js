@@ -75,11 +75,13 @@ exports.handler = async (event) => {
       "warning = danger principal ou dérive principale. Si rien à signaler, mets une chaîne vide."
     ].join(' ');
 
+    // Contexte en JSON compact : ~30-40% de tokens en moins vs pretty-printed,
+    // donc réponse plus rapide et factures réduites. La lisibilité côté modèle est identique.
     const userPrompt = [
       `Mode: ${mode}`,
       '',
       'Contexte actuel :',
-      JSON.stringify(context, null, 2),
+      JSON.stringify(context),
       '',
       'Question : ' + question
     ].join('\n');
