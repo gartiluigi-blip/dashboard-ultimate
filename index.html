@@ -13877,5 +13877,275 @@ if (document.readyState === 'loading'){
 })();
 </script>
 
+
+<!-- ═══════════════════════════════════════════════════════════
+     HOTFIX v3.1 — Tabs rebind + voice permission + section placement
+     ═══════════════════════════════════════════════════════════ -->
+<script id="hotfix-v3-1">
+(function(){
+'use strict';
+if (window.__hotfix31) return;
+window.__hotfix31 = true;
+
+const log = (...a) => { try { console.warn('[hotfix3.1]', ...a); } catch(_){} };
+
+// ────────────────────────────────────────────────────────────
+// FIX 1 : ROUTER ÉTENDU pour les nouveaux onglets
+// L'app capture tabEls UNE seule fois au load. Mes nouveaux onglets
+// (today, trading, settings) ne sont pas dans la liste donc clic mort.
+// Solution : event delegation sur la nav qui appelle window.go() 
+// (le router global déjà exposé ligne 6215).
+// ────────────────────────────────────────────────────────────
+function fixTabRouting(){
+  const nav = document.getElementById('tabs');
+  if (!nav){ log('nav #tabs introuvable'); return; }
+  if (nav.dataset.hotfix31) return;
+  nav.dataset.hotfix31 = '1';
+
+  // Délégation : capture clic sur n'importe quel .tab[data-tab] enfant
+  nav.addEventListener('click', e => {
+    const tab = e.target.closest('.tab[data-tab]');
+    if (!tab) return;
+    const name = tab.dataset.tab;
+    // Si window.go existe (router officiel), on l'utilise
+    if (typeof window.go === 'function'){
+      window.go(name);
+    } else {
+      // Fallback : toggle .active manuel
+      document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t === tab));
+      document.querySelectorAll('section.page').forEach(p => {
+        const pname = p.dataset.page || (p.id || '').replace(/^p-/, '');
+        p.classList.toggle('active', pname === name);
+      });
+    }
+  }, true);  // capture phase pour passer avant les anciens listeners cassés
+
+  log('tab routing étendu OK');
+}
+
+// ────────────────────────────────────────────────────────────
+// FIX 2 : ONGLETS today / trading / settings
+// L'onglet "home" existait DÉJÀ → mon "today" doublonne et confuse.
+// Solution : retirer l'onglet "today" injecté et utiliser "home" (déjà natif).
+// Garder trading et settings, vérifier que leurs <section> existent
+// dans <main class="main"> et pas en dehors.
+// ────────────────────────────────────────────────────────────
+function fixTabsAndSections(){
+  // 2a. Retire le doublon today injecté par v3
+  const todayTab = document.querySelector('.tab[data-tab="today"]');
+  if (todayTab) todayTab.remove();
+  const todaySection = document.getElementById('p-today');
+  if (todaySection) todaySection.remove();
+  log('today supprimé (doublon de home)');
+
+  // 2b. Vérifie que les sections trading et settings sont bien dans <main>
+  const main = document.querySelector('main.main');
+  if (!main){ log('main.main introuvable'); return; }
+
+  const tradingSec = document.getElementById('p-trading');
+  if (tradingSec && tradingSec.parentElement !== main){
+    main.appendChild(tradingSec);
+    log('section trading replacée dans main');
+  }
+  // Stop double-insertion : si la section a déjà été insérée hors main par v3,
+  // forcer la classe "page" et l'attribut requis par le router
+  if (tradingSec){
+    tradingSec.classList.add('page');
+    if (!tradingSec.dataset.page) tradingSec.dataset.page = 'trading';
+  }
+
+  const settingsSec = document.getElementById('p-settings');
+  if (settingsSec && settingsSec.parentElement !== main){
+    main.appendChild(settingsSec);
+    log('section settings replacée dans main');
+  }
+  if (settingsSec){
+    settingsSec.classList.add('page');
+    if (!settingsSec.dataset.page) settingsSec.dataset.page = 'settings';
+  }
+
+  // 2c. Vérifie que les onglets existent
+  const tabsNav = document.getElementById('tabs');
+  if (tabsNav){
+    if (!document.querySelector('.tab[data-tab="trading"]')){
+      const t = document.createElement('div');
+      t.className = 'tab';
+      t.dataset.tab = 'trading';
+      t.setAttribute('role','tab');
+      t.setAttribute('tabindex','0');
+      t.setAttribute('aria-selected','false');
+      t.innerHTML = '📈 Trading';
+      tabsNav.appendChild(t);
+      log('tab trading recréé');
+    }
+    if (!document.querySelector('.tab[data-tab="settings"]')){
+      const t = document.createElement('div');
+      t.className = 'tab';
+      t.dataset.tab = 'settings';
+      t.setAttribute('role','tab');
+      t.setAttribute('tabindex','0');
+      t.setAttribute('aria-selected','false');
+      t.title = 'Paramètres';
+      t.innerHTML = '⚙️';
+      tabsNav.appendChild(t);
+      log('tab settings recréé');
+    }
+  }
+}
+
+// ────────────────────────────────────────────────────────────
+// FIX 3 : MICRO — permission explicite avant SpeechRecognition
+// Sur Safari iOS et certains Chrome mobiles, SpeechRecognition.start()
+// échoue silencieusement si on n'a pas appelé getUserMedia avant.
+// Solution : déclencher une demande de permission micro EXPLICITE 
+// au premier clic, puis lancer la reco.
+// ────────────────────────────────────────────────────────────
+function fixVoice(){
+  // Override de la méthode start pour demander mic d'abord
+  if (!window.__ultimate || !window.__ultimate.Voice) return;
+  const Voice = window.__ultimate.Voice;
+  if (Voice.__hotfixed) return;
+  Voice.__hotfixed = true;
+
+  const originalStart = Voice.start.bind(Voice);
+
+  Voice.start = async function(onResult, onEnd){
+    if (!Voice.isSupported()){
+      throw new Error('Voice non supporté sur ce navigateur. Essaye Chrome desktop ou Safari iOS récent.');
+    }
+
+    // 1. Demande permission micro explicite (déclenche le prompt système)
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // On stoppe immédiatement le stream — on voulait juste la permission
+        stream.getTracks().forEach(t => t.stop());
+      } catch(err){
+        throw new Error('Permission micro refusée. Va dans les réglages du navigateur pour autoriser le micro pour ultimatedashboard.netlify.app');
+      }
+    }
+
+    // 2. Lance la reco normalement
+    return originalStart(onResult, onEnd);
+  };
+
+  log('voice permission flow installé');
+}
+
+// QuickCapture aussi : faut catcher l'erreur et l'afficher
+function fixQuickCapture(){
+  if (!window.__ultimate || !window.__ultimate.QuickCapture) return;
+  const QC = window.__ultimate.QuickCapture;
+  if (QC.__hotfixed) return;
+  QC.__hotfixed = true;
+
+  const originalStart = QC.startRec.bind(QC);
+  QC.startRec = async function(){
+    const status = document.getElementById('qc-status');
+    const transcriptEl = document.getElementById('qc-transcript');
+    const recBtn = document.getElementById('qc-rec');
+    const stopBtn = document.getElementById('qc-stop');
+    
+    if (!window.__ultimate.Voice.isSupported()){
+      if (status) {
+        status.textContent = '⚠️ Voix non supportée. Tape ton message directement et utilise les boutons en bas.';
+        status.style.color = 'var(--amber)';
+      }
+      return;
+    }
+
+    try {
+      // Demande permission via le wrapper hotfixé
+      if (recBtn) recBtn.disabled = true;
+      if (status) { status.textContent = '🔐 Demande de permission micro…'; status.classList.add('live'); }
+      
+      await window.__ultimate.Voice.start(
+        (text) => { if (transcriptEl) transcriptEl.textContent = text; },
+        (final) => {
+          if (recBtn) recBtn.disabled = false;
+          if (stopBtn) stopBtn.disabled = true;
+          if (QC.el) QC.el.classList.remove('recording');
+          if (status){ status.classList.remove('live'); status.textContent = 'Arrêté.'; status.style.color = ''; }
+        }
+      );
+
+      if (stopBtn) stopBtn.disabled = false;
+      if (QC.el) QC.el.classList.add('recording');
+      if (status){ status.textContent = '🔴 enregistrement…'; status.style.color = ''; }
+
+    } catch(err){
+      if (recBtn) recBtn.disabled = false;
+      if (status){
+        status.textContent = '❌ ' + err.message;
+        status.style.color = 'var(--coral)';
+      }
+      if (QC.el) QC.el.classList.remove('recording');
+      log('voice start error', err);
+    }
+  };
+
+  log('QuickCapture error handling installé');
+}
+
+// ────────────────────────────────────────────────────────────
+// FIX 4 : INSCRIRE settings/trading/today dans pageEls 
+// Le router compare via pageName(p) qui prend l'ID. Donc tant que les
+// sections ont id="p-trading" et id="p-settings", elles devraient
+// matcher. Le bug serait si elles ne sont pas dans pageEls (querySelectorAll
+// au load). On force visibilité via attr active.
+// ────────────────────────────────────────────────────────────
+function ensurePagesVisible(){
+  // Si l'utilisateur clique trading/settings, le router toggle .active
+  // mais comme ces sections ont été ajoutées APRÈS le querySelectorAll,
+  // elles ne sont pas dans pageEls. Solution : on observe le clic et on
+  // force la visibilité manuellement.
+  document.addEventListener('click', e => {
+    const tab = e.target.closest('.tab[data-tab="trading"], .tab[data-tab="settings"]');
+    if (!tab) return;
+    const target = tab.dataset.tab;
+    // Cache toutes les .page
+    document.querySelectorAll('section.page').forEach(p => p.classList.remove('active'));
+    // Active la cible
+    const targetSec = document.getElementById('p-' + target);
+    if (targetSec){
+      targetSec.classList.add('active');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    // Update tab styles
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === target));
+  }, true);
+  log('visibility forcing installé pour trading/settings');
+}
+
+// ────────────────────────────────────────────────────────────
+// INIT — attendre que v3 soit installé
+// ────────────────────────────────────────────────────────────
+function run(){
+  fixTabsAndSections();
+  fixTabRouting();
+  fixVoice();
+  fixQuickCapture();
+  ensurePagesVisible();
+  log('hotfix v3.1 OK');
+}
+
+// Multiple tentatives car v3 peut prendre du temps à s'installer
+function poll(){
+  if (window.__ultimate && window.__aiCore){
+    run();
+  } else {
+    setTimeout(poll, 200);
+  }
+}
+
+if (document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', () => setTimeout(poll, 400));
+} else {
+  setTimeout(poll, 400);
+}
+
+})();
+</script>
+
 </body>
 </html>
