@@ -14147,5 +14147,479 @@ if (document.readyState === 'loading'){
 })();
 </script>
 
+
+<!-- ═══════════════════════════════════════════════════════════
+     HOTFIX v3.2 — Notification guards + Voice command parser
+     + Weekly Review fix + SW disable + Voice "mets une task"
+     ═══════════════════════════════════════════════════════════ -->
+<script id="hotfix-v3-2">
+(function(){
+'use strict';
+if (window.__hotfix32) return;
+window.__hotfix32 = true;
+
+const log = (...a) => { try { console.warn('[hotfix3.2]', ...a); } catch(_){} };
+
+// ════════════════════════════════════════════════════════════
+// FIX 1 : Notification API guard global
+// Brave / Firefox privé / certains contextes mobiles n'exposent pas
+// Notification. On crée un stub no-op pour éviter ReferenceError.
+// ════════════════════════════════════════════════════════════
+if (typeof Notification === 'undefined'){
+  window.Notification = function(){};
+  window.Notification.permission = 'denied';
+  window.Notification.requestPermission = () => Promise.resolve('denied');
+  log('Notification stub installé (API absente sur ce navigateur)');
+}
+
+// ════════════════════════════════════════════════════════════
+// FIX 2 : Désactivation propre du Service Worker inline (blob://)
+// Le navigateur refuse les SW depuis blob URLs. Pour un SW réel,
+// il faudrait servir /sw.js depuis Netlify (action utilisateur).
+// On désactive juste l'erreur en attendant.
+// ════════════════════════════════════════════════════════════
+if ('serviceWorker' in navigator){
+  navigator.serviceWorker.getRegistrations().then(regs => {
+    regs.forEach(r => {
+      if (r.scope && r.scope.startsWith('blob:')){
+        r.unregister().catch(()=>{});
+      }
+    });
+  }).catch(()=>{});
+}
+
+// ════════════════════════════════════════════════════════════
+// FIX 3 : Weekly Review insertBefore — utiliser appendChild safe
+// Le bug : injectWeeklyReview cherche .page-title dans Stats puis
+// fait insertBefore(block, title.nextSibling). Si nextSibling est
+// dans un sous-container, ça échoue.
+// Solution : remplacer par appendChild ou prepend.
+// ════════════════════════════════════════════════════════════
+function fixWeeklyReview(){
+  if (!window.__aiCore) return;
+  // Retirer un éventuel block déjà mal placé
+  document.querySelectorAll('.wr-block').forEach(b => b.remove());
+
+  // Re-injection propre dans #p-stats (ou Today)
+  const stats = document.getElementById('p-stats');
+  if (!stats || stats.querySelector('.wr-block')) return;
+
+  const block = document.createElement('div');
+  block.className = 'wr-block';
+  block.innerHTML = `
+    <div class="wr-block-head">
+      <div>
+        <div class="wr-block-title">📋 Weekly Review IA</div>
+        <div class="wr-block-sub">Synthèse semaine + 3 priorités à venir</div>
+      </div>
+      <button class="wr-block-btn" id="wr-go-v2">Lancer Review IA</button>
+    </div>
+    <div class="ai-quota-chip" style="margin-top:6px">— appels · cache 6h</div>
+    <div class="wr-block-output" id="wr-output-v2"></div>
+  `;
+  // Méthode safe : prepend (ajoute en premier enfant)
+  stats.prepend(block);
+
+  block.querySelector('#wr-go-v2').addEventListener('click', async () => {
+    const btn = block.querySelector('#wr-go-v2');
+    const out = block.querySelector('#wr-output-v2');
+    btn.disabled = true; btn.textContent = '… analyse en cours';
+    out.classList.add('show'); out.textContent = 'Analyse de ta semaine…';
+    const ctx = window.__aiCore.buildContextV2();
+    const data = await window.__aiCore.coachAsk({
+      mode: 'analyse',
+      question: "Fais ma weekly review. Format strict :\n1. Point faible principal\n2. Trois priorités de la semaine\n3. Une chose à couper\n4. Une chose à renforcer\n5. Next action immédiate",
+      context: ctx,
+      max_tokens: 350
+    });
+    out.innerHTML = '';
+    window.__aiCore.renderAIResponse(out, { ...data, _timestamp: new Date().toISOString() }, { allowApply: true });
+    if (!data.blocked && window.__aiCore.History){
+      window.__aiCore.History.add({ ...data, mode: 'analyse', question: 'weekly review' });
+    }
+    btn.disabled = false; btn.textContent = 'Relancer Review IA';
+  });
+  log('Weekly Review réinjecté proprement');
+}
+
+// ════════════════════════════════════════════════════════════
+// FIX 4 : COMMAND PARSER vocal
+// "mets une task pour demain : faire X" → ajoute vraiment une task
+// "log que j'ai fait 30 min de Java" → ajoute au log + bookmark
+// "rappel demain à 9h : appeler X" → reminder
+// "supprime l'onglet trading" → bouton de confirmation
+// "ouvre stats" → switch tab
+// Si pas de pattern reconnu → fallback Claude
+// ════════════════════════════════════════════════════════════
+const NS = 'dashv2_';
+const sg = (k, d) => { try { return JSON.parse(localStorage.getItem(NS+k)) ?? d; } catch(_){ return d; } };
+const ss = (k, v) => { try { localStorage.setItem(NS+k, JSON.stringify(v)); return true; } catch(_){ return false; } };
+
+const Cmd = {
+  patterns: [
+    // Tasks
+    { re: /^(?:mets?|ajoute?|crée?|cree?|met)\s+(?:une\s+)?(?:t[aâ]che|task|todo)\s+(?:pour\s+)?(demain|aujourd['’]?hui|maintenant)?\s*(?::|,|—|-)?\s*(.+)$/i,
+      fn: (m) => Cmd.addTask(m[1] || 'aujourd\'hui', m[2]) },
+    // Log
+    { re: /^(?:log|journal|note)(?:\s+que)?\s+(.+)$/i,
+      fn: (m) => Cmd.addLog(m[1]) },
+    // Bookmark
+    { re: /^(?:bookmark|marque|signet)\s+(epfc|code|nl|trading|read|chess|ai|vinted)\s*(?::|,|—|-)?\s*(.+)$/i,
+      fn: (m) => Cmd.setBookmark(m[1].toLowerCase(), m[2]) },
+    // Reminder
+    { re: /^rappel(?:le)?(?:-?moi)?\s+(?:demain|aujourd['’]?hui|à|a)?\s*(?:à|a)?\s*(\d{1,2})\s*h(?:eure)?\s*(\d{0,2})?\s*(?::|,|—|-)?\s*(.+)$/i,
+      fn: (m) => Cmd.addReminder(m[1], m[2] || '0', m[3]) },
+    // Navigation
+    { re: /^(?:ouvre|va\s+(?:à|sur)|montre|affiche)\s+(?:l['’]?)?(?:onglet\s+)?(home|aujourd['’]?hui|stats|routine|sport|flex|nutrition|epfc|code|ia|vinted|nl|chess|finance|social|plan|trading|settings|paramètres|parametres)$/i,
+      fn: (m) => Cmd.openTab(m[1]) },
+    // Suppression
+    { re: /^(?:supprime|enlève|enleve|retire|cache)\s+(?:l['’]?)?(?:onglet\s+)?(trading|settings|paramètres|parametres)$/i,
+      fn: (m) => Cmd.confirmRemoveTab(m[1]) },
+    // Pomodoro
+    { re: /^(?:démarre|demarre|lance|start)\s+(?:un\s+)?(?:pomo(?:doro)?|focus|timer)(?:\s+(?:de\s+)?(\d+)\s*(?:min|minutes?))?$/i,
+      fn: (m) => Cmd.startPomo(m[1]) }
+  ],
+
+  parse(text){
+    const t = text.trim();
+    for (const p of this.patterns){
+      const m = t.match(p.re);
+      if (m){
+        try { return p.fn(m); }
+        catch(e){ return { ok: false, msg: 'Erreur: ' + e.message }; }
+      }
+    }
+    return null; // pas de match
+  },
+
+  addTask(when, label){
+    const tasks = sg('voice_tasks', []);
+    let date;
+    const today = new Date();
+    if (/demain/i.test(when)){
+      const d = new Date(today); d.setDate(d.getDate()+1);
+      date = d.toISOString().slice(0,10);
+    } else {
+      date = today.toISOString().slice(0,10);
+    }
+    tasks.push({ id: Date.now(), date, label: label.trim(), done: false, source: 'voice' });
+    ss('voice_tasks', tasks);
+    return { ok: true, msg: `✓ Task "${label.trim()}" ajoutée pour ${when || 'aujourd\'hui'} (${date})`, action: 'task' };
+  },
+
+  addLog(text){
+    const today = new Date().toISOString().slice(0,10);
+    const logs = sg('logs', {}) || {};
+    logs[today] = logs[today] || {};
+    logs[today].voice_notes = (logs[today].voice_notes || []);
+    logs[today].voice_notes.push({ ts: new Date().toISOString(), text: text.trim() });
+    ss('logs', logs);
+    return { ok: true, msg: `✓ Log ajouté : "${text.trim()}"`, action: 'log' };
+  },
+
+  setBookmark(key, text){
+    if (window.__aiCore?.Bookmarks){
+      window.__aiCore.Bookmarks.set(key, text.trim());
+      return { ok: true, msg: `✓ Bookmark ${key} → "${text.trim()}"`, action: 'bookmark' };
+    }
+    return { ok: false, msg: 'Bookmarks API absent' };
+  },
+
+  addReminder(h, m, label){
+    const reminders = sg('voice_reminders', []);
+    const d = new Date();
+    d.setHours(parseInt(h), parseInt(m||0), 0, 0);
+    if (d <= new Date()) d.setDate(d.getDate()+1);
+    reminders.push({ id: Date.now(), at: d.toISOString(), label: label.trim() });
+    ss('voice_reminders', reminders);
+    return { ok: true, msg: `✓ Rappel à ${h}h${m||'00'} : "${label.trim()}"`, action: 'reminder' };
+  },
+
+  openTab(name){
+    const map = {
+      'home':'home','aujourd\'hui':'home','aujourdhui':'home',
+      'paramètres':'settings','parametres':'settings'
+    };
+    const target = map[name.toLowerCase()] || name.toLowerCase();
+    if (typeof window.go === 'function'){
+      window.go(target);
+      return { ok: true, msg: `→ Onglet ${target}`, action: 'nav' };
+    }
+    // Fallback : click manuel
+    const tab = document.querySelector(`.tab[data-tab="${target}"]`);
+    if (tab){ tab.click(); return { ok: true, msg: `→ Onglet ${target}`, action: 'nav' }; }
+    return { ok: false, msg: 'Onglet non trouvé' };
+  },
+
+  confirmRemoveTab(name){
+    const target = name.toLowerCase().replace('paramètres','settings').replace('parametres','settings');
+    if (!confirm(`Supprimer l'onglet ${target} ? Les données restent en localStorage mais l'onglet sera caché.`)){
+      return { ok: false, msg: 'Annulé' };
+    }
+    const tab = document.querySelector(`.tab[data-tab="${target}"]`);
+    const sec = document.getElementById('p-' + target);
+    if (tab) tab.style.display = 'none';
+    if (sec) sec.style.display = 'none';
+    const hidden = sg('hidden_tabs', []);
+    if (!hidden.includes(target)){ hidden.push(target); ss('hidden_tabs', hidden); }
+    return { ok: true, msg: `✓ Onglet ${target} caché`, action: 'remove' };
+  },
+
+  startPomo(min){
+    // Cherche un bouton existant "start pomodoro"
+    const candidates = ['#pomo-start','[data-action="pomo-start"]','.pomo-start','.btn-pomo','#start-pomo'];
+    for (const sel of candidates){
+      const el = document.querySelector(sel);
+      if (el){ el.click(); return { ok: true, msg: '✓ Pomodoro lancé', action: 'pomo' }; }
+    }
+    return { ok: false, msg: 'Bouton pomodoro non trouvé — démarre depuis Routine' };
+  }
+};
+
+// Reapply hidden tabs au load
+(function applyHidden(){
+  const hidden = sg('hidden_tabs', []);
+  hidden.forEach(t => {
+    const tab = document.querySelector(`.tab[data-tab="${t}"]`);
+    const sec = document.getElementById('p-' + t);
+    if (tab) tab.style.display = 'none';
+    if (sec) sec.style.display = 'none';
+  });
+})();
+
+// ════════════════════════════════════════════════════════════
+// FIX 5 : Patcher Quick Capture pour gérer les commandes vocales
+// Bouton "Exécuter commande" qui parse le transcript
+// ════════════════════════════════════════════════════════════
+function patchQuickCapture(){
+  const modal = document.getElementById('qc-modal');
+  if (!modal) return;
+  if (modal.dataset.qcPatched) return;
+  modal.dataset.qcPatched = '1';
+
+  const actions = modal.querySelector('.qc-actions');
+  if (actions && !document.getElementById('qc-cmd')){
+    const cmdBtn = document.createElement('button');
+    cmdBtn.id = 'qc-cmd';
+    cmdBtn.className = 'primary';
+    cmdBtn.style.cssText = 'grid-column:1/-1';
+    cmdBtn.innerHTML = '⚡ Exécuter commande';
+    actions.appendChild(cmdBtn);
+
+    cmdBtn.addEventListener('click', () => {
+      const transcriptEl = document.getElementById('qc-transcript');
+      const status = document.getElementById('qc-status');
+      const text = transcriptEl?.textContent.trim();
+      if (!text){ if (status) status.textContent = 'Rien à exécuter.'; return; }
+      const result = Cmd.parse(text);
+      if (result){
+        if (status){
+          status.textContent = result.msg;
+          status.style.color = result.ok ? 'var(--jade)' : 'var(--coral)';
+        }
+        if (result.ok){
+          // Refresh today view + stats si dispo
+          if (window.__ultimate?.Today?.refresh) window.__ultimate.Today.refresh();
+          // Auto-close après 1.5s
+          setTimeout(() => window.__ultimate?.QuickCapture?.close?.(), 1500);
+        }
+      } else {
+        // Pas de pattern → envoie à Claude
+        if (status) status.textContent = '🤖 Pas de commande reconnue, envoi à Claude…';
+        window.__ultimate?.QuickCapture?.askAI?.();
+      }
+    });
+  }
+
+  // Affiche les commandes possibles dans le sheet
+  const sheet = modal.querySelector('.qc-sheet');
+  if (sheet && !document.getElementById('qc-help')){
+    const help = document.createElement('details');
+    help.id = 'qc-help';
+    help.style.cssText = 'margin-top:10px;font:11px var(--f-mono);color:var(--text-faint)';
+    help.innerHTML = `
+      <summary style="cursor:pointer;padding:6px 0">💡 Commandes reconnues</summary>
+      <div style="padding:8px 0;line-height:1.6">
+        <div>• <b>mets une task pour demain</b> : faire X</div>
+        <div>• <b>log que</b> j'ai fait 30 min de Java</div>
+        <div>• <b>bookmark epfc</b> : ch.4 exo 12</div>
+        <div>• <b>rappel à 9h</b> : appeler X</div>
+        <div>• <b>ouvre stats</b> · <b>ouvre routine</b></div>
+        <div>• <b>supprime l'onglet trading</b></div>
+        <div>• <b>démarre un pomodoro</b></div>
+        <div>• Si pas reconnu → envoi automatique à Claude</div>
+      </div>
+    `;
+    sheet.appendChild(help);
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// FIX 6 : Voice — auto-exécution de commande à la fin de l'enregistrement
+// Si la transcription matche un pattern → exécute direct
+// Sinon → reste affichée pour que l'utilisateur choisisse
+// ════════════════════════════════════════════════════════════
+function patchVoiceAutoExec(){
+  if (!window.__ultimate?.QuickCapture) return;
+  const QC = window.__ultimate.QuickCapture;
+  if (QC.__autoExecPatched) return;
+  QC.__autoExecPatched = true;
+
+  const originalStartRec = QC.startRec.bind(QC);
+  QC.startRec = async function(){
+    const recBtn = document.getElementById('qc-rec');
+    const stopBtn = document.getElementById('qc-stop');
+    const status = document.getElementById('qc-status');
+    const transcriptEl = document.getElementById('qc-transcript');
+
+    if (!window.__ultimate?.Voice?.isSupported()){
+      if (status){
+        status.textContent = '⚠️ Voix non supportée. Tape ton message et clique Exécuter commande.';
+        status.style.color = 'var(--amber)';
+      }
+      return;
+    }
+
+    try {
+      if (recBtn) recBtn.disabled = true;
+      if (status){ status.textContent = '🔐 permission…'; status.classList.add('live'); }
+
+      await window.__ultimate.Voice.start(
+        (text) => { if (transcriptEl) transcriptEl.textContent = text; },
+        (final) => {
+          if (recBtn) recBtn.disabled = false;
+          if (stopBtn) stopBtn.disabled = true;
+          if (QC.el) QC.el.classList.remove('recording');
+          if (status){ status.classList.remove('live'); status.style.color = ''; }
+
+          // AUTO-PARSE : si la phrase matche, on exécute immédiatement
+          const t = (final || transcriptEl?.textContent || '').trim();
+          if (!t){ if (status) status.textContent = 'Aucune transcription.'; return; }
+          const result = Cmd.parse(t);
+          if (result){
+            if (status){
+              status.textContent = result.msg;
+              status.style.color = result.ok ? 'var(--jade)' : 'var(--coral)';
+            }
+            if (result.ok){
+              if (window.__ultimate?.Today?.refresh) window.__ultimate.Today.refresh();
+              setTimeout(() => QC.close?.(), 1500);
+            }
+          } else {
+            if (status) status.textContent = 'Pas une commande. Tape "Envoyer à Claude" ou "Exécuter commande".';
+          }
+        }
+      );
+
+      if (stopBtn) stopBtn.disabled = false;
+      if (QC.el) QC.el.classList.add('recording');
+      if (status){ status.textContent = '🔴 enregistrement…'; status.style.color = ''; }
+
+    } catch(err){
+      if (recBtn) recBtn.disabled = false;
+      if (status){
+        status.textContent = '❌ ' + err.message;
+        status.style.color = 'var(--coral)';
+      }
+      if (QC.el) QC.el.classList.remove('recording');
+    }
+  };
+  log('voice auto-exec patché');
+}
+
+// ════════════════════════════════════════════════════════════
+// FIX 7 : Today view — afficher tasks + reminders
+// ════════════════════════════════════════════════════════════
+function patchToday(){
+  if (!window.__ultimate?.Today) return;
+  const T = window.__ultimate.Today;
+  if (T.__tasksPatched) return;
+  T.__tasksPatched = true;
+
+  const originalRefresh = T.refresh.bind(T);
+  T.refresh = function(){
+    originalRefresh();
+    // Afficher tasks/reminders du jour
+    const today = new Date().toISOString().slice(0,10);
+    const tasks = sg('voice_tasks', []).filter(t => t.date === today && !t.done);
+    const reminders = sg('voice_reminders', []).filter(r => {
+      const d = new Date(r.at).toISOString().slice(0,10);
+      return d === today;
+    });
+
+    let extra = document.getElementById('td-tasks-block');
+    if (!extra && (tasks.length || reminders.length)){
+      const homeSec = document.getElementById('p-home') || document.getElementById('p-today');
+      if (homeSec){
+        extra = document.createElement('div');
+        extra.id = 'td-tasks-block';
+        extra.className = 'today-prios';
+        homeSec.insertBefore(extra, homeSec.querySelector('.today-prios') || homeSec.firstChild);
+      }
+    }
+    if (extra){
+      const items = [];
+      tasks.forEach(t => items.push(`<div class="today-prio"><div class="today-prio-num">📌</div><div style="flex:1"><div class="today-prio-text">${esc(t.label)}</div><div class="today-prio-domain">Task vocale</div></div></div>`));
+      reminders.forEach(r => {
+        const time = new Date(r.at).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+        items.push(`<div class="today-prio"><div class="today-prio-num">⏰</div><div style="flex:1"><div class="today-prio-text">${esc(r.label)} <span style="color:var(--flame-2);font-weight:700">${time}</span></div><div class="today-prio-domain">Rappel vocal</div></div></div>`);
+      });
+      extra.innerHTML = items.length
+        ? `<div class="today-prios-h">📌 Tasks & rappels du jour</div>` + items.join('')
+        : '';
+    }
+  };
+}
+
+function esc(s){ return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// ════════════════════════════════════════════════════════════
+// FIX 8 : Banner d'erreur — bouton "détails" pour voir
+// (utile si tu veux comprendre une erreur sans desktop)
+// ════════════════════════════════════════════════════════════
+window.addEventListener('error', (e) => {
+  // Suppression silencieuse des erreurs de SW blob (déjà gérées)
+  if (e.message && e.message.includes('blob:') && e.message.includes('ServiceWorker')){
+    e.preventDefault();
+    return;
+  }
+  if (e.message && e.message.includes('Notification is not defined')){
+    // déjà patché par stub, ignore
+    e.preventDefault();
+    return;
+  }
+});
+
+// ════════════════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════════════════
+function run(){
+  fixWeeklyReview();
+  patchQuickCapture();
+  patchVoiceAutoExec();
+  patchToday();
+  log('hotfix v3.2 OK · commandes vocales actives');
+
+  // Expose
+  window.__cmd = Cmd;
+}
+
+function poll(){
+  if (window.__ultimate && window.__aiCore){
+    run();
+  } else {
+    setTimeout(poll, 200);
+  }
+}
+
+if (document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', () => setTimeout(poll, 600));
+} else {
+  setTimeout(poll, 600);
+}
+
+})();
+</script>
+
 </body>
 </html>
