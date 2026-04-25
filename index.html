@@ -16686,6 +16686,10 @@ function boot(){
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(boot, 50));
 else setTimeout(boot, 50);
+
+// Expose for external patching (v37+, global-task-sync)
+window.applyRoutineStateV35 = applyRoutineStateV35;
+window.decorateRoutineV35   = decorateRoutineV35;
 })();
 </script>
 
@@ -16909,30 +16913,45 @@ window.__fixV37 = true;
 
 /* ── 5. Routine: hide completed tasks & show done count ── */
 function patchRoutineHiding(){
-  // Override applyRoutineStateV35 to also hide done items
   const origApply = window.applyRoutineStateV35;
   if (!origApply || window.__v37RoutinePatched) return;
   window.__v37RoutinePatched = true;
 
   function applyAndHide(){
+    const allItems = Array.from(
+      document.querySelectorAll('.shift-view:not(.hidden) .tl-item[data-time]')
+    );
+
+    // Phase 1 — prevent flash: already-hidden items stay hidden while v35 re-applies classes
+    allItems.forEach(item => {
+      if (item.dataset.v37Hidden) item.style.display = 'none';
+    });
+
+    // Phase 2 — let v35 recompute done-early-v35 classes on all items
     if (typeof origApply === 'function') origApply();
-    // Count and hide done items
-    const items = document.querySelectorAll('.shift-view:not(.hidden) .tl-item[data-time]');
+
+    // Phase 3 — sync display to the class state v35 just wrote
     let doneCount = 0;
-    items.forEach(item => {
-      if (item.classList.contains('done-early-v35')){
+    allItems.forEach(item => {
+      if (item.classList.contains('done-early-v35')) {
         doneCount++;
-        // The CSS animation handles hiding — but also set display:none after animation
-        if (!item.dataset.v37Hidden){
+        if (!item.dataset.v37Hidden) {
+          // First time done → CSS animation plays, then lock with display:none
           item.dataset.v37Hidden = '1';
-          setTimeout(() => { item.style.display = 'none'; }, 360);
+          setTimeout(() => { if (item.dataset.v37Hidden) item.style.display = 'none'; }, 360);
         }
+        // else: Phase 1 already re-applied display:none — nothing more needed
+      } else if (item.dataset.v37Hidden) {
+        // Item was unchecked → restore visibility
+        delete item.dataset.v37Hidden;
+        item.style.display = '';
       }
     });
-    // Update or create the done count banner
-    updateDoneBanner(doneCount, items.length);
+
+    updateDoneBanner(doneCount, allItems.length);
   }
 
+  // Expose the patched version so global-task-sync can call it
   window.applyRoutineStateV35 = applyAndHide;
 }
 
@@ -16999,6 +17018,294 @@ if (document.readyState === 'loading'){
   document.addEventListener('DOMContentLoaded', () => setTimeout(bootV37, 200));
 } else {
   setTimeout(bootV37, 200);
+}
+
+})();
+</script>
+
+<!-- ═══════════════════════════════════════════════════════════
+     GLOBAL TASK SYNC — v1.0
+     Central completion store.  Any check/uncheck anywhere in the
+     app is mirrored to `dashv2_global_done` and immediately
+     reflected in the Routine timeline.
+     ═══════════════════════════════════════════════════════════ -->
+<script id="global-task-sync">
+(function(){
+'use strict';
+if (window.__globalTaskSync) return;
+
+// ── Storage namespace (same prefix as the rest of the app) ──────────────
+const NS        = 'dashv2_';
+const STORE_KEY = NS + 'global_done';
+
+function readStore(){ try { return JSON.parse(localStorage.getItem(STORE_KEY) || '{}'); } catch(_){ return {}; } }
+function writeStore(d){ try { localStorage.setItem(STORE_KEY, JSON.stringify(d)); } catch(_){} }
+
+// ── Keyword extractor ────────────────────────────────────────────────────
+// Returns unique lowercase keywords of ≥4 chars from a task title.
+// Strips accents, emoji, punctuation, and pure-number tokens.
+function kw(text){
+  return (text || '')
+    .toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '') // strip combining marks
+    .replace(/[^\w\s]/g, ' ')                          // strip punctuation / emoji
+    .split(/\s+/)
+    .filter(w => w.length >= 4 && !/^\d+$/.test(w))   // ≥4 chars, not a bare number
+    .filter((w, i, a) => a.indexOf(w) === i);          // unique
+}
+
+// Two task texts "match" if they share at least one keyword
+// or one keyword is a prefix of the other (both ≥5 chars)
+function textsMatch(a, b){
+  const ka = kw(a), kb = kw(b);
+  if (!ka.length || !kb.length) return false;
+  return ka.some(wa =>
+    kb.some(wb => {
+      if (wa === wb) return true;
+      // prefix match (min 5 chars so "admin" doesn't match "administration" too loosely)
+      if (wa.length >= 5 && wb.startsWith(wa)) return true;
+      if (wb.length >= 5 && wa.startsWith(wb)) return true;
+      return false;
+    })
+  );
+}
+
+// ── Date helper (same format the routine uses) ──────────────────────────
+function todayKey(){
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// ── Routine key helpers (must match v35 exactly) ────────────────────────
+function activeShift(){
+  const el = document.querySelector('.shift-view:not(.hidden)');
+  return (el?.id || 'view-sm').replace(/^view-/, '');
+}
+function routineKey(){
+  return 'routine_v35_' + todayKey() + '_' + activeShift();
+}
+function stableId(item, idx){
+  const title = (item.querySelector('.tl-name')?.textContent || '')
+    .replace(/\s+/g, ' ').trim().slice(0, 36);
+  return activeShift() + '_' + idx + '_' + title;
+}
+
+// ── All visible routine items ───────────────────────────────────────────
+function visibleRoutineItems(){
+  return Array.from(
+    document.querySelectorAll('.shift-view:not(.hidden) .tl-item[data-time]')
+  );
+}
+
+// ── Core API ─────────────────────────────────────────────────────────────
+const sync = window.__globalTaskSync = {
+
+  /** Mark a text as globally done; propagate to routine. */
+  markDone(text, source){
+    if (!text) return;
+    const keys = kw(text);
+    if (!keys.length) return;
+    const store = readStore();
+    store[keys.join(' ')] = { at: new Date().toISOString(), src: source || 'unknown' };
+    writeStore(store);
+    this._syncToRoutine();
+  },
+
+  /** Remove a text from the global done store; re-check routine. */
+  markUndone(text){
+    if (!text) return;
+    const keys = kw(text);
+    if (!keys.length) return;
+    const store = readStore();
+    const k = keys.join(' ');
+    delete store[k];
+    writeStore(store);
+    this._syncToRoutine();
+  },
+
+  /** True if any stored done-entry overlaps with `text` AND was completed today. */
+  isDone(text){
+    const today = todayKey();
+    const store = readStore();
+    return Object.keys(store).some(k => {
+      const entry = store[k];
+      if (!entry || !entry.at || !entry.at.startsWith(today)) return false;
+      return textsMatch(text, k);
+    });
+  },
+
+  /**
+   * Read global store → update routine localStorage state →
+   * trigger visual re-render (applyAndHide or fallback).
+   * Only writes entries with source='global' so manual routine checks
+   * can never be overridden by global un-sync.
+   */
+  _syncToRoutine(){
+    const items = visibleRoutineItems();
+    if (!items.length) return;
+
+    const rk    = routineKey();
+    let   state;
+    try { state = JSON.parse(localStorage.getItem(NS + rk) || '{"done":{}}'); } catch(_){ state = {done:{}}; }
+    state.done = state.done || {};
+
+    let changed = false;
+
+    items.forEach((item, idx) => {
+      const title = (item.querySelector('.tl-name')?.textContent || '').replace(/\s+/g,' ').trim();
+      const sid   = stableId(item, idx);
+      const existingEntry = state.done[sid];
+      const globallyDone  = this.isDone(title);
+
+      if (globallyDone && !existingEntry) {
+        // External task was completed — mark routine block done
+        state.done[sid] = { at: new Date().toISOString(), gain: 0, source: 'global' };
+        changed = true;
+      } else if (!globallyDone && existingEntry && existingEntry.source === 'global') {
+        // External task was un-done — only remove if WE set it (not a manual routine check)
+        delete state.done[sid];
+        changed = true;
+      }
+    });
+
+    if (changed) {
+      try { localStorage.setItem(NS + rk, JSON.stringify(state)); } catch(_){}
+    }
+
+    // Trigger visual update — prefer the v37-patched version (applyAndHide)
+    // which also handles display:none hiding
+    if (typeof window.applyRoutineStateV35 === 'function') {
+      window.applyRoutineStateV35();
+    }
+  },
+
+  /** Full boot reconciliation — run once at page load. */
+  _boot(){
+    // Reload global store entries back into the routine state
+    // (ensures persistence after page refresh)
+    this._syncToRoutine();
+
+    // Also reapply any previously-done states to prio-items and task-items
+    // so the global store stays consistent with local done flags
+    this._reloadFromLocalDone();
+  },
+
+  /**
+   * On page load: read prio_[date] and tasks_[date] from storage,
+   * and write any already-done items into the global store.
+   * This keeps the global store in sync even if the page was reloaded
+   * in the middle of a session.
+   */
+  _reloadFromLocalDone(){
+    const today = todayKey();
+
+    // Priority done state
+    try {
+      const prioState = JSON.parse(localStorage.getItem(NS + 'prio_' + today) || '{}');
+      const prioList  = JSON.parse(localStorage.getItem(NS + 'prio_list')      || '[]');
+      const store     = readStore();
+      let   dirty     = false;
+      prioList.forEach(p => {
+        if (prioState[p.id]) {
+          const keys = kw(p.text);
+          if (keys.length) { store[keys.join(' ')] = { at: new Date().toISOString(), src: 'priority' }; dirty = true; }
+        }
+      });
+      if (dirty) writeStore(store);
+    } catch(_){}
+
+    // Task list done state
+    try {
+      const tasks = JSON.parse(localStorage.getItem(NS + 'tasks_' + today) || '[]');
+      const store = readStore();
+      let   dirty = false;
+      tasks.forEach(t => {
+        if (t.done) {
+          const keys = kw(t.title);
+          if (keys.length) { store[keys.join(' ')] = { at: new Date().toISOString(), src: 'task' }; dirty = true; }
+        }
+      });
+      if (dirty) writeStore(store);
+    } catch(_){}
+
+    // Re-sync after reloading
+    this._syncToRoutine();
+  }
+};
+
+// ── Intercept: PRIORITY ITEM check/uncheck ──────────────────────────────
+document.addEventListener('click', e => {
+  const item = e.target.closest('#prio-list .prio-item');
+  if (!item) return;
+  // Ignore clicks on edit/delete/color-picker
+  if (e.target.closest('[data-act="edit"],[data-act="del"],.prio-picker-v35,.prio-dot-v35,.prio-del')) return;
+  // After the v35 click handler toggles the done class:
+  setTimeout(() => {
+    const text = (item.querySelector('.prio-text')?.textContent || '').trim();
+    if (!text) return;
+    if (item.classList.contains('done')) sync.markDone(text, 'priority');
+    else                                 sync.markUndone(text);
+  }, 80);
+}, false);
+
+// ── Intercept: TASK LIST check/uncheck ──────────────────────────────────
+// The renderTasks handler mutates the task in localStorage then re-renders,
+// so we read the updated title from the task element itself.
+document.addEventListener('click', e => {
+  const btn = e.target.closest('[data-act="check"]');
+  if (!btn) return;
+  const taskItem = btn.closest('.task-item');
+  if (!taskItem) return;
+  const taskId = taskItem.dataset.id;
+  setTimeout(() => {
+    // Read the updated state from localStorage (renderTasks has already saved it)
+    try {
+      const tasks = JSON.parse(localStorage.getItem(NS + 'tasks_' + todayKey()) || '[]');
+      const t = tasks.find(x => x.id === taskId);
+      if (!t) return;
+      if (t.done) sync.markDone(t.title, 'task');
+      else        sync.markUndone(t.title);
+    } catch(_){}
+  }, 150); // renderTasks + saveTasks must finish first
+}, false);
+
+// ── Intercept: TODO CHECKBOX (Plan tab milestones) ──────────────────────
+document.addEventListener('change', e => {
+  const cb = e.target.closest('input[type="checkbox"][data-todo]');
+  if (!cb) return;
+  const label = (cb.closest('label')?.textContent || '').trim();
+  if (cb.checked) sync.markDone(label, 'todo');
+  else            sync.markUndone(label);
+}, false);
+
+// ── Intercept: ROUTINE BLOCK check (bidirectional: routine → global) ────
+// When a routine block is checked, also write to the global store so that
+// the global banner and any other UI that queries isDone() reflects it.
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.tl-check-v35');
+  if (!btn) return;
+  const item = btn.closest('.tl-item[data-time]');
+  if (!item) return;
+  setTimeout(() => {
+    const title = (item.querySelector('.tl-name')?.textContent || '').trim();
+    if (!title) return;
+    if (item.classList.contains('done-early-v35')) sync.markDone(title, 'routine');
+    else                                            sync.markUndone(title);
+  }, 120); // after v35 handler writes the class
+}, false);
+
+// ── Re-sync when switching to routine tab or changing shift ─────────────
+document.addEventListener('click', e => {
+  if (e.target.closest('.tab[data-tab="routine"]') || e.target.closest('.shift-chip,[data-shift]')) {
+    setTimeout(() => sync._syncToRoutine(), 350);
+  }
+}, true);
+
+// ── Boot ─────────────────────────────────────────────────────────────────
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => setTimeout(() => sync._boot(), 1200));
+} else {
+  setTimeout(() => sync._boot(), 1200);
 }
 
 })();
