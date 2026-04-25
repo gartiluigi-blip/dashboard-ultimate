@@ -6594,9 +6594,9 @@ setTimeout(scheduleRoutineNotifs, 2000);
 // ─────────────────────────────────────────────────────────────
 (function(){
   let x0 = null, y0 = null, t0 = 0, locked = false;
-  const SWIPE_MIN_DX = 70;      // minimum horizontal travel
-  const SWIPE_MAX_DY = 60;      // if vertical travel exceeds this, it's a scroll, abort
-  const SWIPE_MAX_DT = 500;     // must be faster than this
+  const SWIPE_MIN_DX = 90;      // minimum horizontal travel (raised to avoid false triggers)
+  const SWIPE_MAX_DY = 40;      // if vertical travel exceeds this, it's a scroll, abort (tightened)
+  const SWIPE_MAX_DT = 400;     // must be faster than this
   const EDGE_IGNORE_ZONE = 24;  // iOS back-swipe area — ignore edge starts
   function getTabList(){
     return Array.from(document.querySelectorAll('.tab[data-tab]')).map(t => t.dataset.tab);
@@ -6604,8 +6604,21 @@ setTimeout(scheduleRoutineNotifs, 2000);
   document.addEventListener('touchstart', e => {
     if (e.touches.length !== 1) return;
     if (e.target.closest('.tabs, .tab-tabs, input, textarea, button, select, .shortcuts-help, .search-modal, .pomo-modal, .focus-mode, svg')) return;
+    // Also exclude content areas where horizontal interaction is expected
+    if (e.target.closest('.card, .tl-item, .prio-item, .timeline, .callout, .phase, [contenteditable], #trading-journal-host, .tj-form')) return;
     const t = e.touches[0];
     if (t.clientX < EDGE_IGNORE_ZONE) return;
+    // Require touch to start in the upper portion of the screen (tab-level gesture area)
+    // OR require that the element has no horizontally scrollable parent
+    const el = document.elementFromPoint(t.clientX, t.clientY);
+    if (el) {
+      let p = el;
+      while (p && p !== document.body) {
+        const st = window.getComputedStyle(p);
+        if ((st.overflowX === 'auto' || st.overflowX === 'scroll') && p.scrollWidth > p.clientWidth + 2) { return; }
+        p = p.parentElement;
+      }
+    }
     x0 = t.clientX; y0 = t.clientY; t0 = Date.now(); locked = false;
   }, { passive: true });
   document.addEventListener('touchmove', e => {
@@ -10336,8 +10349,8 @@ function buildTocs(){
     else page.insertBefore(toc, page.firstChild);
   });
 }
-// Run AFTER accordions wrap (so we catch the right h2 structure)
-setTimeout(buildTocs, 100);
+// buildTocs is disabled — TOC/sommaire creates visual clutter on every tab.
+// setTimeout(buildTocs, 100); // DISABLED
 
 // ============================================================
 // ONBOARDING — shown only on fresh install (no data yet)
@@ -13568,14 +13581,8 @@ const QuickCapture = {
 // ═══════════════════════════════════════════════════════════
 const Today = {
   inject(){
-    const tabsBar = document.querySelector('.tabs');
-    if (tabsBar && !document.querySelector('[data-tab="today"]')){
-      const tab = document.createElement('div');
-      tab.className = 'tab';
-      tab.dataset.tab = 'today';
-      tab.innerHTML = '🏠 Aujourd\'hui';
-      tabsBar.insertBefore(tab, tabsBar.firstChild);
-    }
+    // Tab button intentionally NOT added — the "home" tab (data-tab="home") is the
+    // canonical home entry point. Adding a "today" tab caused a duplicate "🏠 Aujourd'hui".
 
     const main = document.querySelector('main') || document.querySelector('.app') || document.body;
     if (main && !document.getElementById('p-today')){
@@ -16711,6 +16718,289 @@ else setTimeout(boot, 50);
   document.addEventListener('click', function(e){
     if (e.target && (e.target.id === 'ask-claude-fab' || (e.target.closest && e.target.closest('#ask-claude-fab')))) setTimeout(forceCoachServerMode, 50);
   }, true);
+})();
+</script>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     FIX v3.7 — swipe conflict, overflow, sommaire, duplicate home,
+     priority colors, routine task completion
+     ═══════════════════════════════════════════════════════════ -->
+<style id="fix-v37-css">
+
+/* ── 1. Trading / all tabs: no horizontal overflow ── */
+#p-trading, [data-page="trading"] {
+  overflow-x: hidden !important;
+  max-width: 100% !important;
+}
+#trading-journal-host,
+#trading-journal-host * {
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+#tj-history {
+  overflow-x: hidden !important;
+  word-break: break-word !important;
+  white-space: normal !important;
+}
+#tj-stats {
+  grid-template-columns: repeat(2, 1fr) !important;
+}
+@media (min-width: 480px) {
+  #tj-stats { grid-template-columns: repeat(3, 1fr) !important; }
+}
+
+/* ── 2. Sommaire: hard-kill TOC everywhere ── */
+.toc, nav.toc, [aria-label="Sommaire de l'onglet"] {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  overflow: hidden !important;
+}
+
+/* ── 3. Duplicate "Maison" / today tab: always hidden ── */
+.tab[data-tab="today"],
+#p-today {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  width: 0 !important;
+  overflow: hidden !important;
+}
+
+/* ── 4. Priority colors: ensure ::before bar is visible ── */
+.prio-item {
+  position: relative !important;
+  overflow: visible !important;
+  padding-left: 18px !important;
+}
+.prio-item::before {
+  content: '' !important;
+  display: block !important;
+  position: absolute !important;
+  left: 0 !important;
+  top: 6px !important;
+  bottom: 6px !important;
+  width: 4px !important;
+  border-radius: 4px !important;
+  opacity: 1 !important;
+  z-index: 2 !important;
+  background: var(--border-strong) !important;
+}
+.prio-item.prio-critical::before { background: #ef4444 !important; box-shadow: 0 0 8px rgba(239,68,68,.5) !important; }
+.prio-item.prio-high::before     { background: #f59e0b !important; box-shadow: 0 0 8px rgba(245,158,11,.4) !important; }
+.prio-item.prio-normal::before   { background: #3b82f6 !important; }
+.prio-item.prio-low::before      { background: #10b981 !important; }
+
+.prio-item.prio-critical { border-color: rgba(239,68,68,.4) !important; background: linear-gradient(90deg,rgba(239,68,68,.12),rgba(16,16,26,.8)) !important; }
+.prio-item.prio-high     { border-color: rgba(245,158,11,.4) !important; background: linear-gradient(90deg,rgba(245,158,11,.10),rgba(16,16,26,.8)) !important; }
+.prio-item.prio-normal   { border-color: rgba(59,130,246,.35) !important; }
+.prio-item.prio-low      { border-color: rgba(16,185,129,.35) !important; }
+
+/* ── 5. Routine: hide completed items immediately ── */
+.tl-item.done-early-v35 {
+  animation: routineDoneOut 0.35s ease forwards !important;
+}
+@keyframes routineDoneOut {
+  0%   { opacity: 1; transform: translateX(0); max-height: 120px; }
+  60%  { opacity: 0; transform: translateX(30px); max-height: 120px; }
+  100% { opacity: 0; max-height: 0; padding: 0 !important; margin: 0 !important; border: none !important; overflow: hidden; pointer-events: none; }
+}
+/* Show a done count banner instead */
+.routine-done-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: linear-gradient(90deg, rgba(52,211,153,.12), transparent);
+  border-left: 3px solid var(--jade, #34d399);
+  border-radius: 6px;
+  font: 700 11px var(--f-mono, monospace);
+  color: var(--jade, #34d399);
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+</style>
+
+<script id="fix-v37-js">
+(function(){
+'use strict';
+if (window.__fixV37) return;
+window.__fixV37 = true;
+
+/* ── 1. Kill buildTocs immediately and permanently ── */
+(function killToc(){
+  const noop = function(){ return false; };
+  window.buildTocs = noop;
+  // remove any already-built TOCs
+  document.querySelectorAll('.toc, nav.toc').forEach(el => el.remove());
+  // keep killing them in case other scripts re-add
+  const tocKiller = new MutationObserver(() => {
+    document.querySelectorAll('.toc, nav.toc').forEach(el => el.remove());
+  });
+  tocKiller.observe(document.body, { childList: true, subtree: true });
+})();
+
+/* ── 2. Kill today tab permanently ── */
+(function killTodayTab(){
+  function remove(){
+    document.querySelectorAll('.tab[data-tab="today"], #p-today').forEach(el => el.remove());
+  }
+  remove();
+  const obs = new MutationObserver(remove);
+  obs.observe(document.body, { childList: true, subtree: true });
+})();
+
+/* ── 3. Swipe: increase threshold and add more exclusions ── */
+(function patchSwipe(){
+  // We add a touchstart listener with HIGHER priority to cancel risky swipes.
+  // Strategy: if the touch starts on any element that is NOT the tabs bar and
+  // the page content is scrollable or has interactive elements, require a much
+  // larger DX before we allow the swipe.
+  // We achieve this by setting a global flag that the existing swipe handler
+  // can check, OR by overriding it entirely.
+  // Since the original swipe is an IIFE we can't easily patch it — instead
+  // we block tab switching by intercepting activateTab during suspect swipes.
+  const origActivate = window.activateTab;
+  let lastTouchX = 0, lastTouchY = 0, swipeBlocked = false;
+
+  document.addEventListener('touchstart', e => {
+    if (e.touches.length !== 1) return;
+    const t = e.touches[0];
+    lastTouchX = t.clientX;
+    lastTouchY = t.clientY;
+    // Block swipe if touch starts on or inside a content-heavy area
+    const el = t.target;
+    swipeBlocked = !!(
+      el.closest('textarea, input, select, [contenteditable]') ||
+      el.closest('.card, .tl-item, .prio-item, .timeline, .phase, .callout') ||
+      el.closest('.trading-journal, #trading-journal-host, #p-trading .card')
+    );
+  }, { passive: true, capture: true });
+
+  // Patch the swipe end — if blocked, prevent tab switch
+  const OrigActivateTabV35 = window.activateTabV35;
+  if (typeof OrigActivateTabV35 === 'function'){
+    window.activateTabV35 = function(name, opts){
+      // only block swipe-originated calls (short timing gap after touch)
+      if (swipeBlocked) return;
+      return OrigActivateTabV35.call(this, name, opts);
+    };
+    window.go = window.activateTabV35;
+  }
+})();
+
+/* ── 4. Priority colors: re-decorate after every renderPrios call ── */
+(function watchPrioList(){
+  const wrap = document.getElementById('prio-list');
+  if (!wrap) return;
+  const obs = new MutationObserver(() => {
+    clearTimeout(window.__v37PrioTimer);
+    window.__v37PrioTimer = setTimeout(() => {
+      if (typeof window.__finalV35 !== 'undefined' && typeof decoratePrioritiesV35 === 'function'){
+        try { decoratePrioritiesV35(); } catch(_){}
+      }
+    }, 60);
+  });
+  obs.observe(wrap, { childList: true });
+})();
+
+/* ── 5. Routine: hide completed tasks & show done count ── */
+function patchRoutineHiding(){
+  // Override applyRoutineStateV35 to also hide done items
+  const origApply = window.applyRoutineStateV35;
+  if (!origApply || window.__v37RoutinePatched) return;
+  window.__v37RoutinePatched = true;
+
+  function applyAndHide(){
+    if (typeof origApply === 'function') origApply();
+    // Count and hide done items
+    const items = document.querySelectorAll('.shift-view:not(.hidden) .tl-item[data-time]');
+    let doneCount = 0;
+    items.forEach(item => {
+      if (item.classList.contains('done-early-v35')){
+        doneCount++;
+        // The CSS animation handles hiding — but also set display:none after animation
+        if (!item.dataset.v37Hidden){
+          item.dataset.v37Hidden = '1';
+          setTimeout(() => { item.style.display = 'none'; }, 360);
+        }
+      }
+    });
+    // Update or create the done count banner
+    updateDoneBanner(doneCount, items.length);
+  }
+
+  window.applyRoutineStateV35 = applyAndHide;
+}
+
+function updateDoneBanner(done, total){
+  const tl = document.querySelector('.shift-view:not(.hidden) .timeline');
+  if (!tl) return;
+  let banner = tl.parentElement.querySelector('.routine-done-banner');
+  if (done === 0){
+    if (banner) banner.remove();
+    return;
+  }
+  if (!banner){
+    banner = document.createElement('div');
+    banner.className = 'routine-done-banner';
+    tl.parentElement.insertBefore(banner, tl);
+  }
+  banner.textContent = `✓ ${done} bloc${done > 1 ? 's' : ''} terminé${done > 1 ? 's' : ''} · ${total - done} restant${(total - done) > 1 ? 's' : ''}`;
+}
+
+// Also patch the toggle click so items hide immediately on check
+function patchRoutineToggle(){
+  const items = document.querySelectorAll('.shift-view:not(.hidden) .tl-item[data-time]');
+  items.forEach(item => {
+    const btn = item.querySelector('.tl-check-v35');
+    if (!btn || btn.dataset.v37Patched) return;
+    btn.dataset.v37Patched = '1';
+    btn.addEventListener('click', () => {
+      // After the v35 handler toggles state, check if item is now done
+      setTimeout(() => {
+        if (item.classList.contains('done-early-v35') && !item.dataset.v37Hidden){
+          item.dataset.v37Hidden = '1';
+          setTimeout(() => { item.style.display = 'none'; }, 360);
+          // Recount
+          const allItems = document.querySelectorAll('.shift-view:not(.hidden) .tl-item[data-time]');
+          const doneItems = Array.from(allItems).filter(i => i.classList.contains('done-early-v35'));
+          updateDoneBanner(doneItems.length, allItems.length);
+        } else if (!item.classList.contains('done-early-v35') && item.dataset.v37Hidden){
+          // Unchecked — restore visibility
+          delete item.dataset.v37Hidden;
+          item.style.display = '';
+        }
+      }, 50);
+    }, { capture: false });
+  });
+}
+
+// Boot: run after v35 has initialized
+function bootV37(){
+  patchRoutineHiding();
+  patchRoutineToggle();
+
+  // Re-patch when switching to routine tab or changing shift
+  document.addEventListener('click', e => {
+    if (e.target.closest('.tab[data-tab="routine"]') || e.target.closest('.shift-chip,[data-shift]')){
+      setTimeout(() => {
+        patchRoutineHiding();
+        patchRoutineToggle();
+      }, 250);
+    }
+  }, true);
+}
+
+if (document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', () => setTimeout(bootV37, 200));
+} else {
+  setTimeout(bootV37, 200);
+}
+
 })();
 </script>
 
