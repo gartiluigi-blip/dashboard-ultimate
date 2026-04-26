@@ -4181,6 +4181,7 @@ Bachelor dev en septembre. Bilingue NL+FR d'ici 2 ans. Corps robuste malgré la 
 
 <h2 class="section-title coral">Mes données</h2>
 <p class="page-lead" style="margin-top:-4px">Tout est stocké <em>localement</em> dans ton navigateur. Si tu vides le cache, tu perds tout. <b>Exporte régulièrement.</b></p>
+<div class="callout callout-tip" style="margin-bottom:8px">🔒 <strong>Clé API Claude et token GitHub exclus automatiquement</strong> de tous les exports. Ces secrets ne quittent jamais ton navigateur local.</div>
 <div class="data-bar">
 <button class="data-btn" id="data-export">💾 Exporter mes données</button>
 <button class="data-btn" id="data-import">📂 Importer</button>
@@ -6088,8 +6089,11 @@ const S = {
   }
 };
 
-// ─────────────────────────────────────────────────────────────
-// INDEXEDDB MIRROR — async shadow copy of localStorage
+// Keys that must NEVER appear in any backup or export.
+// Stored without the dashv2_ prefix (matching S.get/set keys).
+const BACKUP_SECRETS = new Set(['claude_api_key', 'gh_token']);
+// Same keys with the storage prefix (for raw localStorage loops).
+const BACKUP_SECRETS_RAW = new Set(['dashv2_claude_api_key', 'dashv2_gh_token']);
 // ─────────────────────────────────────────────────────────────
 // Keeps an async mirror of all writes. Doesn't gate reads (kept sync on localStorage).
 // Purpose: safety net against localStorage wipe + ready migration path when we flip over.
@@ -8296,12 +8300,29 @@ renderTrend('weight'); renderTrend('elo');
 
 // ============================================================
 // PLAN TODO CHECKBOXES
+// Daily habits (prefix "d-") reset each day; caps/milestones persist forever.
 // ============================================================
-document.querySelectorAll('input[type="checkbox"][data-todo]').forEach(c => {
-  const k = 'todo_'+c.dataset.todo;
-  c.checked = !!S.get(k, false);
-  c.addEventListener('change', () => S.set(k, c.checked));
-});
+(function(){
+  const todayStr = dateKey(new Date());
+  document.querySelectorAll('input[type="checkbox"][data-todo]').forEach(c => {
+    const id = c.dataset.todo;
+    const isDaily = id.startsWith('d-');
+    const k = isDaily ? 'todo_' + id + '_' + todayStr : 'todo_' + id;
+    c.checked = !!S.get(k, false);
+    c.addEventListener('change', () => S.set(k, c.checked));
+    if (isDaily){
+      const lbl = c.closest('label');
+      if (lbl && !lbl.querySelector('.todo-date-badge')){
+        const b = document.createElement('span');
+        b.className = 'todo-date-badge';
+        b.title = 'Réinitialise chaque jour';
+        b.textContent = '↻';
+        b.style.cssText = 'margin-left:6px;font-size:9px;color:var(--text-faint);vertical-align:middle';
+        lbl.appendChild(b);
+      }
+    }
+  });
+})();
 
 // ============================================================
 // FLEX MEASUREMENTS
@@ -8792,7 +8813,9 @@ if (impBtn && impFile){
 }
 const wipeBtn = document.getElementById('data-wipe');
 function downloadBackup(suffix){
-  const data = S.all();
+  const raw = S.all();
+  const data = {};
+  for (const k in raw){ if (!BACKUP_SECRETS.has(k)) data[k] = raw[k]; }
   const blob = new Blob([JSON.stringify({ exportedAt: new Date().toISOString(), version:3, data }, null, 2)], { type:'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -9099,7 +9122,7 @@ if (vtAdd) vtAdd.addEventListener('click', () => {
   const price = parseFloat(vtPrice.value) || 0;
   const status = vtStatus.value || 'listed';
   const arr = vtData();
-  arr.push({ name, cost, price, status, date: dateKey(new Date()) });
+  arr.push({ name, cost, price, status, date: dateKey(new Date()), listedAt: new Date().toISOString() });
   vtSave(arr);
   vtName.value = vtCost.value = vtPrice.value = '';
   renderVt();
@@ -13321,7 +13344,7 @@ const Backup = {
     };
     for (let i = 0; i < localStorage.length; i++){
       const k = localStorage.key(i);
-      if (k && k.startsWith(NS)){
+      if (k && k.startsWith(NS) && !BACKUP_SECRETS_RAW.has(k)){
         data.localStorage[k] = localStorage.getItem(k);
       }
     }
@@ -15337,6 +15360,9 @@ function loadSettings(){
         </label>
       </div>
       <div id="bk-info" style="font:11px monospace;color:#888;margin-top:8px"></div>
+      <div style="margin-top:8px;padding:8px 10px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:6px;font:11px var(--f-mono,monospace);color:#34d399">
+        🔒 Clé API Claude et token GitHub <strong>exclus automatiquement</strong> de tous les exports — ils ne quittent jamais ton navigateur.
+      </div>
     </div>
 
     <div style="background:var(--surface,#1f1f2e);border:1px solid var(--border,#333);border-radius:12px;padding:14px;margin:12px 0">
@@ -15413,7 +15439,7 @@ function exportData(){
   const data = { v: 'v3', exportedAt: new Date().toISOString(), localStorage: {} };
   for (let i = 0; i < localStorage.length; i++){
     const k = localStorage.key(i);
-    if (k && k.startsWith('dashv2_')) data.localStorage[k] = localStorage.getItem(k);
+    if (k && k.startsWith('dashv2_') && !BACKUP_SECRETS_RAW.has(k)) data.localStorage[k] = localStorage.getItem(k);
   }
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -15448,7 +15474,7 @@ async function pushGist(){
   const data = { v: 'v3', exportedAt: new Date().toISOString(), localStorage: {} };
   for (let i = 0; i < localStorage.length; i++){
     const k = localStorage.key(i);
-    if (k && k.startsWith('dashv2_')) data.localStorage[k] = localStorage.getItem(k);
+    if (k && k.startsWith('dashv2_') && !BACKUP_SECRETS_RAW.has(k)) data.localStorage[k] = localStorage.getItem(k);
   }
   const gistId = JSON.parse(localStorage.getItem('dashv2_gist_id') || '""');
   const url = gistId ? 'https://api.github.com/gists/' + gistId : 'https://api.github.com/gists';
