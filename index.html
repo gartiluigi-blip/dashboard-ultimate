@@ -17753,6 +17753,811 @@ if (document.readyState !== 'loading'){
 
 })();
 </script>
+<script id="ud-timed-task-routine-patch">
+(() => {
+  if (window.__UD_TIMED_TASK_ROUTINE_PATCH__) return;
+  window.__UD_TIMED_TASK_ROUTINE_PATCH__ = true;
 
+  const NS = "dashv2_";
+  const PATCH_ID = "ud-adapted-routine-panel";
+
+  const pad = n => String(n).padStart(2, "0");
+
+  function todayKey(offsetDays = 0) {
+    const d = new Date();
+    d.setDate(d.getDate() + offsetDays);
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
+
+  function toMin(t) {
+    if (!t) return null;
+    const m = String(t).trim().match(/^(\d{1,2})(?::|h)?(\d{2})?$/i);
+    if (!m) return null;
+    const h = Number(m[1]);
+    const min = Number(m[2] || 0);
+    if (h < 0 || h > 23 || min < 0 || min > 59) return null;
+    return h * 60 + min;
+  }
+
+  function toTime(min) {
+    min = Math.max(0, Math.min(1439, Math.round(min)));
+    return `${pad(Math.floor(min / 60))}:${pad(min % 60)}`;
+  }
+
+  function overlaps(aStart, aEnd, bStart, bEnd) {
+    return aStart < bEnd && bStart < aEnd;
+  }
+
+  function safeJsonParse(raw, fallback) {
+    try {
+      const parsed = JSON.parse(raw);
+      return parsed ?? fallback;
+    } catch {
+      return fallback;
+    }
+  }
+
+  function getStore(key, fallback) {
+    return safeJsonParse(localStorage.getItem(NS + key), fallback);
+  }
+
+  function setStore(key, value) {
+    localStorage.setItem(NS + key, JSON.stringify(value));
+  }
+
+  function toast(msg) {
+    const el = document.createElement("div");
+    el.textContent = msg;
+    el.style.cssText = `
+      position:fixed;left:16px;right:16px;bottom:18px;z-index:999999;
+      background:#111827;color:#fff;border:1px solid #334155;
+      padding:12px 14px;border-radius:14px;font:600 13px system-ui;
+      box-shadow:0 10px 35px rgba(0,0,0,.35);
+    `;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 2600);
+  }
+
+  function uid() {
+    return "tt_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8);
+  }
+
+  function slug(s) {
+    return String(s || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 60);
+  }
+
+  function getTasks(dateKey) {
+    const arr = getStore(`tasks_${dateKey}`, []);
+    return Array.isArray(arr) ? arr : [];
+  }
+
+  function saveTasks(dateKey, tasks) {
+    setStore(`tasks_${dateKey}`, tasks);
+  }
+
+  function getTimedTasks(dateKey) {
+    const tasks = getTasks(dateKey);
+    return tasks.filter(t =>
+      t &&
+      !t.done &&
+      t.startTime &&
+      t.endTime &&
+      toMin(t.startTime) !== null &&
+      toMin(t.endTime) !== null
+    );
+  }
+
+  function saveTimedTask({ title, dateKey, startTime, endTime, category = "Admin", priority = "normal" }) {
+    title = String(title || "").trim();
+    const s = toMin(startTime);
+    const e = toMin(endTime);
+
+    if (!title) {
+      toast("Titre obligatoire.");
+      return false;
+    }
+
+    if (s === null || e === null || e <= s) {
+      toast("Heure invalide. Exemple correct : 10:00 → 11:30.");
+      return false;
+    }
+
+    const task = {
+      id: uid(),
+      title,
+      text: title,
+      date: dateKey,
+      startTime: toTime(s),
+      endTime: toTime(e),
+      durationMinutes: e - s,
+      isFixedTime: true,
+      prio: priority,
+      priority,
+      cat: category,
+      category,
+      done: false,
+      source: "timed-task-routine-patch",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    const tasks = getTasks(dateKey);
+    const alreadyExists = tasks.some(t =>
+      String(t.title || t.text || "").trim().toLowerCase() === title.toLowerCase() &&
+      t.startTime === task.startTime &&
+      t.endTime === task.endTime
+    );
+
+    if (!alreadyExists) {
+      tasks.push(task);
+      saveTasks(dateKey, tasks);
+    }
+
+    window.dispatchEvent(new Event("ud:timed-task-added"));
+    renderAdaptedRoutine();
+    toast(`Tâche horaire ajoutée : ${task.startTime}-${task.endTime} · ${title}`);
+    return true;
+  }
+
+  function parseNaturalTask(raw) {
+    let text = String(raw || "").trim();
+    if (!text) return null;
+
+    let dateKey = todayKey(0);
+
+    if (/\bdemain\b/i.test(text)) {
+      dateKey = todayKey(1);
+      text = text.replace(/\bdemain\b/gi, " ");
+    }
+
+    if (/\baujourd'hui\b|\bajd\b|\btoday\b/i.test(text)) {
+      dateKey = todayKey(0);
+      text = text.replace(/\baujourd'hui\b|\bajd\b|\btoday\b/gi, " ");
+    }
+
+    const range = text.match(/(\d{1,2})(?:h|:)?(\d{2})?\s*(?:à|-|–|—|jusqu(?:'|’)?à)\s*(\d{1,2})(?:h|:)?(\d{2})?/i);
+    if (!range) return null;
+
+    const startTime = `${pad(Number(range[1]))}:${pad(Number(range[2] || 0))}`;
+    const endTime = `${pad(Number(range[3]))}:${pad(Number(range[4] || 0))}`;
+
+    text = text.replace(range[0], " ");
+    text = text.replace(/\brdv\b|\brendez-vous\b/gi, " ");
+    text = text.replace(/\s+/g, " ").trim();
+
+    return {
+      title: text || "Rendez-vous",
+      dateKey,
+      startTime,
+      endTime
+    };
+  }
+
+  function findRoutinePage() {
+    const selectors = [
+      '[data-page="routine"]',
+      "#p-routine",
+      "#routine",
+      ".page[data-name='routine']",
+      ".page.routine"
+    ];
+
+    for (const s of selectors) {
+      const el = document.querySelector(s);
+      if (el) return el;
+    }
+
+    const candidates = [...document.querySelectorAll("section, main, div")];
+    return candidates.find(el => {
+      const txt = (el.innerText || "").slice(0, 700);
+      return txt.includes("Ton rythme quotidien") && txt.includes("Choix du shift");
+    }) || null;
+  }
+
+  function detectShift() {
+    const stored = localStorage.getItem(NS + "shift") || localStorage.getItem("shift") || "";
+    if (stored) return stored;
+
+    const routine = findRoutinePage();
+    const txt = routine?.innerText || document.body.innerText || "";
+
+    const activeBtn = [...document.querySelectorAll("button, .chip, .shift-chip")]
+      .find(b => /active|selected|on/.test(b.className || "") && /5h30|7h|11h|13h30|weekend|maladie/i.test(b.innerText || ""));
+
+    if (activeBtn) return activeBtn.innerText.trim();
+
+    if (/Mode Maladie/i.test(txt)) return "maladie";
+    if (/Shift 13h30/i.test(txt)) return "13h30";
+    if (/Shift 11h/i.test(txt)) return "11h";
+    if (/Shift 7h/i.test(txt)) return "7h";
+    if (/Shift 5h30/i.test(txt)) return "5h30";
+    if (/Weekend/i.test(txt)) return "weekend";
+
+    return "routine";
+  }
+
+  function parseTimeLine(line) {
+    const clean = String(line || "").trim();
+    const m = clean.match(/^(\d{1,2})(?::|h)(\d{2})?\s*(?:[–—\-à→]\s*(\d{1,2})(?::|h)(\d{2})?)?/i);
+    if (!m) return null;
+
+    const start = toMin(`${m[1]}:${m[2] || "00"}`);
+    const end = m[3] ? toMin(`${m[3]}:${m[4] || "00"}`) : null;
+
+    return { start, end };
+  }
+
+  function isHardFixedTitle(title) {
+    return /travail|réveil|reveil|coucher|dormir|sommeil|r1|r2|r3|r4|r5|r6|repas|déjeuner|dejeuner|dîner|diner|brunch|douche|hygiène|hygiene|shift/i.test(title || "");
+  }
+
+  function isFlexibleTitle(title) {
+    return /epfc|code|coding|ia|nl|néerlandais|neerlandais|anki|lecture|vinted|sport|stretch|souplesse|échecs|echecs|chess|trading|journal|review/i.test(title || "");
+  }
+
+  function extractBaseRoutineBlocks() {
+    const routine = findRoutinePage();
+    if (!routine) return [];
+
+    const text = routine.innerText || "";
+    const lines = text
+      .split("\n")
+      .map(x => x.trim())
+      .filter(Boolean);
+
+    const blocks = [];
+
+    for (let i = 0; i < lines.length; i++) {
+      const parsed = parseTimeLine(lines[i]);
+      if (!parsed || parsed.start === null) continue;
+
+      let title = "";
+      for (let j = i + 1; j < Math.min(i + 4, lines.length); j++) {
+        if (!parseTimeLine(lines[j])) {
+          title = lines[j];
+          break;
+        }
+      }
+
+      if (!title || title.length > 90) continue;
+      if (/Total journée|Objectif fin|Règles discipline|Push Pull Legs|Trading · 30 mois/i.test(title)) continue;
+
+      let end = parsed.end;
+
+      if (end === null) {
+        for (let k = i + 1; k < lines.length; k++) {
+          const next = parseTimeLine(lines[k]);
+          if (next && next.start > parsed.start) {
+            end = Math.max(parsed.start + 10, next.start - 5);
+            break;
+          }
+        }
+      }
+
+      if (end === null) end = parsed.start + 15;
+      if (end <= parsed.start) continue;
+      if (end - parsed.start > 600) continue;
+
+      const fixed = isHardFixedTitle(title) && !isFlexibleTitle(title);
+
+      blocks.push({
+        id: "base_" + slug(title) + "_" + parsed.start,
+        title,
+        startMin: parsed.start,
+        endMin: end,
+        duration: end - parsed.start,
+        isFixed: fixed,
+        type: fixed ? "fixed-base" : "routine",
+        source: "parsed-visible-routine",
+        originalStartMin: parsed.start,
+        originalEndMin: end
+      });
+    }
+
+    const unique = [];
+    const seen = new Set();
+
+    for (const b of blocks) {
+      const key = `${b.startMin}-${b.endMin}-${b.title}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        unique.push(b);
+      }
+    }
+
+    return unique.slice(0, 80);
+  }
+
+  function taskToFixedBlock(task) {
+    const s = toMin(task.startTime);
+    const e = toMin(task.endTime);
+
+    return {
+      id: task.id || "task_" + slug(task.title || task.text) + "_" + s,
+      title: task.title || task.text || "Tâche",
+      startMin: s,
+      endMin: e,
+      duration: e - s,
+      isFixed: true,
+      type: "timed-task",
+      source: "normal-task-with-time",
+      originalStartMin: s,
+      originalEndMin: e
+    };
+  }
+
+  function getTradingBlocks(dateKey, shift) {
+    if (typeof window.UD_PATCH_GET_TRADING_BLOCKS === "function") {
+      return window.UD_PATCH_GET_TRADING_BLOCKS(shift, dateKey) || [];
+    }
+    return [];
+  }
+
+  function findConflict(start, end, placed) {
+    return placed
+      .filter(b => b.startMin !== null && b.endMin !== null)
+      .sort((a, b) => a.startMin - b.startMin)
+      .find(b => overlaps(start, end, b.startMin, b.endMin));
+  }
+
+  function adaptRoutine(dateKey) {
+    const shift = detectShift();
+    const base = extractBaseRoutineBlocks();
+
+    const timedTasks = getTimedTasks(dateKey).map(taskToFixedBlock);
+    const trading = getTradingBlocks(dateKey, shift);
+
+    const fixed = [
+      ...base.filter(b => b.isFixed),
+      ...timedTasks
+    ].sort((a, b) => a.startMin - b.startMin);
+
+    const flexible = [
+      ...base.filter(b => !b.isFixed),
+      ...trading
+    ].sort((a, b) => a.originalStartMin - b.originalStartMin);
+
+    const placed = [...fixed];
+    const unscheduled = [];
+
+    for (const block of flexible) {
+      let start = block.originalStartMin;
+      let end = start + block.duration;
+      let guard = 0;
+
+      while (guard < 80) {
+        const conflict = findConflict(start, end, placed);
+        if (!conflict) break;
+        start = conflict.endMin;
+        end = start + block.duration;
+        guard++;
+      }
+
+      if (end > 23 * 60 + 30) {
+        unscheduled.push({
+          ...block,
+          moved: true,
+          reason: "Journée trop chargée"
+        });
+        continue;
+      }
+
+      placed.push({
+        ...block,
+        startMin: start,
+        endMin: end,
+        moved: start !== block.originalStartMin
+      });
+    }
+
+    const conflictFixed = [];
+    const fixedOnly = placed.filter(b => b.isFixed).sort((a, b) => a.startMin - b.startMin);
+
+    for (let i = 0; i < fixedOnly.length - 1; i++) {
+      if (overlaps(fixedOnly[i].startMin, fixedOnly[i].endMin, fixedOnly[i + 1].startMin, fixedOnly[i + 1].endMin)) {
+        conflictFixed.push([fixedOnly[i], fixedOnly[i + 1]]);
+      }
+    }
+
+    return {
+      shift,
+      dateKey,
+      blocks: placed.sort((a, b) => a.startMin - b.startMin),
+      unscheduled,
+      conflictFixed,
+      timedTasks
+    };
+  }
+
+  function blockClass(b) {
+    if (b.type === "timed-task") return "ud-fixed-task";
+    if (b.type === "trading") return "ud-trading";
+    if (b.isFixed) return "ud-fixed-base";
+    if (b.moved) return "ud-moved";
+    return "ud-flex";
+  }
+
+  function renderBlock(b) {
+    const label =
+      b.type === "timed-task" ? "TÂCHE FIXE" :
+      b.type === "trading" ? "TRADING" :
+      b.isFixed ? "FIXE" :
+      b.moved ? "DÉPLACÉ" :
+      "ROUTINE";
+
+    return `
+      <div class="ud-routine-block ${blockClass(b)}">
+        <div class="ud-time">${toTime(b.startMin)} – ${toTime(b.endMin)}</div>
+        <div class="ud-title">${escapeHtml(b.title)}</div>
+        <div class="ud-meta">
+          ${label}
+          ${b.moved ? ` · prévu ${toTime(b.originalStartMin)}-${toTime(b.originalEndMin)}` : ""}
+          ${b.note ? ` · ${escapeHtml(b.note)}` : ""}
+        </div>
+      </div>
+    `;
+  }
+
+  function escapeHtml(s) {
+    return String(s || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function addStyles() {
+    if (document.getElementById("ud-routine-patch-style")) return;
+
+    const style = document.createElement("style");
+    style.id = "ud-routine-patch-style";
+    style.textContent = `
+      #${PATCH_ID}{
+        margin:16px 0;
+        border:1px solid rgba(148,163,184,.28);
+        border-radius:18px;
+        padding:14px;
+        background:linear-gradient(180deg,rgba(15,23,42,.96),rgba(2,6,23,.94));
+        color:#e5e7eb;
+        box-shadow:0 12px 35px rgba(0,0,0,.25);
+      }
+      #${PATCH_ID} *{box-sizing:border-box}
+      .ud-patch-title{font-weight:800;font-size:16px;margin-bottom:8px}
+      .ud-patch-sub{font-size:12px;color:#94a3b8;margin-bottom:12px;line-height:1.35}
+      .ud-form-grid{display:grid;grid-template-columns:1fr 105px 105px;gap:8px;margin-bottom:8px}
+      .ud-form-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px}
+      #${PATCH_ID} input,#${PATCH_ID} select,#${PATCH_ID} button{
+        min-height:42px;border-radius:12px;border:1px solid rgba(148,163,184,.35);
+        background:#020617;color:#e5e7eb;padding:8px 10px;font:600 13px system-ui;
+      }
+      #${PATCH_ID} button{background:#2563eb;border-color:#3b82f6;cursor:pointer}
+      #${PATCH_ID} button.secondary{background:#111827}
+      .ud-routine-block{
+        display:grid;grid-template-columns:105px 1fr;gap:8px;
+        padding:10px 10px;margin:8px 0;border-radius:14px;
+        border:1px solid rgba(148,163,184,.22);background:rgba(15,23,42,.75);
+      }
+      .ud-time{font:800 12px ui-monospace,monospace;color:#cbd5e1}
+      .ud-title{font-weight:800;font-size:13px;min-width:0;word-break:break-word}
+      .ud-meta{grid-column:2;font-size:11px;color:#94a3b8}
+      .ud-fixed-task{border-color:rgba(239,68,68,.55);background:rgba(127,29,29,.30)}
+      .ud-trading{border-color:rgba(245,158,11,.60);background:rgba(120,53,15,.28)}
+      .ud-moved{border-color:rgba(59,130,246,.55);background:rgba(30,64,175,.25)}
+      .ud-fixed-base{opacity:.82}
+      .ud-warn{padding:10px;border-radius:12px;background:rgba(239,68,68,.16);border:1px solid rgba(239,68,68,.35);margin:8px 0;font-size:12px}
+      .ud-empty{padding:10px;border-radius:12px;background:rgba(148,163,184,.08);color:#94a3b8;font-size:12px}
+      @media(max-width:560px){
+        .ud-form-grid,.ud-form-row{grid-template-columns:1fr}
+        .ud-routine-block{grid-template-columns:1fr}
+        .ud-meta{grid-column:1}
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  function injectTaskModalFields() {
+    const candidates = [...document.querySelectorAll("div,section,dialog")].filter(el => {
+      const txt = el.innerText || "";
+      return txt.includes("Nouvelle tâche") && txt.includes("Ajouter");
+    });
+
+    const modal = candidates.sort((a, b) => a.innerText.length - b.innerText.length)[0];
+    if (!modal || modal.querySelector(".ud-modal-time-fields")) return;
+
+    const box = document.createElement("div");
+    box.className = "ud-modal-time-fields";
+    box.style.cssText = "display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0;";
+    box.innerHTML = `
+      <input type="time" data-ud-start placeholder="Début">
+      <input type="time" data-ud-end placeholder="Fin">
+    `;
+
+    const addBtn = [...modal.querySelectorAll("button")].find(b => /ajouter/i.test(b.innerText || ""));
+    if (addBtn) addBtn.parentNode.insertBefore(box, addBtn);
+  }
+
+  function hookModalAddClick(e) {
+    const btn = e.target.closest("button");
+    if (!btn || !/ajouter/i.test(btn.innerText || "")) return;
+
+    const modal = btn.closest("div,section,dialog");
+    if (!modal || !modal.innerText.includes("Nouvelle tâche")) return;
+
+    const start = modal.querySelector("[data-ud-start]")?.value;
+    const end = modal.querySelector("[data-ud-end]")?.value;
+
+    if (!start || !end) return;
+
+    const textInput = [...modal.querySelectorAll("input,textarea")]
+      .find(input => input.type !== "time" && input.value && input.value.trim().length > 0);
+
+    const title = textInput?.value?.trim();
+
+    const isTomorrow = /demain/i.test(modal.innerText) && !/aujourd/i.test(modal.innerText);
+    const dateKey = isTomorrow ? todayKey(1) : todayKey(0);
+
+    setTimeout(() => {
+      saveTimedTask({
+        title: title || "Tâche horaire",
+        dateKey,
+        startTime: start,
+        endTime: end
+      });
+    }, 50);
+  }
+
+  function renderAdaptedRoutine() {
+    addStyles();
+    injectTaskModalFields();
+
+    const routine = findRoutinePage();
+    if (!routine) return;
+
+    let panel = document.getElementById(PATCH_ID);
+    if (!panel) {
+      panel = document.createElement("div");
+      panel.id = PATCH_ID;
+
+      const h1 = [...routine.querySelectorAll("h1,h2")][0];
+      if (h1 && h1.parentNode) {
+        h1.parentNode.insertBefore(panel, h1.nextSibling);
+      } else {
+        routine.prepend(panel);
+      }
+    }
+
+    const dateKey = document.getElementById("ud-date-select")?.value || todayKey(0);
+    const adapted = adaptRoutine(dateKey);
+
+    const conflictHtml = adapted.conflictFixed.length
+      ? `<div class="ud-warn">⚠️ Conflit entre blocs fixes. Corrige l'heure d'une tâche.</div>`
+      : "";
+
+    const unscheduledHtml = adapted.unscheduled.length
+      ? `
+        <div class="ud-warn">
+          <b>À replanifier</b><br>
+          ${adapted.unscheduled.map(b => `• ${escapeHtml(b.title)} (${b.duration} min)`).join("<br>")}
+        </div>
+      `
+      : "";
+
+    panel.innerHTML = `
+      <div class="ud-patch-title">Routine adaptée · tâches horaires</div>
+      <div class="ud-patch-sub">
+        Une tâche avec heure début + fin devient un bloc fixe. Les blocs souples se décalent autour.
+      </div>
+
+      <div class="ud-form-grid">
+        <input id="ud-nl-task" placeholder="Ex: demain 10h à 11h30 coiffeur">
+        <button id="ud-parse-task">Parser</button>
+        <button class="secondary" id="ud-refresh-routine">Refresh</button>
+      </div>
+
+      <div class="ud-form-grid">
+        <input id="ud-task-title" placeholder="Titre ex: Coiffeur">
+        <input id="ud-task-start" type="time">
+        <input id="ud-task-end" type="time">
+      </div>
+
+      <div class="ud-form-row">
+        <select id="ud-date-select">
+          <option value="${todayKey(0)}"${dateKey === todayKey(0) ? " selected" : ""}>Aujourd'hui</option>
+          <option value="${todayKey(1)}"${dateKey === todayKey(1) ? " selected" : ""}>Demain</option>
+        </select>
+        <select id="ud-task-cat">
+          <option>Admin</option>
+          <option>Maison</option>
+          <option>Santé</option>
+          <option>Études</option>
+          <option>Boulot</option>
+          <option>Perso</option>
+        </select>
+        <button id="ud-add-timed-task">Ajouter à la routine</button>
+      </div>
+
+      ${conflictHtml}
+
+      <div class="ud-patch-sub">
+        Shift détecté : <b>${escapeHtml(adapted.shift)}</b> · Date : <b>${escapeHtml(adapted.dateKey)}</b> ·
+        Tâches horaires détectées : <b>${adapted.timedTasks.length}</b>
+      </div>
+
+      <div>
+        ${adapted.blocks.length ? adapted.blocks.map(renderBlock).join("") : `<div class="ud-empty">Aucun bloc détecté.</div>`}
+      </div>
+
+      ${unscheduledHtml}
+    `;
+
+    document.getElementById("ud-refresh-routine")?.addEventListener("click", renderAdaptedRoutine);
+
+    document.getElementById("ud-date-select")?.addEventListener("change", renderAdaptedRoutine);
+
+    document.getElementById("ud-parse-task")?.addEventListener("click", () => {
+      const raw = document.getElementById("ud-nl-task")?.value || "";
+      const parsed = parseNaturalTask(raw);
+      if (!parsed) {
+        toast("Format non reconnu. Exemple : demain 10h à 11h30 coiffeur");
+        return;
+      }
+
+      document.getElementById("ud-task-title").value = parsed.title;
+      document.getElementById("ud-task-start").value = parsed.startTime;
+      document.getElementById("ud-task-end").value = parsed.endTime;
+      document.getElementById("ud-date-select").value = parsed.dateKey;
+      toast("Tâche parsée. Clique sur Ajouter à la routine.");
+    });
+
+    document.getElementById("ud-add-timed-task")?.addEventListener("click", () => {
+      saveTimedTask({
+        title: document.getElementById("ud-task-title")?.value,
+        dateKey: document.getElementById("ud-date-select")?.value || todayKey(0),
+        startTime: document.getElementById("ud-task-start")?.value,
+        endTime: document.getElementById("ud-task-end")?.value,
+        category: document.getElementById("ud-task-cat")?.value || "Admin"
+      });
+    });
+  }
+
+  document.addEventListener("click", hookModalAddClick, true);
+
+  window.addEventListener("ud:timed-task-added", renderAdaptedRoutine);
+  window.addEventListener("ud:refreshRoutinePatch", renderAdaptedRoutine);
+  window.addEventListener("hashchange", () => setTimeout(renderAdaptedRoutine, 200));
+  document.addEventListener("click", () => setTimeout(renderAdaptedRoutine, 250));
+
+  const observer = new MutationObserver(() => {
+    injectTaskModalFields();
+    if (findRoutinePage()) renderAdaptedRoutine();
+  });
+
+  observer.observe(document.documentElement, { childList: true, subtree: true });
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", () => setTimeout(renderAdaptedRoutine, 500));
+  } else {
+    setTimeout(renderAdaptedRoutine, 500);
+  }
+})();
+                                    </script>
+   <script id="ud-trading-routine-patch">
+(() => {
+  if (window.__UD_TRADING_ROUTINE_PATCH__) return;
+  window.__UD_TRADING_ROUTINE_PATCH__ = true;
+
+  const pad = n => String(n).padStart(2, "0");
+
+  function toMin(t) {
+    const m = String(t || "").match(/^(\d{1,2}):(\d{2})$/);
+    if (!m) return null;
+    return Number(m[1]) * 60 + Number(m[2]);
+  }
+
+  function makeBlock({ id, title, start, end, note }) {
+    const s = toMin(start);
+    const e = toMin(end);
+    return {
+      id,
+      title,
+      startMin: s,
+      endMin: e,
+      duration: e - s,
+      isFixed: false,
+      type: "trading",
+      source: "trading-routine-patch",
+      originalStartMin: s,
+      originalEndMin: e,
+      note
+    };
+  }
+
+  window.UD_PATCH_GET_TRADING_BLOCKS = function getTradingBlocksForShift(shiftRaw, dateKey) {
+    const shift = String(shiftRaw || "").toLowerCase();
+
+    if (shift.includes("maladie")) {
+      return [
+        makeBlock({
+          id: `trading_light_${dateKey}`,
+          title: "Trading light · lecture / simulation",
+          start: "18:00",
+          end: "18:30",
+          note: "30 min max · pas de live"
+        })
+      ];
+    }
+
+    if (shift.includes("5h30")) {
+      return [];
+    }
+
+    if (shift.includes("7h")) {
+      return [
+        makeBlock({
+          id: `trading_7h_${dateKey}`,
+          title: "Trading · backtest / journal",
+          start: "19:45",
+          end: "20:30",
+          note: "45 min · NY close"
+        })
+      ];
+    }
+
+    if (shift.includes("11h")) {
+      return [
+        makeBlock({
+          id: `trading_11h_${dateKey}`,
+          title: "Trading · backtest / replay",
+          start: "09:30",
+          end: "10:15",
+          note: "45 min · matin avant shift"
+        })
+      ];
+    }
+
+    if (shift.includes("13h30")) {
+      return [
+        makeBlock({
+          id: `trading_13h_${dateKey}`,
+          title: "Trading · backtest / replay",
+          start: "09:30",
+          end: "10:30",
+          note: "60 min max · matin"
+        })
+      ];
+    }
+
+    if (shift.includes("weekend")) {
+      return [
+        makeBlock({
+          id: `trading_weekend_${dateKey}`,
+          title: "Trading review · journal + backtest",
+          start: "18:00",
+          end: "19:00",
+          note: "60 min · pas de live"
+        })
+      ];
+    }
+
+    return [
+      makeBlock({
+        id: `trading_default_${dateKey}`,
+        title: "Trading · session courte",
+        start: "18:00",
+        end: "18:45",
+        note: "45 min standard"
+      })
+    ];
+  };
+
+  window.dispatchEvent(new Event("ud:refreshRoutinePatch"));
+})();
+   </script>
 </body>
 </html>
