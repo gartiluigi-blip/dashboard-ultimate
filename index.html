@@ -13471,9 +13471,12 @@ const Backup = {
     const token = sg('gh_token', '');
     if (!token) throw new Error('Token GitHub non configuré');
     const data = await this.exportAll();
+    const now = new Date();
+    // Le gist "courant" est toujours le même (on PATCH dessus pour la latest version)
+    // Rotation : on archive l'ancienne version dans un gist daté avant de PATCH
     const gistId = sg('gh_gist_id', '');
     const body = {
-      description: `Ultimate Dashboard backup ${new Date().toISOString()}`,
+      description: `Ultimate Dashboard · backup ${now.toISOString()}`,
       public: false,
       files: { 'ultimate-backup.json': { content: JSON.stringify(data, null, 2) } }
     };
@@ -13487,6 +13490,45 @@ const Backup = {
     const json = await res.json();
     if (!gistId) ss('gh_gist_id', json.id);
     ss('last_gist_push', Date.now());
+
+    // Audit Apr 2026 : rotation hebdo — créer un snapshot daté tous les 7 jours
+    // (gist séparé). Garde max 30 snapshots datés, supprime les plus anciens.
+    try {
+      const lastWeekly = sg('last_gist_weekly_snapshot', 0);
+      if (Date.now() - lastWeekly >= 7 * 24 * 3600 * 1000){
+        const snapBody = {
+          description: `Ultimate Dashboard · weekly snapshot ${now.toISOString().slice(0,10)}`,
+          public: false,
+          files: { ['ultimate-snapshot-' + now.toISOString().slice(0,10) + '.json']: { content: JSON.stringify(data, null, 2) } }
+        };
+        const snapRes = await fetch('https://api.github.com/gists', {
+          method: 'POST',
+          headers: { 'Authorization': 'token '+token, 'Content-Type': 'application/json' },
+          body: JSON.stringify(snapBody)
+        });
+        if (snapRes.ok){
+          const snapJson = await snapRes.json();
+          // Track snapshot IDs
+          let snapIds = [];
+          try { snapIds = JSON.parse(sg('gist_snapshot_ids', '[]')); } catch(_){}
+          if (!Array.isArray(snapIds)) snapIds = [];
+          snapIds.push({ id: snapJson.id, ts: Date.now() });
+          // Rotation : garde les 30 derniers, delete les plus anciens
+          while (snapIds.length > 30){
+            const old = snapIds.shift();
+            try {
+              await fetch('https://api.github.com/gists/' + old.id, {
+                method: 'DELETE',
+                headers: { 'Authorization': 'token '+token }
+              });
+            } catch(_){}
+          }
+          ss('gist_snapshot_ids', JSON.stringify(snapIds));
+          ss('last_gist_weekly_snapshot', Date.now());
+        }
+      }
+    } catch(_){ /* rotation est best-effort, ne bloque pas le push principal */ }
+
     return json.html_url;
   },
 
@@ -13507,17 +13549,56 @@ const Backup = {
   }
 };
 
-// Auto-backup local quotidien (silencieux)
+// Auto-backup quotidien (audit Apr 2026 — version améliorée)
+//   1. Garde toujours 1 snapshot local en localStorage (rapide, no network)
+//   2. Si token Gist configuré : push aussi vers Gist (résilient en cas de crash navigateur)
+//   3. Si dernier push Gist > 7 jours : reminder visible dans l'app
+//   4. Errors silencieuses pour ne jamais bloquer le boot
 async function autoBackupCheck(){
   const last = sg('last_auto_backup', 0);
   const now = Date.now();
-  if (now - last < 24 * 3600 * 1000) return;
-  try {
-    const data = await Backup.exportAll();
-    ss('auto_backup_data', data);  // garde 1 backup en localStorage
-    ss('last_auto_backup', now);
-    log('auto-backup OK');
-  } catch(e){ log('auto-backup fail', e); }
+  const ONE_DAY = 24 * 3600 * 1000;
+  const SEVEN_DAYS = 7 * ONE_DAY;
+
+  // Local snapshot (toujours, même sans token Gist)
+  if (now - last >= ONE_DAY){
+    try {
+      const data = await Backup.exportAll();
+      ss('auto_backup_data', data);
+      ss('last_auto_backup', now);
+      log('auto-backup local OK');
+    } catch(e){ log('auto-backup local fail', e); }
+  }
+
+  // Push vers Gist si token configuré
+  const ghToken = sg('gh_token', '');
+  if (ghToken){
+    const lastGist = sg('last_gist_push', 0);
+    if (now - lastGist >= ONE_DAY){
+      try {
+        await Backup.pushToGist();
+        log('auto-push Gist OK');
+        // showToast discret pour confirmer (n'apparaît qu'au premier auto-push de la journée)
+        if (typeof showToast === 'function') showToast('☁️ Backup auto vers Gist réussi');
+      } catch(e){
+        log('auto-push Gist fail:', e.message);
+        // Si l'auth échoue, on prévient explicitement (token périmé/révoqué)
+        if (/^GitHub: 4(01|03)/.test(e.message)){
+          if (typeof showToast === 'function') showToast('⚠️ Token GitHub invalide · Settings → reconfigure');
+        }
+      }
+    }
+  }
+
+  // Reminder hebdo : si pas de push Gist depuis >7j, afficher banner
+  const lastGist = sg('last_gist_push', 0);
+  if (lastGist === 0 || now - lastGist > SEVEN_DAYS){
+    // Stocker un flag pour que l'UI puisse afficher un banner si besoin
+    ss('backup_reminder_active', true);
+    ss('backup_reminder_age_days', lastGist === 0 ? -1 : Math.floor((now - lastGist) / ONE_DAY));
+  } else {
+    ss('backup_reminder_active', false);
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -15486,6 +15567,43 @@ function loadSettings(){
   if (dl) dl.addEventListener('click', exportData);
   const rs = document.getElementById('bk-rs');
   if (rs) rs.addEventListener('change', restoreData);
+
+  // Audit Apr 2026 : afficher status backup
+  function refreshBackupStatus(){
+    const info = document.getElementById('bk-info');
+    if (!info) return;
+    const lastLocal = sg('last_auto_backup', 0);
+    const lastGist = sg('last_gist_push', 0);
+    const ghToken = sg('gh_token', '');
+    const lines = [];
+    if (lastLocal){
+      const age = Math.floor((Date.now() - lastLocal) / (3600*1000));
+      lines.push('Local : il y a ' + (age < 24 ? age + 'h' : Math.floor(age/24) + 'j'));
+    } else {
+      lines.push('Local : jamais');
+    }
+    if (ghToken){
+      if (lastGist){
+        const age = Math.floor((Date.now() - lastGist) / (3600*1000));
+        const ageStr = age < 24 ? age + 'h' : Math.floor(age/24) + 'j';
+        const status = age > 7*24 ? '⚠️' : '✓';
+        lines.push('Gist : ' + status + ' il y a ' + ageStr);
+      } else {
+        lines.push('Gist : token configuré · pas encore de push');
+      }
+      let snapIds = [];
+      try { snapIds = JSON.parse(sg('gist_snapshot_ids', '[]')); } catch(_){}
+      if (Array.isArray(snapIds) && snapIds.length){
+        lines.push('Snapshots datés : ' + snapIds.length + '/30');
+      }
+    } else {
+      lines.push('Gist : ⚠️ pas de token configuré');
+    }
+    info.innerHTML = lines.join(' · ');
+  }
+  refreshBackupStatus();
+  // Refresh quand on revient sur le tab
+  setInterval(refreshBackupStatus, 30000);
   const ghSave = document.getElementById('gh-save');
   if (ghSave) ghSave.addEventListener('click', () => {
     const t = document.getElementById('gh-token').value.trim();
@@ -18864,6 +18982,68 @@ if (document.readyState === 'loading') {
       console.log('[Audit] dashv2_claude_api_key supprimé de localStorage (mode serveur uniquement).');
     }
   } catch(_){}
+})();
+</script>
+<script id="audit-backup-reminder">
+/* Audit Apr 2026 : banner backup si dernière sync Gist > 7j */
+(function(){
+  function showBanner(){
+    try {
+      if (sessionStorage.getItem('backup_banner_dismissed') === '1') return;
+      const active = JSON.parse(localStorage.getItem('dashv2_backup_reminder_active') || 'false');
+      if (!active) return;
+      const age = JSON.parse(localStorage.getItem('dashv2_backup_reminder_age_days') || '-1');
+      const ghToken = (function(){
+        try { return JSON.parse(localStorage.getItem('dashv2_gh_token') || '""'); }
+        catch(_){ return localStorage.getItem('dashv2_gh_token') || ''; }
+      })();
+
+      const msg = ghToken
+        ? (age === -1
+            ? '☁️ Aucun backup Gist encore — clique pour en faire un'
+            : '☁️ Dernier backup Gist il y a ' + age + ' jours — pousse en faisant un clic')
+        : '⚠️ Pas de token GitHub configuré · backup local seulement → Settings';
+
+      // Ne pas afficher si déjà présent
+      if (document.getElementById('audit-backup-banner')) return;
+      const banner = document.createElement('div');
+      banner.id = 'audit-backup-banner';
+      banner.setAttribute('role', 'status');
+      banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,#fb923c,#f97316);color:#0a0a10;padding:10px 14px;font:600 13px system-ui,sans-serif;display:flex;align-items:center;gap:10px;box-shadow:0 2px 12px rgba(0,0,0,.4);';
+      banner.innerHTML = '<span style="flex:1">' + msg + '</span><button id="aud-bk-go" style="background:#0a0a10;color:#fb923c;border:none;padding:6px 12px;border-radius:6px;font:700 12px sans-serif;cursor:pointer">Backup now</button><button id="aud-bk-x" aria-label="Ignorer pour cette session" style="background:transparent;color:#0a0a10;border:none;font-size:18px;cursor:pointer;padding:0 4px;line-height:1">✕</button>';
+      document.body.appendChild(banner);
+      banner.querySelector('#aud-bk-x').addEventListener('click', () => {
+        sessionStorage.setItem('backup_banner_dismissed', '1');
+        banner.remove();
+      });
+      banner.querySelector('#aud-bk-go').addEventListener('click', async () => {
+        if (!ghToken){
+          // Aller à Settings
+          const settingsTab = document.querySelector('[data-tab="settings"]');
+          if (settingsTab) settingsTab.click();
+          if (typeof showToast === 'function') showToast('Configure ton token GitHub puis Push');
+          banner.remove();
+          return;
+        }
+        banner.querySelector('#aud-bk-go').textContent = '…';
+        try {
+          if (typeof Backup !== 'undefined' && Backup.pushToGist){
+            await Backup.pushToGist();
+            if (typeof showToast === 'function') showToast('✓ Backup poussé vers Gist');
+            banner.remove();
+          }
+        } catch(e){
+          if (typeof showToast === 'function') showToast('❌ ' + e.message);
+        }
+      });
+    } catch(_){}
+  }
+  // Attendre que le DOM et autoBackupCheck soient prêts
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', () => setTimeout(showBanner, 3000));
+  } else {
+    setTimeout(showBanner, 3000);
+  }
 })();
 </script>
 </body>
