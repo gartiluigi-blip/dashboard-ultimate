@@ -15384,6 +15384,21 @@ function loadSettings(){
       <div id="storage-info" style="font:12px monospace;color:#aaa"></div>
     </div>
 
+    <div style="background:var(--surface,#1f1f2e);border:1px solid var(--border,#333);border-radius:12px;padding:14px;margin:12px 0">
+      <h3 style="font:700 13px sans-serif;color:#fff;margin-bottom:10px;text-transform:uppercase;letter-spacing:.04em">🗑️ Nettoyage</h3>
+      <div style="font:11px var(--f-mono,monospace);color:#888;margin-bottom:10px">
+        Données obsolètes datant de plus de
+        <select id="cleanup-age" style="background:#1a1a2e;color:#fff;border:1px solid #444;border-radius:4px;padding:2px 6px;font-size:11px;margin:0 4px">
+          <option value="30">30 j</option>
+          <option value="60">60 j</option>
+          <option value="90" selected>90 j</option>
+        </select>.
+        Configs, historiques et données métier toujours protégés.
+      </div>
+      <button id="cleanup-scan" style="padding:10px 16px;background:#2a2a3a;border:1px solid #444;border-radius:8px;font:600 12px sans-serif;cursor:pointer;color:#a0a0c0;min-height:44px;touch-action:manipulation">🔍 Analyser le stockage</button>
+      <div id="cleanup-preview" style="margin-top:10px"></div>
+    </div>
+
     <div style="background:var(--surface,#1f1f2e);border:1px solid rgba(248,113,113,.3);border-radius:12px;padding:14px;margin:12px 0">
       <h3 style="font:700 13px sans-serif;color:#f87171;margin-bottom:10px;text-transform:uppercase;letter-spacing:.04em">⚠️ Zone dangereuse</h3>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -15430,6 +15445,12 @@ function loadSettings(){
       if (k && k.startsWith('dashv2_')) localStorage.removeItem(k);
     }
     location.reload();
+  });
+
+  const scanBtn = document.getElementById('cleanup-scan');
+  const ageEl = document.getElementById('cleanup-age');
+  if (scanBtn) scanBtn.addEventListener('click', () => {
+    renderCleanupPreview(parseInt(ageEl?.value || '90', 10));
   });
 
   refreshStorageInfo();
@@ -15525,6 +15546,123 @@ function refreshStorageInfo(){
   }
   const el = document.getElementById('storage-info');
   if (el) el.innerHTML = `localStorage: <b style="color:#fff">${n} clés · ${(total/1024).toFixed(1)} KB</b>`;
+}
+
+// ── Cleanup tool ────────────────────────────────────────────────────────────
+function scanStaleKeys(ageDays){
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - ageDays);
+  const cutoffStr = cutoff.toISOString().slice(0, 10); // YYYY-MM-DD
+
+  // These keys must never be touched by the cleanup tool
+  const PROTECTED = new Set([
+    'dashv2_claude_api_key', 'dashv2_gh_token', 'dashv2_gist_id'
+  ]);
+
+  // Date-keyed patterns: only entries whose embedded date is before cutoffStr are stale
+  const DATE_GROUPS = [
+    { id:'log',     regex:/^dashv2_log_(\d{4}-\d{2}-\d{2})$/,                      label:'Logs journaliers' },
+    { id:'tasks',   regex:/^dashv2_tasks_(\d{4}-\d{2}-\d{2})$/,                    label:'Tâches journalières' },
+    { id:'prio',    regex:/^dashv2_prio_(\d{4}-\d{2}-\d{2})$/,                     label:'Priorités journalières' },
+    { id:'wake',    regex:/^dashv2_wake_(\d{4}-\d{2}-\d{2})$/,                     label:'Décalages réveil' },
+    { id:'notif',   regex:/^dashv2_notif_fired_(\d{4}-\d{2}-\d{2})$/,              label:'Notifications' },
+    { id:'na',      regex:/^dashv2_na_(?:skipped|snooze)_(\d{4}-\d{2}-\d{2})$/,   label:'Actions journalières (NA)' },
+    { id:'routine', regex:/^dashv2_routine_(?:done_|v35_)(\d{4}-\d{2}-\d{2})/,    label:'État routines' },
+    { id:'todo',    regex:/^dashv2_todo_[^_]+_(\d{4}-\d{2}-\d{2})$/,              label:'Todos journaliers' },
+  ];
+
+  const groups = {};
+  // AI cache is always cleanable regardless of date
+  const aiGroup = { id:'ai_cache', label:'Cache IA', keys:[], size:0 };
+
+  for (let i = 0; i < localStorage.length; i++){
+    const k = localStorage.key(i);
+    if (!k || !k.startsWith('dashv2_') || PROTECTED.has(k)) continue;
+
+    if (k.includes('ai_cache')){
+      aiGroup.keys.push(k);
+      aiGroup.size += (localStorage.getItem(k) || '').length;
+      continue;
+    }
+
+    for (const g of DATE_GROUPS){
+      const m = k.match(g.regex);
+      if (m && m[1] < cutoffStr){
+        if (!groups[g.id]) groups[g.id] = { ...g, keys:[], size:0 };
+        groups[g.id].keys.push(k);
+        groups[g.id].size += (localStorage.getItem(k) || '').length;
+        break;
+      }
+    }
+  }
+
+  if (aiGroup.keys.length) groups.ai_cache = aiGroup;
+  return groups;
+}
+
+function renderCleanupPreview(ageDays){
+  const previewEl = document.getElementById('cleanup-preview');
+  if (!previewEl) return;
+
+  const groups = scanStaleKeys(ageDays);
+  const ids = Object.keys(groups);
+
+  if (!ids.length){
+    previewEl.innerHTML = '<div style="font:12px var(--f-mono,monospace);color:#34d399;padding:8px 0">✓ Aucune donnée obsolète trouvée. Stockage propre.</div>';
+    return;
+  }
+
+  let totalSize = 0, totalCount = 0, rows = '';
+  for (const id of ids){
+    const g = groups[id];
+    totalSize += g.size;
+    totalCount += g.keys.length;
+    rows += `<label style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:rgba(255,255,255,.04);border-radius:6px;margin-bottom:4px;cursor:pointer">
+      <input type="checkbox" data-cg="${id}" checked style="width:15px;height:15px;accent-color:#f87171;cursor:pointer;flex-shrink:0">
+      <span style="flex:1;color:#e0e0e0;font:12px sans-serif">${g.label}</span>
+      <span style="color:#888;font:11px var(--f-mono,monospace)">${g.keys.length} entrée${g.keys.length > 1 ? 's' : ''}</span>
+      <span style="color:#f87171;font:11px var(--f-mono,monospace);min-width:54px;text-align:right">${(g.size/1024).toFixed(1)} KB</span>
+    </label>`;
+  }
+
+  previewEl.innerHTML = `<div style="font:11px var(--f-mono,monospace);color:#aaa;margin-bottom:6px">Sélectionne les catégories à supprimer :</div>
+    ${rows}
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08)">
+      <span style="font:11px var(--f-mono,monospace);color:#888">Total : <span id="cleanup-total">${(totalSize/1024).toFixed(1)} KB</span></span>
+      <button id="cleanup-delete" style="padding:10px 20px;background:rgba(248,113,113,.15);border:1px solid rgba(248,113,113,.35);border-radius:8px;font:700 12px sans-serif;cursor:pointer;color:#f87171;min-height:44px;touch-action:manipulation">🗑️ Supprimer la sélection</button>
+    </div>`;
+
+  previewEl.querySelectorAll('[data-cg]').forEach(cb => {
+    cb.addEventListener('change', () => {
+      let sz = 0;
+      previewEl.querySelectorAll('[data-cg]:checked').forEach(c => { sz += groups[c.dataset.cg]?.size || 0; });
+      const t = document.getElementById('cleanup-total');
+      if (t) t.textContent = (sz / 1024).toFixed(1) + ' KB';
+    });
+  });
+
+  const delBtn = document.getElementById('cleanup-delete');
+  if (delBtn) delBtn.addEventListener('click', () => executeCleanup(previewEl, groups));
+}
+
+function executeCleanup(previewEl, groups){
+  const checked = Array.from(previewEl.querySelectorAll('[data-cg]:checked'));
+  if (!checked.length){ alert('Aucune catégorie sélectionnée.'); return; }
+
+  let keys = [], size = 0;
+  checked.forEach(cb => {
+    const g = groups[cb.dataset.cg];
+    if (g){ keys = keys.concat(g.keys); size += g.size; }
+  });
+
+  const kb = (size / 1024).toFixed(1);
+  if (!confirm(`Supprimer ${keys.length} entrée${keys.length > 1 ? 's' : ''} (${kb} KB) ?\n\nCette action est irréversible.\nFais un backup avant si besoin.`)) return;
+
+  let n = 0;
+  keys.forEach(k => { try { localStorage.removeItem(k); n++; } catch(_){} });
+
+  previewEl.innerHTML = `<div style="font:12px var(--f-mono,monospace);color:#34d399;padding:8px 0">✓ ${n} entrée${n > 1 ? 's' : ''} supprimée${n > 1 ? 's' : ''} — ${kb} KB libérés.</div>`;
+  if (typeof refreshStorageInfo === 'function') refreshStorageInfo();
 }
 
 // Hook sur les clics d'onglets
