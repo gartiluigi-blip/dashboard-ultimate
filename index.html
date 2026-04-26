@@ -3832,9 +3832,8 @@ Bachelor dev en septembre. Bilingue NL+FR d'ici 2 ans. Corps robuste malgré la 
 <div class="task-wrap">
 <div class="task-form">
 <input type="text" id="task-title" class="task-title-input" placeholder="Ex. Appeler kiné, payer loyer…" autocomplete="off">
-<input type="time" id="task-time" title="Heure (optionnel)">
-<input type="time" id="task-end-time" title="Heure de fin (optionnel)">
-<label class="task-fixed-wrap" id="task-fixed-wrap" title="Créneau fixe — bloque ce plage dans la Routine"><input type="checkbox" id="task-fixed"> Fixe</label>
+<input type="time" id="task-time" title="Heure de début (optionnel)">
+<input type="time" id="task-end-time" title="Heure de fin — crée un bloc fixe dans la Routine">
 <select id="task-prio" title="Priorité">
 <option value="med">Normal</option>
 <option value="hi">Urgent</option>
@@ -8401,8 +8400,6 @@ function saveTasks(d, arr){
 const taskTitle = document.getElementById('task-title');
 const taskTime = document.getElementById('task-time');
 const taskEndTime = document.getElementById('task-end-time');
-const taskFixed = document.getElementById('task-fixed');
-const taskFixedWrap = document.getElementById('task-fixed-wrap');
 const taskPrio = document.getElementById('task-prio');
 const taskCat = document.getElementById('task-cat');
 const taskAdd = document.getElementById('task-add');
@@ -8410,11 +8407,7 @@ const taskList = document.getElementById('task-list');
 function _updateTaskTimeExtras(){
   const hasTime = !!taskTime.value;
   if (taskEndTime) taskEndTime.classList.toggle('visible', hasTime);
-  if (taskFixedWrap) taskFixedWrap.classList.toggle('visible', hasTime);
-  if (!hasTime){
-    if (taskEndTime) taskEndTime.value = '';
-    if (taskFixed) taskFixed.checked = false;
-  }
+  if (!hasTime && taskEndTime) taskEndTime.value = '';
 }
 if (taskTime) taskTime.addEventListener('change', _updateTaskTimeExtras);
 const taskDayTabs = document.querySelectorAll('[data-tasks-day]');
@@ -8464,7 +8457,8 @@ function renderTasks(){
     const check = '<button class="task-check" data-act="check" aria-label="Terminer">✓</button>';
     const prio = '<div class="task-prio '+(t.prio||'med')+'" title="Priorité"></div>';
     const prioLbl = t.prio === 'hi' ? '<span class="task-prio-label hi">Urgent</span>' : '';
-    const time = t.time ? '<span class="task-time">'+escapeHtml(t.time)+'</span>' : '';
+    const timeRange = t.time ? escapeHtml(t.time) + (t.endTime ? '–'+escapeHtml(t.endTime) : '') : '';
+    const time = timeRange ? '<span class="task-time">'+timeRange+'</span>' : '';
     const cat = t.cat ? '<span class="task-cat '+escapeHtml(t.cat)+'">'+escapeHtml(catLabel(t.cat))+'</span>' : '';
     const text = '<span class="task-text" data-act="edit" title="Clic pour éditer">'+escapeHtml(t.title)+'</span>';
     const del = '<button class="task-del" data-act="del" aria-label="Supprimer">✕</button>';
@@ -8480,7 +8474,7 @@ function renderTasks(){
       const t = tasks.find(x => x.id === id);
       if (t){
         t.done = !t.done; saveTasks(activeDate, tasks); renderTasks();
-        if (t.isFixedTime && window.renderRoutineFixedEvents) setTimeout(window.renderRoutineFixedEvents, 50);
+        if (t.time && t.endTime && window.renderRoutineFixedEvents) setTimeout(window.renderRoutineFixedEvents, 50);
       }
     });
     el.querySelector('[data-act="del"]').addEventListener('click', () => {
@@ -8489,7 +8483,7 @@ function renderTasks(){
       if (!removed) return;
       const filtered = tasks.filter(x => x.id !== id);
       saveTasks(activeDate, filtered); renderTasks();
-      if (removed.isFixedTime && window.renderRoutineFixedEvents) setTimeout(window.renderRoutineFixedEvents, 50);
+      if (removed.time && removed.endTime && window.renderRoutineFixedEvents) setTimeout(window.renderRoutineFixedEvents, 50);
       pushUndo('Tâche "' + removed.title.slice(0,30) + '"', () => {
         const back = loadTasks(activeDate); back.push(removed); saveTasks(activeDate, back); renderTasks();
       });
@@ -8540,13 +8534,18 @@ function addTask(){
   const arr = loadTasks(activeDate);
   const startVal = taskTime.value || '';
   const endVal = (taskEndTime && taskEndTime.value) || '';
-  const isFixed = !!(taskFixed && taskFixed.checked && startVal && endVal && endVal > startVal);
+  // A task with both start and end time is automatically a fixed routine block — no checkbox needed
+  const isFixedTime = !!(startVal && endVal && endVal > startVal);
+  const durationMinutes = isFixedTime
+    ? (parseTimeMin(endVal) - parseTimeMin(startVal))
+    : null;
   arr.push({
     id: 't_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
     title,
     time: startVal,
-    endTime: isFixed ? endVal : '',
-    isFixedTime: isFixed,
+    endTime: endVal,
+    isFixedTime,
+    durationMinutes,
     prio: taskPrio.value || 'med',
     cat: taskCat.value || '',
     done: false,
@@ -8555,11 +8554,11 @@ function addTask(){
   saveTasks(activeDate, arr);
   taskTitle.value = ''; taskTime.value = '';
   if (taskEndTime) taskEndTime.value = '';
-  if (taskFixed) taskFixed.checked = false;
   taskPrio.value = 'med'; taskCat.value = '';
   _updateTaskTimeExtras();
   renderTasks();
-  if (isFixed && window.renderRoutineFixedEvents) setTimeout(window.renderRoutineFixedEvents, 50);
+  // Any task with a timed range updates the Routine immediately
+  if (isFixedTime && window.renderRoutineFixedEvents) setTimeout(window.renderRoutineFixedEvents, 50);
   taskTitle.focus();
 }
 if (taskAdd) taskAdd.addEventListener('click', addTask);
@@ -16587,9 +16586,6 @@ section.page.active{
 .routine-replan-section ul{ margin:4px 0 0 14px; padding:0; font:11px var(--f-mono,monospace); color:#f87171; }
 #task-end-time{ display:none; }
 #task-end-time.visible{ display:inline-block; }
-.task-fixed-wrap{ display:none; align-items:center; gap:5px; font:11px var(--f-sans,system-ui); color:var(--text-faint,#777); white-space:nowrap; }
-.task-fixed-wrap.visible{ display:inline-flex; }
-.task-fixed-wrap input[type=checkbox]{ accent-color:#a78bfa; width:13px; height:13px; }
 .routine-reset-v35{
   width:100%; margin:12px 0 4px; min-height:44px; border:1px solid rgba(239,68,68,.35); border-radius:12px;
   color:#fca5a5; background:rgba(239,68,68,.06); font:800 11px var(--f-sans,system-ui); letter-spacing:.08em; text-transform:uppercase; cursor:pointer;
@@ -17539,8 +17535,10 @@ function getTodayFixedEvents(){
     if (raw) tasks = JSON.parse(raw);
   } catch(_){}
   if (!Array.isArray(tasks)) tasks = [];
+  // Any task with both time (start) and endTime is treated as a fixed routine block.
+  // No special flag required — having both fields is the contract.
   return tasks
-    .filter(t => t.isFixedTime && !t.done && t.time && t.endTime)
+    .filter(t => !t.done && t.time && t.endTime)
     .map(t => ({
       id: t.id, title: t.title,
       startMin: parseMin(t.time),
