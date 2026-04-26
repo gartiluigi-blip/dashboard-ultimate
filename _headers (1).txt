@@ -1,0 +1,56 @@
+# ============================================================
+# SECURITY HEADERS — Netlify _headers file
+# ============================================================
+# Doc: https://docs.netlify.com/routing/headers/
+# Test: https://securityheaders.com/?q=https://ultimatedashboard.netlify.app/
+# ============================================================
+
+/*
+  # ── Browser hardening ──────────────────────────────────────
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
+
+  # ── Permissions Policy ─────────────────────────────────────
+  # Block everything that's not explicitly used; voice input opens microphone via SpeechRecognition (not getUserMedia), so microphone can stay off.
+  Permissions-Policy: accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-get=(), screen-wake-lock=(self), sync-xhr=(self), usb=(), web-share=(self), xr-spatial-tracking=()
+
+  # ── Cross-Origin isolation (mild) ──────────────────────────
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Resource-Policy: same-origin
+  # NOTE: COEP commented out — it breaks Google Fonts embeds. Re-enable after self-hosting fonts.
+  # Cross-Origin-Embedder-Policy: require-corp
+
+  # ── CSP ────────────────────────────────────────────────────
+  # Notes:
+  #  - 'unsafe-inline' on script-src is currently required because the app uses 24 inline <script> blocks. Goal: remove it after extraction (see TODO.md).
+  #  - 'unsafe-inline' on style-src is required for inline style attributes used heavily in the app.
+  #  - api.anthropic.com remains in connect-src for the legacy "local key" mode; remove once that path is killed.
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; connect-src 'self' https://api.anthropic.com; img-src 'self' data: blob:; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; manifest-src 'self' data:; object-src 'none'; upgrade-insecure-requests
+
+# ============================================================
+# CACHING
+# ============================================================
+
+/index.html
+  # HTML must always revalidate so deploys take effect immediately
+  Cache-Control: public, max-age=0, must-revalidate
+
+/robots.txt
+  Cache-Control: public, max-age=86400
+
+/manifest.json
+  Cache-Control: public, max-age=3600
+
+# Static assets — cache hard once you add hashed filenames (post-build-step)
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+  Access-Control-Allow-Origin: *
+
+# Netlify functions — never cache the response unless you opt in
+/.netlify/functions/*
+  Cache-Control: no-store
