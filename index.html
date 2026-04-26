@@ -16628,10 +16628,14 @@ function applyRoutineStateV35(){
       const b = document.createElement('span'); b.className = 'tl-badge-v35 done'; b.textContent = done.gain > 0 ? `✓ fait · -${done.gain} min` : '✓ fait';
       timeEl.appendChild(b);
       totalGain += Math.max(0, parseInt(done.gain || 0, 10));
-    } else if (totalGain > 0 && idx > 0){
-      item.classList.add('routine-shifted-v35');
-      const b = document.createElement('span'); b.className = 'tl-badge-v35 shift'; b.textContent = `↑ -${totalGain} min`;
-      timeEl.appendChild(b);
+      item.style.display = 'none';
+    } else {
+      item.style.display = '';
+      if (totalGain > 0 && idx > 0){
+        item.classList.add('routine-shifted-v35');
+        const b = document.createElement('span'); b.className = 'tl-badge-v35 shift'; b.textContent = `↑ -${totalGain} min`;
+        timeEl.appendChild(b);
+      }
     }
     const chk = item.querySelector('.tl-check-v35');
     if (chk){ chk.classList.toggle('checked', !!done); chk.textContent = done ? '✓' : ''; }
@@ -16669,7 +16673,7 @@ function decorateRoutineV35(){
           state.done[id] = { at:new Date().toISOString(), gain };
         }
         set(routineKey(), state);
-        applyRoutineStateV35();
+        (window.applyRoutineStateV35 || applyRoutineStateV35)();
       });
       item.insertBefore(btn, item.firstChild);
     }
@@ -16680,11 +16684,13 @@ function decorateRoutineV35(){
     reset.type = 'button'; reset.className = 'routine-reset-v35'; reset.textContent = '↺ Reset validations / recalcul du jour';
     reset.addEventListener('click', () => {
       if (!confirm('Reset les validations et le recalcul de cette routine aujourd’hui ?')) return;
-      del(routineKey()); applyRoutineStateV35();
+      del(routineKey()); (window.applyRoutineStateV35 || applyRoutineStateV35)();
     });
     tl.insertAdjacentElement('afterend', reset);
   }
-  applyRoutineStateV35();
+  // Sync global task completion state into routine before rendering
+  try { if (window.__globalTaskSync) window.__globalTaskSync._updateStateFromGlobal(); } catch(_){}
+  (window.applyRoutineStateV35 || applyRoutineStateV35)();
 }
 
 function fixOverflowReport(){
@@ -16702,8 +16708,8 @@ function boot(){
   decorateRoutineV35();
   fixOverflowReport();
   document.addEventListener('click', e => {
-    if (e.target.closest('.shift-chip,[data-shift]')) setTimeout(() => { decorateRoutineV35(); applyRoutineStateV35(); }, 120);
-    if (e.target.closest('#wake-apply,#wake-reset')) setTimeout(() => { decorateRoutineV35(); applyRoutineStateV35(); }, 180);
+    if (e.target.closest('.shift-chip,[data-shift]')) setTimeout(() => { decorateRoutineV35(); }, 120);
+    if (e.target.closest('#wake-apply,#wake-reset')) setTimeout(() => { decorateRoutineV35(); }, 180);
     if (e.target.closest('#task-add,.task-check,[data-act="check"]')) setTimeout(decoratePrioritiesV35, 100);
   }, true);
   const obs = new MutationObserver(() => { clearTimeout(window.__v35MutTimer); window.__v35MutTimer = setTimeout(() => { removeDuplicateHomeAndTocs(); decoratePrioritiesV35(); if (canon(get('tab','home')) === 'routine' || document.getElementById('p-routine')?.classList.contains('active')) decorateRoutineV35(); }, 120); });
@@ -16827,15 +16833,7 @@ window.decorateRoutineV35   = decorateRoutineV35;
 .prio-item.prio-normal   { border-color: rgba(59,130,246,.35) !important; }
 .prio-item.prio-low      { border-color: rgba(16,185,129,.35) !important; }
 
-/* ── 5. Routine: hide completed items immediately ── */
-.tl-item.done-early-v35 {
-  animation: routineDoneOut 0.35s ease forwards !important;
-}
-@keyframes routineDoneOut {
-  0%   { opacity: 1; transform: translateX(0); max-height: 120px; }
-  60%  { opacity: 0; transform: translateX(30px); max-height: 120px; }
-  100% { opacity: 0; max-height: 0; padding: 0 !important; margin: 0 !important; border: none !important; overflow: hidden; pointer-events: none; }
-}
+/* ── 5. Routine: completed items are hidden via display:none in applyRoutineStateV35 ── */
 /* Show a done count banner instead */
 .routine-done-banner {
   display: flex;
@@ -16937,48 +16935,25 @@ window.__fixV37 = true;
   obs.observe(wrap, { childList: true });
 })();
 
-/* ── 5. Routine: hide completed tasks & show done count ── */
+/* ── 5. Routine: done count banner wrapper ── */
 function patchRoutineHiding(){
   const origApply = window.applyRoutineStateV35;
   if (!origApply || window.__v37RoutinePatched) return;
   window.__v37RoutinePatched = true;
 
   function applyAndHide(){
+    // v35 applyRoutineStateV35 now sets display:none/'' directly — just delegate and update banner
+    if (typeof origApply === 'function') origApply();
     const allItems = Array.from(
       document.querySelectorAll('.shift-view:not(.hidden) .tl-item[data-time]')
     );
-
-    // Phase 1 — prevent flash: already-hidden items stay hidden while v35 re-applies classes
-    allItems.forEach(item => {
-      if (item.dataset.v37Hidden) item.style.display = 'none';
-    });
-
-    // Phase 2 — let v35 recompute done-early-v35 classes on all items
-    if (typeof origApply === 'function') origApply();
-
-    // Phase 3 — sync display to the class state v35 just wrote
-    let doneCount = 0;
-    allItems.forEach(item => {
-      if (item.classList.contains('done-early-v35')) {
-        doneCount++;
-        if (!item.dataset.v37Hidden) {
-          // First time done → CSS animation plays, then lock with display:none
-          item.dataset.v37Hidden = '1';
-          setTimeout(() => { if (item.dataset.v37Hidden) item.style.display = 'none'; }, 360);
-        }
-        // else: Phase 1 already re-applied display:none — nothing more needed
-      } else if (item.dataset.v37Hidden) {
-        // Item was unchecked → restore visibility
-        delete item.dataset.v37Hidden;
-        item.style.display = '';
-      }
-    });
-
+    const doneCount = allItems.filter(i => i.classList.contains('done-early-v35')).length;
     updateDoneBanner(doneCount, allItems.length);
   }
 
-  // Expose the patched version so global-task-sync can call it
   window.applyRoutineStateV35 = applyAndHide;
+  // Trigger immediately so already-done items hide at patch time (not at 1200ms sync boot)
+  setTimeout(() => { try { applyAndHide(); } catch(_){} }, 0);
 }
 
 function updateDoneBanner(done, total){
@@ -16997,32 +16972,8 @@ function updateDoneBanner(done, total){
   banner.textContent = `✓ ${done} bloc${done > 1 ? 's' : ''} terminé${done > 1 ? 's' : ''} · ${total - done} restant${(total - done) > 1 ? 's' : ''}`;
 }
 
-// Also patch the toggle click so items hide immediately on check
-function patchRoutineToggle(){
-  const items = document.querySelectorAll('.shift-view:not(.hidden) .tl-item[data-time]');
-  items.forEach(item => {
-    const btn = item.querySelector('.tl-check-v35');
-    if (!btn || btn.dataset.v37Patched) return;
-    btn.dataset.v37Patched = '1';
-    btn.addEventListener('click', () => {
-      // After the v35 handler toggles state, check if item is now done
-      setTimeout(() => {
-        if (item.classList.contains('done-early-v35') && !item.dataset.v37Hidden){
-          item.dataset.v37Hidden = '1';
-          setTimeout(() => { item.style.display = 'none'; }, 360);
-          // Recount
-          const allItems = document.querySelectorAll('.shift-view:not(.hidden) .tl-item[data-time]');
-          const doneItems = Array.from(allItems).filter(i => i.classList.contains('done-early-v35'));
-          updateDoneBanner(doneItems.length, allItems.length);
-        } else if (!item.classList.contains('done-early-v35') && item.dataset.v37Hidden){
-          // Unchecked — restore visibility
-          delete item.dataset.v37Hidden;
-          item.style.display = '';
-        }
-      }, 50);
-    }, { capture: false });
-  });
-}
+// Hiding is handled directly by applyRoutineStateV35 — no extra click patches needed
+function patchRoutineToggle(){}
 
 // Boot: run after v35 has initialized
 function bootV37(){
@@ -17161,14 +17112,15 @@ const sync = window.__globalTaskSync = {
   },
 
   /**
-   * Read global store → update routine localStorage state →
-   * trigger visual re-render (applyAndHide or fallback).
+   * Update routine localStorage state from global done store.
+   * Called by decorateRoutineV35 (tab switch) and _syncToRoutine.
    * Only writes entries with source='global' so manual routine checks
    * can never be overridden by global un-sync.
+   * Returns true if state changed.
    */
-  _syncToRoutine(){
+  _updateStateFromGlobal(){
     const items = visibleRoutineItems();
-    if (!items.length) return;
+    if (!items.length) return false;
 
     const rk    = routineKey();
     let   state;
@@ -17184,11 +17136,9 @@ const sync = window.__globalTaskSync = {
       const globallyDone  = this.isDone(title);
 
       if (globallyDone && !existingEntry) {
-        // External task was completed — mark routine block done
         state.done[sid] = { at: new Date().toISOString(), gain: 0, source: 'global' };
         changed = true;
       } else if (!globallyDone && existingEntry && existingEntry.source === 'global') {
-        // External task was un-done — only remove if WE set it (not a manual routine check)
         delete state.done[sid];
         changed = true;
       }
@@ -17197,9 +17147,11 @@ const sync = window.__globalTaskSync = {
     if (changed) {
       try { localStorage.setItem(NS + rk, JSON.stringify(state)); } catch(_){}
     }
+    return changed;
+  },
 
-    // Trigger visual update — prefer the v37-patched version (applyAndHide)
-    // which also handles display:none hiding
+  _syncToRoutine(){
+    this._updateStateFromGlobal();
     if (typeof window.applyRoutineStateV35 === 'function') {
       window.applyRoutineStateV35();
     }
