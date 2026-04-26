@@ -1,17 +1,38 @@
 'use strict';
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Max-Age': '86400'
-};
+// Only allow requests from the deployed Netlify site and local dev
+const ALLOWED_ORIGINS = [
+  'https://ultimatedashboard.netlify.app',
+  'http://localhost:8888',
+  'http://localhost:3000'
+];
 
-function response(statusCode, body) {
+function getCorsHeaders(event) {
+  const origin = (event && event.headers && event.headers.origin) || '';
+  const allowed = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    'Access-Control-Allow-Origin': allowed,
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Max-Age': '86400',
+    'Vary': 'Origin'
+  };
+}
+
+// Hard allowlist — never let the client pick an expensive model
+const ALLOWED_MODELS = [
+  'claude-haiku-4-5-20251001',
+  'claude-sonnet-4-6',
+  'claude-3-5-sonnet-latest',
+  'claude-3-haiku-20240307'
+];
+const DEFAULT_MODEL = process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-latest';
+
+function response(statusCode, body, event) {
   return {
     statusCode: statusCode,
     headers: {
-      ...CORS_HEADERS,
+      ...getCorsHeaders(event),
       'Content-Type': 'application/json; charset=utf-8',
       'Cache-Control': 'no-store, max-age=0'
     },
@@ -260,7 +281,7 @@ exports.handler = async function handler(event) {
   if (method === 'OPTIONS') {
     return {
       statusCode: 204,
-      headers: CORS_HEADERS,
+      headers: getCorsHeaders(event),
       body: ''
     };
   }
@@ -272,16 +293,16 @@ exports.handler = async function handler(event) {
       version: 'v38-direct',
       method: 'GET',
       has_anthropic_key: Boolean(process.env.ANTHROPIC_API_KEY),
-      model: process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-latest',
+      model: DEFAULT_MODEL,
       message: 'Function loaded. Use POST for coach requests.'
-    });
+    }, event);
   }
 
   if (method !== 'POST') {
     return response(405, {
       ok: false,
       error: 'Method not allowed. Use GET, POST, or OPTIONS.'
-    });
+    }, event);
   }
 
   try {
@@ -290,7 +311,7 @@ exports.handler = async function handler(event) {
         ok: false,
         error: 'fetch is not available in this Netlify runtime',
         fix: 'Set NODE_VERSION to 18 or 20 in Netlify environment variables.'
-      });
+      }, event);
     }
 
     const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -300,7 +321,7 @@ exports.handler = async function handler(event) {
         ok: false,
         error: 'ANTHROPIC_API_KEY is missing on the server',
         fix: 'Netlify > Site configuration > Environment variables > add ANTHROPIC_API_KEY > redeploy.'
-      });
+      }, event);
     }
 
     const payload = safeParseBody(event.body || '{}');
@@ -312,15 +333,14 @@ exports.handler = async function handler(event) {
       return response(400, {
         ok: false,
         error: 'Question is required'
-      });
+      }, event);
     }
 
     const detected = detectIntent(question);
 
-    const model =
-      process.env.ANTHROPIC_MODEL ||
-      limitText(payload.model || '', 80) ||
-      'claude-3-5-sonnet-latest';
+    // Model is server-controlled — client suggestion only accepted if in allowlist
+    const requestedModel = limitText(payload.model || '', 80);
+    const model = ALLOWED_MODELS.includes(requestedModel) ? requestedModel : DEFAULT_MODEL;
 
     const maxTokens = clampNumber(payload.max_tokens, 120, 900, 500);
     const temperature = clampNumber(payload.temperature, 0, 1, 0.2);
@@ -404,7 +424,7 @@ exports.handler = async function handler(event) {
             : 'anthropic_error',
         model: model,
         server_ms: Date.now() - startedAt
-      });
+      }, event);
     }
 
     const rawText = Array.isArray(data.content)
@@ -423,7 +443,8 @@ exports.handler = async function handler(event) {
 
     return response(
       200,
-      normalizeFinalAnswer(parsed, rawText, mode, detected, startedAt)
+      normalizeFinalAnswer(parsed, rawText, mode, detected, startedAt),
+      event
     );
   } catch (error) {
     return response(error.statusCode || 500, {
@@ -431,6 +452,6 @@ exports.handler = async function handler(event) {
       error: error && error.message ? error.message : 'Unknown server error',
       version: 'v38-direct',
       server_ms: Date.now() - startedAt
-    });
+    }, event);
   }
 };
