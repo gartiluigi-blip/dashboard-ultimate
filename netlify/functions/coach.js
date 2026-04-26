@@ -20,13 +20,25 @@ function getCorsHeaders(event) {
 }
 
 // Hard allowlist — never let the client pick an expensive model
-const ALLOWED_MODELS = [
+const ALLOWED_MODELS = new Set([
   'claude-haiku-4-5-20251001',
   'claude-sonnet-4-6',
   'claude-3-5-sonnet-latest',
   'claude-3-haiku-20240307'
-];
+]);
 const DEFAULT_MODEL = process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-latest';
+
+// Valid coach modes — anything else is rejected
+const ALLOWED_MODES = new Set([
+  'coach', 'plan', 'routine', 'task', 'trading',
+  'sport', 'study', 'finance', 'review', 'nl'
+]);
+
+// Hard limits — prevent runaway token costs
+const MAX_BODY_BYTES   = 64 * 1024;   // 64 KB raw body
+const MAX_QUESTION_LEN = 2000;
+const MAX_CONTEXT_LEN  = 6000;        // was 24 000 — no need for more
+const MAX_TOKENS_CAP   = 600;         // was 900
 
 function response(statusCode, body, event) {
   return {
@@ -292,8 +304,6 @@ exports.handler = async function handler(event) {
       service: 'coach',
       version: 'v38-direct',
       method: 'GET',
-      has_anthropic_key: Boolean(process.env.ANTHROPIC_API_KEY),
-      model: DEFAULT_MODEL,
       message: 'Function loaded. Use POST for coach requests.'
     }, event);
   }
@@ -307,27 +317,24 @@ exports.handler = async function handler(event) {
 
   try {
     if (typeof fetch !== 'function') {
-      return response(500, {
-        ok: false,
-        error: 'fetch is not available in this Netlify runtime',
-        fix: 'Set NODE_VERSION to 18 or 20 in Netlify environment variables.'
-      }, event);
+      return response(500, { ok: false, error: 'fetch unavailable in this runtime' }, event);
     }
 
     const apiKey = process.env.ANTHROPIC_API_KEY;
 
     if (!apiKey) {
-      return response(500, {
-        ok: false,
-        error: 'ANTHROPIC_API_KEY is missing on the server',
-        fix: 'Netlify > Site configuration > Environment variables > add ANTHROPIC_API_KEY > redeploy.'
-      }, event);
+      return response(500, { ok: false, error: 'Server configuration error' }, event);
     }
 
-    const payload = safeParseBody(event.body || '{}');
+    const rawBody = event.body || '{}';
+    if (rawBody.length > MAX_BODY_BYTES) {
+      return response(413, { ok: false, error: 'Request too large' }, event);
+    }
 
-    const question = limitText(payload.question, 2200);
-    const mode = limitText(payload.mode || 'coach', 40) || 'coach';
+    const payload = safeParseBody(rawBody);
+
+    const question = limitText(payload.question, MAX_QUESTION_LEN);
+    const mode = ALLOWED_MODES.has(payload.mode) ? payload.mode : 'coach';
 
     if (!question) {
       return response(400, {
@@ -340,9 +347,9 @@ exports.handler = async function handler(event) {
 
     // Model is server-controlled — client suggestion only accepted if in allowlist
     const requestedModel = limitText(payload.model || '', 80);
-    const model = ALLOWED_MODELS.includes(requestedModel) ? requestedModel : DEFAULT_MODEL;
+    const model = ALLOWED_MODELS.has(requestedModel) ? requestedModel : DEFAULT_MODEL;
 
-    const maxTokens = clampNumber(payload.max_tokens, 120, 900, 500);
+    const maxTokens = clampNumber(payload.max_tokens, 120, MAX_TOKENS_CAP, 500);
     const temperature = clampNumber(payload.temperature, 0, 1, 0.2);
 
     const systemPrompt = [
@@ -377,7 +384,7 @@ exports.handler = async function handler(event) {
     ].join(' ');
 
     const contextRaw = payload.context || {};
-    const contextText = JSON.stringify(contextRaw).slice(0, 24000);
+    const contextText = JSON.stringify(contextRaw).slice(0, MAX_CONTEXT_LEN);
 
     const userPrompt = [
       'Mode: ' + mode,
@@ -414,15 +421,7 @@ exports.handler = async function handler(event) {
     if (!anthropicResponse.ok) {
       return response(anthropicResponse.status, {
         ok: false,
-        error:
-          data && data.error && data.error.message
-            ? data.error.message
-            : 'Anthropic request failed',
-        type:
-          data && data.error && data.error.type
-            ? data.error.type
-            : 'anthropic_error',
-        model: model,
+        error: 'Upstream request failed',
         server_ms: Date.now() - startedAt
       }, event);
     }
@@ -450,7 +449,6 @@ exports.handler = async function handler(event) {
     return response(error.statusCode || 500, {
       ok: false,
       error: error && error.message ? error.message : 'Unknown server error',
-      version: 'v38-direct',
       server_ms: Date.now() - startedAt
     }, event);
   }

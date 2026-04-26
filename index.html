@@ -3832,7 +3832,8 @@ Bachelor dev en septembre. Bilingue NL+FR d'ici 2 ans. Corps robuste malgré la 
 <div class="task-wrap">
 <div class="task-form">
 <input type="text" id="task-title" class="task-title-input" placeholder="Ex. Appeler kiné, payer loyer…" autocomplete="off">
-<input type="time" id="task-time" title="Heure (optionnel)">
+<input type="time" id="task-time" title="Heure de début (optionnel)">
+<input type="time" id="task-end-time" title="Heure de fin — crée un bloc fixe dans la Routine">
 <select id="task-prio" title="Priorité">
 <option value="med">Normal</option>
 <option value="hi">Urgent</option>
@@ -8398,10 +8399,17 @@ function saveTasks(d, arr){
 }
 const taskTitle = document.getElementById('task-title');
 const taskTime = document.getElementById('task-time');
+const taskEndTime = document.getElementById('task-end-time');
 const taskPrio = document.getElementById('task-prio');
 const taskCat = document.getElementById('task-cat');
 const taskAdd = document.getElementById('task-add');
 const taskList = document.getElementById('task-list');
+function _updateTaskTimeExtras(){
+  const hasTime = !!taskTime.value;
+  if (taskEndTime) taskEndTime.classList.toggle('visible', hasTime);
+  if (!hasTime && taskEndTime) taskEndTime.value = '';
+}
+if (taskTime) taskTime.addEventListener('change', _updateTaskTimeExtras);
 const taskDayTabs = document.querySelectorAll('[data-tasks-day]');
 taskDayTabs.forEach(b => {
   b.addEventListener('click', () => {
@@ -8449,7 +8457,8 @@ function renderTasks(){
     const check = '<button class="task-check" data-act="check" aria-label="Terminer">✓</button>';
     const prio = '<div class="task-prio '+(t.prio||'med')+'" title="Priorité"></div>';
     const prioLbl = t.prio === 'hi' ? '<span class="task-prio-label hi">Urgent</span>' : '';
-    const time = t.time ? '<span class="task-time">'+escapeHtml(t.time)+'</span>' : '';
+    const timeRange = t.time ? escapeHtml(t.time) + (t.endTime ? '–'+escapeHtml(t.endTime) : '') : '';
+    const time = timeRange ? '<span class="task-time">'+timeRange+'</span>' : '';
     const cat = t.cat ? '<span class="task-cat '+escapeHtml(t.cat)+'">'+escapeHtml(catLabel(t.cat))+'</span>' : '';
     const text = '<span class="task-text" data-act="edit" title="Clic pour éditer">'+escapeHtml(t.title)+'</span>';
     const del = '<button class="task-del" data-act="del" aria-label="Supprimer">✕</button>';
@@ -8463,7 +8472,10 @@ function renderTasks(){
     el.querySelector('[data-act="check"]').addEventListener('click', () => {
       const tasks = loadTasks(activeDate);
       const t = tasks.find(x => x.id === id);
-      if (t){ t.done = !t.done; saveTasks(activeDate, tasks); renderTasks(); }
+      if (t){
+        t.done = !t.done; saveTasks(activeDate, tasks); renderTasks();
+        if (t.time && t.endTime && window.renderRoutineFixedEvents) setTimeout(window.renderRoutineFixedEvents, 50);
+      }
     });
     el.querySelector('[data-act="del"]').addEventListener('click', () => {
       const tasks = loadTasks(activeDate);
@@ -8471,6 +8483,7 @@ function renderTasks(){
       if (!removed) return;
       const filtered = tasks.filter(x => x.id !== id);
       saveTasks(activeDate, filtered); renderTasks();
+      if (removed.time && removed.endTime && window.renderRoutineFixedEvents) setTimeout(window.renderRoutineFixedEvents, 50);
       pushUndo('Tâche "' + removed.title.slice(0,30) + '"', () => {
         const back = loadTasks(activeDate); back.push(removed); saveTasks(activeDate, back); renderTasks();
       });
@@ -8519,18 +8532,33 @@ function addTask(){
   if (!title){ taskTitle.focus(); return; }
   const activeDate = activeTaskDate();
   const arr = loadTasks(activeDate);
+  const startVal = taskTime.value || '';
+  const endVal = (taskEndTime && taskEndTime.value) || '';
+  // A task with both start and end time is automatically a fixed routine block — no checkbox needed
+  const isFixedTime = !!(startVal && endVal && endVal > startVal);
+  const durationMinutes = isFixedTime
+    ? (parseTimeMin(endVal) - parseTimeMin(startVal))
+    : null;
   arr.push({
     id: 't_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
     title,
-    time: taskTime.value || '',
+    time: startVal,
+    endTime: endVal,
+    isFixedTime,
+    durationMinutes,
     prio: taskPrio.value || 'med',
     cat: taskCat.value || '',
     done: false,
     createdAt: new Date().toISOString()
   });
   saveTasks(activeDate, arr);
-  taskTitle.value = ''; taskTime.value = ''; taskPrio.value = 'med'; taskCat.value = '';
+  taskTitle.value = ''; taskTime.value = '';
+  if (taskEndTime) taskEndTime.value = '';
+  taskPrio.value = 'med'; taskCat.value = '';
+  _updateTaskTimeExtras();
   renderTasks();
+  // Any task with a timed range updates the Routine immediately
+  if (isFixedTime && window.renderRoutineFixedEvents) setTimeout(window.renderRoutineFixedEvents, 50);
   taskTitle.focus();
 }
 if (taskAdd) taskAdd.addEventListener('click', addTask);
@@ -15384,6 +15412,21 @@ function loadSettings(){
       <div id="storage-info" style="font:12px monospace;color:#aaa"></div>
     </div>
 
+    <div style="background:var(--surface,#1f1f2e);border:1px solid var(--border,#333);border-radius:12px;padding:14px;margin:12px 0">
+      <h3 style="font:700 13px sans-serif;color:#fff;margin-bottom:10px;text-transform:uppercase;letter-spacing:.04em">🗑️ Nettoyage</h3>
+      <div style="font:11px var(--f-mono,monospace);color:#888;margin-bottom:10px">
+        Données obsolètes datant de plus de
+        <select id="cleanup-age" style="background:#1a1a2e;color:#fff;border:1px solid #444;border-radius:4px;padding:2px 6px;font-size:11px;margin:0 4px">
+          <option value="30">30 j</option>
+          <option value="60">60 j</option>
+          <option value="90" selected>90 j</option>
+        </select>.
+        Configs, historiques et données métier toujours protégés.
+      </div>
+      <button id="cleanup-scan" style="padding:10px 16px;background:#2a2a3a;border:1px solid #444;border-radius:8px;font:600 12px sans-serif;cursor:pointer;color:#a0a0c0;min-height:44px;touch-action:manipulation">🔍 Analyser le stockage</button>
+      <div id="cleanup-preview" style="margin-top:10px"></div>
+    </div>
+
     <div style="background:var(--surface,#1f1f2e);border:1px solid rgba(248,113,113,.3);border-radius:12px;padding:14px;margin:12px 0">
       <h3 style="font:700 13px sans-serif;color:#f87171;margin-bottom:10px;text-transform:uppercase;letter-spacing:.04em">⚠️ Zone dangereuse</h3>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -15430,6 +15473,12 @@ function loadSettings(){
       if (k && k.startsWith('dashv2_')) localStorage.removeItem(k);
     }
     location.reload();
+  });
+
+  const scanBtn = document.getElementById('cleanup-scan');
+  const ageEl = document.getElementById('cleanup-age');
+  if (scanBtn) scanBtn.addEventListener('click', () => {
+    renderCleanupPreview(parseInt(ageEl?.value || '90', 10));
   });
 
   refreshStorageInfo();
@@ -15525,6 +15574,123 @@ function refreshStorageInfo(){
   }
   const el = document.getElementById('storage-info');
   if (el) el.innerHTML = `localStorage: <b style="color:#fff">${n} clés · ${(total/1024).toFixed(1)} KB</b>`;
+}
+
+// ── Cleanup tool ────────────────────────────────────────────────────────────
+function scanStaleKeys(ageDays){
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - ageDays);
+  const cutoffStr = cutoff.toISOString().slice(0, 10); // YYYY-MM-DD
+
+  // These keys must never be touched by the cleanup tool
+  const PROTECTED = new Set([
+    'dashv2_claude_api_key', 'dashv2_gh_token', 'dashv2_gist_id'
+  ]);
+
+  // Date-keyed patterns: only entries whose embedded date is before cutoffStr are stale
+  const DATE_GROUPS = [
+    { id:'log',     regex:/^dashv2_log_(\d{4}-\d{2}-\d{2})$/,                      label:'Logs journaliers' },
+    { id:'tasks',   regex:/^dashv2_tasks_(\d{4}-\d{2}-\d{2})$/,                    label:'Tâches journalières' },
+    { id:'prio',    regex:/^dashv2_prio_(\d{4}-\d{2}-\d{2})$/,                     label:'Priorités journalières' },
+    { id:'wake',    regex:/^dashv2_wake_(\d{4}-\d{2}-\d{2})$/,                     label:'Décalages réveil' },
+    { id:'notif',   regex:/^dashv2_notif_fired_(\d{4}-\d{2}-\d{2})$/,              label:'Notifications' },
+    { id:'na',      regex:/^dashv2_na_(?:skipped|snooze)_(\d{4}-\d{2}-\d{2})$/,   label:'Actions journalières (NA)' },
+    { id:'routine', regex:/^dashv2_routine_(?:done_|v35_)(\d{4}-\d{2}-\d{2})/,    label:'État routines' },
+    { id:'todo',    regex:/^dashv2_todo_[^_]+_(\d{4}-\d{2}-\d{2})$/,              label:'Todos journaliers' },
+  ];
+
+  const groups = {};
+  // AI cache is always cleanable regardless of date
+  const aiGroup = { id:'ai_cache', label:'Cache IA', keys:[], size:0 };
+
+  for (let i = 0; i < localStorage.length; i++){
+    const k = localStorage.key(i);
+    if (!k || !k.startsWith('dashv2_') || PROTECTED.has(k)) continue;
+
+    if (k.includes('ai_cache')){
+      aiGroup.keys.push(k);
+      aiGroup.size += (localStorage.getItem(k) || '').length;
+      continue;
+    }
+
+    for (const g of DATE_GROUPS){
+      const m = k.match(g.regex);
+      if (m && m[1] < cutoffStr){
+        if (!groups[g.id]) groups[g.id] = { ...g, keys:[], size:0 };
+        groups[g.id].keys.push(k);
+        groups[g.id].size += (localStorage.getItem(k) || '').length;
+        break;
+      }
+    }
+  }
+
+  if (aiGroup.keys.length) groups.ai_cache = aiGroup;
+  return groups;
+}
+
+function renderCleanupPreview(ageDays){
+  const previewEl = document.getElementById('cleanup-preview');
+  if (!previewEl) return;
+
+  const groups = scanStaleKeys(ageDays);
+  const ids = Object.keys(groups);
+
+  if (!ids.length){
+    previewEl.innerHTML = '<div style="font:12px var(--f-mono,monospace);color:#34d399;padding:8px 0">✓ Aucune donnée obsolète trouvée. Stockage propre.</div>';
+    return;
+  }
+
+  let totalSize = 0, totalCount = 0, rows = '';
+  for (const id of ids){
+    const g = groups[id];
+    totalSize += g.size;
+    totalCount += g.keys.length;
+    rows += `<label style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:rgba(255,255,255,.04);border-radius:6px;margin-bottom:4px;cursor:pointer">
+      <input type="checkbox" data-cg="${id}" checked style="width:15px;height:15px;accent-color:#f87171;cursor:pointer;flex-shrink:0">
+      <span style="flex:1;color:#e0e0e0;font:12px sans-serif">${g.label}</span>
+      <span style="color:#888;font:11px var(--f-mono,monospace)">${g.keys.length} entrée${g.keys.length > 1 ? 's' : ''}</span>
+      <span style="color:#f87171;font:11px var(--f-mono,monospace);min-width:54px;text-align:right">${(g.size/1024).toFixed(1)} KB</span>
+    </label>`;
+  }
+
+  previewEl.innerHTML = `<div style="font:11px var(--f-mono,monospace);color:#aaa;margin-bottom:6px">Sélectionne les catégories à supprimer :</div>
+    ${rows}
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08)">
+      <span style="font:11px var(--f-mono,monospace);color:#888">Total : <span id="cleanup-total">${(totalSize/1024).toFixed(1)} KB</span></span>
+      <button id="cleanup-delete" style="padding:10px 20px;background:rgba(248,113,113,.15);border:1px solid rgba(248,113,113,.35);border-radius:8px;font:700 12px sans-serif;cursor:pointer;color:#f87171;min-height:44px;touch-action:manipulation">🗑️ Supprimer la sélection</button>
+    </div>`;
+
+  previewEl.querySelectorAll('[data-cg]').forEach(cb => {
+    cb.addEventListener('change', () => {
+      let sz = 0;
+      previewEl.querySelectorAll('[data-cg]:checked').forEach(c => { sz += groups[c.dataset.cg]?.size || 0; });
+      const t = document.getElementById('cleanup-total');
+      if (t) t.textContent = (sz / 1024).toFixed(1) + ' KB';
+    });
+  });
+
+  const delBtn = document.getElementById('cleanup-delete');
+  if (delBtn) delBtn.addEventListener('click', () => executeCleanup(previewEl, groups));
+}
+
+function executeCleanup(previewEl, groups){
+  const checked = Array.from(previewEl.querySelectorAll('[data-cg]:checked'));
+  if (!checked.length){ alert('Aucune catégorie sélectionnée.'); return; }
+
+  let keys = [], size = 0;
+  checked.forEach(cb => {
+    const g = groups[cb.dataset.cg];
+    if (g){ keys = keys.concat(g.keys); size += g.size; }
+  });
+
+  const kb = (size / 1024).toFixed(1);
+  if (!confirm(`Supprimer ${keys.length} entrée${keys.length > 1 ? 's' : ''} (${kb} KB) ?\n\nCette action est irréversible.\nFais un backup avant si besoin.`)) return;
+
+  let n = 0;
+  keys.forEach(k => { try { localStorage.removeItem(k); n++; } catch(_){} });
+
+  previewEl.innerHTML = `<div style="font:12px var(--f-mono,monospace);color:#34d399;padding:8px 0">✓ ${n} entrée${n > 1 ? 's' : ''} supprimée${n > 1 ? 's' : ''} — ${kb} KB libérés.</div>`;
+  if (typeof refreshStorageInfo === 'function') refreshStorageInfo();
 }
 
 // Hook sur les clics d'onglets
@@ -16407,6 +16573,19 @@ section.page.active{
 .tl-badge-v35{ display:inline-flex; margin-left:8px; padding:2px 7px; border-radius:999px; font:800 9px var(--f-mono,monospace); letter-spacing:.04em; text-transform:uppercase; }
 .tl-badge-v35.done{ color:var(--jade,#34d399); background:rgba(52,211,153,.13); }
 .tl-badge-v35.shift{ color:var(--sapphire,#6aa5fa); background:rgba(106,165,250,.13); }
+.tl-badge-v35.moved{ color:#f97316; background:rgba(249,115,22,.13); }
+.tl-badge-v35.fixed{ color:#a78bfa; background:rgba(167,139,250,.13); }
+.tl-badge-adaptive{ display:inline-flex; margin-left:8px; padding:2px 7px; border-radius:999px; font:800 9px var(--f-mono,monospace); letter-spacing:.04em; text-transform:uppercase; }
+.tl-badge-fixed{ color:#a78bfa; background:rgba(167,139,250,.13); }
+.tl-badge-moved{ color:#f97316; background:rgba(249,115,22,.13); }
+.tl-item.routine-fixed-event{ border-left:3px solid #a78bfa !important; background:linear-gradient(90deg,rgba(167,139,250,.12),transparent) !important; cursor:default; }
+.tl-item.routine-moved-flex{ border-left:3px solid #f97316 !important; background:linear-gradient(90deg,rgba(249,115,22,.07),transparent) !important; }
+.routine-reschedule-section{ margin:6px 8px; padding:7px 12px; border-radius:8px; background:rgba(249,115,22,.08); border:1px solid rgba(249,115,22,.25); font:600 11px var(--f-mono,monospace); color:#fb923c; }
+.routine-replan-section{ margin:10px 8px 4px; padding:10px 14px; border-radius:10px; background:rgba(239,68,68,.07); border:1px solid rgba(239,68,68,.25); font:12px var(--f-sans,system-ui); color:#fca5a5; }
+.routine-replan-section strong{ display:block; margin-bottom:4px; font-size:11px; text-transform:uppercase; letter-spacing:.05em; }
+.routine-replan-section ul{ margin:4px 0 0 14px; padding:0; font:11px var(--f-mono,monospace); color:#f87171; }
+#task-end-time{ display:none; }
+#task-end-time.visible{ display:inline-block; }
 .routine-reset-v35{
   width:100%; margin:12px 0 4px; min-height:44px; border:1px solid rgba(239,68,68,.35); border-radius:12px;
   color:#fca5a5; background:rgba(239,68,68,.06); font:800 11px var(--f-sans,system-ui); letter-spacing:.08em; text-transform:uppercase; cursor:pointer;
@@ -16628,10 +16807,14 @@ function applyRoutineStateV35(){
       const b = document.createElement('span'); b.className = 'tl-badge-v35 done'; b.textContent = done.gain > 0 ? `✓ fait · -${done.gain} min` : '✓ fait';
       timeEl.appendChild(b);
       totalGain += Math.max(0, parseInt(done.gain || 0, 10));
-    } else if (totalGain > 0 && idx > 0){
-      item.classList.add('routine-shifted-v35');
-      const b = document.createElement('span'); b.className = 'tl-badge-v35 shift'; b.textContent = `↑ -${totalGain} min`;
-      timeEl.appendChild(b);
+      item.style.display = 'none';
+    } else {
+      item.style.display = '';
+      if (totalGain > 0 && idx > 0){
+        item.classList.add('routine-shifted-v35');
+        const b = document.createElement('span'); b.className = 'tl-badge-v35 shift'; b.textContent = `↑ -${totalGain} min`;
+        timeEl.appendChild(b);
+      }
     }
     const chk = item.querySelector('.tl-check-v35');
     if (chk){ chk.classList.toggle('checked', !!done); chk.textContent = done ? '✓' : ''; }
@@ -16644,6 +16827,9 @@ function decorateRoutineV35(){
   const items = getVisibleRoutineItems();
   if (!items.length) return;
   items.forEach((item, idx) => {
+    // Preserve original time text before applyRoutineStateV35 overwrites it
+    const rawTimeEl = item.querySelector('.tl-time');
+    if (rawTimeEl && !rawTimeEl.dataset.origTime) rawTimeEl.dataset.origTime = rawTimeEl.textContent.trim();
     if (!item.querySelector('.tl-check-v35')){
       const btn = document.createElement('button');
       btn.type = 'button';
@@ -16669,7 +16855,7 @@ function decorateRoutineV35(){
           state.done[id] = { at:new Date().toISOString(), gain };
         }
         set(routineKey(), state);
-        applyRoutineStateV35();
+        (window.applyRoutineStateV35 || applyRoutineStateV35)();
       });
       item.insertBefore(btn, item.firstChild);
     }
@@ -16680,11 +16866,15 @@ function decorateRoutineV35(){
     reset.type = 'button'; reset.className = 'routine-reset-v35'; reset.textContent = '↺ Reset validations / recalcul du jour';
     reset.addEventListener('click', () => {
       if (!confirm('Reset les validations et le recalcul de cette routine aujourd’hui ?')) return;
-      del(routineKey()); applyRoutineStateV35();
+      del(routineKey()); (window.applyRoutineStateV35 || applyRoutineStateV35)();
     });
     tl.insertAdjacentElement('afterend', reset);
   }
-  applyRoutineStateV35();
+  // Inject fixed-time task events and recalculate schedule (pass true → skip its internal applyRoutineStateV35)
+  try { if (window.renderRoutineFixedEvents) window.renderRoutineFixedEvents(true); } catch(_){}
+  // Sync global task completion state into routine before rendering
+  try { if (window.__globalTaskSync) window.__globalTaskSync._updateStateFromGlobal(); } catch(_){}
+  (window.applyRoutineStateV35 || applyRoutineStateV35)();
 }
 
 function fixOverflowReport(){
@@ -16702,8 +16892,8 @@ function boot(){
   decorateRoutineV35();
   fixOverflowReport();
   document.addEventListener('click', e => {
-    if (e.target.closest('.shift-chip,[data-shift]')) setTimeout(() => { decorateRoutineV35(); applyRoutineStateV35(); }, 120);
-    if (e.target.closest('#wake-apply,#wake-reset')) setTimeout(() => { decorateRoutineV35(); applyRoutineStateV35(); }, 180);
+    if (e.target.closest('.shift-chip,[data-shift]')) setTimeout(() => { decorateRoutineV35(); }, 120);
+    if (e.target.closest('#wake-apply,#wake-reset')) setTimeout(() => { decorateRoutineV35(); }, 180);
     if (e.target.closest('#task-add,.task-check,[data-act="check"]')) setTimeout(decoratePrioritiesV35, 100);
   }, true);
   const obs = new MutationObserver(() => { clearTimeout(window.__v35MutTimer); window.__v35MutTimer = setTimeout(() => { removeDuplicateHomeAndTocs(); decoratePrioritiesV35(); if (canon(get('tab','home')) === 'routine' || document.getElementById('p-routine')?.classList.contains('active')) decorateRoutineV35(); }, 120); });
@@ -16827,15 +17017,7 @@ window.decorateRoutineV35   = decorateRoutineV35;
 .prio-item.prio-normal   { border-color: rgba(59,130,246,.35) !important; }
 .prio-item.prio-low      { border-color: rgba(16,185,129,.35) !important; }
 
-/* ── 5. Routine: hide completed items immediately ── */
-.tl-item.done-early-v35 {
-  animation: routineDoneOut 0.35s ease forwards !important;
-}
-@keyframes routineDoneOut {
-  0%   { opacity: 1; transform: translateX(0); max-height: 120px; }
-  60%  { opacity: 0; transform: translateX(30px); max-height: 120px; }
-  100% { opacity: 0; max-height: 0; padding: 0 !important; margin: 0 !important; border: none !important; overflow: hidden; pointer-events: none; }
-}
+/* ── 5. Routine: completed items are hidden via display:none in applyRoutineStateV35 ── */
 /* Show a done count banner instead */
 .routine-done-banner {
   display: flex;
@@ -16937,48 +17119,25 @@ window.__fixV37 = true;
   obs.observe(wrap, { childList: true });
 })();
 
-/* ── 5. Routine: hide completed tasks & show done count ── */
+/* ── 5. Routine: done count banner wrapper ── */
 function patchRoutineHiding(){
   const origApply = window.applyRoutineStateV35;
   if (!origApply || window.__v37RoutinePatched) return;
   window.__v37RoutinePatched = true;
 
   function applyAndHide(){
+    // v35 applyRoutineStateV35 now sets display:none/'' directly — just delegate and update banner
+    if (typeof origApply === 'function') origApply();
     const allItems = Array.from(
       document.querySelectorAll('.shift-view:not(.hidden) .tl-item[data-time]')
     );
-
-    // Phase 1 — prevent flash: already-hidden items stay hidden while v35 re-applies classes
-    allItems.forEach(item => {
-      if (item.dataset.v37Hidden) item.style.display = 'none';
-    });
-
-    // Phase 2 — let v35 recompute done-early-v35 classes on all items
-    if (typeof origApply === 'function') origApply();
-
-    // Phase 3 — sync display to the class state v35 just wrote
-    let doneCount = 0;
-    allItems.forEach(item => {
-      if (item.classList.contains('done-early-v35')) {
-        doneCount++;
-        if (!item.dataset.v37Hidden) {
-          // First time done → CSS animation plays, then lock with display:none
-          item.dataset.v37Hidden = '1';
-          setTimeout(() => { if (item.dataset.v37Hidden) item.style.display = 'none'; }, 360);
-        }
-        // else: Phase 1 already re-applied display:none — nothing more needed
-      } else if (item.dataset.v37Hidden) {
-        // Item was unchecked → restore visibility
-        delete item.dataset.v37Hidden;
-        item.style.display = '';
-      }
-    });
-
+    const doneCount = allItems.filter(i => i.classList.contains('done-early-v35')).length;
     updateDoneBanner(doneCount, allItems.length);
   }
 
-  // Expose the patched version so global-task-sync can call it
   window.applyRoutineStateV35 = applyAndHide;
+  // Trigger immediately so already-done items hide at patch time (not at 1200ms sync boot)
+  setTimeout(() => { try { applyAndHide(); } catch(_){} }, 0);
 }
 
 function updateDoneBanner(done, total){
@@ -16997,32 +17156,8 @@ function updateDoneBanner(done, total){
   banner.textContent = `✓ ${done} bloc${done > 1 ? 's' : ''} terminé${done > 1 ? 's' : ''} · ${total - done} restant${(total - done) > 1 ? 's' : ''}`;
 }
 
-// Also patch the toggle click so items hide immediately on check
-function patchRoutineToggle(){
-  const items = document.querySelectorAll('.shift-view:not(.hidden) .tl-item[data-time]');
-  items.forEach(item => {
-    const btn = item.querySelector('.tl-check-v35');
-    if (!btn || btn.dataset.v37Patched) return;
-    btn.dataset.v37Patched = '1';
-    btn.addEventListener('click', () => {
-      // After the v35 handler toggles state, check if item is now done
-      setTimeout(() => {
-        if (item.classList.contains('done-early-v35') && !item.dataset.v37Hidden){
-          item.dataset.v37Hidden = '1';
-          setTimeout(() => { item.style.display = 'none'; }, 360);
-          // Recount
-          const allItems = document.querySelectorAll('.shift-view:not(.hidden) .tl-item[data-time]');
-          const doneItems = Array.from(allItems).filter(i => i.classList.contains('done-early-v35'));
-          updateDoneBanner(doneItems.length, allItems.length);
-        } else if (!item.classList.contains('done-early-v35') && item.dataset.v37Hidden){
-          // Unchecked — restore visibility
-          delete item.dataset.v37Hidden;
-          item.style.display = '';
-        }
-      }, 50);
-    }, { capture: false });
-  });
-}
+// Hiding is handled directly by applyRoutineStateV35 — no extra click patches needed
+function patchRoutineToggle(){}
 
 // Boot: run after v35 has initialized
 function bootV37(){
@@ -17161,14 +17296,15 @@ const sync = window.__globalTaskSync = {
   },
 
   /**
-   * Read global store → update routine localStorage state →
-   * trigger visual re-render (applyAndHide or fallback).
+   * Update routine localStorage state from global done store.
+   * Called by decorateRoutineV35 (tab switch) and _syncToRoutine.
    * Only writes entries with source='global' so manual routine checks
    * can never be overridden by global un-sync.
+   * Returns true if state changed.
    */
-  _syncToRoutine(){
+  _updateStateFromGlobal(){
     const items = visibleRoutineItems();
-    if (!items.length) return;
+    if (!items.length) return false;
 
     const rk    = routineKey();
     let   state;
@@ -17184,11 +17320,9 @@ const sync = window.__globalTaskSync = {
       const globallyDone  = this.isDone(title);
 
       if (globallyDone && !existingEntry) {
-        // External task was completed — mark routine block done
         state.done[sid] = { at: new Date().toISOString(), gain: 0, source: 'global' };
         changed = true;
       } else if (!globallyDone && existingEntry && existingEntry.source === 'global') {
-        // External task was un-done — only remove if WE set it (not a manual routine check)
         delete state.done[sid];
         changed = true;
       }
@@ -17197,9 +17331,11 @@ const sync = window.__globalTaskSync = {
     if (changed) {
       try { localStorage.setItem(NS + rk, JSON.stringify(state)); } catch(_){}
     }
+    return changed;
+  },
 
-    // Trigger visual update — prefer the v37-patched version (applyAndHide)
-    // which also handles display:none hiding
+  _syncToRoutine(){
+    this._updateStateFromGlobal();
     if (typeof window.applyRoutineStateV35 === 'function') {
       window.applyRoutineStateV35();
     }
@@ -17332,6 +17468,287 @@ if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => setTimeout(() => sync._boot(), 1200));
 } else {
   setTimeout(() => sync._boot(), 1200);
+}
+
+})();
+</script>
+
+<script id="adaptive-routine">
+(function(){
+'use strict';
+if (window.__adaptiveRoutine) return;
+window.__adaptiveRoutine = true;
+
+const NS = 'dashv2_';
+const DAY_END = 23 * 60; // blocks past 23:00 overflow to "À replanifier"
+
+// ── Time helpers ─────────────────────────────────────────────────────────────
+
+// Parse any single-time token ("10:00", "10h00", "10h") → minutes
+function parseMin(s){
+  if (!s) return null;
+  const m = String(s).match(/(\d{1,2})\s*(?:h|:)\s*(\d{0,2})/);
+  if (!m) return null;
+  return parseInt(m[1],10)*60 + parseInt((m[2]||'0').padEnd(2,'0'),10);
+}
+
+// Parse "start – end" or "start" from any format → {start, end, duration}
+function parseRange(text){
+  const parts = (String(text||'').match(/\d{1,2}\s*(?:h|:)\s*\d{0,2}/g) || []);
+  const start = parts[0] ? parseMin(parts[0]) : null;
+  const end   = parts[1] ? parseMin(parts[1]) : null;
+  return { start, end, duration: (start != null && end != null && end > start) ? end - start : null };
+}
+
+// Format minutes → "H:MM"  (e.g. 570 → "9:30", 615 → "10:15")
+function fmtM(min){
+  const t = ((Math.round(min) % 1440) + 1440) % 1440;
+  return Math.floor(t/60) + ':' + String(t%60).padStart(2,'0');
+}
+function fmtRange(s, e){ return (e != null) ? fmtM(s)+'–'+fmtM(e) : fmtM(s); }
+
+// ── Storage helpers ──────────────────────────────────────────────────────────
+
+function dateKey(d){
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+function getActiveShift(){
+  return (document.querySelector('.shift-view:not(.hidden)')?.id || 'view-sm').replace(/^view-/,'');
+}
+
+// Mirror v35's offsetForShift — reads dashv2_wake_YYYY-MM-DD
+function getWakeOffset(){
+  try {
+    const raw = localStorage.getItem(NS+'wake_'+dateKey(new Date()));
+    if (!raw) return 0;
+    const w = JSON.parse(raw);
+    const shift = getActiveShift();
+    return (w && (!w.shift || w.shift === shift)) ? (w.offset||0) : 0;
+  } catch(_){ return 0; }
+}
+
+function getTodayFixedEvents(){
+  let tasks = [];
+  try {
+    const raw = localStorage.getItem(NS+'tasks_'+dateKey(new Date()));
+    if (raw) tasks = JSON.parse(raw);
+  } catch(_){}
+  if (!Array.isArray(tasks)) tasks = [];
+  // Any task with both time (start) and endTime is treated as a fixed routine block.
+  // No special flag required — having both fields is the contract.
+  return tasks
+    .filter(t => !t.done && t.time && t.endTime)
+    .map(t => ({
+      id: t.id, title: t.title,
+      startMin: parseMin(t.time),
+      endMin: parseMin(t.endTime),
+      timeLabel: t.time+'–'+t.endTime
+    }))
+    .filter(e => e.startMin != null && e.endMin != null && e.endMin > e.startMin)
+    .sort((a,b) => a.startMin - b.startMin);
+}
+
+// ── DOM helpers ──────────────────────────────────────────────────────────────
+
+// Create a fixed-event .tl-item WITHOUT data-time so v35 never iterates it
+// (avoids corrupting stableRoutineId indices of surrounding blocks)
+function createFixedItem(ev){
+  const item = document.createElement('div');
+  item.className = 'tl-item routine-fixed-event';
+  // NO data-time attribute intentionally
+  item.dataset.adaptiveFixedId = ev.id;
+
+  const timeEl = document.createElement('span');
+  timeEl.className = 'tl-time';
+  timeEl.textContent = ev.timeLabel;
+
+  const badge = document.createElement('span');
+  badge.className = 'tl-badge-adaptive tl-badge-fixed';
+  badge.textContent = '📌 fixe';
+  // append after timeEl so v35 textContent= on this span (which never happens) wouldn't lose it
+  item.appendChild(timeEl);
+  item.appendChild(badge);
+
+  const nameEl = document.createElement('span');
+  nameEl.className = 'tl-name';
+  nameEl.textContent = ev.title;
+  item.appendChild(nameEl);
+  return item;
+}
+
+// ── Main recalculation ───────────────────────────────────────────────────────
+
+function renderRoutineFixedEvents(_skipApply){
+  const tl = document.querySelector('.shift-view:not(.hidden) .timeline');
+  if (!tl) return;
+  const parent = tl.parentElement;
+
+  // ① Remove everything from previous run
+  tl.querySelectorAll('[data-adaptive-fixed-id]').forEach(el => el.remove());
+  parent.querySelectorAll('.routine-reschedule-section,.routine-replan-section').forEach(el => el.remove());
+
+  // ② Collect flex items (original HTML blocks, v35-managed)
+  //    These are .tl-item[data-time] — does NOT include our injected fixed items (no data-time)
+  const flexItems = Array.from(tl.querySelectorAll('.tl-item[data-time]'));
+
+  // Capture origTime once from raw HTML textContent (before any v35 override)
+  // dataset.origTime is set in decorateRoutineV35's forEach before applyRoutineStateV35 runs.
+  // Fallback: if somehow it wasn't set, read current textContent stripped of badge text.
+  flexItems.forEach(item => {
+    const te = item.querySelector('.tl-time');
+    if (!te) return;
+    if (!te.dataset.origTime){
+      // Strip any badge text nodes and use only the first text node
+      const txt = Array.from(te.childNodes)
+        .filter(n => n.nodeType === Node.TEXT_NODE)
+        .map(n => n.textContent.trim())
+        .join(' ').trim();
+      te.dataset.origTime = txt || item.dataset.time;
+    }
+    // Remove adaptive badges from previous run (these live on the item, not inside te)
+    item.querySelectorAll('.tl-badge-adaptive').forEach(b => b.remove());
+    // Reset dataset.orig to raw original so v35 re-reads true base this cycle
+    te.dataset.orig = te.dataset.origTime;
+    // Remove moved styling
+    item.classList.remove('routine-moved-flex');
+    // Un-hide any items that were hidden by previous replan logic
+    if (item.dataset.adaptiveHidden) { item.style.display = ''; delete item.dataset.adaptiveHidden; }
+  });
+
+  // ③ Get today's fixed events
+  const events = getTodayFixedEvents();
+  if (!events.length){
+    // No fixed events — restore defaults and re-render with original times
+    if (!_skipApply) try { if (typeof window.applyRoutineStateV35 === 'function') window.applyRoutineStateV35(); } catch(_){}
+    return;
+  }
+
+  // ④ Build adapted schedule ────────────────────────────────────────────────
+  // Wake offset: v35 adds this to dataset.orig values when reading times.
+  // Our algorithm works in real clock minutes, so we apply offset to originals
+  // and store (adaptedClockTime - offset) back into dataset.orig.
+  const offset = getWakeOffset();
+
+  const flexData = flexItems.map(item => {
+    const te = item.querySelector('.tl-time');
+    const r = parseRange(te?.dataset.origTime || item.dataset.time || '');
+    const clockStart = r.start != null ? r.start + offset : null;
+    const clockEnd   = r.end   != null ? r.end   + offset : null;
+    const dur = (clockStart != null && clockEnd != null) ? clockEnd - clockStart : 0;
+    return {
+      item, te,
+      clockStart, clockEnd,
+      duration: dur > 0 ? dur : 15, // minimum 15 min for single-time blocks
+      isDone: item.classList.contains('done-early-v35')
+    };
+  });
+
+  // cursor = earliest available time slot (starts at first undone block's original time)
+  const firstUndone = flexData.find(fd => !fd.isDone && fd.clockStart != null);
+  let cursor = firstUndone ? firstUndone.clockStart : 0;
+
+  const replanList = []; // items that can't fit before DAY_END
+
+  flexData.forEach(fd => {
+    if (fd.clockStart == null) return;
+    if (fd.isDone) return; // done blocks are hidden by v35; skip from scheduling
+
+    // Start from the later of: cursor or block's original start
+    // This preserves early blocks that are before any conflict zone
+    let placement = Math.max(cursor, fd.clockStart);
+
+    // Greedy push: advance past any overlapping fixed event, loop until clean
+    let passes = 0;
+    let moved = false;
+    while (passes++ < events.length * 2) { // safety cap
+      let pushed = false;
+      for (const ev of events){
+        // Overlap: placement < ev.endMin  AND  placement + duration > ev.startMin
+        if (placement < ev.endMin && placement + fd.duration > ev.startMin){
+          placement = ev.endMin;
+          pushed = true;
+          moved = true;
+          break; // restart the check from the top
+        }
+      }
+      if (!pushed) break; // clean pass — no more overlaps
+    }
+
+    if (placement >= DAY_END){
+      replanList.push(fd);
+      return;
+    }
+
+    const adaptedEnd = placement + fd.duration;
+    fd.adaptedStart = placement;
+    fd.adaptedEnd   = adaptedEnd;
+    fd.wasMoved     = moved || (placement !== fd.clockStart);
+
+    // Write dataset.orig as (adapted clock time − offset) so v35 reads it and adds offset back,
+    // arriving at the correct clock time in the display
+    if (fd.te) fd.te.dataset.orig = fmtRange(placement - offset, adaptedEnd - offset);
+
+    // Visual badge: append to item (NOT inside te) so it survives te.textContent= by v35
+    if (fd.wasMoved){
+      fd.item.classList.add('routine-moved-flex');
+      const b = document.createElement('span');
+      b.className = 'tl-badge-adaptive tl-badge-moved';
+      b.textContent = '↻ déplacé';
+      fd.item.appendChild(b);
+    }
+
+    cursor = adaptedEnd;
+  });
+
+  // ⑤ Inject fixed event DOM elements at the correct visual position
+  events.forEach(ev => {
+    // Place the fixed block before the first flex item whose adapted start >= ev.endMin
+    let insertBefore = null;
+    for (const fd of flexData){
+      const s = fd.adaptedStart != null ? fd.adaptedStart
+              : fd.clockStart   != null ? fd.clockStart : null;
+      if (s != null && s >= ev.endMin){ insertBefore = fd.item; break; }
+    }
+    const fixedEl = createFixedItem(ev);
+    if (insertBefore) tl.insertBefore(fixedEl, insertBefore);
+    else              tl.appendChild(fixedEl);
+  });
+
+  // ⑥ "À replanifier" section for overflow items
+  if (replanList.length > 0){
+    const section = document.createElement('div');
+    section.className = 'routine-replan-section';
+    const strong = document.createElement('strong');
+    strong.textContent = `⚠ À replanifier (${replanList.length} bloc${replanList.length>1?'s':''})`;
+    section.appendChild(strong);
+    const ul = document.createElement('ul');
+    replanList.forEach(fd => {
+      const li = document.createElement('li');
+      const name = (fd.item.querySelector('.tl-name')?.textContent || '').trim();
+      li.textContent = name + (fd.duration ? ' — '+fd.duration+' min' : '');
+      ul.appendChild(li);
+      // Hide overflow block from main timeline without destroying it
+      fd.item.style.display = 'none';
+      fd.item.dataset.adaptiveHidden = '1';
+    });
+    section.appendChild(ul);
+    parent.appendChild(section);
+  }
+
+  // ⑦ Ask v35 to re-render using our updated dataset.orig values.
+  // Skipped when called from decorateRoutineV35 (which calls applyRoutineStateV35 itself after us).
+  // Runs for standalone calls: addTask, check, delete handlers.
+  if (!_skipApply) try { if (typeof window.applyRoutineStateV35 === 'function') window.applyRoutineStateV35(); } catch(_){}
+}
+
+window.renderRoutineFixedEvents = renderRoutineFixedEvents;
+
+// Boot after v35 (50ms) and v37 (200ms) patches have loaded
+if (document.readyState !== 'loading'){
+  setTimeout(renderRoutineFixedEvents, 950);
+} else {
+  document.addEventListener('DOMContentLoaded', () => setTimeout(renderRoutineFixedEvents, 950));
 }
 
 })();
