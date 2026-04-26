@@ -3833,6 +3833,8 @@ Bachelor dev en septembre. Bilingue NL+FR d'ici 2 ans. Corps robuste malgré la 
 <div class="task-form">
 <input type="text" id="task-title" class="task-title-input" placeholder="Ex. Appeler kiné, payer loyer…" autocomplete="off">
 <input type="time" id="task-time" title="Heure (optionnel)">
+<input type="time" id="task-end-time" title="Heure de fin (optionnel)">
+<label class="task-fixed-wrap" id="task-fixed-wrap" title="Créneau fixe — bloque ce plage dans la Routine"><input type="checkbox" id="task-fixed"> Fixe</label>
 <select id="task-prio" title="Priorité">
 <option value="med">Normal</option>
 <option value="hi">Urgent</option>
@@ -8398,10 +8400,23 @@ function saveTasks(d, arr){
 }
 const taskTitle = document.getElementById('task-title');
 const taskTime = document.getElementById('task-time');
+const taskEndTime = document.getElementById('task-end-time');
+const taskFixed = document.getElementById('task-fixed');
+const taskFixedWrap = document.getElementById('task-fixed-wrap');
 const taskPrio = document.getElementById('task-prio');
 const taskCat = document.getElementById('task-cat');
 const taskAdd = document.getElementById('task-add');
 const taskList = document.getElementById('task-list');
+function _updateTaskTimeExtras(){
+  const hasTime = !!taskTime.value;
+  if (taskEndTime) taskEndTime.classList.toggle('visible', hasTime);
+  if (taskFixedWrap) taskFixedWrap.classList.toggle('visible', hasTime);
+  if (!hasTime){
+    if (taskEndTime) taskEndTime.value = '';
+    if (taskFixed) taskFixed.checked = false;
+  }
+}
+if (taskTime) taskTime.addEventListener('change', _updateTaskTimeExtras);
 const taskDayTabs = document.querySelectorAll('[data-tasks-day]');
 taskDayTabs.forEach(b => {
   b.addEventListener('click', () => {
@@ -8463,7 +8478,10 @@ function renderTasks(){
     el.querySelector('[data-act="check"]').addEventListener('click', () => {
       const tasks = loadTasks(activeDate);
       const t = tasks.find(x => x.id === id);
-      if (t){ t.done = !t.done; saveTasks(activeDate, tasks); renderTasks(); }
+      if (t){
+        t.done = !t.done; saveTasks(activeDate, tasks); renderTasks();
+        if (t.isFixedTime && window.renderRoutineFixedEvents) setTimeout(window.renderRoutineFixedEvents, 50);
+      }
     });
     el.querySelector('[data-act="del"]').addEventListener('click', () => {
       const tasks = loadTasks(activeDate);
@@ -8471,6 +8489,7 @@ function renderTasks(){
       if (!removed) return;
       const filtered = tasks.filter(x => x.id !== id);
       saveTasks(activeDate, filtered); renderTasks();
+      if (removed.isFixedTime && window.renderRoutineFixedEvents) setTimeout(window.renderRoutineFixedEvents, 50);
       pushUndo('Tâche "' + removed.title.slice(0,30) + '"', () => {
         const back = loadTasks(activeDate); back.push(removed); saveTasks(activeDate, back); renderTasks();
       });
@@ -8519,18 +8538,28 @@ function addTask(){
   if (!title){ taskTitle.focus(); return; }
   const activeDate = activeTaskDate();
   const arr = loadTasks(activeDate);
+  const startVal = taskTime.value || '';
+  const endVal = (taskEndTime && taskEndTime.value) || '';
+  const isFixed = !!(taskFixed && taskFixed.checked && startVal && endVal && endVal > startVal);
   arr.push({
     id: 't_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
     title,
-    time: taskTime.value || '',
+    time: startVal,
+    endTime: isFixed ? endVal : '',
+    isFixedTime: isFixed,
     prio: taskPrio.value || 'med',
     cat: taskCat.value || '',
     done: false,
     createdAt: new Date().toISOString()
   });
   saveTasks(activeDate, arr);
-  taskTitle.value = ''; taskTime.value = ''; taskPrio.value = 'med'; taskCat.value = '';
+  taskTitle.value = ''; taskTime.value = '';
+  if (taskEndTime) taskEndTime.value = '';
+  if (taskFixed) taskFixed.checked = false;
+  taskPrio.value = 'med'; taskCat.value = '';
+  _updateTaskTimeExtras();
   renderTasks();
+  if (isFixed && window.renderRoutineFixedEvents) setTimeout(window.renderRoutineFixedEvents, 50);
   taskTitle.focus();
 }
 if (taskAdd) taskAdd.addEventListener('click', addTask);
@@ -16545,6 +16574,16 @@ section.page.active{
 .tl-badge-v35{ display:inline-flex; margin-left:8px; padding:2px 7px; border-radius:999px; font:800 9px var(--f-mono,monospace); letter-spacing:.04em; text-transform:uppercase; }
 .tl-badge-v35.done{ color:var(--jade,#34d399); background:rgba(52,211,153,.13); }
 .tl-badge-v35.shift{ color:var(--sapphire,#6aa5fa); background:rgba(106,165,250,.13); }
+.tl-badge-v35.moved{ color:#f97316; background:rgba(249,115,22,.13); }
+.tl-badge-v35.fixed{ color:#a78bfa; background:rgba(167,139,250,.13); }
+.tl-item.routine-fixed-event{ border-left:3px solid #a78bfa !important; background:linear-gradient(90deg,rgba(167,139,250,.12),transparent) !important; cursor:default; }
+.tl-item.routine-moved-flex{ border-left:3px solid #f97316 !important; background:linear-gradient(90deg,rgba(249,115,22,.07),transparent) !important; }
+.routine-reschedule-section{ margin:6px 8px; padding:7px 12px; border-radius:8px; background:rgba(249,115,22,.08); border:1px solid rgba(249,115,22,.25); font:600 11px var(--f-mono,monospace); color:#fb923c; }
+#task-end-time{ display:none; }
+#task-end-time.visible{ display:inline-block; }
+.task-fixed-wrap{ display:none; align-items:center; gap:5px; font:11px var(--f-sans,system-ui); color:var(--text-faint,#777); white-space:nowrap; }
+.task-fixed-wrap.visible{ display:inline-flex; }
+.task-fixed-wrap input[type=checkbox]{ accent-color:#a78bfa; width:13px; height:13px; }
 .routine-reset-v35{
   width:100%; margin:12px 0 4px; min-height:44px; border:1px solid rgba(239,68,68,.35); border-radius:12px;
   color:#fca5a5; background:rgba(239,68,68,.06); font:800 11px var(--f-sans,system-ui); letter-spacing:.08em; text-transform:uppercase; cursor:pointer;
@@ -16786,6 +16825,9 @@ function decorateRoutineV35(){
   const items = getVisibleRoutineItems();
   if (!items.length) return;
   items.forEach((item, idx) => {
+    // Preserve original time text before applyRoutineStateV35 overwrites it
+    const rawTimeEl = item.querySelector('.tl-time');
+    if (rawTimeEl && !rawTimeEl.dataset.origTime) rawTimeEl.dataset.origTime = rawTimeEl.textContent.trim();
     if (!item.querySelector('.tl-check-v35')){
       const btn = document.createElement('button');
       btn.type = 'button';
@@ -16826,6 +16868,8 @@ function decorateRoutineV35(){
     });
     tl.insertAdjacentElement('afterend', reset);
   }
+  // Inject fixed-time task events and mark overlapping flexible blocks
+  try { if (window.renderRoutineFixedEvents) window.renderRoutineFixedEvents(); } catch(_){}
   // Sync global task completion state into routine before rendering
   try { if (window.__globalTaskSync) window.__globalTaskSync._updateStateFromGlobal(); } catch(_){}
   (window.applyRoutineStateV35 || applyRoutineStateV35)();
@@ -17422,6 +17466,176 @@ if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => setTimeout(() => sync._boot(), 1200));
 } else {
   setTimeout(() => sync._boot(), 1200);
+}
+
+})();
+</script>
+
+<script id="adaptive-routine">
+(function(){
+'use strict';
+if (window.__adaptiveRoutine) return;
+window.__adaptiveRoutine = true;
+
+const NS = 'dashv2_';
+
+function parseMin(s){
+  if (!s) return null;
+  const hm = String(s).match(/^(\d{1,2})[h:](\d{2})/);
+  if (hm) return parseInt(hm[1],10)*60 + parseInt(hm[2],10);
+  const h = String(s).match(/^(\d{1,2})h$/);
+  if (h) return parseInt(h[1],10)*60;
+  return null;
+}
+
+function fmtMin(min){
+  const h = Math.floor(min/60);
+  const m = min%60;
+  return h + ':' + (m < 10 ? '0' : '') + m;
+}
+
+function dateKey(d){
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+function getTodayFixedEvents(){
+  let tasks = [];
+  try {
+    const raw = localStorage.getItem(NS+'tasks_'+dateKey(new Date()));
+    if (raw) tasks = JSON.parse(raw);
+  } catch(_){}
+  if (!Array.isArray(tasks)) tasks = [];
+  return tasks
+    .filter(t => t.isFixedTime && !t.done && t.time && t.endTime)
+    .map(t => ({
+      id: t.id,
+      title: t.title,
+      startMin: parseMin(t.time),
+      endMin: parseMin(t.endTime),
+      time: t.time,
+      endTime: t.endTime
+    }))
+    .filter(e => e.startMin != null && e.endMin != null && e.endMin > e.startMin)
+    .sort((a,b) => a.startMin - b.startMin);
+}
+
+function getItemOrigStart(item){
+  return parseMin(item.dataset.time || '');
+}
+
+function getItemOrigEnd(item, allFlex, idx){
+  const timeEl = item.querySelector('.tl-time');
+  const orig = timeEl && timeEl.dataset.origTime ? timeEl.dataset.origTime : (timeEl ? timeEl.textContent : '');
+  const range = orig.match(/(\d{1,2}[h:]\d{2})\s*[–\-]\s*(\d{1,2}[h:]\d{2})/);
+  if (range) return parseMin(range[2]);
+  // Fallback: next flex item start
+  for (let i = idx+1; i < allFlex.length; i++){
+    const s = getItemOrigStart(allFlex[i]);
+    if (s != null) return s;
+  }
+  return null;
+}
+
+function createFixedItem(ev){
+  const item = document.createElement('div');
+  item.className = 'tl-item routine-fixed-event';
+  item.dataset.time = ev.time;
+  item.dataset.adaptiveFixedId = ev.id;
+
+  const timeEl = document.createElement('span');
+  timeEl.className = 'tl-time';
+  timeEl.textContent = ev.time+'–'+ev.endTime;
+  timeEl.dataset.origTime = ev.time+'–'+ev.endTime;
+
+  const badge = document.createElement('span');
+  badge.className = 'tl-badge-v35 fixed';
+  badge.textContent = '📌 fixe';
+  timeEl.appendChild(badge);
+
+  const nameEl = document.createElement('span');
+  nameEl.className = 'tl-name';
+  nameEl.textContent = ev.title;
+
+  item.appendChild(timeEl);
+  item.appendChild(nameEl);
+  return item;
+}
+
+function renderRoutineFixedEvents(){
+  const tl = document.querySelector('.shift-view:not(.hidden) .timeline');
+  if (!tl) return;
+
+  // Clean up previous run
+  tl.querySelectorAll('.tl-item[data-adaptive-fixed-id]').forEach(el => el.remove());
+  tl.querySelectorAll('.tl-item.routine-moved-flex').forEach(item => {
+    item.classList.remove('routine-moved-flex');
+    item.querySelectorAll('.tl-badge-v35.moved').forEach(b => b.remove());
+  });
+  tl.parentElement.querySelectorAll('.routine-reschedule-section').forEach(el => el.remove());
+
+  const events = getTodayFixedEvents();
+  if (!events.length) return;
+
+  // Original flex items (not injected by us)
+  const flexItems = Array.from(tl.querySelectorAll('.tl-item[data-time]:not([data-adaptive-fixed-id])'));
+
+  // Ensure origTime is captured (in case decorateRoutineV35 hasn't set it yet)
+  flexItems.forEach(item => {
+    const te = item.querySelector('.tl-time');
+    if (te && !te.dataset.origTime) te.dataset.origTime = te.textContent.trim();
+  });
+
+  const allMovedTitles = [];
+
+  events.forEach(ev => {
+    // Insert fixed event DOM at correct position
+    let insertBefore = null;
+    for (let i = 0; i < flexItems.length; i++){
+      const s = getItemOrigStart(flexItems[i]);
+      if (s != null && s >= ev.startMin){ insertBefore = flexItems[i]; break; }
+    }
+    const fixedEl = createFixedItem(ev);
+    if (insertBefore) tl.insertBefore(fixedEl, insertBefore);
+    else tl.appendChild(fixedEl);
+
+    // Mark overlapping flexible items
+    flexItems.forEach((item, idx) => {
+      const s = getItemOrigStart(item);
+      if (s == null) return;
+      const e = getItemOrigEnd(item, flexItems, idx);
+      const overlaps = (s >= ev.startMin && s < ev.endMin) ||
+                       (e != null && e > ev.startMin && s < ev.endMin);
+      if (overlaps){
+        item.classList.add('routine-moved-flex');
+        const te = item.querySelector('.tl-time');
+        if (te && !te.querySelector('.tl-badge-v35.moved')){
+          const b = document.createElement('span');
+          b.className = 'tl-badge-v35 moved';
+          b.textContent = '↻ déplacé';
+          te.appendChild(b);
+        }
+        const title = (item.querySelector('.tl-name')?.textContent || '').trim();
+        if (title && !allMovedTitles.includes(title)) allMovedTitles.push(title);
+      }
+    });
+  });
+
+  // Single reschedule warning for all moved blocks
+  if (allMovedTitles.length > 0){
+    const section = document.createElement('div');
+    section.className = 'routine-reschedule-section';
+    section.textContent = `⚠ ${allMovedTitles.length} bloc${allMovedTitles.length > 1 ? 's' : ''} déplacé${allMovedTitles.length > 1 ? 's' : ''} : ${allMovedTitles.slice(0,3).join(', ')}${allMovedTitles.length > 3 ? '…' : ''}`;
+    tl.parentElement.insertBefore(section, tl);
+  }
+}
+
+window.renderRoutineFixedEvents = renderRoutineFixedEvents;
+
+// Boot after v35 is ready
+if (document.readyState !== 'loading'){
+  setTimeout(renderRoutineFixedEvents, 900);
+} else {
+  document.addEventListener('DOMContentLoaded', () => setTimeout(renderRoutineFixedEvents, 900));
 }
 
 })();
