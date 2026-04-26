@@ -336,3 +336,4 @@ exports.handler = async (event) => {
     return jsonResponse(500, { error: 'Internal server error' }, corsOrigin);
   }
 };
+chore: harden coach function (CORS allowlist)
