@@ -53,7 +53,7 @@ if (typeof window.Notification === 'undefined'){
     size-adjust:96%;
   }
 </style>
-<link rel="stylesheet" href="/assets/main.bb7b8c4f.css">
+<link rel="stylesheet" href="/assets/main.80db7fae.css">
 
 <style id="ud-performance-step1-style">
 @media (max-width: 640px){
@@ -6519,380 +6519,7 @@ if (document.readyState === 'loading'){
 </script>
 
 
-<!-- ═══════════════════════════════════════════════════════════
-     DEBUG PANEL VISIBLE v3.3
-     Affiche en permanence l'état de chaque système.
-     Plus besoin de console F12 — tout est lisible sur mobile.
-     ═══════════════════════════════════════════════════════════ -->
-<style id="dbg-panel-styles">
-.dbg-panel{position:fixed;top:8px;left:8px;right:8px;z-index:9997;
-  background:rgba(20,20,30,.95);backdrop-filter:blur(12px);
-  border:1px solid var(--border,#444);border-radius:10px;
-  padding:8px 10px;font:11px var(--f-mono,monospace);color:#fff;
-  box-shadow:0 4px 12px rgba(0,0,0,.5);
-  max-height:50vh;overflow-y:auto;display:none}
-.dbg-panel.open{display:block}
-.dbg-panel h5{font:700 11px var(--f-sans,sans-serif);color:#fb923c;
-  margin:6px 0 4px;text-transform:uppercase;letter-spacing:.05em}
-.dbg-row{display:flex;justify-content:space-between;gap:8px;padding:3px 0;
-  border-bottom:1px dashed rgba(255,255,255,.1);font-size:10px}
-.dbg-row:last-child{border:none}
-.dbg-row .k{color:#888}
-.dbg-row .v{font-weight:700}
-.dbg-row .v.ok{color:#34d399}
-.dbg-row .v.fail{color:#f87171}
-.dbg-row .v.warn{color:#fbbf24}
-
-.dbg-toggle{position:fixed;top:8px;right:8px;z-index:9998;
-  width:36px;height:36px;border-radius:50%;
-  background:rgba(20,20,30,.85);color:#fb923c;
-  border:1px solid #fb923c;font-size:14px;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;
-  touch-action:manipulation}
-.dbg-toggle.alert{background:#dc2626;color:white;animation:dbg-blink 1s infinite}
-@keyframes dbg-blink{0%,100%{opacity:1}50%{opacity:.5}}
-
-.dbg-actions{display:grid;grid-template-columns:repeat(2,1fr);gap:4px;margin-top:6px}
-.dbg-actions button{padding:6px;font:600 10px var(--f-mono,monospace);
-  background:#1f2937;color:#fff;border:1px solid #374151;border-radius:4px;
-  cursor:pointer;touch-action:manipulation;min-height:32px}
-
-.dbg-log{max-height:120px;overflow-y:auto;background:rgba(0,0,0,.3);
-  padding:6px;border-radius:4px;font-size:9px;line-height:1.4}
-.dbg-log .e{color:#f87171}
-.dbg-log .w{color:#fbbf24}
-.dbg-log .i{color:#94a3b8}
-.dbg-log .ok{color:#34d399}
-</style>
-
-<script id="dbg-panel-v3-3">
-(function(){
-'use strict';
-if (window.__dbgPanel33) return;
-window.__dbgPanel33 = true;
-
-// ─── Capture log buffer ─────────────────────────────────────
-const logs = [];
-const MAX_LOGS = 80;
-function capture(level, ...args){
-  const msg = args.map(a => {
-    if (typeof a === 'string') return a;
-    if (a instanceof Error) return a.message;
-    try { return JSON.stringify(a).slice(0, 200); } catch(_) { return String(a); }
-  }).join(' ');
-  logs.push({ t: new Date().toLocaleTimeString('fr-FR'), level, msg });
-  while (logs.length > MAX_LOGS) logs.shift();
-  refreshIfOpen();
-}
-
-// Wrap console.error / warn / log
-const origErr = console.error.bind(console);
-const origWarn = console.warn.bind(console);
-const origLog = console.log.bind(console);
-console.error = (...a) => { capture('e', ...a); origErr(...a); markAlert(); };
-console.warn  = (...a) => { capture('w', ...a); origWarn(...a); };
-console.log   = (...a) => { capture('i', ...a); origLog(...a); };
-
-// Capture errors globales
-window.addEventListener('error', e => {
-  capture('e', `[ERR] ${e.message} @ ${(e.filename||'').split('/').pop()}:${e.lineno}`);
-  markAlert();
-});
-window.addEventListener('unhandledrejection', e => {
-  capture('e', `[PROMISE] ${e.reason?.message || e.reason}`);
-  markAlert();
-});
-
-let alertOn = false;
-function markAlert(){
-  alertOn = true;
-  const t = document.getElementById('dbg-toggle');
-  if (t) t.classList.add('alert');
-}
-
-// ─── État système ──────────────────────────────────────────
-async function checkAll(){
-  const checks = [];
-
-  // 1. Voice
-  const voiceOk = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
-  checks.push({ k: 'SpeechRecognition API', v: voiceOk ? 'OK' : 'ABSENT', ok: voiceOk });
-
-  let micPerm = '?';
-  try {
-    if (navigator.permissions){
-      const p = await navigator.permissions.query({ name: 'microphone' });
-      micPerm = p.state; // 'granted' | 'denied' | 'prompt'
-    }
-  } catch(_){}
-  checks.push({ k: 'Permission micro', v: micPerm, ok: micPerm === 'granted', warn: micPerm === 'prompt' });
-
-  checks.push({ k: 'Contexte HTTPS', v: location.protocol === 'https:' ? 'OK' : 'NON',
-    ok: location.protocol === 'https:' });
-
-  // 2. Modules core
-  checks.push({ k: '__aiCore', v: window.__aiCore ? 'OK' : 'KO', ok: !!window.__aiCore });
-  checks.push({ k: '__ultimate', v: window.__ultimate ? 'OK' : 'KO', ok: !!window.__ultimate });
-  checks.push({ k: '__cmd (parser vocal)', v: window.__cmd ? 'OK' : 'KO', ok: !!window.__cmd });
-  checks.push({ k: '__hotfix31', v: window.__hotfix31 ? 'OK' : 'KO', ok: !!window.__hotfix31 });
-  checks.push({ k: '__hotfix32', v: window.__hotfix32 ? 'OK' : 'KO', ok: !!window.__hotfix32 });
-
-  // 3. Onglets
-  const tabs = ['home','stats','routine','sport','trading','settings'];
-  tabs.forEach(t => {
-    const tabEl = document.querySelector(`.tab[data-tab="${t}"]`);
-    const sec = document.getElementById('p-' + t);
-    const present = tabEl && sec;
-    checks.push({ k: `Onglet ${t}`, v: present ? 'OK' : (sec ? 'tab manque' : 'section manque'), ok: present });
-  });
-
-  // 4. Storage
-  try {
-    let lsBytes = 0, count = 0;
-    for (let i = 0; i < localStorage.length; i++){
-      const k = localStorage.key(i);
-      if (k && k.startsWith('dashv2_')){ lsBytes += (localStorage.getItem(k)||'').length; count++; }
-    }
-    checks.push({ k: `localStorage`, v: `${count} clés · ${(lsBytes/1024).toFixed(0)} KB`, ok: lsBytes < 4*1024*1024, warn: lsBytes > 2*1024*1024 });
-  } catch(e){
-    checks.push({ k: `localStorage`, v: 'ERREUR', ok: false });
-  }
-
-  // 5. IDB
-  try {
-    const idb = window.__ultimate?.DB;
-    if (idb){
-      const c = (await idb.getAll('logs')).length + (await idb.getAll('trades')).length + (await idb.getAll('aiHist')).length;
-      checks.push({ k: 'IndexedDB', v: c + ' entrées', ok: true });
-    } else {
-      checks.push({ k: 'IndexedDB', v: 'non init', ok: false });
-    }
-  } catch(_){
-    checks.push({ k: 'IndexedDB', v: 'erreur', ok: false });
-  }
-
-  // 6. Network
-  checks.push({ k: 'Online', v: navigator.onLine ? 'OK' : 'OFFLINE', ok: navigator.onLine });
-
-  // 7. AI Cost
-  if (window.__aiCore?.Cost){
-    const c = window.__aiCore.Cost;
-    checks.push({ k: 'AI quota jour', v: `${c.getUsedToday()}/${c.DAILY_LIMIT}`, ok: c.getRemaining() > 0, warn: c.getRemaining() <= 5 });
-  }
-
-  // 8. Tasks vocales
-  try {
-    const tasks = JSON.parse(localStorage.getItem('dashv2_voice_tasks') || '[]');
-    const today = new Date().toISOString().slice(0,10);
-    const todayTasks = tasks.filter(t => t.date === today && !t.done);
-    checks.push({ k: 'Tasks vocales aujourd\'hui', v: todayTasks.length, ok: true });
-  } catch(_){}
-
-  return checks;
-}
-
-// ─── UI ─────────────────────────────────────────────────────
-function buildUI(){
-  if (document.getElementById('dbg-panel')) return;
-
-  const toggle = document.createElement('button');
-  toggle.id = 'dbg-toggle';
-  toggle.className = 'dbg-toggle';
-  toggle.title = 'Diagnostic système';
-  toggle.innerHTML = '🔍';
-  toggle.addEventListener('click', () => {
-    const panel = document.getElementById('dbg-panel');
-    panel.classList.toggle('open');
-    if (panel.classList.contains('open')){
-      refresh();
-      toggle.classList.remove('alert');
-      alertOn = false;
-    }
-  });
-  document.body.appendChild(toggle);
-
-  const panel = document.createElement('div');
-  panel.id = 'dbg-panel';
-  panel.className = 'dbg-panel';
-  panel.innerHTML = `
-    <h5>🩺 Diagnostic système</h5>
-    <div id="dbg-status"></div>
-    <h5>📋 Actions test</h5>
-    <div class="dbg-actions">
-      <button id="dbg-test-mic">Test micro</button>
-      <button id="dbg-test-tab-trading">Open Trading</button>
-      <button id="dbg-test-tab-settings">Open Settings</button>
-      <button id="dbg-test-cmd">Test cmd vocale</button>
-      <button id="dbg-clear-cache">Vider cache</button>
-      <button id="dbg-export-logs">Copier logs</button>
-    </div>
-    <h5>📜 Logs récents</h5>
-    <div class="dbg-log" id="dbg-log"></div>
-  `;
-  document.body.appendChild(panel);
-
-  // Bind actions
-  document.getElementById('dbg-test-mic').addEventListener('click', testMic);
-  document.getElementById('dbg-test-tab-trading').addEventListener('click', () => {
-    capture('i', '[test] click trading');
-    if (window.go) window.go('trading');
-    else document.querySelector('.tab[data-tab="trading"]')?.click();
-    setTimeout(() => {
-      const sec = document.getElementById('p-trading');
-      const visible = sec && getComputedStyle(sec).display !== 'none';
-      capture(visible?'ok':'e', `[test] Trading section visible: ${visible}`);
-    }, 300);
-  });
-  document.getElementById('dbg-test-tab-settings').addEventListener('click', () => {
-    capture('i', '[test] click settings');
-    if (window.go) window.go('settings');
-    else document.querySelector('.tab[data-tab="settings"]')?.click();
-    setTimeout(() => {
-      const sec = document.getElementById('p-settings');
-      const visible = sec && getComputedStyle(sec).display !== 'none';
-      capture(visible?'ok':'e', `[test] Settings section visible: ${visible}`);
-    }, 300);
-  });
-  document.getElementById('dbg-test-cmd').addEventListener('click', () => {
-    if (!window.__cmd){ capture('e', '[test] __cmd absent'); return; }
-    const r = window.__cmd.parse('mets une task pour demain : test depuis debug panel');
-    capture(r?.ok ? 'ok' : 'e', `[test] cmd parse: ${r ? r.msg : 'pattern non reconnu'}`);
-    refresh();
-  });
-  document.getElementById('dbg-clear-cache').addEventListener('click', () => {
-    let n = 0;
-    for (let i = localStorage.length - 1; i >= 0; i--){
-      const k = localStorage.key(i);
-      if (k && k.includes('ai_cache_v2_')){ localStorage.removeItem(k); n++; }
-    }
-    capture('ok', `[cache] ${n} entrées vidées`);
-  });
-  document.getElementById('dbg-export-logs').addEventListener('click', async () => {
-    const checks = await checkAll();
-    const text = [
-      '=== ULTIMATE DASHBOARD DIAGNOSTIC ===',
-      'URL: ' + location.href,
-      'UA: ' + navigator.userAgent,
-      'Date: ' + new Date().toISOString(),
-      '',
-      '--- État système ---',
-      ...checks.map(c => `${c.k}: ${c.v} ${c.ok ? '✓' : '✗'}`),
-      '',
-      '--- Logs (' + logs.length + ') ---',
-      ...logs.map(l => `[${l.t}] ${l.level.toUpperCase()} ${l.msg}`)
-    ].join('\n');
-    try {
-      await navigator.clipboard.writeText(text);
-      capture('ok', '[export] Diagnostic copié dans presse-papier — colle-le à Claude');
-    } catch(_){
-      // Fallback : montre dans une textarea
-      const ta = document.createElement('textarea');
-      ta.value = text;
-      ta.style.cssText = 'position:fixed;inset:5%;z-index:99999;background:#000;color:#fff;padding:10px;font-size:10px';
-      document.body.appendChild(ta);
-      ta.select();
-      capture('w', '[export] Sélectionne tout (Ctrl+A) et copie manuellement');
-    }
-  });
-}
-
-async function testMic(){
-  capture('i', '[test] micro start');
-  if (!navigator.mediaDevices?.getUserMedia){
-    capture('e', '[test] getUserMedia absent — navigateur trop vieux ou contexte non sécurisé');
-    return;
-  }
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    capture('ok', '[test] micro OK · ' + stream.getAudioTracks().length + ' track(s)');
-    stream.getTracks().forEach(t => t.stop());
-  } catch(e){
-    capture('e', `[test] micro REFUSÉ · ${e.name}: ${e.message}`);
-    if (e.name === 'NotAllowedError'){
-      capture('w', '[fix] Va dans : Réglages site → Microphone → Autoriser');
-    }
-  }
-  refresh();
-}
-
-// ─── Refresh affichage ──────────────────────────────────────
-let refreshing = false;
-async function refresh(){
-  if (refreshing) return;
-  refreshing = true;
-  try {
-    const checks = await checkAll();
-    const status = document.getElementById('dbg-status');
-    if (status){
-      status.innerHTML = checks.map(c => {
-        const cls = c.ok ? 'ok' : (c.warn ? 'warn' : 'fail');
-        return `<div class="dbg-row"><span class="k">${c.k}</span><span class="v ${cls}">${c.v}</span></div>`;
-      }).join('');
-    }
-    const logEl = document.getElementById('dbg-log');
-    if (logEl){
-      logEl.innerHTML = logs.slice().reverse().map(l =>
-        `<div class="${l.level}">[${l.t}] ${escapeHTML(l.msg)}</div>`
-      ).join('');
-    }
-  } finally { refreshing = false; }
-}
-function refreshIfOpen(){
-  const p = document.getElementById('dbg-panel');
-  if (p && p.classList.contains('open')) refresh();
-}
-function escapeHTML(s){
-  return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-}
-
-// ─── Init ───────────────────────────────────────────────────
-function init(){
-  buildUI();
-  capture('ok', '[debug-panel] v3.3 ready');
-  /* Audit Apr 2026 : pausable en background. */
-  if (typeof window.__pausableInterval === 'function'){
-    window.__pausableInterval(() => refreshIfOpen(), 5000);
-  } else {
-    setInterval(() => refreshIfOpen(), 5000);
-  }
-}
-
-if (document.readyState === 'loading'){
-  document.addEventListener('DOMContentLoaded', () => setTimeout(init, 200));
-} else {
-  setTimeout(init, 200);
-}
-
-})();
-</script>
-
-
-<script id="lazy-content-loader">
-(function(){
-'use strict';
-if (window.__lazyContentLoaded) return;
-window.__lazyContentLoaded = true;
-
-// Lazy load du contenu trading et settings au premier clic
-const loaded = { trading: false, settings: false };
-
-function loadTrading(){
-  if (loaded.trading) return;
-  const host = document.getElementById('trading-content-host');
-  if (!host) return;
-  loaded.trading = true;
-  host.innerHTML = `
-    <div style="background:var(--surface,#1f1f2e);border:1px solid var(--border,#333);border-radius:12px;padding:14px;margin:12px 0">
-      <h3 style="font:700 13px sans-serif;color:#fff;margin-bottom:10px;text-transform:uppercase;letter-spacing:.04em">📔 Journal trade rapide</h3>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
-        <input id="trd-instr" type="text" placeholder="Instrument (MNQ, EURUSD…)" style="padding:10px;background:#2a2a3a;border:1px solid #444;border-radius:6px;color:#fff;font-size:13px;min-height:44px">
-        <select id="trd-res" style="padding:10px;background:#2a2a3a;border:1px solid #444;border-radius:6px;color:#fff;font-size:13px;min-height:44px">
-          <option value="W">Win</option><option value="L">Loss</option><option value="BE">BE</option><option value="SKIP">Skip</option>
-        </select>
-        <input id="trd-pnl" type="number" placeholder="P&L $" step="0.01" style="padding:10px;background:#2a2a3a;border:1px solid #444;border-radius:6px;color:#fff;font-size:13px;min-height:44px">
-        <input id="trd-r" type="number" placeholder="R multiple" step="0.1" style="padding:10px;background:#2a2a3a;border:1px solid #444;border-radius:6px;color:#fff;font-size:13px;min-height:44px">
-      </div>
-      <textarea id="trd-notes" placeholder="Notes (émotion, contexte, règles respectées)" style="width:100%;padding:10px;background:#2a2a3a;border:1px solid #444;border-radius:6px;color:#fff;font-size:13px;min-height:60px;margin-bottom:10px"></textarea>
+100%;padding:10px;background:#2a2a3a;border:1px solid #444;border-radius:6px;color:#fff;font-size:13px;min-height:60px;margin-bottom:10px"></textarea>
       <button id="trd-save" style="background:linear-gradient(135deg,#fb923c,#f97316);color:#0a0a10;border:none;border-radius:8px;padding:12px 18px;font:700 12px sans-serif;cursor:pointer;width:100%;min-height:48px;text-transform:uppercase;letter-spacing:.04em;touch-action:manipulation">Sauvegarder trade</button>
       <div id="trd-saved" style="margin-top:10px;font:12px monospace;color:#34d399"></div>
     </div>
@@ -8253,6 +7880,437 @@ section.page.active{
 }
 </style>
 
+<script id="audit-validation-modal">
+/* Audit Apr 2026 — Modal de validation enrichi.
+   Quand l'utilisateur clique sur le bouton check de la timeline (.tl-check-v35)
+   pour un bloc d'apprentissage (étude, code, nl, ia, lecture, sport, vinted),
+   on intercepte et on ouvre une modale qui demande :
+   - Où il s'est arrêté (note de reprise pour la prochaine session)
+   - Combien de minutes il a vraiment étudié
+
+   La validation V35 (le check normal) continue d'opérer en arrière-plan.
+   Les data sont sauvées dans module_progress + Bookmarks (qui alimente
+   le widget "Reprendre où t'as arrêté" en accueil).
+*/
+(function(){
+  if (window.__auditValidationModalInstalled) return;
+  window.__auditValidationModalInstalled = true;
+
+  // Mapping tl-dot.X → module_progress key + label affiché
+  const DOT_TO_MODULE = {
+    study:  { key: 'epfc',   label: 'EPFC',         bookmarkKey: 'epfc'    },
+    code:   { key: 'coding', label: 'Coding',       bookmarkKey: 'code'    },
+    nl:     { key: 'nl',     label: 'Néerlandais',  bookmarkKey: 'nl'      },
+    ai:     { key: 'ia',     label: 'IA',           bookmarkKey: 'ia'      },
+    read:   { key: 'lecture',label: 'Lecture',      bookmarkKey: 'read'    },
+    sport:  { key: 'sport',  label: 'Sport',        bookmarkKey: 'sport'   },
+    vinted: { key: 'vinted', label: 'Vinted',       bookmarkKey: 'vinted'  }
+  };
+
+  const NS = 'dashv2_';
+
+  function readJSON(key, fallback){
+    try {
+      const raw = localStorage.getItem(NS + key);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch(_){ return fallback; }
+  }
+  function writeJSON(key, val){
+    try { localStorage.setItem(NS + key, JSON.stringify(val)); }
+    catch(_){}
+  }
+
+  // Mise à jour de module_progress (avec totalMinutes cumulé)
+  function updateModuleProgress(moduleKey, data){
+    const all = readJSON('module_progress', {});
+    const prev = all[moduleKey] || {};
+    const minutes = Number(data.minutes || 0) || 0;
+    all[moduleKey] = {
+      ...prev,
+      ...data,
+      module: moduleKey,
+      resume: data.resume || data.notes || prev.resume || '',
+      updatedAt: new Date().toISOString(),
+      totalMinutes: Number(prev.totalMinutes || 0) + minutes,
+      lastSessionMinutes: minutes,
+      lastSessionDate: new Date().toISOString().slice(0,10)
+    };
+    writeJSON('module_progress', all);
+    return all[moduleKey];
+  }
+
+  // Update Bookmarks (widget "Reprendre où t'as arrêté")
+  function updateBookmark(bookmarkKey, label, text){
+    if (!bookmarkKey || !text) return;
+    try {
+      if (window.Bookmarks && typeof window.Bookmarks.set === 'function'){
+        window.Bookmarks.set(bookmarkKey, text, label);
+      } else {
+        // Fallback direct localStorage if Bookmarks not exposed
+        const all = readJSON('bk_v2', {});
+        const prev = all[bookmarkKey];
+        all[bookmarkKey] = {
+          key: bookmarkKey,
+          label: label,
+          text: String(text).trim(),
+          updatedAt: new Date().toISOString(),
+          history: prev ? [{ text: prev.text, updatedAt: prev.updatedAt }, ...(prev.history || [])].slice(0, 10) : []
+        };
+        writeJSON('bk_v2', all);
+      }
+    } catch(_){}
+  }
+
+  // Estimation de la durée du bloc à partir de son texte d'horaire
+  function estimateMinutes(item){
+    try {
+      const timeEl = item.querySelector('.tl-time');
+      if (!timeEl) return null;
+      const text = timeEl.textContent || timeEl.dataset.orig || '';
+      // Match "9:00 – 10:15" ou "9h00 – 10h15"
+      const m = text.match(/(\d{1,2})[:hH](\d{2})\s*[–\-—]\s*(\d{1,2})[:hH](\d{2})/);
+      if (m){
+        const startMin = parseInt(m[1],10)*60 + parseInt(m[2],10);
+        const endMin = parseInt(m[3],10)*60 + parseInt(m[4],10);
+        const diff = endMin - startMin;
+        return diff > 0 && diff < 600 ? diff : null;
+      }
+      // Match "(75 min)" dans le titre
+      const nameEl = item.querySelector('.tl-name');
+      if (nameEl){
+        const m2 = nameEl.textContent.match(/\((\d{1,3})\s*min\)/i);
+        if (m2) return parseInt(m2[1],10);
+      }
+    } catch(_){}
+    return null;
+  }
+
+  // Création du dialog une seule fois
+  let dialog = null;
+  function ensureDialog(){
+    if (dialog) return dialog;
+    dialog = document.createElement('dialog');
+    dialog.id = 'auditValidationDialog';
+    dialog.setAttribute('aria-labelledby', 'avd-title');
+    dialog.style.cssText = [
+      'border:1px solid var(--border, #2a2a3e)',
+      'background:var(--surface, #14141d)',
+      'color:var(--text, #e7e7ee)',
+      'border-radius:14px',
+      'padding:0',
+      'max-width:480px',
+      'width:calc(100vw - 24px)',
+      'box-shadow:0 20px 60px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.04)',
+      'overflow:hidden'
+    ].join(';');
+    dialog.innerHTML = `
+      <form method="dialog" id="avd-form" style="display:flex;flex-direction:column">
+        <div style="display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border,#2a2a3e);background:linear-gradient(180deg,rgba(52,211,153,.08),transparent)">
+          <span style="font-size:18px">✓</span>
+          <h3 id="avd-title" style="flex:1;margin:0;font:700 14px var(--f-sans,system-ui,sans-serif);text-transform:uppercase;letter-spacing:.04em">Validation</h3>
+          <button type="button" id="avd-close" aria-label="Fermer" style="background:transparent;color:var(--text,#fff);border:1px solid var(--border,#2a2a3e);border-radius:8px;width:32px;height:32px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;padding:0;touch-action:manipulation">✕</button>
+        </div>
+        <div style="padding:16px;display:flex;flex-direction:column;gap:14px">
+          <div id="avd-block-info" style="font:600 13px var(--f-sans);color:var(--text-faint,#8a8aa4)"></div>
+          <label style="display:flex;flex-direction:column;gap:6px">
+            <span style="font:600 11px var(--f-mono,monospace);text-transform:uppercase;letter-spacing:.06em;color:var(--text-faint,#8a8aa4)">Où t'as arrêté ?</span>
+            <textarea id="avd-resume" rows="3" placeholder="Ex: chap 4 page 87, exo 3 fini, exo 4 à faire" style="background:var(--surface-2,#0d0d15);color:var(--text,#fff);border:1px solid var(--border,#2a2a3e);border-radius:10px;padding:10px;font:500 14px var(--f-sans);resize:vertical;min-height:60px;outline:none" required></textarea>
+          </label>
+          <label style="display:flex;flex-direction:column;gap:6px">
+            <span style="font:600 11px var(--f-mono,monospace);text-transform:uppercase;letter-spacing:.06em;color:var(--text-faint,#8a8aa4)">Minutes vraiment étudiées</span>
+            <input id="avd-minutes" type="number" min="0" max="600" step="5" placeholder="Ex: 45" style="background:var(--surface-2,#0d0d15);color:var(--text,#fff);border:1px solid var(--border,#2a2a3e);border-radius:10px;padding:10px;font:500 14px var(--f-mono,monospace);outline:none" required>
+          </label>
+        </div>
+        <div style="display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--border,#2a2a3e);background:rgba(255,255,255,.02)">
+          <button type="button" id="avd-skip" style="flex:1;background:transparent;color:var(--text-faint,#8a8aa4);border:1px solid var(--border,#2a2a3e);border-radius:10px;padding:10px;font:600 13px var(--f-sans);cursor:pointer;touch-action:manipulation">Valider sans noter</button>
+          <button type="submit" id="avd-submit" style="flex:1;background:linear-gradient(135deg,#fb923c,#f97316);color:#0a0a10;border:none;border-radius:10px;padding:10px;font:700 13px var(--f-sans);cursor:pointer;touch-action:manipulation">Valider + sauver</button>
+        </div>
+      </form>
+    `;
+    document.body.appendChild(dialog);
+
+    dialog.querySelector('#avd-close').addEventListener('click', () => dialog.close('cancel'));
+    dialog.querySelector('#avd-skip').addEventListener('click', () => dialog.close('skip'));
+
+    // Click backdrop = cancel
+    dialog.addEventListener('click', e => {
+      const r = dialog.getBoundingClientRect();
+      const inside = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+      if (!inside) dialog.close('cancel');
+    });
+
+    return dialog;
+  }
+
+  // Open dialog — return Promise<{action, resume, minutes} | null>
+  function openValidationModal(moduleInfo, item){
+    return new Promise(resolve => {
+      const dlg = ensureDialog();
+      const form = dlg.querySelector('#avd-form');
+      const titleEl = dlg.querySelector('#avd-title');
+      const blockInfoEl = dlg.querySelector('#avd-block-info');
+      const resumeEl = dlg.querySelector('#avd-resume');
+      const minutesEl = dlg.querySelector('#avd-minutes');
+
+      titleEl.textContent = 'Validation · ' + moduleInfo.label;
+      const blockTitle = item.querySelector('.tl-name')?.textContent?.trim() || '';
+      blockInfoEl.textContent = blockTitle;
+
+      // Pré-remplir avec dernière progression (si existe)
+      const last = readJSON('module_progress', {})[moduleInfo.key];
+      resumeEl.value = ''; // Always start empty for "où t'as arrêté CE soir"
+      if (last && last.resume){
+        resumeEl.placeholder = 'Dernière fois : ' + last.resume;
+      }
+
+      // Pré-remplir minutes avec estimation du bloc
+      const estimated = estimateMinutes(item);
+      minutesEl.value = estimated != null ? estimated : '';
+
+      // Submit handler
+      const submitHandler = e => {
+        // dialog form method="dialog" closes natively, but we need data first
+        e.preventDefault();
+        const resume = resumeEl.value.trim();
+        const minutes = parseInt(minutesEl.value, 10);
+        if (!resume || isNaN(minutes) || minutes < 0){
+          if (!resume) resumeEl.focus();
+          else minutesEl.focus();
+          return;
+        }
+        dlg.close('submit');
+        resolve({ action: 'submit', resume, minutes });
+      };
+      form.removeEventListener('submit', form.__auditSubmit || (() => {}));
+      form.__auditSubmit = submitHandler;
+      form.addEventListener('submit', submitHandler);
+
+      // Close handler (cancel/skip)
+      const closeHandler = () => {
+        dlg.removeEventListener('close', closeHandler);
+        if (dlg.returnValue === 'submit'){
+          // already handled in submitHandler
+        } else if (dlg.returnValue === 'skip'){
+          resolve({ action: 'skip' });
+        } else {
+          resolve({ action: 'cancel' });
+        }
+      };
+      dlg.addEventListener('close', closeHandler);
+
+      try { dlg.showModal(); } catch(_){ dlg.setAttribute('open', ''); }
+      setTimeout(() => resumeEl.focus(), 100);
+    });
+  }
+
+  // Détecter le module à partir d'un .tl-item
+  function detectModule(item){
+    const dot = item.querySelector('.tl-dot');
+    if (!dot) return null;
+    for (const cls of dot.classList){
+      if (DOT_TO_MODULE[cls]) return DOT_TO_MODULE[cls];
+    }
+    return null;
+  }
+
+  // Hook la timeline : intercepte les clics sur .tl-check-v35 pour ouvrir le modal
+  // mais SEULEMENT si :
+  //  - C'est un module trackable
+  //  - Le bloc n'est pas déjà coché (sinon on uncheck simplement)
+  document.addEventListener('click', e => {
+    // Skip si c'est notre clic synthétique (post-modal) — laisse passer V35
+    if (e.__auditValidationDone) return;
+
+    const btn = e.target.closest('.tl-check-v35');
+    if (!btn) return;
+    const item = btn.closest('.tl-item');
+    if (!item) return;
+
+    // Skip si c'est un fixed-event (tâche horaire ajoutée par l'user)
+    if (item.classList.contains('routine-fixed-event')) return;
+
+    // Skip si déjà coché (uncheck normal)
+    if (btn.classList.contains('checked')) return;
+
+    const moduleInfo = detectModule(item);
+    if (!moduleInfo) return; // Bloc non trackable (food, sleep, hygiene, work, rest)
+
+    // STOP propagation — on prend le contrôle
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+
+    openValidationModal(moduleInfo, item).then(result => {
+      if (result.action === 'cancel'){
+        // Ne rien faire, juste re-fermer
+        return;
+      }
+
+      if (result.action === 'submit'){
+        // Sauver la progression
+        const updated = updateModuleProgress(moduleInfo.key, {
+          resume: result.resume,
+          minutes: result.minutes,
+          notes: result.resume
+        });
+        // Mettre à jour le widget Bookmarks (Reprendre où t'as arrêté)
+        if (moduleInfo.bookmarkKey){
+          updateBookmark(moduleInfo.bookmarkKey, moduleInfo.label, result.resume);
+        }
+        // Toast de confirmation
+        try {
+          if (typeof showToast === 'function'){
+            const mins = result.minutes;
+            const total = updated.totalMinutes || mins;
+            const totalH = Math.floor(total/60);
+            const totalM = total % 60;
+            const totalStr = totalH > 0 ? `${totalH}h${String(totalM).padStart(2,'0')}` : `${totalM}min`;
+            showToast(`✓ ${moduleInfo.label} · +${mins}min · total ${totalStr}`);
+          }
+        } catch(_){}
+      }
+      // result.action === 'skip' : on valide juste le bloc sans modal
+
+      // Re-déclencher le clic original sur le bouton (pour la validation V35)
+      // On crée un nouveau clic synthétique avec un flag pour éviter la boucle
+      const synthetic = new MouseEvent('click', { bubbles: true, cancelable: true });
+      synthetic.__auditValidationDone = true;
+      btn.dispatchEvent(synthetic);
+    });
+  }, true); // capture phase pour intercepter avant les autres handlers
+
+  console.log('[audit-validation-modal] Installed');
+})();
+</script>
+
+<script id="audit-render-routine-fixed-events">
+/* Audit Apr 2026 — Fonction `window.renderRoutineFixedEvents` qui était
+   référencée 4 fois mais jamais définie. Bug : quand l'utilisateur ajoute
+   une tâche horaire (ex: 08:48-10:48 médecin), la routine du haut ne se
+   mettait jamais à jour pour l'intégrer.
+
+   Cette fonction:
+   1. Lit les tasks du jour avec `isFixedTime` true (time + endTime).
+   2. Crée des .tl-item de type "fixed-event" dans la timeline du shift visible.
+   3. Les insère à la bonne position chronologique.
+   4. Re-déclenche applyRoutineStateV35 pour recalculer les décalages.
+
+   Argument optionnel skipApply (boolean) : si true, ne pas appeler V35
+   à la fin (utilisé quand V35 nous appelle lui-même, évite récursion).
+*/
+(function(){
+  if (window.renderRoutineFixedEvents) return; // Already defined elsewhere
+
+  const NS = 'dashv2_';
+  function loadTasksToday(){
+    try {
+      const d = new Date();
+      const key = NS + 'tasks_' + d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : [];
+    } catch(_){ return []; }
+  }
+  function parseHM(s){
+    if (!s) return null;
+    const m = String(s).match(/^(\d{1,2}):(\d{2})$/);
+    if (!m) return null;
+    return parseInt(m[1],10)*60 + parseInt(m[2],10);
+  }
+  function fmtHM(min){
+    if (min == null) return '';
+    const h = Math.floor(min/60);
+    const m = min%60;
+    return h + ':' + String(m).padStart(2,'0');
+  }
+  function catEmoji(cat){
+    const map = {
+      sante:'🩺', perso:'👤', admin:'📄', maison:'🏠',
+      etudes:'🎓', boulot:'💼', sport:'💪', famille:'👨‍👩‍👧'
+    };
+    if (!cat) return '📌';
+    const k = String(cat).toLowerCase();
+    return map[k] || '📌';
+  }
+
+  window.renderRoutineFixedEvents = function(skipApply){
+    try {
+      const view = document.querySelector('.shift-view:not(.hidden)');
+      if (!view) return;
+      const timeline = view.querySelector('.timeline');
+      if (!timeline) return;
+
+      // Nettoyer les fixed-events existants (ils sont régénérés à chaque appel)
+      view.querySelectorAll('.tl-item.routine-fixed-event').forEach(el => el.remove());
+
+      // Récupérer les tâches horaires
+      const tasks = loadTasksToday().filter(t => {
+        return t.time && t.endTime && !t.done
+          && parseHM(t.time) != null
+          && parseHM(t.endTime) != null;
+      });
+      if (!tasks.length) {
+        // Even with no tasks, still trigger V35 in case it needs to clean up
+        if (!skipApply && typeof window.applyRoutineStateV35 === 'function'){
+          setTimeout(() => { try { window.applyRoutineStateV35(); } catch(_){} }, 0);
+        }
+        return;
+      }
+
+      // Créer un .tl-item pour chaque tâche
+      tasks.forEach(t => {
+        const startMin = parseHM(t.time);
+        const endMin = parseHM(t.endTime);
+        const item = document.createElement('div');
+        item.className = 'tl-item routine-fixed-event';
+        item.dataset.time = t.time;
+        item.dataset.fixedTaskId = t.id;
+        const emoji = catEmoji(t.cat);
+        item.innerHTML =
+          '<div class="tl-dot" style="background:#a78bfa"></div>' +
+          '<div class="tl-time" data-orig="' + t.time + '" data-orig-min="' + startMin + '">' +
+            t.time + ' – ' + t.endTime +
+          '</div>' +
+          '<div class="tl-name">' + emoji + ' ' +
+            (t.title || 'Tâche fixe').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])) +
+          '</div>' +
+          '<div class="tl-desc">⚓ Tâche fixe ajoutée depuis l\'accueil</div>';
+
+        // Insertion chronologique : trouver la bonne position parmi les .tl-item existants
+        const all = Array.from(timeline.querySelectorAll('.tl-item'));
+        let inserted = false;
+        for (const existing of all){
+          const existingTime = existing.querySelector('.tl-time');
+          if (!existingTime) continue;
+          const existingMin = parseInt(existingTime.dataset.origMin || existingTime.dataset.origMin || '');
+          const fallbackText = existingTime.dataset.orig || existingTime.textContent || '';
+          const existingMinFromText = isNaN(existingMin) ? parseHM(fallbackText.split(/[–\-]/)[0].trim()) : existingMin;
+          if (existingMinFromText != null && existingMinFromText > startMin){
+            timeline.insertBefore(item, existing);
+            inserted = true;
+            break;
+          }
+        }
+        if (!inserted) timeline.appendChild(item);
+      });
+
+      // Trigger V35 pour recalculer décalages, validation, wake offset, etc.
+      if (!skipApply && typeof window.applyRoutineStateV35 === 'function'){
+        setTimeout(() => { try { window.applyRoutineStateV35(); } catch(_){} }, 0);
+      }
+    } catch(e){
+      console.error('[renderRoutineFixedEvents]', e);
+    }
+  };
+
+  // Premier appel au chargement
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', () => setTimeout(() => window.renderRoutineFixedEvents(), 200));
+  } else {
+    setTimeout(() => window.renderRoutineFixedEvents(), 200);
+  }
+})();
+</script>
+
 <script id="final-v35-js">
 (function(){
 'use strict';
@@ -9340,7 +9398,7 @@ if (document.readyState === 'loading') {
   function ensureModal() { if (document.getElementById(MODAL_ID)) return; const m = document.createElement('div'); m.id = MODAL_ID; document.body.appendChild(m); m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); }); }
   function ensureStyles() {
     if (document.getElementById(STYLE_ID)) return; const st = document.createElement('style'); st.id = STYLE_ID;
-    st.textContent = `#ud-adapted-routine-panel,#ud-master-routine-panel-v2,#ud-routine-command-engine-v3,#ud-routine-command-engine-v4{display:none!important}#${PANEL_ID}{margin:16px 0;padding:14px;border-radius:20px;border:1px solid rgba(148,163,184,.28);background:linear-gradient(180deg,rgba(15,23,42,.98),rgba(2,6,23,.96));color:#e5e7eb;box-shadow:0 16px 45px rgba(0,0,0,.38)}#${PANEL_ID} *{box-sizing:border-box}.udrci-title{font:900 17px system-ui;margin-bottom:6px}.udrci-sub{font:700 12px system-ui;color:#94a3b8;line-height:1.4;margin-bottom:10px}.udrci-grid{display:grid;grid-template-columns:1fr 108px 108px;gap:8px;margin:8px 0}.udrci-grid2{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:8px 0}#${PANEL_ID} input,#${PANEL_ID} select,#${PANEL_ID} button,#${PANEL_ID} textarea{min-height:42px;border-radius:12px;border:1px solid rgba(148,163,184,.35);background:#020617;color:#e5e7eb;padding:8px 10px;font:800 13px system-ui}#${PANEL_ID} button{background:#2563eb;border-color:#3b82f6}#${PANEL_ID} button.secondary{background:#111827}.udrci-status{padding:10px;border-radius:12px;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.30);color:#bbf7d0;font:800 12px system-ui;margin:8px 0}.udrci-warn{padding:10px;border-radius:12px;background:rgba(239,68,68,.16);border:1px solid rgba(239,68,68,.40);color:#fecaca;font:800 12px system-ui;margin:8px 0}.udrci-block{display:grid;grid-template-columns:102px 1fr auto;gap:8px;align-items:start;padding:10px;margin:8px 0;border-radius:14px;border:1px solid rgba(148,163,184,.25);background:rgba(15,23,42,.78)}.udrci-time{font:900 12px ui-monospace,monospace;color:#dbeafe}.udrci-name{font:900 13px system-ui;word-break:break-word}.udrci-meta{grid-column:2/4;font:700 11px system-ui;color:#94a3b8;line-height:1.4}.udrci-validate{min-width:82px!important;padding:7px 10px!important;background:#16a34a!important;border-color:#22c55e!important}.udrci-done .udrci-validate{background:#334155!important;border-color:#475569!important;color:#bbf7d0!important}.udrci-done{opacity:.72}.udrci-moved .udrci-meta{color:#bfdbfe}.udrci-epfc{border-color:rgba(59,130,246,.65);background:rgba(30,64,175,.26)}.udrci-coding{border-color:rgba(34,197,94,.60);background:rgba(20,83,45,.24)}.udrci-nl{border-color:rgba(14,165,233,.60);background:rgba(12,74,110,.24)}.udrci-ia{border-color:rgba(168,85,247,.60);background:rgba(88,28,135,.24)}.udrci-trading{border-color:rgba(245,158,11,.75);background:rgba(120,53,15,.35)}.udrci-vinted{border-color:rgba(236,72,153,.60);background:rgba(131,24,67,.24)}.udrci-muscu,.udrci-sport{border-color:rgba(22,163,74,.60);background:rgba(20,83,45,.22)}.udrci-souplesse{border-color:rgba(45,212,191,.60);background:rgba(19,78,74,.24)}.udrci-lecture{border-color:rgba(99,102,241,.60);background:rgba(49,46,129,.24)}.udrci-fixed-task{border-color:rgba(239,68,68,.75);background:rgba(127,29,29,.36)}.udrci-fixed{opacity:.84}#${MODAL_ID}{position:fixed;inset:0;display:none;z-index:999999;background:rgba(2,6,23,.76);backdrop-filter:blur(8px);padding:18px;overflow:auto}#${MODAL_ID}.open{display:block}.udrci-modal-card{position:relative;max-width:620px;margin:20px auto;padding:16px;border-radius:18px;border:1px solid rgba(148,163,184,.32);background:#0f172a;color:#e5e7eb;box-shadow:0 20px 60px rgba(0,0,0,.55)}.udrci-close{position:absolute;right:12px;top:10px;width:38px;height:38px;border-radius:999px;background:#111827;color:#e5e7eb;border:1px solid #334155}.udrci-modal-kicker{font:900 11px system-ui;color:#fb923c;text-transform:uppercase;letter-spacing:.12em}.udrci-modal-card h2{font:900 20px system-ui;margin:4px 44px 4px 0}.udrci-modal-sub{font:700 12px system-ui;color:#94a3b8;margin-bottom:12px}.udrci-modal-card label{display:block;font:800 12px system-ui;color:#cbd5e1;margin:9px 0 5px}.udrci-modal-card input,.udrci-modal-card select,.udrci-modal-card textarea{width:100%;min-height:42px;margin-top:5px;border-radius:12px;border:1px solid #334155;background:#020617;color:#e5e7eb;padding:9px 10px;font:700 13px system-ui}.udrci-modal-card textarea{min-height:82px}.udrci-check{display:flex!important;gap:10px;align-items:center}.udrci-check input{width:auto!important}.udrci-modal-actions{display:flex;gap:8px;margin-top:14px}.udrci-modal-actions button{flex:1;min-height:44px;border-radius:12px;border:1px solid #334155;background:#2563eb;color:#fff;font:900 13px system-ui}.udrci-modal-actions .secondary{background:#111827}.udrci-toast{position:fixed;left:14px;right:14px;bottom:18px;z-index:1000000;background:#020617;color:#fff;border:1px solid #334155;padding:12px 14px;border-radius:14px;font:800 13px system-ui;box-shadow:0 12px 40px rgba(0,0,0,.45)}.udrci-progress-box{margin:10px 0 16px;padding:12px;border:1px solid rgba(148,163,184,.25);border-radius:14px;background:rgba(15,23,42,.72);color:#e5e7eb}.udrci-progress-box b{color:#fb923c}.udrci-progress-box small{display:block;color:#94a3b8;margin-top:4px;line-height:1.4}@media(max-width:560px){.udrci-grid,.udrci-grid2{grid-template-columns:1fr}.udrci-block{grid-template-columns:1fr}.udrci-meta{grid-column:1}.udrci-validate{width:100%}.udrci-modal-actions{flex-direction:column}}`;
+    st.textContent = `#ud-adapted-routine-panel,#ud-master-routine-panel-v2,#ud-routine-command-engine-v3,#ud-routine-command-engine-v4,#ud-routine-checkin-engine-v1-panel{display:none!important}#${PANEL_ID}{margin:16px 0;padding:14px;border-radius:20px;border:1px solid rgba(148,163,184,.28);background:linear-gradient(180deg,rgba(15,23,42,.98),rgba(2,6,23,.96));color:#e5e7eb;box-shadow:0 16px 45px rgba(0,0,0,.38)}#${PANEL_ID} *{box-sizing:border-box}.udrci-title{font:900 17px system-ui;margin-bottom:6px}.udrci-sub{font:700 12px system-ui;color:#94a3b8;line-height:1.4;margin-bottom:10px}.udrci-grid{display:grid;grid-template-columns:1fr 108px 108px;gap:8px;margin:8px 0}.udrci-grid2{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:8px 0}#${PANEL_ID} input,#${PANEL_ID} select,#${PANEL_ID} button,#${PANEL_ID} textarea{min-height:42px;border-radius:12px;border:1px solid rgba(148,163,184,.35);background:#020617;color:#e5e7eb;padding:8px 10px;font:800 13px system-ui}#${PANEL_ID} button{background:#2563eb;border-color:#3b82f6}#${PANEL_ID} button.secondary{background:#111827}.udrci-status{padding:10px;border-radius:12px;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.30);color:#bbf7d0;font:800 12px system-ui;margin:8px 0}.udrci-warn{padding:10px;border-radius:12px;background:rgba(239,68,68,.16);border:1px solid rgba(239,68,68,.40);color:#fecaca;font:800 12px system-ui;margin:8px 0}.udrci-block{display:grid;grid-template-columns:102px 1fr auto;gap:8px;align-items:start;padding:10px;margin:8px 0;border-radius:14px;border:1px solid rgba(148,163,184,.25);background:rgba(15,23,42,.78)}.udrci-time{font:900 12px ui-monospace,monospace;color:#dbeafe}.udrci-name{font:900 13px system-ui;word-break:break-word}.udrci-meta{grid-column:2/4;font:700 11px system-ui;color:#94a3b8;line-height:1.4}.udrci-validate{min-width:82px!important;padding:7px 10px!important;background:#16a34a!important;border-color:#22c55e!important}.udrci-done .udrci-validate{background:#334155!important;border-color:#475569!important;color:#bbf7d0!important}.udrci-done{opacity:.72}.udrci-moved .udrci-meta{color:#bfdbfe}.udrci-epfc{border-color:rgba(59,130,246,.65);background:rgba(30,64,175,.26)}.udrci-coding{border-color:rgba(34,197,94,.60);background:rgba(20,83,45,.24)}.udrci-nl{border-color:rgba(14,165,233,.60);background:rgba(12,74,110,.24)}.udrci-ia{border-color:rgba(168,85,247,.60);background:rgba(88,28,135,.24)}.udrci-trading{border-color:rgba(245,158,11,.75);background:rgba(120,53,15,.35)}.udrci-vinted{border-color:rgba(236,72,153,.60);background:rgba(131,24,67,.24)}.udrci-muscu,.udrci-sport{border-color:rgba(22,163,74,.60);background:rgba(20,83,45,.22)}.udrci-souplesse{border-color:rgba(45,212,191,.60);background:rgba(19,78,74,.24)}.udrci-lecture{border-color:rgba(99,102,241,.60);background:rgba(49,46,129,.24)}.udrci-fixed-task{border-color:rgba(239,68,68,.75);background:rgba(127,29,29,.36)}.udrci-fixed{opacity:.84}#${MODAL_ID}{position:fixed;inset:0;display:none;z-index:999999;background:rgba(2,6,23,.76);backdrop-filter:blur(8px);padding:18px;overflow:auto}#${MODAL_ID}.open{display:block}.udrci-modal-card{position:relative;max-width:620px;margin:20px auto;padding:16px;border-radius:18px;border:1px solid rgba(148,163,184,.32);background:#0f172a;color:#e5e7eb;box-shadow:0 20px 60px rgba(0,0,0,.55)}.udrci-close{position:absolute;right:12px;top:10px;width:38px;height:38px;border-radius:999px;background:#111827;color:#e5e7eb;border:1px solid #334155}.udrci-modal-kicker{font:900 11px system-ui;color:#fb923c;text-transform:uppercase;letter-spacing:.12em}.udrci-modal-card h2{font:900 20px system-ui;margin:4px 44px 4px 0}.udrci-modal-sub{font:700 12px system-ui;color:#94a3b8;margin-bottom:12px}.udrci-modal-card label{display:block;font:800 12px system-ui;color:#cbd5e1;margin:9px 0 5px}.udrci-modal-card input,.udrci-modal-card select,.udrci-modal-card textarea{width:100%;min-height:42px;margin-top:5px;border-radius:12px;border:1px solid #334155;background:#020617;color:#e5e7eb;padding:9px 10px;font:700 13px system-ui}.udrci-modal-card textarea{min-height:82px}.udrci-check{display:flex!important;gap:10px;align-items:center}.udrci-check input{width:auto!important}.udrci-modal-actions{display:flex;gap:8px;margin-top:14px}.udrci-modal-actions button{flex:1;min-height:44px;border-radius:12px;border:1px solid #334155;background:#2563eb;color:#fff;font:900 13px system-ui}.udrci-modal-actions .secondary{background:#111827}.udrci-toast{position:fixed;left:14px;right:14px;bottom:18px;z-index:1000000;background:#020617;color:#fff;border:1px solid #334155;padding:12px 14px;border-radius:14px;font:800 13px system-ui;box-shadow:0 12px 40px rgba(0,0,0,.45)}.udrci-progress-box{margin:10px 0 16px;padding:12px;border:1px solid rgba(148,163,184,.25);border-radius:14px;background:rgba(15,23,42,.72);color:#e5e7eb}.udrci-progress-box b{color:#fb923c}.udrci-progress-box small{display:block;color:#94a3b8;margin-top:4px;line-height:1.4}@media(max-width:560px){.udrci-grid,.udrci-grid2{grid-template-columns:1fr}.udrci-block{grid-template-columns:1fr}.udrci-meta{grid-column:1}.udrci-validate{width:100%}.udrci-modal-actions{flex-direction:column}}`;
     document.head.appendChild(st);
   }
   function routinePage() { return document.getElementById('p-routine') || document.querySelector('[data-page="routine"]'); }
@@ -10301,162 +10359,6 @@ if (document.readyState === 'loading') {
 
 
 <!-- HOTFIX MOBILE OS+ v2.0 — pas de MutationObserver infini, bouton compact fiable -->
-<style id="ud-osplus-mobile-hotfix-v2">
-  /* Neutralise définitivement l’ancien dock bleu qui bloque les clics. */
-  #ud-mobile-command-dock,
-  #ud-mobile-command-dock *{
-    display:none !important;
-    visibility:hidden !important;
-    pointer-events:none !important;
-  }
-  #ud-mobile-command-dock{
-    width:0 !important;
-    height:0 !important;
-    min-width:0 !important;
-    min-height:0 !important;
-    overflow:hidden !important;
-    opacity:0 !important;
-    transform:none !important;
-  }
-
-  /* Bouton OS+ compact : petit éclair à gauche, ne bloque pas les boutons Claude à droite. */
-  #u20-fab,
-  #ud-osplus-mini-fab{
-    position:fixed !important;
-    left:12px !important;
-    right:auto !important;
-    bottom:calc(92px + env(safe-area-inset-bottom,0px)) !important;
-    z-index:99960 !important;
-    width:52px !important;
-    height:52px !important;
-    min-width:52px !important;
-    min-height:52px !important;
-    max-width:52px !important;
-    max-height:52px !important;
-    padding:0 !important;
-    margin:0 !important;
-    border-radius:50% !important;
-    border:1px solid rgba(249,115,22,.75) !important;
-    background:linear-gradient(135deg,#f97316,#f59e0b) !important;
-    color:#0a0a10 !important;
-    font:900 24px/1 system-ui !important;
-    display:flex !important;
-    align-items:center !important;
-    justify-content:center !important;
-    box-shadow:0 10px 28px rgba(0,0,0,.45),0 0 0 2px rgba(249,115,22,.22) !important;
-    pointer-events:auto !important;
-    touch-action:manipulation !important;
-  }
-  #u20-fab{
-    font-size:0 !important;
-    overflow:hidden !important;
-  }
-  #u20-fab::before{
-    content:"⚡";
-    font-size:24px !important;
-    line-height:1 !important;
-  }
-  #ud-osplus-mini-fab{ display:none; }
-  body.ud-osplus-no-u20 #ud-osplus-mini-fab{ display:flex !important; }
-
-  #u20-cockpit{ margin-bottom:16px !important; }
-  #u20-drawer{ z-index:999990 !important; }
-  #u20-modal{ z-index:999995 !important; }
-
-  @media(max-width:700px){
-    body{ padding-bottom:calc(104px + env(safe-area-inset-bottom,0px)) !important; }
-    .app{ padding-bottom:calc(104px + env(safe-area-inset-bottom,0px)) !important; }
-  }
-</style>
-<script id="ud-osplus-mobile-hotfix-v2-script">
-(() => {
-  if (window.__UD_OSPLUS_MOBILE_HOTFIX_V2__) return;
-  window.__UD_OSPLUS_MOBILE_HOTFIX_V2__ = true;
-
-  function openOSPlus(){
-    if (typeof window.UD_U20?.renderDrawer === 'function') {
-      window.UD_U20.renderDrawer();
-    }
-    const drawer = document.getElementById('u20-drawer');
-    if (drawer) {
-      drawer.classList.add('open');
-      document.body.classList.remove('ud-osplus-no-u20');
-      return;
-    }
-    if (typeof window.UD_ASSISTANT_OS?.openCommandCenter === 'function') {
-      window.UD_ASSISTANT_OS.openCommandCenter();
-      return;
-    }
-    showToast('OS+ pas encore chargé. Attends 1 seconde puis réessaie.');
-  }
-
-  function disableOldDock(){
-    const dock = document.getElementById('ud-mobile-command-dock');
-    if (!dock) return;
-    dock.setAttribute('aria-hidden', 'true');
-    dock.style.display = 'none';
-    dock.style.visibility = 'hidden';
-    dock.style.pointerEvents = 'none';
-  }
-
-  function ensureMiniButton(){
-    let mini = document.getElementById('ud-osplus-mini-fab');
-    if (!mini) {
-      mini = document.createElement('button');
-      mini.id = 'ud-osplus-mini-fab';
-      mini.type = 'button';
-      mini.textContent = '⚡';
-      mini.setAttribute('aria-label', 'Ouvrir OS+');
-      mini.setAttribute('title', 'OS+');
-      mini.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        openOSPlus();
-      });
-      document.body.appendChild(mini);
-    }
-  }
-
-  function compactRealButton(){
-    const btn = document.getElementById('u20-fab');
-    if (!btn) {
-      document.body.classList.add('ud-osplus-no-u20');
-      return false;
-    }
-    document.body.classList.remove('ud-osplus-no-u20');
-    btn.setAttribute('aria-label', 'Ouvrir OS+');
-    btn.setAttribute('title', 'OS+');
-    if (!btn.dataset.udOsplusBound) {
-      btn.dataset.udOsplusBound = '1';
-      btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        openOSPlus();
-      }, false);
-    }
-    return true;
-  }
-
-  function setup(){
-    disableOldDock();
-    ensureMiniButton();
-    compactRealButton();
-  }
-
-  setup();
-  document.addEventListener('DOMContentLoaded', setup, { once:true });
-  window.addEventListener('hashchange', () => setTimeout(setup, 120));
-
-  /* Essais courts seulement. Pas de MutationObserver permanent : évite le freeze après clic/onglet. */
-  let tries = 0;
-  const timer = setInterval(() => {
-    tries += 1;
-    setup();
-    if (document.getElementById('u20-fab') || tries >= 16) clearInterval(timer);
-  }, 250);
-})();
-</script>
-
 <script id="audit-visibility-handler">
 /* Pause les rafraîchissements lourds quand le tab est en background.
    Étendu Apr 2026 : registre d'intervals pausables + audit setInterval audit (point 8 TODO).
