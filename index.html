@@ -15569,12 +15569,21 @@ function loadSettings(){
   if (rs) rs.addEventListener('change', restoreData);
 
   // Audit Apr 2026 : afficher status backup
+  // Helper local pour ne dépendre d'aucun scope externe (S/sg/ss sont
+  // dans d'autres IIFE et inaccessibles depuis ce script).
+  function _localGet(k, fallback){
+    try {
+      const raw = localStorage.getItem('dashv2_' + k);
+      if (raw === null) return fallback;
+      try { return JSON.parse(raw); } catch(_){ return raw; }
+    } catch(_){ return fallback; }
+  }
   function refreshBackupStatus(){
     const info = document.getElementById('bk-info');
     if (!info) return;
-    const lastLocal = S.get('last_auto_backup', 0);
-    const lastGist = S.get('last_gist_push', 0);
-    const ghToken = S.get('gh_token', '');
+    const lastLocal = _localGet('last_auto_backup', 0);
+    const lastGist = _localGet('last_gist_push', 0);
+    const ghToken = _localGet('gh_token', '');
     const lines = [];
     if (lastLocal){
       const age = Math.floor((Date.now() - lastLocal) / (3600*1000));
@@ -15591,22 +15600,21 @@ function loadSettings(){
       } else {
         lines.push('Gist : token configuré · pas encore de push');
       }
-      let snapIds = [];
-      try {
-        const raw = S.get('gist_snapshot_ids', '[]');
-        snapIds = typeof raw === 'string' ? JSON.parse(raw) : raw;
-      } catch(_){}
+      let snapIds = _localGet('gist_snapshot_ids', []);
+      if (typeof snapIds === 'string'){
+        try { snapIds = JSON.parse(snapIds); } catch(_){ snapIds = []; }
+      }
       if (Array.isArray(snapIds) && snapIds.length){
         lines.push('Snapshots datés : ' + snapIds.length + '/30');
       }
     } else {
-      lines.push('Gist : ⚠️ pas de token configuré');
+      lines.push('Gist : pas de token configuré');
     }
-    info.innerHTML = lines.join(' · ');
+    info.textContent = lines.join(' · ');
   }
-  refreshBackupStatus();
+  try { refreshBackupStatus(); } catch(e){ console.error('refreshBackupStatus failed', e); }
   // Refresh quand on revient sur le tab
-  setInterval(refreshBackupStatus, 30000);
+  setInterval(() => { try { refreshBackupStatus(); } catch(_){} }, 30000);
   const ghSave = document.getElementById('gh-save');
   if (ghSave) ghSave.addEventListener('click', () => {
     const t = document.getElementById('gh-token').value.trim();
