@@ -12,6 +12,206 @@ if (typeof window.Notification === 'undefined'){
   window.Notification.requestPermission = function(){ return Promise.resolve('denied'); };
 }
 </script>
+<script id="audit-private-mode-check">
+(function(){
+  var ok = false;
+  try { var k = '__t_'+Date.now(); localStorage.setItem(k,'1'); localStorage.removeItem(k); ok = true; }
+  catch(e){ ok = false; }
+  if (!ok){
+    document.addEventListener('DOMContentLoaded', function(){
+      var bar = document.createElement('div');
+      bar.id = 'audit-storage-warning';
+      bar.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#dc2626;color:#fff;padding:12px 16px;font:600 13px system-ui,sans-serif;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.4)';
+      bar.innerHTML = '⚠️ Mode privé ou stockage indisponible — Tes données ne seront PAS sauvegardées. <button aria-label="Fermer" style="margin-left:12px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;padding:4px 10px;border-radius:6px;cursor:pointer">Compris</button>';
+      bar.querySelector('button').addEventListener('click', function(){ bar.remove(); document.body.style.paddingTop=''; });
+      document.body.appendChild(bar);
+      document.body.style.paddingTop = (bar.offsetHeight + 8) + 'px';
+    });
+  }
+})();
+</script>
+<script id="audit-localstorage-safe">
+(function(){
+  var stats = { ok:0, errors:0, lastError:null };
+  var oG = Storage.prototype.getItem;
+  var oS = Storage.prototype.setItem;
+  var oR = Storage.prototype.removeItem;
+  Storage.prototype.getItem = function(k){
+    try { var v = oG.call(this,k); stats.ok++; return v; }
+    catch(e){ stats.errors++; stats.lastError = String(e); return null; }
+  };
+  Storage.prototype.setItem = function(k,v){
+    try { oS.call(this,k,v); stats.ok++; }
+    catch(e){
+      stats.errors++; stats.lastError = String(e);
+      if (e && /quota/i.test(String(e))){
+        try {
+          var keys = [];
+          for (var i = 0; i < this.length; i++){
+            var key = this.key(i);
+            if (key && /\d{4}-\d{2}-\d{2}/.test(key)) keys.push(key);
+          }
+          keys.sort();
+          for (var j = 0; j < Math.min(10, keys.length-5); j++){
+            try { oR.call(this, keys[j]); } catch(_){}
+          }
+          try { oS.call(this,k,v); stats.ok++; stats.errors--; } catch(e){ window.__warn && window.__warn('audit-catch', e); }
+        } catch(_){}
+      }
+    }
+  };
+  Storage.prototype.removeItem = function(k){
+    try { oR.call(this,k); stats.ok++; }
+    catch(e){ stats.errors++; stats.lastError = String(e); }
+  };
+  window.__storageStats = stats;
+})();
+</script>
+<script id="audit-helpers">
+(function(){
+  if (!window.escapeHTML){
+    var m = { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' };
+    window.escapeHTML = function(s){ return s == null ? '' : String(s).replace(/[&<>"']/g, function(c){ return m[c]; }); };
+  }
+  if (!window.bindOnce){
+    window.bindOnce = function(el, ev, h, k){
+      if (!el) return false;
+      var dk = '_bound_' + (k || ev);
+      if (el.dataset && el.dataset[dk]) return false;
+      el.addEventListener(ev, h);
+      if (el.dataset) el.dataset[dk] = '1';
+      return true;
+    };
+    window.delegate = function(p, sel, ev, h){
+      if (!p) return false;
+      var dk = '_delegate_' + sel + '_' + ev;
+      if (p.dataset && p.dataset[dk]) return false;
+      p.addEventListener(ev, function(e){
+        var match = e.target.closest(sel);
+        if (match && p.contains(match)) h.call(match, e);
+      });
+      if (p.dataset) p.dataset[dk] = '1';
+      return true;
+    };
+  }
+  window.__warn = function(ctx, err){ if (window.__debugMode) console.warn('['+ctx+']', err); };
+  window.__debugMode = false;
+  window.__memoryStatus = function(){
+    if (!performance || !performance.memory) return 'unavailable';
+    return {
+      usedMB: (performance.memory.usedJSHeapSize/1048576).toFixed(1),
+      limitMB: (performance.memory.jsHeapSizeLimit/1048576).toFixed(0),
+      percentUsed: (performance.memory.usedJSHeapSize/performance.memory.jsHeapSizeLimit*100).toFixed(1)+'%'
+    };
+  };
+})();
+</script>
+<script id="audit-raf-helper">
+/* Audit Apr 2026 — Helper window.scheduleRender(fn, key) qui :
+   1. Debounce les calls successifs (key = id du render)
+   2. Wrap dans requestAnimationFrame pour rester à 60 fps
+   3. Fait passer les renders dans le bon "frame" du browser
+   
+   Usage : window.scheduleRender(() => myRender(), 'my-render');
+   Si scheduleRender est rappelé avec la même key avant le frame suivant,
+   le 1er call est annulé. */
+(function(){
+  if (window.scheduleRender) return;
+  
+  var pending = {};
+  
+  window.scheduleRender = function(fn, key){
+    key = key || 'default';
+    if (pending[key]) cancelAnimationFrame(pending[key]);
+    pending[key] = requestAnimationFrame(function(){
+      delete pending[key];
+      try { fn(); } catch(e){ window.__warn && window.__warn('schedule-render:'+key, e); }
+    });
+  };
+  
+  // Helper pour rAF simple sans debounce
+  window.nextFrame = function(fn){
+    requestAnimationFrame(function(){
+      try { fn(); } catch(e){ window.__warn && window.__warn('next-frame', e); }
+    });
+  };
+})();
+</script>
+<script id="audit-storage-cleanup">
+/* Audit Apr 2026 — Cleanup PRÉVENTIF du localStorage.
+   Tu as ~43 clés dans dashv2_*. Plusieurs sont datées (logs_2025-12-15, freeze_2026-01-03, etc.).
+   Sans rétention, elles s'accumulent jusqu'au quota (5 MB). 
+   Ce script supprime les clés date-based > 90 jours, 1× au boot, max 1×/24h.
+
+   Préserve : tous les noms de clés non-datées, les snapshots datés volontaires
+   (snapshot_*, qui sont gérés par autoBackupCheck avec rotation 30).
+*/
+(function(){
+  if (window.__auditStorageCleanupDone) return;
+  window.__auditStorageCleanupDone = true;
+  
+  var LAST_CLEANUP_KEY = 'dashv2___last_cleanup';
+  var ONE_DAY_MS = 24 * 60 * 60 * 1000;
+  var RETENTION_DAYS = 90;
+  
+  try {
+    var lastCleanup = parseInt(localStorage.getItem(LAST_CLEANUP_KEY) || '0', 10);
+    var now = Date.now();
+    if (now - lastCleanup < ONE_DAY_MS) return; // Pas plus d'1 cleanup par jour
+    
+    var threshold = new Date(now - RETENTION_DAYS * ONE_DAY_MS);
+    var thresholdYear = threshold.getFullYear();
+    var thresholdMonth = threshold.getMonth() + 1;
+    var thresholdDay = threshold.getDate();
+    
+    // Format ISO YYYY-MM-DD comparable lexicographiquement
+    var thresholdISO = thresholdYear + '-' + 
+                       String(thresholdMonth).padStart(2, '0') + '-' +
+                       String(thresholdDay).padStart(2, '0');
+    
+    var deleted = 0;
+    var keysToDelete = [];
+    
+    for (var i = 0; i < localStorage.length; i++){
+      var key = localStorage.key(i);
+      if (!key) continue;
+      
+      // PRÉSERVATIONS — ne JAMAIS toucher :
+      if (key.indexOf('snapshot_') !== -1) continue;       // snapshots gérés par rotation
+      if (key.indexOf('__last_cleanup') !== -1) continue;  // notre propre clé
+      if (key.indexOf('schema_version') !== -1) continue;  // versioning
+      if (key.indexOf('gh_token') !== -1) continue;        // backup token
+      if (key.indexOf('gist_id') !== -1) continue;
+      
+      // Match clé avec date YYYY-MM-DD à la fin
+      var dateMatch = key.match(/(\d{4}-\d{2}-\d{2})(?:_|$)/);
+      if (!dateMatch) continue; // Pas une clé datée
+      
+      var keyDate = dateMatch[1];
+      // Comparison lexicographique (ISO date)
+      if (keyDate < thresholdISO){
+        keysToDelete.push(key);
+      }
+    }
+    
+    // Supprimer
+    keysToDelete.forEach(function(k){
+      try { localStorage.removeItem(k); deleted++; } catch(e){ window.__warn && window.__warn('storage-cleanup', e); }
+    });
+    
+    localStorage.setItem(LAST_CLEANUP_KEY, String(now));
+    
+    if (deleted > 0 && window.__debugMode){
+      console.log('[storage-cleanup] Removed ' + deleted + ' keys older than ' + RETENTION_DAYS + ' days');
+    }
+    
+    window.__lastCleanupStats = { deleted: deleted, ranAt: new Date().toISOString(), thresholdISO: thresholdISO };
+  } catch(e){
+    window.__warn && window.__warn('storage-cleanup', e);
+  }
+})();
+</script>
+
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
@@ -53,7 +253,7 @@ if (typeof window.Notification === 'undefined'){
     size-adjust:96%;
   }
 </style>
-<link rel="stylesheet" href="/assets/main.80db7fae.css">
+<link rel="stylesheet" href="/assets/main.b19fca0a.css">
 
 <style id="ud-performance-step1-style">
 @media (max-width: 640px){
@@ -92,9 +292,7 @@ if (typeof window.Notification === 'undefined'){
 <body>
 <div class="app">
 
-<!-- ═══════════════════════════════════════════════════════════
-     MASTHEAD
-     ═══════════════════════════════════════════════════════════ -->
+
 <header class="masthead">
 <div class="masthead-inner">
 <div class="brand">
@@ -135,9 +333,7 @@ if (typeof window.Notification === 'undefined'){
 <main class="main">
 
 
-<!-- ═══════════════════════════════════════════════════════════
-     HOME · AUJOURD'HUI
-     ═══════════════════════════════════════════════════════════ -->
+
 <section class="page active" id="p-home">
 
 <div class="home-search">
@@ -148,7 +344,7 @@ if (typeof window.Notification === 'undefined'){
 </button>
 </div>
 
-<!-- NEXT ACTION · l'instruction principale du moment -->
+
 <div class="next-action" id="next-action" aria-live="polite">
   <div class="na-head">
     <span class="na-label" id="na-label">Prochaine action</span>
@@ -591,15 +787,15 @@ Bachelor dev en septembre. Bilingue NL+FR d'ici 2 ans. Corps robuste malgré la 
 <h2 class="section-title amber">Raccourcis <em>utiles</em></h2>
 
 <div class="stats stats-3">
-<button class="stat" data-go="sport" style="cursor:pointer"><div class="stat-v flame" style="font-size:22px">💪</div><div class="stat-l">Séance du jour</div></button>
-<button class="stat" data-go="nutrition" style="cursor:pointer"><div class="stat-v amber" style="font-size:22px">🍳</div><div class="stat-l">Mes 6 repas</div></button>
-<button class="stat" data-go="stats" style="cursor:pointer"><div class="stat-v jade" style="font-size:22px">📊</div><div class="stat-l">Mes stats</div></button>
+<button aria-label="Action" class="stat" data-go="sport" style="cursor:pointer"><div class="stat-v flame" style="font-size:22px">💪</div><div class="stat-l">Séance du jour</div></button>
+<button aria-label="Action" class="stat" data-go="nutrition" style="cursor:pointer"><div class="stat-v amber" style="font-size:22px">🍳</div><div class="stat-l">Mes 6 repas</div></button>
+<button aria-label="Action" class="stat" data-go="stats" style="cursor:pointer"><div class="stat-v jade" style="font-size:22px">📊</div><div class="stat-l">Mes stats</div></button>
 </div>
 
 <div class="stats stats-3" style="margin-top:10px">
-<button class="stat" data-action="pomo-open" style="cursor:pointer"><div class="stat-v coral" style="font-size:22px">⏱️</div><div class="stat-l">Pomodoro 25/5</div></button>
-<button class="stat" data-go="code" style="cursor:pointer"><div class="stat-v violet" style="font-size:22px">💻</div><div class="stat-l">Où coder</div></button>
-<button class="stat" data-go="plan" style="cursor:pointer"><div class="stat-v blue" style="font-size:22px">📋</div><div class="stat-l">Mon plan</div></button>
+<button aria-label="Action" class="stat" data-action="pomo-open" style="cursor:pointer"><div class="stat-v coral" style="font-size:22px">⏱️</div><div class="stat-l">Pomodoro 25/5</div></button>
+<button aria-label="Action" class="stat" data-go="code" style="cursor:pointer"><div class="stat-v violet" style="font-size:22px">💻</div><div class="stat-l">Où coder</div></button>
+<button aria-label="Action" class="stat" data-go="plan" style="cursor:pointer"><div class="stat-v blue" style="font-size:22px">📋</div><div class="stat-l">Mon plan</div></button>
 </div>
 
 <h2 class="section-title coral">Mes données</h2>
@@ -617,9 +813,7 @@ Bachelor dev en septembre. Bilingue NL+FR d'ici 2 ans. Corps robuste malgré la 
 </section>
 
 
-<!-- ═══════════════════════════════════════════════════════════
-     STATS (new tab)
-     ═══════════════════════════════════════════════════════════ -->
+
 <section class="page" id="p-stats">
 <div class="page-header">
 <h1 class="page-title">Stats · <em>ta progression</em></h1>
@@ -693,9 +887,7 @@ Bachelor dev en septembre. Bilingue NL+FR d'ici 2 ans. Corps robuste malgré la 
 </section>
 
 
-<!-- ═══════════════════════════════════════════════════════════
-     ROUTINE
-     ═══════════════════════════════════════════════════════════ -->
+
 <section class="page" id="p-routine">
 <div class="page-kicker">Routine</div>
 <h1 class="page-title">Ton <em>rythme</em> quotidien</h1>
@@ -880,9 +1072,7 @@ Si t'as de la fièvre, douleurs fortes, ou t'es vraiment KO : <strong>protocole 
 </section>
 
 
-<!-- ═══════════════════════════════════════════════════════════
-     SPORT
-     ═══════════════════════════════════════════════════════════ -->
+
 <section class="page" id="p-sport">
 <div class="page-kicker">Force & Mouvement</div>
 <h1 class="page-title">Push <em>Pull</em> Legs</h1>
@@ -931,13 +1121,13 @@ Si t'as de la fièvre, douleurs fortes, ou t'es vraiment KO : <strong>protocole 
 
 <h2 class="section-title">Semaine <em>type</em></h2>
 <div class="weekrow">
-<button class="wday active" data-d="d1"><b>L</b><em>Push</em></button>
-<button class="wday" data-d="d2"><b>M</b><em>Pull</em></button>
-<button class="wday" data-d="d3"><b>Me</b><em>Legs</em></button>
-<button class="wday" data-d="d4"><b>J</b><em>Push</em></button>
-<button class="wday" data-d="d5"><b>V</b><em>Pull</em></button>
-<button class="wday" data-d="d6"><b>S</b><em>Legs</em></button>
-<button class="wday" data-d="d7"><b>D</b><em>Repos</em></button>
+<button aria-label="Action" class="wday active" data-d="d1"><b>L</b><em>Push</em></button>
+<button aria-label="Action" class="wday" data-d="d2"><b>M</b><em>Pull</em></button>
+<button aria-label="Action" class="wday" data-d="d3"><b>Me</b><em>Legs</em></button>
+<button aria-label="Action" class="wday" data-d="d4"><b>J</b><em>Push</em></button>
+<button aria-label="Action" class="wday" data-d="d5"><b>V</b><em>Pull</em></button>
+<button aria-label="Action" class="wday" data-d="d6"><b>S</b><em>Legs</em></button>
+<button aria-label="Action" class="wday" data-d="d7"><b>D</b><em>Repos</em></button>
 </div>
 
 <div class="day-view" id="day-d1">
@@ -1033,9 +1223,7 @@ Si t'as de la fièvre, douleurs fortes, ou t'es vraiment KO : <strong>protocole 
 
 </section>
 
-<!-- ═══════════════════════════════════════════════════════════
-     SOUPLESSE
-     ═══════════════════════════════════════════════════════════ -->
+
 <section class="page" id="p-flex">
 <div class="page-kicker">Souplesse · Mobilité</div>
 <h1 class="page-title">Du sol <em>au grand écart</em></h1>
@@ -1226,398 +1414,27 @@ Si t'as de la fièvre, douleurs fortes, ou t'es vraiment KO : <strong>protocole 
 </section>
 
 
-<!-- ═══════════════════════════════════════════════════════════
-     NUTRITION
-     ═══════════════════════════════════════════════════════════ -->
-<section class="page" id="p-nutrition">
-<div class="page-kicker">Carburant</div>
-<h1 class="page-title">Nutrition · <em>€300/mois</em></h1>
-<p class="page-lead">Six repas par jour. 180g de protéines. 3L d'eau minimum. Supplémentation calibrée. Deux boissons signature — shot matin et élixir pendant la journée — qui font la différence sur 12 mois.</p>
 
-<div class="stats stats-4">
-<div class="stat"><div class="stat-v jade mono">2800</div><div class="stat-l">kcal</div></div>
-<div class="stat"><div class="stat-v flame mono">180g</div><div class="stat-l">Protéines</div></div>
-<div class="stat"><div class="stat-v blue mono">310g</div><div class="stat-l">Glucides</div></div>
-<div class="stat"><div class="stat-v amber mono">85g</div><div class="stat-l">Lipides</div></div>
-</div>
-
-<h2 class="section-title amber">Boissons <em>signature</em></h2>
-<div class="recipe">
-<span class="recipe-tag amber">Avant sport · à jeun</span>
-<div class="recipe-name">🔥 Shot Feu Intérieur</div>
-<div class="recipe-body">Eau tiède + ½ citron + miel + 5g gingembre + ½ c.à.c. curcuma + <strong>poivre noir</strong> + cayenne.<br><br>
-<strong>Pourquoi poivre noir</strong> — La pipérine augmente la biodisponibilité de la curcumine de <strong>2000 %</strong> (Shoba 1998, Planta Medica). Sans poivre, tu n'absorbes quasi rien de la curcumine.<br>
-<strong>Pourquoi cayenne</strong> — La capsaïcine active la thermogenèse → métabolisme + circulation.<br>
-<strong>Gingembre</strong> — anti-inflammatoire, anti-nausée, digestion (Mashhadi 2013, IJPM).
-</div>
-</div>
-
-<div class="recipe blue">
-<span class="recipe-tag pink">Gourde 1L · journée</span>
-<div class="recipe-name">🫀 Élixir Grenade-Betterave</div>
-<div class="recipe-body">250ml grenade + 250ml betterave (fraîche mixée = €0.50/L) + 400ml eau + ½ citron vert + gingembre + miel.<br><br>
-<strong>Betterave</strong> — riche en nitrates → oxyde nitrique (NO) → vasodilatation → <strong>+20 % endurance</strong> (Jones 2014, Sports Medicine).<br>
-<strong>Grenade</strong> — anthocyanines → antioxydant puissant, récupération musculaire, santé cardiovasculaire.
-</div>
-</div>
-
-<div class="callout callout-tip">
-<strong>🚰 Hydratation</strong> — objectif <strong>3L d'eau/jour minimum</strong> (eau + élixir + thé). Mesure : 1 gourde 1L d'élixir + 2 gourdes d'eau. Urine jaune pâle = bien hydraté. Urine foncée = boire plus. La déshydratation de 2% réduit les performances cognitives de 10-20% (Masento 2014, Nutrients).
-</div>
-
-<h2 class="section-title">Les <em>6 repas</em></h2>
-<div class="card">
-<ul class="dlist">
-<li><span class="k"><strong>R1 post-sport</strong> · omelette 4 œufs + 2 blancs + avoine + banane + cacao</span><span class="v info">42g P · 640 kcal</span></li>
-<li><span class="k"><strong>R2</strong> · fromage blanc + amandes + pomme + graines de citrouille</span><span class="v info">22g P · 310</span></li>
-<li><span class="k"><strong>R3</strong> · 200g protéine + 200g glucide + 150g légumes (meal prep)</span><span class="v info">45g P · 550</span></li>
-<li><span class="k"><strong>R4</strong> · whey 30g + banane + 30g avoine</span><span class="v info">32g P · 380</span></li>
-<li><span class="k"><strong>R5</strong> · 200g protéine différente + 150g glucide + 200g légumes</span><span class="v info">42g P · 490</span></li>
-<li><span class="k"><strong>R6</strong> · fromage blanc 250g + beurre cacahuète + chia + baies</span><span class="v info">28g P · 280</span></li>
-</ul>
-</div>
-
-<h2 class="section-title">💊 Stack <em>compléments</em> · ~€50/mois</h2>
-
-<div class="card">
-<div class="subsection-title flame">🏋️ Performance & Muscle</div>
-<ul class="dlist">
-<li><span class="k">Whey protéine 30g</span><span class="v">Post-training</span><div class="note">Récupération musculaire. Isolate si intolérant lactose.</div></li>
-<li><span class="k">Créatine monohydrate 5g/j</span><span class="v">N'importe quand</span><div class="note">+8-14% force. Aussi prouvé pour la mémoire et la cognition (Rae 2003, Psychopharmacology).</div></li>
-<li><span class="k">Caféine 100-200mg (café OU pilule)</span><span class="v">Avant sport ou étude matin</span><div class="note">Dernière dose avant 14h. Pas de café après. Demi-vie = 5h.</div></li>
-</ul>
-
-<div class="subsection-title blue" style="margin-top:10px">🧠 Concentration & Énergie mentale</div>
-<ul class="dlist">
-<li><span class="k">L-Théanine 200mg</span><span class="v">Avec le café</span><div class="note">Acide aminé du thé vert. Élimine le jitter de la caféine → focus calme. Combo caféine + L-théanine = nootropique le plus prouvé (Einöther 2010). €10/mois.</div></li>
-<li><span class="k">Oméga 3 · DHA 1000mg + EPA 500mg</span><span class="v">Dîner</span><div class="note">DHA = 60% du cerveau. Mémoire, concentration, humeur. Prendre avec repas gras. Min 1000mg DHA/j. €15/mois.</div></li>
-<li><span class="k">Créatine (déjà listée)</span><span class="v">—</span><div class="note">Boost cognitif prouvé : +13% mémoire de travail chez les non-mangeurs de viande. Tu manges de la viande mais le boost existe sous stress/fatigue.</div></li>
-</ul>
-
-<div class="subsection-title violet" style="margin-top:10px">😴 Sommeil & Récupération</div>
-<ul class="dlist">
-<li><span class="k">Magnésium bisglycinate 400mg</span><span class="v">Soir</span><div class="note">Sommeil profond + récupération + testostérone. Bisglycinate &gt; oxide pour absorption.</div></li>
-<li><span class="k">Zinc bisglycinate 25mg</span><span class="v">Soir</span><div class="note">Immunité + testostérone. Pas en même temps que café (inhibe absorption).</div></li>
-<li><span class="k">Ashwagandha KSM-66 600mg</span><span class="v">Soir</span><div class="note">Adaptogène. Cortisol -22%, testo +14.7%, anxiété -44% (méta-analyse Bonilla 2022). 6-8 sem pour effet. Cycler 8 on / 2 off.</div></li>
-</ul>
-
-<div class="subsection-title amber" style="margin-top:10px">☀️ Santé générale</div>
-<ul class="dlist">
-<li><span class="k">Vitamine D3 4000 UI/j</span><span class="v">Repas gras</span><div class="note">Belgique = peu de soleil. 70% des Belges sont déficients. Essentiel pour immunité, humeur, testo, absorption calcium.</div></li>
-<li><span class="k">Vitamine K2 MK-7 100mcg</span><span class="v">Avec la D3</span><div class="note">Synergie avec D3 : dirige le calcium vers les os (pas les artères). <strong>Toujours combiner D3+K2.</strong></div></li>
-<li><span class="k">Rhodiola Rosea 300mg (optionnel)</span><span class="v">Matin, jours d'étude intense</span><div class="note">Adaptogène anti-fatigue. Performance cognitive sous stress (Shevtsov 2003). Ne pas combiner avec ashwagandha le même jour.</div></li>
-</ul>
-</div>
-
-<div class="callout callout-tip">
-<strong>Timing compléments · résumé</strong><br><br>
-<strong>Matin (petit-déj)</strong> · café + L-théanine 200mg + D3 4000UI + K2 100mcg + créatine 5g. Rhodiola 300mg les jours d'étude intense.<br>
-<strong>Soir (dîner ou caséine)</strong> · Oméga 3 (1000mg DHA) + magnésium 400mg + zinc 25mg + ashwagandha 600mg (pas les soirs de rhodiola).<br><br>
-<strong>Budget</strong> · whey ~€20/mois + compléments ~€30/mois = <strong>~€50/mois total</strong>. MyProtein.be ou iHerb.
-</div>
-
-</section>
-
-<!-- ═══════════════════════════════════════════════════════════
-     EPFC
-     ═══════════════════════════════════════════════════════════ -->
-<section class="page" id="p-epfc">
-<div class="page-kicker">Bachelor · Développement d'applications</div>
-<h1 class="page-title">EPFC · <em>25 cours</em> · 11 certifs</h1>
-<p class="page-lead">Chaque cours EPFC mappé à sa ressource O'Reilly (livre + vidéo) <em>et</em> à la certif industrie qui le valide. En septembre, tu n'apprends pas en aveugle : tu sais exactement quelle certif tu vises pour chaque module.</p>
-
-<h2 class="section-title">🖥️ Programmation · <em>PRM3 + PRO3 + PAN2 + ANC4 + PRI2</em></h2>
-<div class="card"><ul class="dlist">
-<li><span class="k"><strong>PRM3</strong> — Principes algorithmiques et programmation</span><span class="v">120p · 8 ECTS</span><div class="note">📘 Think Python 3rd Ed. + Grokking Algorithms 2nd Ed. · 📹 Complete Python Course (5h, Diwan) + Python for Beginners (14h, Steele)</div></li>
-<li><span class="k"><strong>PRO3</strong> — Programmation orientée objet</span><span class="v">120p · 9 ECTS</span><div class="note">📘 Head First Java 3rd Ed. + Head First Design Patterns 2nd Ed. · 📹 Java Programming for Complete Beginners (15h38)</div></li>
-<li><span class="k"><strong>PAN2</strong> — Analyse informatique</span><span class="v">60p · 4 ECTS</span><div class="note">📘 Head First OO Analysis and Design · 📹 UML and Object-Oriented Design Foundations (O'Reilly)</div></li>
-<li><span class="k"><strong>ANC4</strong> — Projet d'analyse et de conception</span><span class="v">100p · 10 ECTS</span><div class="note">UML, use cases, diagrammes de séquence. Même livre que PAN2.</div></li>
-<li><span class="k"><strong>PRI2</strong> — Projet d'intégration de développement</span><span class="v">100p · 9 ECTS</span><div class="note">Projet intégrateur. Tout ce qui précède combiné.</div></li>
-</ul></div>
-<div class="card">
-<div class="card-title"><h3 class="flame">🏆 Certifs programmation</h3></div>
-<ul class="dlist">
-<li><span class="k"><strong>PCEP — Python Entry-Level</strong> (~€60)</span><span class="v pos">Avant sept.</span><div class="note">Valide PRM3. Think Python → mock exams pythoninstitute.org → passer en ligne.</div></li>
-<li><span class="k"><strong>Oracle Java SE 17 OCA</strong> (~€245)</span><span class="v info">Année 2</span><div class="note">Valide PRO3 + ANC4 + PRI2. Head First Java + OCA Study Guide (Boyarsky, O'Reilly).</div></li>
-</ul>
-</div>
-
-<h2 class="section-title blue">🗄️ Bases de Données · <em>BDO1 + BDG4 + PRB2</em></h2>
-<div class="card"><ul class="dlist">
-<li><span class="k"><strong>BDO1</strong> — Initiation aux bases de données</span><span class="v">60p · 5 ECTS</span><div class="note">📘 Head First SQL · 📹 SQL for Data Science (8h)</div></li>
-<li><span class="k"><strong>BDG4</strong> — Gestion et exploitation BD</span><span class="v">60p · 5 ECTS</span><div class="note">📘 Learning SQL 3rd Ed. (Beaulieu) · 📹 Advanced SQL for Data Scientists</div></li>
-<li><span class="k"><strong>PRB2</strong> — Projet de développement SGBD</span><span class="v">80p · 8 ECTS</span></li>
-</ul></div>
-<div class="card"><div class="card-title"><h3 class="blue">🏆 Certif BD</h3></div><ul class="dlist">
-<li><span class="k"><strong>Oracle Database SQL Associate</strong> (~€245)</span><span class="v info">Année 1-2</span><div class="note">Valide BDO1 + BDG4 + PRB2. SELECT, JOINs, DDL/DML, sous-requêtes, normalisation.</div></li>
-</ul></div>
-
-<h2 class="section-title jade">🌐 Réseaux + Sécurité · <em>BNE2 + SNE4</em></h2>
-<div class="card"><ul class="dlist">
-<li><span class="k"><strong>BNE2</strong> — Bases des réseaux</span><span class="v">80p · 6 ECTS</span><div class="note">📘 CompTIA Network+ Study Guide 6th Ed. · 📹 CompTIA Network+ N10-009 Total Course (Mike Meyers, 18h) — le meilleur cours vidéo réseau.</div></li>
-<li><span class="k"><strong>SNE4</strong> — Administration, gestion, sécurisation des réseaux</span><span class="v">100p · 8 ECTS</span><div class="note">📘 Network+ Study Guide · 📹 CompTIA Security+ SY0-701 + labs Packet Tracer gratuit.</div></li>
-</ul></div>
-<div class="card"><div class="card-title"><h3 class="jade">🏆 Certif réseaux</h3></div><ul class="dlist">
-<li><span class="k"><strong>CompTIA Network+ N10-009</strong> (~€370)</span><span class="v info">Fin année 1</span><div class="note">Valide BNE2 + SNE4. OSI, TCP/IP, routage, switching, Wi-Fi, sécurité, cloud.</div></li>
-</ul></div>
-
-<h2 class="section-title coral">⚙️ Hardware + OS · <em>STO4 + SYS4</em></h2>
-<div class="card"><ul class="dlist">
-<li><span class="k"><strong>STO4</strong> — Structure des ordinateurs</span><span class="v">60p · 5 ECTS</span><div class="note">📘 Practical Discrete Mathematics · 📹 CompTIA A+ Core 1 (220-1201) — Mike Meyers, 25h.</div></li>
-<li><span class="k"><strong>SYS4</strong> — Système d'exploitation</span><span class="v">100p · 8 ECTS</span><div class="note">📘 The Linux Command Line 2nd Ed. + Linux with OS Concepts · 📹 CompTIA A+ Core 2 (220-1202) + Linux Essentials (12h).</div></li>
-</ul></div>
-<div class="card"><div class="card-title"><h3 class="flame">🏆 Certifs hardware + OS</h3></div><ul class="dlist">
-<li><span class="k"><strong>CompTIA A+ Core 1 (220-1201)</strong> (~€253)</span><span class="v warn">Année 1 sem.1</span><div class="note">Valide STO4. Hardware, mobile, networking basics, virtualisation. Prof. Messer (gratuit) + Study Guide O'Reilly.</div></li>
-<li><span class="k"><strong>CompTIA A+ Core 2 (220-1202)</strong> (~€253)</span><span class="v warn">Année 1 sem.2</span><div class="note">Valide SYS4. OS (Windows, Linux, macOS), sécurité, troubleshooting.</div></li>
-</ul></div>
-
-<h2 class="section-title pink">🌐 Web · <em>WEB1 + PRW3</em></h2>
-<div class="card"><ul class="dlist">
-<li><span class="k"><strong>WEB1</strong> — Web : principes de base</span><span class="v">40p · 3 ECTS</span><div class="note">📘 Learning Web Design 5th Ed. · 📹 HTML CSS JS for Beginners (14h) + Web Dev Bootcamp (Colt Steele, 60h+)</div></li>
-<li><span class="k"><strong>PRW3</strong> — Projet de développement Web</span><span class="v">100p · 10 ECTS</span><div class="note">📘 JavaScript: The Good Parts · 📹 Hands-On Projects HTML/CSS/JS (30+ projets)</div></li>
-</ul></div>
-<div class="card"><div class="card-title"><h3 class="pink">🏆 Certif web</h3></div><ul class="dlist">
-<li><span class="k"><strong>Meta Front-End Developer Certificate</strong> (Coursera, gratuit en audit)</span><span class="v pos">Année 1-2</span><div class="note">Valide WEB1 + PRW3. HTML, CSS, JS, React, UX/UI. 9 cours. Audit gratuit.</div></li>
-</ul></div>
-
-<h2 class="section-title amber">📊 Maths + Stats · <em>MAP4 + STA1</em></h2>
-<div class="card"><ul class="dlist">
-<li><span class="k"><strong>MAP4</strong> — Mathématique appliquée à l'informatique</span><span class="v">60p · 5 ECTS</span><div class="note">📘 Practical Discrete Mathematics · 📹 Discrete Math + Essential Math for ML</div></li>
-<li><span class="k"><strong>STA1</strong> — Éléments de statistique</span><span class="v">40p · 3 ECTS</span><div class="note">📘 Head First Statistics + Think Stats 2nd Ed. · 📹 Statistics Fundamentals (StatQuest style)</div></li>
-</ul></div>
-<div class="card"><div class="card-title"><h3 class="amber">🏆 Certif data/stats</h3></div><ul class="dlist">
-<li><span class="k"><strong>Google Data Analytics Certificate</strong> (Coursera, gratuit en audit)</span><span class="v pos">Année 2</span><div class="note">Valide MAP4 + STA1. Spreadsheets, SQL, R/Python, visualisation, analyse statistique. 8 cours. Très reconnu.</div></li>
-</ul></div>
-
-<h2 class="section-title violet">📋 Gestion · <em>TGP2 + ORM1 + ASIP + ASAP</em></h2>
-<div class="card"><ul class="dlist">
-<li><span class="k"><strong>TGP2</strong> — Techniques de gestion de projets</span><span class="v">40p · 3 ECTS</span><div class="note">📘 Agile PM For Dummies 4th Ed. + Scrum Guide (gratuit, scrum.org)</div></li>
-<li><span class="k"><strong>ORM1</strong> — Organisation des entreprises et management</span><span class="v">40p · 4 ECTS</span><div class="note">Couvert par certif Scrum (rôles, organisation, leadership agile).</div></li>
-<li><span class="k"><strong>ASIP</strong> — Stage d'intégration professionnelle</span><span class="v">120p · 5 ECTS</span><div class="note">Stage pratique. PSM I sur le CV = avantage pour trouver un bon stage.</div></li>
-<li><span class="k"><strong>ASAP</strong> — Activités professionnelles de formation</span><span class="v">240p · 12 ECTS</span></li>
-</ul></div>
-<div class="card"><div class="card-title"><h3 class="violet">🏆 Certif gestion</h3></div><ul class="dlist">
-<li><span class="k"><strong>PSM I — Professional Scrum Master</strong> (~€150)</span><span class="v info">Année 2</span><div class="note">Valide TGP2 + ORM1. Scrum.org, en ligne 80min. Scrum Guide ×3 lectures + mock exams gratuits.</div></li>
-</ul></div>
-
-<h2 class="section-title gold">☁️ E-business + Cloud + ERP · <em>EBN5 + VTEC + PLG3</em></h2>
-<div class="card"><ul class="dlist">
-<li><span class="k"><strong>EBN5</strong> — Notions de e-business</span><span class="v">80p · 7 ECTS</span><div class="note">Cloud computing, SaaS, business models numériques.</div></li>
-<li><span class="k"><strong>VTEC</strong> — Veille technologique</span><span class="v">40p · 4 ECTS</span><div class="note">Tendances tech, cloud, IA, méthodologies émergentes.</div></li>
-<li><span class="k"><strong>PLG3</strong> — Produits logiciels de gestion intégrés</span><span class="v">100p · 9 ECTS</span><div class="note">📘 SAP Project Management + Manage Your SAP Projects with SAP Activate</div></li>
-</ul></div>
-<div class="card"><div class="card-title"><h3 class="gold">🏆 Certifs cloud + ERP</h3></div><ul class="dlist">
-<li><span class="k"><strong>AWS Cloud Practitioner CLF-C02</strong> (~€100)</span><span class="v pos">Année 2-3</span><div class="note">Valide EBN5 + VTEC. EC2, S3, Lambda, IAM, pricing cloud. Datacenter AWS à Bruxelles.</div></li>
-<li><span class="k"><strong>SAP TS410 — SAP S/4HANA Overview</strong> (gratuit via SAP Learning)</span><span class="v pos">Année 3</span><div class="note">Valide PLG3. Examen gratuit via SAP Learning Hub. Très valorisé en Belgique.</div></li>
-</ul></div>
-
-<h2 class="section-title cyan">🗣️ Soft Skills · <em>ICO1 + 2GB5</em></h2>
-<div class="card"><ul class="dlist">
-<li><span class="k"><strong>ICO1</strong> — Information et communication professionnelles</span><span class="v">40p · 3 ECTS</span><div class="note">Les livres Carnegie + Cialdini + Voss de ta liste couvrent ça mieux que n'importe quel cours.</div></li>
-<li><span class="k"><strong>2GB5</strong> — Langue en situation appliquée UE2</span><span class="v">80p · 7 ECTS</span><div class="note">Ton plan néerlandais couvre ça. Certif cible : CNaVT B2 (mois 24).</div></li>
-</ul></div>
-
-<h2 class="section-title">Timeline certifs · <em>11 certifs en 3 ans</em></h2>
-<div class="card"><ul class="dlist">
-<li><span class="k">1. <strong>PCEP Python</strong> (~€60)</span><span class="v pos">Avant sept.</span></li>
-<li><span class="k">2. <strong>CompTIA A+ Core 1</strong> (~€253)</span><span class="v">Oct-Déc an.1</span></li>
-<li><span class="k">3. <strong>CompTIA A+ Core 2</strong> (~€253)</span><span class="v">Jan-Mars an.1</span></li>
-<li><span class="k">4. <strong>CompTIA Network+</strong> (~€370)</span><span class="v">Avr-Juin an.1</span></li>
-<li><span class="k">5. <strong>Meta Front-End Dev</strong> (gratuit audit)</span><span class="v">Année 1-2</span></li>
-<li><span class="k">6. <strong>Oracle SQL Associate</strong> (~€245)</span><span class="v">Sept-Nov an.2</span></li>
-<li><span class="k">7. <strong>Oracle Java OCA</strong> (~€245)</span><span class="v">Jan-Mars an.2</span></li>
-<li><span class="k">8. <strong>Google Data Analytics</strong> (gratuit audit)</span><span class="v">Année 2</span></li>
-<li><span class="k">9. <strong>PSM I Scrum</strong> (~€150)</span><span class="v">Avr-Mai an.2</span></li>
-<li><span class="k">10. <strong>AWS Cloud Practitioner</strong> (~€100)</span><span class="v">Année 3</span></li>
-<li><span class="k">11. <strong>SAP TS410</strong> (gratuit)</span><span class="v">Année 3</span></li>
-</ul></div>
-<div class="callout callout-tip"><strong>Budget total · ~€1 676 sur 3 ans.</strong> 4 certifs gratuites (Meta, Google, SAP en audit). Les 7 payantes = €1 676 étalées. Avec le Vinted qui tourne, <em>~2-3 mois de profit</em>. Chaque certif passée APRÈS avoir étudié le cours → tu ne paies l'examen que quand tu es prêt.</div>
-
-<h2 class="section-title">Rotation d'étude <em>pré-septembre</em></h2>
-<div class="day-row"><div class="day-tag">LUN</div><div class="day-content"><strong>Programmation</strong> → <span class="book">Think Python</span> 1 chap/lundi → puis <span class="book">Head First Java</span></div></div>
-<div class="day-row"><div class="day-tag">MAR</div><div class="day-content"><strong>SQL</strong> → <span class="book">Head First SQL</span> 1 chap/mardi → puis <span class="book">Learning SQL</span></div></div>
-<div class="day-row"><div class="day-tag">MER</div><div class="day-content"><strong>Réseaux</strong> → <span class="vid">Network+ vidéos Meyers</span> 2-3 vidéos/mer</div></div>
-<div class="day-row"><div class="day-tag">JEU</div><div class="day-content"><strong>Web</strong> → <span class="book">Learning Web Design</span> 1 chap + coder</div></div>
-<div class="day-row"><div class="day-tag">VEN</div><div class="day-content"><strong>Algo + Maths + Hardware</strong> → alterner <span class="book">Grokking Algo</span> / <span class="book">Head First Stats</span> / <span class="vid">A+ vidéos Prof Messer</span></div></div>
-<div class="day-row"><div class="day-tag">WE</div><div class="day-content">Révision + projets + mock exams certif. Si OK : <span class="book">Linux Command Line</span></div></div>
-</section>
+<section class="page" id="p-nutrition"><div class="lazy-placeholder" data-lazy-id="p-nutrition" style="padding:40px;text-align:center;color:#888;font-size:14px;">Chargement...</div></section>
 
 
-<!-- ============================================================= -->
+<section class="page" id="p-epfc"><div class="lazy-placeholder" data-lazy-id="p-epfc" style="padding:40px;text-align:center;color:#888;font-size:14px;">Chargement...</div></section>
+
+
+
 <!-- TAB : CODE -->
-<!-- ============================================================= -->
-<section class="page" id="p-code" data-page="code">
-<div class="page-header">
-<h1 class="page-title">Progression Code</h1>
-<p class="page-sub">De <em>Hello World</em> à <em>ingénieur junior</em> — chaque plateforme a son rôle, chaque phase son verdict.</p>
-</div>
 
-<div class="callout callout-info"><strong>La règle :</strong> tu ne passes à la plateforme suivante <em>que</em> quand tu fais 80% des exos de la précédente sans galérer. Ce n'est pas une course — c'est une échelle.</div>
+<section class="page" id="p-code" data-page="code"><div class="lazy-placeholder" data-lazy-id="p-code" style="padding:40px;text-align:center;color:#888;font-size:14px;">Chargement...</div></section>
 
-<h2 class="section-title jade">Phase 0 · <em>fondations absolues</em></h2>
-<div class="phase">
-<div class="phase-head"><span class="phase-tag">M1-M4 · avant EPFC</span><h3>Syntaxe & réflexes de base</h3></div>
-<ul class="dlist">
-<li><span class="k"><strong>CodingBat</strong> <span class="muted">(gratuit)</span></span><span class="v pos">Commence ici</span><div class="note">Python + Java. 300+ mini-exos ultra-courts. Objectif : faire les 100 premiers Python Warmup + String-1 + List-1 avant septembre. 15min/jour suffit.</div></li>
-<li><span class="k"><strong>Edabit</strong> <span class="muted">(gratuit)</span></span><span class="v pos">En parallèle</span><div class="note">Gamifié, progression par niveaux. Parfait pour les soirs où CodingBat t'ennuie. Fais les "Very Easy" en série jusqu'à ce que ça coule.</div></li>
-<li><span class="k"><strong>freeCodeCamp</strong> <span class="muted">(gratuit, certifs inclus)</span></span><span class="v info">Option web</span><div class="note">Parcours "Responsive Web Design" (300h mais tu passes plus vite) = complément parfait pour WEB1 d'EPFC. Certif gratuit à la fin.</div></li>
-</ul>
-</div>
 
-<h2 class="section-title sapphire">Phase 1 · <em>consolidation</em></h2>
-<div class="phase">
-<div class="phase-head"><span class="phase-tag">Année 1 EPFC · M5-M14</span><h3>Patterns & résolution</h3></div>
-<ul class="dlist">
-<li><span class="k"><strong>Exercism</strong> <span class="muted">(gratuit, avec mentorat humain)</span></span><span class="v pos">Indispensable</span><div class="note">Track Python puis Java. Gros avantage : un mentor review ton code gratuitement. Tu apprends <em>le style</em>, pas juste "ça compile".</div></li>
-<li><span class="k"><strong>Codewars</strong> <span class="muted">(gratuit)</span></span><span class="v pos">Quotidien</span><div class="note">Katas par niveau (8 kyu = débutant → 1 kyu = avancé). Objectif : 5 kyu à la fin de l'année 1. Tu compares ta solution à celles des autres = bond de niveau.</div></li>
-<li><span class="k"><strong>CS50 Harvard</strong> <span class="muted">(gratuit sur edX)</span></span><span class="v info">Bonus</span><div class="note">Le cours d'intro CS le plus reconnu au monde. C, Python, SQL, structures de données. Si tu le finis, tu as un avantage énorme sur tes camarades EPFC.</div></li>
-</ul>
-</div>
-
-<h2 class="section-title flame">Phase 2 · <em>technique d'entretien</em></h2>
-<div class="phase">
-<div class="phase-head"><span class="phase-tag">Année 2 EPFC · M15-M26</span><h3>LeetCode, HackerRank, algos</h3></div>
-<ul class="dlist">
-<li><span class="k"><strong>LeetCode</strong> <span class="muted">(freemium — les Easy suffisent)</span></span><span class="v pos">Le standard</span><div class="note">Fais le <em>NeetCode 150</em> (liste curée, gratuite sur neetcode.io). Couvre tous les patterns d'entretien : two pointers, sliding window, DP, graphes. 150 problèmes = 6 mois à ~1/jour.</div></li>
-<li><span class="k"><strong>HackerRank</strong> <span class="muted">(gratuit)</span></span><span class="v pos">Certifs CV</span><div class="note">Passe les <em>Skills Certifications</em> : Python (Basic puis Intermediate), Java (Basic), Problem Solving (Basic), SQL (Basic puis Intermediate). Gratuit, sur ton profil LinkedIn en 1 clic.</div></li>
-<li><span class="k"><strong>Advent of Code</strong> <span class="muted">(gratuit, tous les décembres)</span></span><span class="v info">Tradition</span><div class="note">25 puzzles, 1/jour en décembre. Bloque tes soirées de décembre pour ça pendant l'EPFC. Ta communauté grandit ici.</div></li>
-</ul>
-</div>
-
-<h2 class="section-title violet">Phase 3 · <em>domaine IA/Data</em></h2>
-<div class="phase">
-<div class="phase-head"><span class="phase-tag">Année 3 EPFC · M27+</span><h3>Kaggle + projets portfolio</h3></div>
-<ul class="dlist">
-<li><span class="k"><strong>Kaggle</strong> <span class="muted">(gratuit)</span></span><span class="v pos">Spécialisation IA</span><div class="note">Commence par les <em>Kaggle Learn</em> micro-cours (Intro to ML, Intermediate ML, Pandas, Data Viz). Puis compete : objectif <em>Expert tier</em> année 3.</div></li>
-<li><span class="k"><strong>Hugging Face</strong> <span class="muted">(gratuit)</span></span><span class="v pos">Portfolio LLM</span><div class="note">Course NLP + Deep RL + Audio. Tes projets finaux vont ici (Spaces publics).</div></li>
-<li><span class="k"><strong>GitHub pro</strong></span><span class="v info">Le vrai CV</span><div class="note">Contrib open-source régulière, README propres, README.md avec démos GIF. C'est <em>ça</em> que les recruteurs regardent — pas LeetCode.</div></li>
-</ul>
-</div>
-
-<h2 class="section-title">CV Tech par mois <em>(ce qui apparaît au recruteur)</em></h2>
-<div class="card"><ul class="dlist">
-<li><span class="k"><strong>M3</strong> — CodingBat 100% Python Warmup</span><span class="v muted">Personnel, pas sur CV</span></li>
-<li><span class="k"><strong>M6</strong> — HackerRank Python Basic + PCEP</span><span class="v pos">+2 lignes CV</span></li>
-<li><span class="k"><strong>M12</strong> — freeCodeCamp Responsive + CompTIA A+ Core 1</span><span class="v pos">+2 lignes</span></li>
-<li><span class="k"><strong>M18</strong> — HackerRank Python Intermediate + SQL + Oracle SQL</span><span class="v pos">+3 lignes</span></li>
-<li><span class="k"><strong>M24</strong> — Oracle Java OCA + Meta Front-End + Google Data + PSM I</span><span class="v pos">CV solide</span></li>
-<li><span class="k"><strong>M30</strong> — 3 projets Kaggle + Hugging Face Spaces + AWS CP</span><span class="v pos">CV IA-ready</span></li>
-<li><span class="k"><strong>M36 (diplôme)</strong> — SAP TS410 + portfolio GitHub + stage</span><span class="v warn">CV complet</span></li>
-</ul></div>
-
-<div class="callout callout-focus"><strong>Le CV idéal au diplôme (M36)</strong> = Bachelor EPFC · 11 certifs tech · 5+ projets GitHub dont 2 IA · contrib open-source · LinkedIn à jour · stage terminé. <em>Il y a des seniors avec moins que ça.</em></div>
-</section>
-
-<!-- ============================================================= -->
 <!-- TAB : IA -->
-<!-- ============================================================= -->
-<section class="page" id="p-ia" data-page="ia">
-<div class="page-header">
-<h1 class="page-title">Parcours IA · 30 mois</h1>
-<p class="page-sub">De <em>zéro ML</em> à <em>ingénieur IA/LLM</em> employable. En parallèle d'EPFC, avec le bachelor comme fondation CS et l'IA comme spécialisation.</p>
-</div>
 
-<div class="callout callout-info"><strong>Python d'abord.</strong> Les ressources IA assument que tu codes en Python. Si tu démarres, commence par CodingBat + Think Python <em>en parallèle</em> des premières leçons Kaggle Learn — pas besoin d'attendre d'être "prêt".</div>
-
-<h2 class="section-title jade">Phase 1 · <em>Fondations Data</em> <span class="muted">M5-M8</span></h2>
-<div class="phase">
-<div class="phase-head"><span class="phase-tag">Python + Maths + Pandas</span><h3>Les outils avant les modèles</h3></div>
-<ul class="dlist">
-<li><span class="k"><strong>Python for Data Analysis</strong> (Wes McKinney, 3e éd.)</span><span class="v">📘 O'Reilly</span><div class="note">Pandas by its creator. NumPy, Pandas, Matplotlib. 2-3 chap/semaine. Le livre référence.</div></li>
-<li><span class="k"><strong>Kaggle Learn</strong> — Python + Pandas + Data Viz</span><span class="v pos">Gratuit</span><div class="note">3 micro-cours de 4-7h chacun. Certif après chaque. Parfait pour alterner avec le livre.</div></li>
-<li><span class="k"><strong>Khan Academy</strong> — Algèbre linéaire + stats + calcul</span><span class="v pos">Gratuit</span><div class="note">Juste ce qu'il te faut. Pas besoin de re-faire Mat Sup.</div></li>
-</ul>
-<div class="callout callout-tip"><strong>Livrable M8 :</strong> 2 notebooks Kaggle publics (EDA propre sur 2 datasets).</div>
-</div>
-
-<h2 class="section-title sapphire">Phase 2 · <em>ML Classique</em> <span class="muted">M9-M14</span></h2>
-<div class="phase">
-<div class="phase-head"><span class="phase-tag">Scikit-learn + théorie</span><h3>Régression, classification, clustering</h3></div>
-<ul class="dlist">
-<li><span class="k"><strong>Hands-On Machine Learning</strong> (Aurélien Géron, 3e éd.)</span><span class="v">📘 O'Reilly · La bible</span><div class="note">Parties I & II. Les chapitres 2-9. Fais les exos à la fin de chaque chap. ~4-6 mois à rythme soutenable.</div></li>
-<li><span class="k"><strong>StatQuest YouTube</strong> (Josh Starmer)</span><span class="v pos">Gratuit</span><div class="note">Pour chaque algo du Géron, regarde le StatQuest correspondant. Les deux ensemble = compréhension profonde.</div></li>
-<li><span class="k"><strong>Andrew Ng — ML Specialization</strong> (Coursera)</span><span class="v info">Audit gratuit</span><div class="note">3 cours. Le classique absolu. Fais-le en alternance avec Géron si tu veux plus de profondeur math.</div></li>
-</ul>
-<div class="callout callout-tip"><strong>Livrable M14 :</strong> 1 compétition Kaggle tentée (ex. Titanic + House Prices) · 1 projet ML complet sur GitHub.</div>
-</div>
-
-<h2 class="section-title flame">Phase 3 · <em>Deep Learning</em> <span class="muted">M15-M19</span></h2>
-<div class="phase">
-<div class="phase-head"><span class="phase-tag">PyTorch + vision + NLP</span><h3>Réseaux de neurones from scratch</h3></div>
-<ul class="dlist">
-<li><span class="k"><strong>Hands-On ML Géron</strong> — Partie III (DL)</span><span class="v">📘 Chap. 10-19</span><div class="note">Keras puis TensorFlow. CNN, RNN, Transformers. La suite logique.</div></li>
-<li><span class="k"><strong>Deep Learning with PyTorch</strong> (Stevens, Antiga)</span><span class="v">📘 Manning</span><div class="note">PyTorch = standard industrie 2026. Ce livre est le plus accessible.</div></li>
-<li><span class="k"><strong>fast.ai — Practical Deep Learning</strong></span><span class="v pos">Gratuit · top-down</span><div class="note">Jeremy Howard. Approche "code d'abord, théorie ensuite". Complémentaire à Géron (bottom-up).</div></li>
-<li><span class="k"><strong>Andrej Karpathy YouTube</strong> — Neural Networks: Zero to Hero</span><span class="v pos">Gratuit · or pur</span><div class="note">Il construit GPT from scratch en vidéo. À voir 2 fois.</div></li>
-</ul>
-<div class="callout callout-tip"><strong>Livrable M19 :</strong> 1 CNN sur image custom + 1 modèle NLP fine-tuné (Hugging Face).</div>
-</div>
-
-<h2 class="section-title violet">Phase 4 · <em>Gen AI & LLMs</em> <span class="muted">M20-M24</span></h2>
-<div class="phase">
-<div class="phase-head"><span class="phase-tag">Transformers, RAG, agents</span><h3>Le cœur de l'industrie 2026</h3></div>
-<ul class="dlist">
-<li><span class="k"><strong>Hugging Face NLP Course</strong></span><span class="v pos">Gratuit</span><div class="note">Transformers, fine-tuning, déploiement. Le plus à jour qui existe.</div></li>
-<li><span class="k"><strong>Natural Language Processing with Transformers</strong> (Tunstall et al.)</span><span class="v">📘 O'Reilly</span><div class="note">Le livre Hugging Face officiel. Parfait compagnon du cours.</div></li>
-<li><span class="k"><strong>LangChain + LangGraph docs</strong></span><span class="v pos">Gratuit</span><div class="note">Construire des agents. Direct utilité pour ton projet JARVIS-style.</div></li>
-<li><span class="k"><strong>Building LLMs for Production</strong> (Louis-François Bouchard)</span><span class="v">📘 2024+</span><div class="note">RAG, eval, déploiement. Un des rares livres à jour sur le sujet.</div></li>
-</ul>
-<div class="callout callout-tip"><strong>Livrable M24 :</strong> 1 chatbot RAG déployé (Hugging Face Space) + 1 mini-agent LangGraph. <em>Tu peux commencer JARVIS ici.</em></div>
-</div>
-
-<h2 class="section-title gold">Phase 5 · <em>MLOps</em> <span class="muted">M25-M27</span></h2>
-<div class="phase">
-<div class="phase-head"><span class="phase-tag">Docker · CI/CD · cloud · monitoring</span><h3>Mettre un modèle en prod</h3></div>
-<ul class="dlist">
-<li><span class="k"><strong>Designing Machine Learning Systems</strong> (Chip Huyen)</span><span class="v">📘 O'Reilly · bible MLOps</span></li>
-<li><span class="k"><strong>Made With ML — MLOps course</strong></span><span class="v pos">Gratuit · madewithml.com</span><div class="note">Goku Mohandas. Bout en bout : data → modèle → prod → monitoring.</div></li>
-<li><span class="k"><strong>AWS SageMaker</strong> ou <strong>GCP Vertex AI</strong></span><span class="v info">Synergies</span><div class="note">L'AWS Cloud Practitioner de ton EPFC ouvre la porte. Tier gratuit AWS suffit pour apprendre.</div></li>
-</ul>
-</div>
-
-<h2 class="section-title pink">Phase 6 · <em>Spécialisations</em> <span class="muted">M28-M30</span></h2>
-<div class="phase">
-<div class="phase-head"><span class="phase-tag">Une ou deux verticales</span><h3>Choisis ton couloir</h3></div>
-<ul class="dlist">
-<li><span class="k"><strong>Computer Vision</strong></span><span class="v info">YOLO, Segment Anything, Stable Diffusion</span></li>
-<li><span class="k"><strong>Agents & systèmes multi-agents</strong></span><span class="v info">LangGraph avancé, CrewAI, AutoGen · ton projet JARVIS pourrait être ça</span></li>
-<li><span class="k"><strong>RL</strong></span><span class="v info">Stable Baselines3, Unity ML-Agents · si tu joues avec Godot</span></li>
-<li><span class="k"><strong>Time Series / Finance</strong></span><span class="v info">Prophet, Darts · utile pour Vinted analytics</span></li>
-</ul>
-</div>
-
-<h2 class="section-title cyan">Certifs IA transverses <span class="muted">budget ~€615</span></h2>
-<div class="card"><ul class="dlist">
-<li><span class="k"><strong>TensorFlow Developer Certificate</strong> (~€100)</span><span class="v pos">M19+</span></li>
-<li><span class="k"><strong>AWS ML Specialty</strong> (~€280)</span><span class="v">M27+</span></li>
-<li><span class="k"><strong>Hugging Face Certifications</strong> (gratuites)</span><span class="v pos">M24</span></li>
-<li><span class="k"><strong>DeepLearning.AI specializations</strong> (Coursera, audit gratuit)</span><span class="v pos">Bonus</span></li>
-</ul></div>
-
-<h2 class="section-title">Portfolio cible · <em>8 projets au diplôme</em></h2>
-<div class="card"><ol class="dlist">
-<li><span class="k">1. EDA notebook Kaggle</span><span class="v muted">M8</span></li>
-<li><span class="k">2. Modèle ML classique end-to-end</span><span class="v muted">M14</span></li>
-<li><span class="k">3. CNN vision sur dataset custom</span><span class="v muted">M18</span></li>
-<li><span class="k">4. NLP fine-tuning HuggingFace</span><span class="v muted">M19</span></li>
-<li><span class="k">5. Chatbot RAG déployé</span><span class="v muted">M23</span></li>
-<li><span class="k">6. Agent LangGraph (ex. mini-JARVIS)</span><span class="v muted">M26</span></li>
-<li><span class="k">7. Modèle en prod (Docker + cloud)</span><span class="v muted">M28</span></li>
-<li><span class="k">8. Projet capstone spécialisation</span><span class="v muted">M30</span></li>
-</ol></div>
-
-<h2 class="section-title">12 compétences résumé <em>(skills LinkedIn)</em></h2>
-<div class="card"><div class="note" style="padding:6px 0">
-Python · SQL · Pandas · Scikit-learn · PyTorch · TensorFlow · Hugging Face · LangChain/LangGraph · Docker · AWS · MLOps · Git
-</div></div>
-
-<div class="callout callout-focus"><strong>Rythme réaliste · 6-8h/semaine IA</strong> = 1 livre tous les 2-3 mois + 1 projet/trimestre. Tu as 30 mois, pas 6. La patience paie exponentiellement ici.</div>
-</section>
+<section class="page" id="p-ia" data-page="ia"><div class="lazy-placeholder" data-lazy-id="p-ia" style="padding:40px;text-align:center;color:#888;font-size:14px;">Chargement...</div></section>
 
 
-<!-- ============================================================= -->
+
 <!-- TAB : VINTED -->
-<!-- ============================================================= -->
+
 <section class="page" id="p-vinted" data-page="vinted">
 <div class="page-header">
 <h1 class="page-title">Vinted · <em>Business Plan</em></h1>
@@ -1711,128 +1528,20 @@ Python · SQL · Pandas · Scikit-learn · PyTorch · TensorFlow · Hugging Face
 
 </section>
 
-<!-- ============================================================= -->
+
 <!-- TAB : NL -->
-<!-- ============================================================= -->
-<section class="page" id="p-nl" data-page="nl">
-<div class="page-header">
-<h1 class="page-title">Néerlandais · A0 → B2</h1>
-<p class="page-sub">Bruxelles bilingue · EPFC <em>2GB5</em> · CNaVT B2 à M24. Zéro euro dépensé en méthodes — tout gratuit en Région.</p>
-</div>
 
-<h2 class="section-title jade">Phase A1 · <em>M1-M6</em></h2>
-<div class="phase">
-<div class="phase-head"><span class="phase-tag">Bases absolues</span><h3>Survie + 500 mots</h3></div>
-<ul class="dlist">
-<li><span class="k"><strong>Taalgarage</strong> (ta ressource actuelle)</span><span class="v pos">Continue · niveau 1</span><div class="note">Structurée, progressive, parfaite pour démarrer. Fais 100% des exos.</div></li>
-<li><span class="k"><strong>Duolingo</strong> <span class="muted">15min/jour</span></span><span class="v pos">Gratuit</span><div class="note">Pas suffisant seul, mais excellent pour la répétition espacée + quotidienneté. Streak = habitude.</div></li>
-<li><span class="k"><strong>Muntpunt</strong> (Bibliothèque NL rue Léopold)</span><span class="v info">Gratuit · inscription 10€/an</span><div class="note">Lectures faciles niveau A1 (livres "Lees &amp; Lach"). Ambiance néerlandophone totale.</div></li>
-</ul>
-</div>
-
-<h2 class="section-title sapphire">Phase A2 · <em>M7-M12</em></h2>
-<div class="phase">
-<div class="phase-head"><span class="phase-tag">Autonomie quotidienne</span><h3>1 500 mots + tout le présent</h3></div>
-<ul class="dlist">
-<li><span class="k"><strong>Brulingua</strong> <span class="muted">(Bruxelles Formation — 100% gratuit pour Bruxellois)</span></span><span class="v pos">🎯 À faire absolument</span><div class="note">Plateforme en ligne + tuteur · A1 → B2. <em>Gratuit</em> si tu es inscrit Actiris ou résident Bruxelles.</div></li>
-<li><span class="k"><strong>NedBox</strong></span><span class="v pos">Gratuit · nedbox.be</span><div class="note">Vidéos VRT + exos compréhension. Niveau A2-B1. Parfait complément.</div></li>
-<li><span class="k"><strong>Zinvol met boeken</strong> — Muntpunt</span><span class="v info">Club lecture NL</span><div class="note">1 livre/mois A2. Discussion avec natifs.</div></li>
-</ul>
-</div>
-
-<h2 class="section-title flame">Phase B1 · <em>M13-M18</em></h2>
-<div class="phase">
-<div class="phase-head"><span class="phase-tag">Conversations réelles</span><h3>3 000 mots + passé + futur</h3></div>
-<ul class="dlist">
-<li><span class="k"><strong>Tandem</strong> <span class="muted">(app gratuite)</span></span><span class="v pos">Échange FR ↔ NL</span><div class="note">Un natif NL veut pratiquer son FR = tu pratiques le NL. 30min/semaine minimum.</div></li>
-<li><span class="k"><strong>iTalki</strong></span><span class="v info">€8-15/heure avec tuteur</span><div class="note">Investissement ponctuel quand tu veux débloquer l'oral. 1 séance/sem pendant 2 mois suffit.</div></li>
-<li><span class="k"><strong>ver-taal.com</strong></span><span class="v pos">Gratuit</span><div class="note">Exos grammaire + compréhension pour francophones. Le site gouvernement néerlandais.</div></li>
-<li><span class="k"><strong>VRT NWS + Het Laatste Nieuws</strong></span><span class="v pos">Gratuit · actus</span><div class="note">10 min/jour = lecture quotidienne obligatoire à ce stade.</div></li>
-</ul>
-</div>
-
-<h2 class="section-title violet">Phase B2 · <em>M19-M24 · objectif CNaVT</em></h2>
-<div class="phase">
-<div class="phase-head"><span class="phase-tag">Niveau professionnel</span><h3>5 000+ mots · abstraction</h3></div>
-<ul class="dlist">
-<li><span class="k"><strong>Huis van het Nederlands Brussel</strong></span><span class="v pos">Cours gratuits/subsidiés</span><div class="note">Conseil placement + orientation cours B2. Indispensable ici.</div></li>
-<li><span class="k"><strong>CNaVT Profiel Educatief Startbekwaam</strong> (examen B2)</span><span class="v warn">€75 · M24</span><div class="note">Certif B2 reconnue partout en BE + NL. Valide 2GB5 EPFC. Passer en juin M24.</div></li>
-<li><span class="k"><strong>Podcasts NL</strong> — <em>De Correspondent</em>, <em>De Volkskrant</em>, <em>NOS Journaal</em></span><span class="v pos">Gratuit</span><div class="note">30min trajet = 30min NL quotidien. Compréhension native = B2 réel.</div></li>
-</ul>
-</div>
-
-<h2 class="section-title gold">Règles de progression</h2>
-<div class="card"><ul class="dlist">
-<li><span class="k"><strong>Quotidien &gt; intensif</strong></span><span class="v pos">20min/jour &gt; 3h/semaine</span></li>
-<li><span class="k"><strong>Immersion passive</strong></span><span class="v info">Netflix en VO NL + sous-titres NL dès B1</span></li>
-<li><span class="k"><strong>Erreur = normal</strong></span><span class="v muted">Les Belges pardonnent le FR avec accent. Ils pardonneront ton NL avec accent.</span></li>
-<li><span class="k"><strong>Zone Dansaert</strong></span><span class="v pos">Sortir dans les quartiers NL de Bruxelles · forçage d'usage</span></li>
-</ul></div>
-
-<div class="callout callout-focus"><strong>Budget total 24 mois :</strong> <em>~€85</em> (CNaVT €75 + Muntpunt €10). Tout le reste est gratuit en Région bruxelloise si tu actionnes Brulingua + Huis van het Nederlands.</div>
-</section>
+<section class="page" id="p-nl" data-page="nl"><div class="lazy-placeholder" data-lazy-id="p-nl" style="padding:40px;text-align:center;color:#888;font-size:14px;">Chargement...</div></section>
 
 
-<!-- ============================================================= -->
+
 <!-- TAB : CHESS -->
-<!-- ============================================================= -->
-<section class="page" id="p-chess" data-page="chess">
-<div class="page-header">
-<h1 class="page-title">Échecs · 500 → 1500 Elo</h1>
-<p class="page-sub">Discipline mentale · reconnaissance de patterns · gratuit à 100%. Sur Chess.com.</p>
-</div>
 
-<h2 class="section-title jade">Phase 1 · <em>0 → 800 Elo</em></h2>
-<div class="phase">
-<div class="phase-head"><span class="phase-tag">M1-M3 · Bases absolues</span><h3>Arrête de perdre sur des fourchettes</h3></div>
-<ul class="dlist">
-<li><span class="k"><strong>Chess.com — Lessons basiques</strong></span><span class="v pos">Gratuit (partiel)</span><div class="note">Règles + mat simples + principes d'ouverture. 10 leçons suffisent.</div></li>
-<li><span class="k"><strong>GothamChess</strong> — YouTube (Levy Rozman)</span><span class="v pos">Gratuit</span><div class="note">Playlist "How to Play Chess". Le maître de la pédagogie en 2026. Drôle + rigoureux.</div></li>
-<li><span class="k"><strong>Puzzles Rush</strong> <span class="muted">(Chess.com)</span></span><span class="v pos">10 min/jour</span><div class="note">La mécanique la plus rentable pour monter. 1 session quotidienne &gt; 10 parties rapides.</div></li>
-<li><span class="k"><strong>Ouverture fixe</strong> : Italien + Caro-Kann</span><span class="v info">Simple, robuste</span><div class="note">Ne change pas d'ouverture avant 1000 Elo. La répétition bat la variété à ce niveau.</div></li>
-</ul>
-</div>
+<section class="page" id="p-chess" data-page="chess"><div class="lazy-placeholder" data-lazy-id="p-chess" style="padding:40px;text-align:center;color:#888;font-size:14px;">Chargement...</div></section>
 
-<h2 class="section-title sapphire">Phase 2 · <em>800 → 1200 Elo</em></h2>
-<div class="phase">
-<div class="phase-head"><span class="phase-tag">M4-M9 · Tactiques & patterns</span><h3>Voir les combinaisons</h3></div>
-<ul class="dlist">
-<li><span class="k"><strong>Bobby Fischer Teaches Chess</strong></span><span class="v">📘 Classique</span><div class="note">Mates en 1, 2, 3 coups. Méthode programmée. Réponds aux diagrammes. 150 exercices.</div></li>
-<li><span class="k"><strong>ChessBrah — Building Habits</strong> (YouTube)</span><span class="v pos">Gratuit</span><div class="note">Aman Hambleton joue de 0 à 2000 Elo en suivant 5 règles simples. Série culte.</div></li>
-<li><span class="k"><strong>Puzzles thématiques</strong> <span class="muted">(Chess.com ou Lichess gratuit)</span></span><span class="v pos">Plus rentable que Puzzle Rush</span><div class="note">Fourchettes → clouages → enfilades → découvertes. 20 puzzles/jour du même thème jusqu'à maîtrise.</div></li>
-<li><span class="k"><strong>Chessable</strong> — <em>Short &amp; Sweet</em> (gratuit)</span><span class="v pos">Répétition espacée</span><div class="note">Ouvertures apprises par SRS. Choisis <em>Caro-Kann Short &amp; Sweet</em> + <em>Italian Short &amp; Sweet</em>.</div></li>
-</ul>
-</div>
 
-<h2 class="section-title flame">Phase 3 · <em>1200 → 1500 Elo</em></h2>
-<div class="phase">
-<div class="phase-head"><span class="phase-tag">M10+ · Stratégie &amp; finales</span><h3>Comprendre les positions</h3></div>
-<ul class="dlist">
-<li><span class="k"><strong>100 Endgames You Must Know</strong> (Jesús de la Villa)</span><span class="v">📘 Le livre de finales</span></li>
-<li><span class="k"><strong>Logical Chess: Move by Move</strong> (Chernev)</span><span class="v">📘 Stratégie narrative</span><div class="note">33 parties expliquées coup par coup. Le livre qui fait cliquer les "pourquoi".</div></li>
-<li><span class="k"><strong>How to Reassess Your Chess</strong> (Silman)</span><span class="v">📘 Stratégie avancée</span></li>
-<li><span class="k"><strong>Daniel Naroditsky</strong> — YouTube Speedruns</span><span class="v pos">Gratuit · or</span><div class="note">GM qui joue à ton niveau Elo et commente. Le meilleur enseignant online.</div></li>
-</ul>
-</div>
-
-<h2 class="section-title violet">Objectifs mensuels</h2>
-<div class="card"><ul class="dlist">
-<li><span class="k">M1 — Règles solides + premier mat</span><span class="v muted">500 Elo</span></li>
-<li><span class="k">M3 — Ouverture auto · 10 parties/sem</span><span class="v muted">700</span></li>
-<li><span class="k">M6 — Fischer fini · tactiques basiques auto</span><span class="v muted">900</span></li>
-<li><span class="k">M9 — Chessable ouvertures · patterns tactiques</span><span class="v muted">1100</span></li>
-<li><span class="k">M12 — De la Villa (partiel) + Chernev</span><span class="v muted">1300</span></li>
-<li><span class="k">M18 — Silman · analyse post-partie systématique</span><span class="v pos">1500</span></li>
-</ul></div>
-
-<div class="callout callout-tip"><strong>Intégration routine :</strong> 10-15 min puzzles à l'éveil (café) + 1 partie rapide 10+5 le soir + 1 partie classique 30+0 samedi. Pas plus — au-delà, la courbe rendement chute vite et l'EPFC passe avant.</div>
-
-<div class="callout callout-focus"><strong>Règle Ben Finegold :</strong> <em>« Perds tes parties rapidement, analyse-les longuement. »</em> 1 partie + 10 min d'analyse &gt; 5 parties blitz à la suite.</div>
-</section>
-
-<!-- ============================================================= -->
 <!-- TAB : FINANCE -->
-<!-- ============================================================= -->
+
 <section class="page" id="p-finance" data-page="finance">
 <div class="page-header">
 <h1 class="page-title">Finance · <em>Plan 10 ans</em></h1>
@@ -1928,57 +1637,14 @@ Python · SQL · Pandas · Scikit-learn · PyTorch · TensorFlow · Hugging Face
 </section>
 
 
-<!-- ============================================================= -->
+
 <!-- TAB : SOCIAL / LIENS -->
-<!-- ============================================================= -->
-<section class="page" id="p-social" data-page="social">
-<div class="page-header">
-<h1 class="page-title">Liens · <em>Relations humaines</em></h1>
-<p class="page-sub">Le plan personnel ne sert à rien si tu t'isoles. L'humain est un animal social — l'ignorer = dépression à M8.</p>
-</div>
 
-<div class="callout callout-warn"><strong>Le piège du haut-performeur :</strong> 18-24 mois d'intensité → <em>"plus tard je verrai mes amis"</em> → isolement → effondrement. Cette page est une ceinture de sécurité.</div>
+<section class="page" id="p-social" data-page="social"><div class="lazy-placeholder" data-lazy-id="p-social" style="padding:40px;text-align:center;color:#888;font-size:14px;">Chargement...</div></section>
 
-<h2 class="section-title jade">Non-négociables hebdomadaires</h2>
-<div class="card"><ul class="dlist">
-<li><span class="k"><strong>1 appel famille/semaine</strong></span><span class="v pos">Dimanche après-midi · fixe</span><div class="note">Parents, frères/sœurs. 20-30min. Mets-le dans ton agenda comme un meeting pro.</div></li>
-<li><span class="k"><strong>1 soirée libre / semaine</strong></span><span class="v pos">Samedi soir ou autre</span><div class="note">Pas d'étude, pas de sport, pas de Vinted. Temps pour vie perso, amis, sortie, rien. <em>Sacré.</em></div></li>
-<li><span class="k"><strong>1 contact ami / semaine</strong></span><span class="v info">Message, café, appel</span><div class="note">Même 10 min suffisent. Tour de rôle : un ami différent chaque semaine.</div></li>
-<li><span class="k"><strong>Temps fils</strong> (si applicable)</span><span class="v flame">Priorité absolue</span><div class="note">Le plan entier existe pour pouvoir lui offrir mieux. Ne sacrifie jamais les moments avec lui pour 30 minutes d'étude.</div></li>
-</ul></div>
 
-<h2 class="section-title sapphire">Règles anti-isolement</h2>
-<div class="card"><ul class="dlist">
-<li><span class="k"><strong>Dire oui par défaut</strong></span><span class="v info">Aux invitations sociales raisonnables</span><div class="note">Dire non t'isole cumulativement. Une sortie "perdue" = 5h, soutenable. Un ami perdu = 10 ans pour le remplacer.</div></li>
-<li><span class="k"><strong>Programmer les retrouvailles</strong></span><span class="v pos">Pas "quand on pourra"</span><div class="note">"Vendredi 19h, Place Flagey" &gt; "faudrait qu'on se voie". Le concret seul se concrétise.</div></li>
-<li><span class="k"><strong>Être honnête sur le rythme</strong></span><span class="v muted">"Je suis en bachelor, je peux 1×/mois — mais vraiment"</span><div class="note">Les vrais amis comprennent. Ceux qui pas = tri naturel sain.</div></li>
-<li><span class="k"><strong>Pas de messages vocaux de 10 min</strong></span><span class="v warn">Règle de santé mentale</span><div class="note">Un appel de 5 min bat un vocal de 10 min et un chat Whatsapp de 30 échanges.</div></li>
-</ul></div>
-
-<h2 class="section-title flame">Ressources Bruxelles <em>(gratuites)</em></h2>
-<div class="card"><ul class="dlist">
-<li><span class="k"><strong>Meetup.com</strong> groupes tech + langue</span><span class="v pos">Networking professionnel</span><div class="note">Brussels Python User Group, Bruxelles AI, Tandem NL-FR. 1/mois suffit, pose-le au calendrier.</div></li>
-<li><span class="k"><strong>Huis van het Nederlands — Babbelclub</strong></span><span class="v pos">Gratuit · synergie NL</span><div class="note">Conversation NL + socialisation + progrès linguistique. Combo parfait.</div></li>
-<li><span class="k"><strong>Boules Bouliniste Place du Jeu de Balle</strong></span><span class="v info">Dimanche</span><div class="note">Pour sortir de ta bulle étudiante quelques heures.</div></li>
-<li><span class="k"><strong>Club d'échecs Bruxelles</strong> (CRECC, Cercle Brugmann)</span><span class="v info">~€50/an</span><div class="note">Synergie chess + rencontres. Ambiance bienveillante, tous niveaux.</div></li>
-</ul></div>
-
-<h2 class="section-title violet">Signaux d'alerte · <em>quand consulter</em></h2>
-<div class="card"><ul class="dlist">
-<li><span class="k">Plus envie de voir personne pendant 3+ semaines</span><span class="v warn">Signal</span></li>
-<li><span class="k">Sommeil dégradé malgré routine</span><span class="v warn">Signal</span></li>
-<li><span class="k">Perte d'intérêt pour tout (y compris échecs, lecture)</span><span class="v warn">Signal</span></li>
-<li><span class="k">Pensées noires récurrentes</span><span class="v danger">Consulter rapidement</span></li>
-</ul>
-<div class="note" style="margin-top:12px"><strong>Ressources BE :</strong> Service Santé Mentale de Bruxelles (consultations ~€11/session remboursables) · <strong>Télé-Accueil</strong> 107 (écoute 24/7, gratuit, anonyme) · médecin traitant pour prescription psy au besoin.</div>
-</div>
-
-<div class="callout callout-focus"><strong>Vérité finale :</strong> tu n'as pas lancé ce plan pour devenir une machine d'optimisation seule dans son appart. Tu l'as lancé pour <em>construire une vie qui te rend fier</em>. Les relations font partie de cette vie — pas optionnelles, pas au "plus tard".</div>
-</section>
-
-<!-- ============================================================= -->
 <!-- TAB : PLAN -->
-<!-- ============================================================= -->
+
 <section class="page" id="p-plan" data-page="plan">
 <div class="page-header">
 <h1 class="page-title">Plan d'action</h1>
@@ -2093,7 +1759,7 @@ Python · SQL · Pandas · Scikit-learn · PyTorch · TensorFlow · Hugging Face
 </section>
 
 
-<!-- Sections injectées en statique pour le router natif -->
+
 <section class="page" id="p-trading" data-page="trading">
 <div class="page-kicker">Discipline · Probabilités · Long terme</div>
 <h1 class="page-title">Trading · <em>30 mois</em> · de zéro à propfirm payé</h1>
@@ -2443,9 +2109,7 @@ Python · SQL · Pandas · Scikit-learn · PyTorch · TensorFlow · Hugging Face
 
 <script src="/assets/main.cfc54acb.js"></script>
 
-<!-- ═══════════════════════════════════════════════════════════
-     WRAPPED · récap année (type Spotify Wrapped)
-     ═══════════════════════════════════════════════════════════ -->
+
 <div class="wrapped" id="wrapped" aria-hidden="true">
   <button class="wrapped-close" id="wrapped-close" aria-label="Fermer">✕</button>
   <div class="wrapped-scroller" id="wrapped-scroller">
@@ -2458,9 +2122,7 @@ Python · SQL · Pandas · Scikit-learn · PyTorch · TensorFlow · Hugging Face
   </div>
 </div>
 
-<!-- ═══════════════════════════════════════════════════════════
-     ASK CLAUDE · chat contextuel
-     ═══════════════════════════════════════════════════════════ -->
+
 <div class="ask-claude" id="ask-claude" aria-hidden="true">
   <div class="ac-box">
     <div class="ac-head">
@@ -2481,9 +2143,7 @@ Python · SQL · Pandas · Scikit-learn · PyTorch · TensorFlow · Hugging Face
       <input type="text" id="ac-input" placeholder="Pose ta question… (ex. pourquoi ma constance baisse ?)" autocomplete="off">
       <button class="ac-send" id="ac-send">→</button>
     </div>
-    <!-- Mode "clé API locale" désactivé pour raisons de sécurité (audit Apr 2026).
-     Le coach utilise désormais EXCLUSIVEMENT la Netlify Function /.netlify/functions/coach.
-     Pour réactiver (déconseillé) : retirer style="display:none" et hidden ci-dessous. -->
+    
 <div class="ac-config" style="display:none" hidden aria-hidden="true">
       <details>
         <summary>⚙️ Configurer la clé API Claude</summary>
@@ -2647,7 +2307,7 @@ Python · SQL · Pandas · Scikit-learn · PyTorch · TensorFlow · Hugging Face
     renderWrapped();
     wrapped.classList.add('open');
     wrapped.setAttribute('aria-hidden', 'false');
-    try { navigator.vibrate && navigator.vibrate(10); } catch(_){}
+    try { navigator.vibrate && navigator.vibrate(10); } catch(e){ window.__warn && window.__warn('audit-catch', e); }
   });
   closeBtn.addEventListener('click', () => {
     wrapped.classList.remove('open');
@@ -2934,9 +2594,7 @@ Python · SQL · Pandas · Scikit-learn · PyTorch · TensorFlow · Hugging Face
 })();
 </script>
 
-<!-- ═══════════════════════════════════════════════════════════
-     AMBIENT MODE · plein écran focus — clock XXL + current block
-     ═══════════════════════════════════════════════════════════ -->
+
 <div class="ambient" id="ambient" aria-hidden="true">
   <button class="ambient-close" id="ambient-close" aria-label="Quitter le mode Ambient">✕</button>
   <div class="amb-clock" id="amb-clock">—</div>
@@ -3016,14 +2674,14 @@ Python · SQL · Pandas · Scikit-learn · PyTorch · TensorFlow · Hugging Face
     tick();
     ambInterval = setInterval(tick, 1000);
     // Try fullscreen if supported
-    try { document.documentElement.requestFullscreen && document.documentElement.requestFullscreen(); } catch(_){}
-    try { navigator.vibrate && navigator.vibrate(10); } catch(_){}
+    try { document.documentElement.requestFullscreen && document.documentElement.requestFullscreen(); } catch(e){ window.__warn && window.__warn('audit-catch', e); }
+    try { navigator.vibrate && navigator.vibrate(10); } catch(e){ window.__warn && window.__warn('audit-catch', e); }
   }
   function close(){
     amb.classList.remove('open');
     amb.setAttribute('aria-hidden', 'true');
     if (ambInterval){ clearInterval(ambInterval); ambInterval = null; }
-    try { document.exitFullscreen && document.fullscreenElement && document.exitFullscreen(); } catch(_){}
+    try { document.exitFullscreen && document.fullscreenElement && document.exitFullscreen(); } catch(e){ window.__warn && window.__warn('audit-catch', e); }
   }
   ambFab.addEventListener('click', open);
   ambClose.addEventListener('click', close);
@@ -3177,7 +2835,7 @@ Python · SQL · Pandas · Scikit-learn · PyTorch · TensorFlow · Hugging Face
   setServerMode();
   setTimeout(setServerMode, 300);
 })();
-  </script><!-- T1 v2 · bloc supprimé : remplacé par window.__aiCore (XHR + buildContextV2 + Bookmarks + History + Cost guard) --><!-- T1 v2 · bloc supprimé : remplacé par window.__aiCore (XHR + buildContextV2 + Bookmarks + History + Cost guard) --><!-- T1 v2 · bloc supprimé : remplacé par window.__aiCore (XHR + buildContextV2 + Bookmarks + History + Cost guard) --><!-- T1 v2 · bloc supprimé : remplacé par window.__aiCore (XHR + buildContextV2 + Bookmarks + History + Cost guard) --><!-- T1 v2 · bloc supprimé : remplacé par window.__aiCore (XHR + buildContextV2 + Bookmarks + History + Cost guard) --><!-- T1 v2 · bloc supprimé : remplacé par window.__aiCore (XHR + buildContextV2 + Bookmarks + History + Cost guard) -->
+  </script>
   <script>
 (function(){
   if (window.__coachApplyIgnoreV2Installed) return;
@@ -3273,7 +2931,7 @@ Python · SQL · Pandas · Scikit-learn · PyTorch · TensorFlow · Hugging Face
       const current = readCard();
       try {
         localStorage.setItem(STORE_KEY, JSON.stringify(current));
-      } catch (_) {}
+      } catch(e){ window.__warn && window.__warn('audit-catch', e); }
       writeCard(current, true);
       bar.style.display = 'none';
     });
@@ -3281,7 +2939,7 @@ Python · SQL · Pandas · Scikit-learn · PyTorch · TensorFlow · Hugging Face
     ignore.addEventListener('click', function(){
       try {
         localStorage.removeItem(STORE_KEY);
-      } catch (_) {}
+      } catch(e){ window.__warn && window.__warn('audit-catch', e); }
       bar.style.display = 'none';
       if (typeof renderNextAction === 'function') {
         renderNextAction();
@@ -3326,13 +2984,9 @@ Python · SQL · Pandas · Scikit-learn · PyTorch · TensorFlow · Hugging Face
     setInterval(refreshBar, 800);
   }
 })();
-  </script><!-- T1 v2 · bloc supprimé : remplacé par window.__aiCore (XHR + buildContextV2 + Bookmarks + History + Cost guard) --><!-- T1 v2 · bloc supprimé : remplacé par window.__aiCore (XHR + buildContextV2 + Bookmarks + History + Cost guard) --><!-- T1 v2 · bloc supprimé : remplacé par window.__aiCore (XHR + buildContextV2 + Bookmarks + History + Cost guard) --><!-- T1 v2 · bloc supprimé : remplacé par window.__aiCore (XHR + buildContextV2 + Bookmarks + History + Cost guard) --><!-- T1 v2 · bloc supprimé : remplacé par window.__aiCore (XHR + buildContextV2 + Bookmarks + History + Cost guard) --><!-- T1 v2 · bloc supprimé : remplacé par window.__aiCore (XHR + buildContextV2 + Bookmarks + History + Cost guard) --><!-- T1 v2 · bloc supprimé : remplacé par window.__aiCore (XHR + buildContextV2 + Bookmarks + History + Cost guard) --><!-- T1 v2 · bloc supprimé : remplacé par window.__aiCore (XHR + buildContextV2 + Bookmarks + History + Cost guard) --><!-- T1 v2 · bloc supprimé : remplacé par window.__aiCore (XHR + buildContextV2 + Bookmarks + History + Cost guard) --><!-- T1 v2 · bloc supprimé : remplacé par window.__aiCore (XHR + buildContextV2 + Bookmarks + History + Cost guard) -->
+  </script>
 
-<!-- ═══════════════════════════════════════════════════════════
-     CONSOLIDATED AI CORE · v2.0 (T1→T10)
-     Tout-en-un. Anti-double-bind. Bypass des wrappers via XHR.
-     Backward-compat avec localStorage existant.
-     ═══════════════════════════════════════════════════════════ -->
+
 <style id="ai-core-styles-v2">
 /* T10 — Hiérarchie z-index claire pour éviter les overlaps */
 .ai-core-debug-panel{z-index:9998}
@@ -3448,7 +3102,7 @@ window.__aiCoreV2Installed = true;
 const NS = 'dashv2_';
 const sg = (k, d) => { try { return JSON.parse(localStorage.getItem(NS+k)) ?? d; } catch(_) { return d; } };
 const ss = (k, v) => { try { localStorage.setItem(NS+k, JSON.stringify(v)); return true; } catch(_) { return false; } };
-const log = (...args) => { try { console.warn('[aiCore]', ...args); } catch(_){} };
+const log = (...args) => { try { console.warn('[aiCore]', ...args); } catch(e){ window.__warn && window.__warn('audit-catch', e); } };
 
 // ─────────────────────────────────────────────────────────────
 // T6 · COST GUARD officiel
@@ -3600,7 +3254,7 @@ const Bookmarks = {
           data[k] = { key:k, label: KNOWN_DOMAINS[k]||k, text: old[k], updatedAt:'', history:[] };
         }
       });
-    } catch(_){}
+    } catch(e){ window.__warn && window.__warn('audit-catch', e); }
     return data;
   },
 
@@ -3627,7 +3281,7 @@ const Bookmarks = {
       document.querySelectorAll('[data-bookmark-key]').forEach(el => {
         out.push({ key: el.dataset.bookmarkKey, label: el.dataset.bookmarkLabel || '', text: (el.textContent||'').trim() });
       });
-    } catch(_){}
+    } catch(e){ window.__warn && window.__warn('audit-catch', e); }
     return out;
   },
 
@@ -3677,7 +3331,7 @@ function buildContextV2(){
       };
     });
     last30Sum.count = dates.slice(0, 30).length;
-  } catch(_){}
+  } catch(e){ window.__warn && window.__warn('audit-catch', e); }
 
   // Pomodoro state (best-effort)
   let pomo = { active: false };
@@ -4104,7 +3758,7 @@ function rebindCoachModal(){
 // ─────────────────────────────────────────────────────────────
 function showToast(text){
   if (typeof window.showToast === 'function' && window.showToast !== showToast) {
-    try { return window.showToast(text); } catch(_){}
+    try { return window.showToast(text); } catch(e){ window.__warn && window.__warn('audit-catch', e); }
   }
   const t = document.createElement('div');
   t.className = 'ai-core-toast';
@@ -4155,14 +3809,10 @@ if (document.readyState === 'loading'){
 
 })();
 </script>
-<!-- ═══════════════════════════════════════════════════════════
-     FIN AI CORE v2.0
-     ═══════════════════════════════════════════════════════════ -->
 
 
-<!-- ═══════════════════════════════════════════════════════════
-     TRADING · onglet propfirm (ajouté par AI core extension)
-     ═══════════════════════════════════════════════════════════ -->
+
+
 <style id="trading-styles">
 .trd-phase-card{background:linear-gradient(135deg,rgba(167,139,250,.10),rgba(106,165,250,.06));
   border:1px solid var(--border);border-radius:14px;padding:16px;margin:14px 0 18px;}
@@ -4673,10 +4323,7 @@ if (document.readyState === 'loading'){
 </script>
 
 
-<!-- ═══════════════════════════════════════════════════════════
-     ULTIMATE ASSISTANT v3.0
-     Today view · Backup · Health · Voice · Offline · IndexedDB · Quick Capture
-     ═══════════════════════════════════════════════════════════ -->
+
 <style id="ultimate-styles-v3">
 /* ─── TODAY VIEW ─── */
 .today-hero{padding:20px 16px;background:linear-gradient(135deg,rgba(255,107,53,.12),rgba(106,165,250,.06));
@@ -4788,7 +4435,7 @@ window.__ultimateV3 = true;
 const NS = 'dashv2_';
 const sg = (k, d) => { try { return JSON.parse(localStorage.getItem(NS+k)) ?? d; } catch(_){ return d; } };
 const ss = (k, v) => { try { localStorage.setItem(NS+k, JSON.stringify(v)); return true; } catch(_){ return false; } };
-const log = (...a) => { try { console.warn('[v3]', ...a); } catch(_){} };
+const log = (...a) => { try { console.warn('[v3]', ...a); } catch(e){ window.__warn && window.__warn('audit-catch', e); } };
 
 // ═══════════════════════════════════════════════════════════
 // 1. INDEXEDDB (large datasets)
@@ -4914,7 +4561,7 @@ const Backup = {
 
     // localStorage
     for (const k in data.localStorage){
-      try { localStorage.setItem(k, data.localStorage[k]); } catch(_){}
+      try { localStorage.setItem(k, data.localStorage[k]); } catch(e){ window.__warn && window.__warn('audit-catch', e); }
     }
     // IndexedDB
     if (data.idb){
@@ -4974,7 +4621,7 @@ const Backup = {
           const snapJson = await snapRes.json();
           // Track snapshot IDs
           let snapIds = [];
-          try { snapIds = JSON.parse(sg('gist_snapshot_ids', '[]')); } catch(_){}
+          try { snapIds = JSON.parse(sg('gist_snapshot_ids', '[]')); } catch(e){ window.__warn && window.__warn('audit-catch', e); }
           if (!Array.isArray(snapIds)) snapIds = [];
           snapIds.push({ id: snapJson.id, ts: Date.now() });
           // Rotation : garde les 30 derniers, delete les plus anciens
@@ -4985,7 +4632,7 @@ const Backup = {
                 method: 'DELETE',
                 headers: { 'Authorization': 'token '+token }
               });
-            } catch(_){}
+            } catch(e){ window.__warn && window.__warn('audit-catch', e); }
           }
           ss('gist_snapshot_ids', JSON.stringify(snapIds));
           ss('last_gist_weekly_snapshot', Date.now());
@@ -5439,7 +5086,7 @@ const Health = {
         const existing = (await DB.getAll('logs')).find(l => l.date === todayKey) || { date: todayKey };
         Object.assign(existing, { health: data });
         await DB.put('logs', existing);
-      } catch(_){}
+      } catch(e){ window.__warn && window.__warn('audit-catch', e); }
       // Alerte si douleur élevée
       if (data.pain >= 6){
         showToast('⚠️ Douleur ' + data.pain + '/10 — repos obligatoire. Pas de sport ni longue session écran.');
@@ -5683,28 +5330,13 @@ function setupOffline(){
   // Service worker registration (le SW lui-même doit être servi à la racine — voir /sw.js)
   // Pour l'instant on registe en inline via Blob URL — mode dégradé.
   if ('serviceWorker' in navigator){
-    const swCode = `
-      const CACHE = 'ultimate-v3';
-      self.addEventListener('install', e => self.skipWaiting());
-      self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
-      self.addEventListener('fetch', e => {
-        if (e.request.method !== 'GET') return;
-        if (e.request.url.includes('/.netlify/functions/')) return;
-        e.respondWith(
-          caches.open(CACHE).then(cache =>
-            cache.match(e.request).then(hit => hit || fetch(e.request).then(res => {
-              try { cache.put(e.request, res.clone()); } catch(_){}
-              return res;
-            }).catch(() => hit))
-          )
-        );
-      });
-    `;
+    /* Audit Apr 2026 : SW propre via /sw.js avec scope racine.
+       Stratégies : network-first HTML, cache-first /assets/*, network-only API. */
     try {
-      const blob = new Blob([swCode], { type: 'text/javascript' });
-      const url = URL.createObjectURL(blob);
-      navigator.serviceWorker.register(url).catch(e => log('SW register fail (normal en dev local)', e.message));
-    } catch(_){}
+      navigator.serviceWorker.register('/sw.js', { scope: '/' })
+        .then(reg => log('SW registered', reg.scope))
+        .catch(e => log('SW register fail (normal en dev local)', e.message));
+    } catch(e){ window.__warn && window.__warn('audit-sw-register', e); }
   }
 }
 
@@ -5775,16 +5407,14 @@ if (document.readyState === 'loading'){
 </script>
 
 
-<!-- ═══════════════════════════════════════════════════════════
-     HOTFIX v3.1 — Tabs rebind + voice permission + section placement
-     ═══════════════════════════════════════════════════════════ -->
+
 <script id="hotfix-v3-1">
 (function(){
 'use strict';
 if (window.__hotfix31) return;
 window.__hotfix31 = true;
 
-const log = (...a) => { try { console.warn('[hotfix3.1]', ...a); } catch(_){} };
+const log = (...a) => { try { console.warn('[hotfix3.1]', ...a); } catch(e){ window.__warn && window.__warn('audit-catch', e); } };
 
 // ────────────────────────────────────────────────────────────
 // FIX 1 : ROUTER ÉTENDU pour les nouveaux onglets
@@ -6045,17 +5675,14 @@ if (document.readyState === 'loading'){
 </script>
 
 
-<!-- ═══════════════════════════════════════════════════════════
-     HOTFIX v3.2 — Notification guards + Voice command parser
-     + Weekly Review fix + SW disable + Voice "mets une task"
-     ═══════════════════════════════════════════════════════════ -->
+
 <script id="hotfix-v3-2">
 (function(){
 'use strict';
 if (window.__hotfix32) return;
 window.__hotfix32 = true;
 
-const log = (...a) => { try { console.warn('[hotfix3.2]', ...a); } catch(_){} };
+const log = (...a) => { try { console.warn('[hotfix3.2]', ...a); } catch(e){ window.__warn && window.__warn('audit-catch', e); } };
 
 // ════════════════════════════════════════════════════════════
 // FIX 1 : Notification API guard global
@@ -6759,7 +6386,7 @@ function loadSettings(){
   });
   const ghToken = document.getElementById('gh-token');
   if (ghToken){
-    try { ghToken.value = JSON.parse(localStorage.getItem('dashv2_gh_token') || '""'); } catch(_){}
+    try { ghToken.value = JSON.parse(localStorage.getItem('dashv2_gh_token') || '""'); } catch(e){ window.__warn && window.__warn('audit-catch', e); }
   }
   const ghPush = document.getElementById('gh-push');
   if (ghPush) ghPush.addEventListener('click', pushGist);
@@ -6820,7 +6447,7 @@ async function restoreData(e){
     const data = JSON.parse(text);
     if (!data.localStorage) throw new Error('Format invalide');
     for (const k in data.localStorage){
-      try { localStorage.setItem(k, data.localStorage[k]); } catch(_){}
+      try { localStorage.setItem(k, data.localStorage[k]); } catch(e){ window.__warn && window.__warn('audit-catch', e); }
     }
     showToast('Restauré. Rechargement…');
     location.reload();
@@ -6869,7 +6496,7 @@ async function pullGist(){
     const file = json.files['ultimate-backup.json'];
     const data = JSON.parse(file.content);
     for (const k in data.localStorage){
-      try { localStorage.setItem(k, data.localStorage[k]); } catch(_){}
+      try { localStorage.setItem(k, data.localStorage[k]); } catch(e){ window.__warn && window.__warn('audit-catch', e); }
     }
     showToast('Pulled. Rechargement…');
     location.reload();
@@ -6997,7 +6624,7 @@ function executeCleanup(previewEl, groups){
   if (!confirm(`Supprimer ${keys.length} entrée${keys.length > 1 ? 's' : ''} (${kb} KB) ?\n\nCette action est irréversible.\nFais un backup avant si besoin.`)) return;
 
   let n = 0;
-  keys.forEach(k => { try { localStorage.removeItem(k); n++; } catch(_){} });
+  keys.forEach(k => { try { localStorage.removeItem(k); n++; } catch(e){ window.__warn && window.__warn('audit-catch', e); } });
 
   previewEl.innerHTML = `<div style="font:12px var(--f-mono,monospace);color:#34d399;padding:8px 0">✓ ${n} entrée${n > 1 ? 's' : ''} supprimée${n > 1 ? 's' : ''} — ${kb} KB libérés.</div>`;
   if (typeof refreshStorageInfo === 'function') refreshStorageInfo();
@@ -7191,7 +6818,7 @@ function loadPhase(){
     if (data.phase !== undefined) sel.value = data.phase;
     if (data.start) start.value = data.start;
     if (data.notes) notes.value = data.notes;
-  } catch(_){}
+  } catch(e){ window.__warn && window.__warn('audit-catch', e); }
 
   save.addEventListener('click', () => {
     const data = {
@@ -7229,9 +6856,7 @@ setTimeout(() => {
 </script>
 
 
-<!-- ═══════════════════════════════════════════════════════════
-     FIXES v3.4 — Largeur mobile · Priorités couleurs · Routine adaptative
-     ═══════════════════════════════════════════════════════════ -->
+
 <style id="fixes-v34">
 /* ════════════════════════════════════════════════════════
    FIX 1 · Largeur mobile (anti-débordement horizontal)
@@ -7784,10 +7409,7 @@ window.__v34 = {
 </script>
 
 
-<!-- ═══════════════════════════════════════════════════════════
-     FINAL FIX v3.5 — mobile routing, no duplicated home/TOC,
-     priority colors, adaptive routine validation.
-     ═══════════════════════════════════════════════════════════ -->
+
 <style id="final-v35-css">
 /* Verrou mobile : aucun enfant ne doit forcer la largeur écran */
 html, body, #root, .app, .shell, .main, main, section.page, .page, .card, .panel, .module, .hero, .masthead, .masthead-inner, .tabs-wrap, .tabs{
@@ -8080,7 +7702,7 @@ section.page.active{
   }
   function writeJSON(key, val){
     try { localStorage.setItem(NS + key, JSON.stringify(val)); }
-    catch(_){}
+    catch(e){ window.__warn && window.__warn('audit-catch', e); }
   }
 
   // Mise à jour de module_progress (avec totalMinutes cumulé)
@@ -8374,7 +7996,7 @@ section.page.active{
     } catch(_){ return []; }
   }
   function saveTasksToday(tasks){
-    try { localStorage.setItem(tasksKey(), JSON.stringify(tasks)); } catch(_){}
+    try { localStorage.setItem(tasksKey(), JSON.stringify(tasks)); } catch(e){ window.__warn && window.__warn('audit-catch', e); }
   }
 
   function parseHM(s){
@@ -8450,7 +8072,7 @@ section.page.active{
       const events = getFixedEvents();
       if (!events.length) {
         if (!skipApply && typeof window.applyRoutineStateV35 === 'function'){
-          setTimeout(() => { try { window.applyRoutineStateV35(); } catch(_){} }, 0);
+          setTimeout(() => { try { window.applyRoutineStateV35(); } catch(e){ window.__warn && window.__warn('audit-catch', e); } }, 0);
         }
         return;
       }
@@ -8495,7 +8117,7 @@ section.page.active{
 
       // Trigger V35 pour recalculer décalages
       if (!skipApply && typeof window.applyRoutineStateV35 === 'function'){
-        setTimeout(() => { try { window.applyRoutineStateV35(); } catch(_){} }, 0);
+        setTimeout(() => { try { window.applyRoutineStateV35(); } catch(e){ window.__warn && window.__warn('audit-catch', e); } }, 0);
       }
     } catch(e){
       console.error('[renderRoutineFixedEvents]', e);
@@ -8530,8 +8152,8 @@ window.__finalV35 = true;
 const NS = 'dashv2_';
 const safeJson = (v,d) => { try { return v == null ? d : JSON.parse(v); } catch(_){ return d; } };
 const get = (k,d) => safeJson(localStorage.getItem(NS+k), d);
-const set = (k,v) => { try { localStorage.setItem(NS+k, JSON.stringify(v)); } catch(_){} };
-const del = k => { try { localStorage.removeItem(NS+k); } catch(_){} };
+const set = (k,v) => { try { localStorage.setItem(NS+k, JSON.stringify(v)); } catch(e){ window.__warn && window.__warn('audit-catch', e); } };
+const del = k => { try { localStorage.removeItem(NS+k); } catch(e){ window.__warn && window.__warn('audit-catch', e); } };
 const dkey = (d=new Date()) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 const pageName = p => (p?.dataset?.page || (p?.id || '').replace(/^p-/,'')).toLowerCase();
 const canon = name => {
@@ -8544,7 +8166,7 @@ const canon = name => {
 function removeDuplicateHomeAndTocs(){
   document.querySelectorAll('.tab[data-tab="today"], #p-today, nav.toc, .toc').forEach(el => el.remove());
   if (canon(get('tab','home')) === 'home' && get('tab','home') === 'today') set('tab','home');
-  try { window.buildTocs = function(){ return false; }; } catch(_){}
+  try { window.buildTocs = function(){ return false; }; } catch(e){ window.__warn && window.__warn('audit-catch', e); }
 }
 
 function ensureCriticalTabs(){
@@ -8587,13 +8209,13 @@ function activateTabV35(raw, opts={}){
   set('tab', target);
   window.__activeTab = target;
   const at = document.querySelector(`.tab[data-tab="${target}"]`);
-  if (at && at.scrollIntoView) { try { at.scrollIntoView({behavior:'smooth', inline:'center', block:'nearest'}); } catch(_){} }
+  if (at && at.scrollIntoView) { try { at.scrollIntoView({behavior:'smooth', inline:'center', block:'nearest'}); } catch(e){ window.__warn && window.__warn('audit-catch', e); } }
   if (!opts.noScroll) { try { window.scrollTo({top:0, behavior:'smooth'}); } catch(_){ window.scrollTo(0,0); } }
   setTimeout(() => {
-    try { if (target === 'stats' && typeof window.renderStats === 'function') window.renderStats(); } catch(_){}
-    try { if (target === 'sport' && typeof window.renderTrainingSport === 'function') window.renderTrainingSport(); } catch(_){}
-    try { if (target === 'routine' && typeof window.applyWakeOffset === 'function') window.applyWakeOffset(); } catch(_){}
-    try { if (target === 'routine') decorateRoutineV35(); } catch(_){}
+    try { if (target === 'stats' && typeof window.renderStats === 'function') window.renderStats(); } catch(e){ window.__warn && window.__warn('audit-catch', e); }
+    try { if (target === 'sport' && typeof window.renderTrainingSport === 'function') window.renderTrainingSport(); } catch(e){ window.__warn && window.__warn('audit-catch', e); }
+    try { if (target === 'routine' && typeof window.applyWakeOffset === 'function') window.applyWakeOffset(); } catch(e){ window.__warn && window.__warn('audit-catch', e); }
+    try { if (target === 'routine') decorateRoutineV35(); } catch(e){ window.__warn && window.__warn('audit-catch', e); }
     try { decoratePrioritiesV35(); } catch(_){}
     try { fixOverflowReport(); } catch(_){}
   }, 80);
@@ -8689,7 +8311,7 @@ function activeShift(){ return (document.querySelector('.shift-view:not(.hidden)
 function routineKey(){ return 'routine_v35_' + dkey() + '_' + activeShift(); }
 function getVisibleRoutineItems(){ return Array.from(document.querySelectorAll('.shift-view:not(.hidden) .tl-item[data-time]')); }
 function offsetForShift(shift){
-  try { if (typeof window.currentOffsetForShift === 'function') return window.currentOffsetForShift(shift) || 0; } catch(_){}
+  try { if (typeof window.currentOffsetForShift === 'function') return window.currentOffsetForShift(shift) || 0; } catch(e){ window.__warn && window.__warn('audit-catch', e); }
   const w = get('wake_'+dkey(), null);
   return w && (!w.shift || w.shift === shift) ? (w.offset || 0) : 0;
 }
@@ -8748,8 +8370,8 @@ function applyRoutineStateV35(){
     const chk = item.querySelector('.tl-check-v35');
     if (chk){ chk.classList.toggle('checked', !!done); chk.textContent = done ? '✓' : ''; }
   });
-  try { if (typeof window.highlightNow === 'function') window.highlightNow(); } catch(_){}
-  try { if (typeof window.renderNextAction === 'function') window.renderNextAction(); } catch(_){}
+  try { if (typeof window.highlightNow === 'function') window.highlightNow(); } catch(e){ window.__warn && window.__warn('audit-catch', e); }
+  try { if (typeof window.renderNextAction === 'function') window.renderNextAction(); } catch(e){ window.__warn && window.__warn('audit-catch', e); }
 }
 function decorateRoutineV35(){
   document.querySelectorAll('.shift-view.hidden .tl-check-v35').forEach(b => b.remove());
@@ -8800,9 +8422,9 @@ function decorateRoutineV35(){
     tl.insertAdjacentElement('afterend', reset);
   }
   // Inject fixed-time task events and recalculate schedule (pass true → skip its internal applyRoutineStateV35)
-  try { if (window.renderRoutineFixedEvents) window.renderRoutineFixedEvents(true); } catch(_){}
+  try { if (window.renderRoutineFixedEvents) window.renderRoutineFixedEvents(true); } catch(e){ window.__warn && window.__warn('audit-catch', e); }
   // Sync global task completion state into routine before rendering
-  try { if (window.__globalTaskSync) window.__globalTaskSync._updateStateFromGlobal(); } catch(_){}
+  try { if (window.__globalTaskSync) window.__globalTaskSync._updateStateFromGlobal(); } catch(e){ window.__warn && window.__warn('audit-catch', e); }
   (window.applyRoutineStateV35 || applyRoutineStateV35)();
 }
 
@@ -8871,10 +8493,7 @@ window.decorateRoutineV35   = decorateRoutineV35;
 </script>
 
 
-<!-- ═══════════════════════════════════════════════════════════
-     FIX v3.7 — swipe conflict, overflow, sommaire, duplicate home,
-     priority colors, routine task completion
-     ═══════════════════════════════════════════════════════════ -->
+
 <style id="fix-v37-css">
 
 /* ── 1. Trading / all tabs: no horizontal overflow ── */
@@ -9113,12 +8732,7 @@ if (document.readyState === 'loading'){
 })();
 </script>
 
-<!-- ═══════════════════════════════════════════════════════════
-     GLOBAL TASK SYNC — v1.0
-     Central completion store.  Any check/uncheck anywhere in the
-     app is mirrored to `dashv2_global_done` and immediately
-     reflected in the Routine timeline.
-     ═══════════════════════════════════════════════════════════ -->
+
 <script id="global-task-sync">
 (function(){
 'use strict';
@@ -9129,7 +8743,7 @@ const NS        = 'dashv2_';
 const STORE_KEY = NS + 'global_done';
 
 function readStore(){ try { return JSON.parse(localStorage.getItem(STORE_KEY) || '{}'); } catch(_){ return {}; } }
-function writeStore(d){ try { localStorage.setItem(STORE_KEY, JSON.stringify(d)); } catch(_){} }
+function writeStore(d){ try { localStorage.setItem(STORE_KEY, JSON.stringify(d)); } catch(e){ window.__warn && window.__warn('audit-catch', e); } }
 
 // ── Keyword extractor ────────────────────────────────────────────────────
 // Returns unique lowercase keywords of ≥4 chars from a task title.
@@ -9258,7 +8872,7 @@ const sync = window.__globalTaskSync = {
     });
 
     if (changed) {
-      try { localStorage.setItem(NS + rk, JSON.stringify(state)); } catch(_){}
+      try { localStorage.setItem(NS + rk, JSON.stringify(state)); } catch(e){ window.__warn && window.__warn('audit-catch', e); }
     }
     return changed;
   },
@@ -9303,7 +8917,7 @@ const sync = window.__globalTaskSync = {
         }
       });
       if (dirty) writeStore(store);
-    } catch(_){}
+    } catch(e){ window.__warn && window.__warn('audit-catch', e); }
 
     // Task list done state
     try {
@@ -9401,6 +9015,18 @@ if (document.readyState === 'loading') {
 
 })();
 </script>
+<script id="audit-disable-routine-os-v1">
+/* Audit Apr 2026 — Le panel Routine OS V1 est caché par CSS (#ud-routine-checkin-engine-v1-panel{display:none!important}).
+   Mais son JavaScript (37 KB) tourne quand même : crée le panel, attache des observers,
+   met en route des renders périodiques. Ça gaspille 5-10% de RAM/CPU sur mobile.
+   
+   Fix : on set le flag d'init à `true` AVANT que le composant ne se charge,
+   ce qui le fait early-return immédiatement (sans rien créer ni observer).
+   
+   Pour le réactiver un jour : commenter ce script, le composant repartira.
+*/
+window.__UD_ROUTINE_CHECKIN_ENGINE_V1__ = true;
+</script>
 <script id="ud-routine-checkin-engine-v1">
 (() => {
   'use strict';
@@ -9423,7 +9049,7 @@ if (document.readyState === 'loading') {
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   }
   function read(key, fallback) { try { const raw = localStorage.getItem(NS + key); return raw ? JSON.parse(raw) : fallback; } catch (_) { return fallback; } }
-  function write(key, value) { try { localStorage.setItem(NS + key, JSON.stringify(value)); } catch (_) {} }
+  function write(key, value) { try { localStorage.setItem(NS + key, JSON.stringify(value)); } catch(e){ window.__warn && window.__warn('audit-catch', e); } }
   function toMin(value) { if (!value) return null; const s = String(value).trim().toLowerCase().replace('h', ':'); const m = s.match(/^(\d{1,2})(?::(\d{2}))?$/); if (!m) return null; const h = Number(m[1]); const mn = Number(m[2] || 0); if (h < 0 || h > 23 || mn < 0 || mn > 59) return null; return h * 60 + mn; }
   function fromMin(minutes) { const v = Math.max(0, Math.min(1439, Math.round(minutes))); return `${pad(Math.floor(v / 60))}:${pad(v % 60)}`; }
   function overlaps(aStart, aEnd, bStart, bEnd) { return aStart < bEnd && bStart < aEnd; }
@@ -9552,7 +9178,7 @@ if (document.readyState === 'loading') {
     const p = progress(); const prev = p[module] || {}; const resume = data.nextAction || data.endPoint || data.resume || data.lastPage || data.nextFocus || data.nextProgression || data.notes || '';
     p[module] = { ...prev, ...data, module, resume, updatedAt: nowIso(), totalMinutes: Number(prev.totalMinutes || 0) + Number(data.minutes || data.duration || 0) };
     saveProgress(p);
-    try { if (window.Bookmarks && ['epfc','coding','nl','lecture','ia'].includes(module)) { const map = { coding:'code', lecture:'read' }; const key = map[module] || module; window.Bookmarks.set(key, resume || data.endPoint || data.nextAction || 'À reprendre', module.toUpperCase()); } } catch (_) {}
+    try { if (window.Bookmarks && ['epfc','coding','nl','lecture','ia'].includes(module)) { const map = { coding:'code', lecture:'read' }; const key = map[module] || module; window.Bookmarks.set(key, resume || data.endPoint || data.nextAction || 'À reprendre', module.toUpperCase()); } } catch(e){ window.__warn && window.__warn('audit-catch', e); }
   }
 
   function findConflict(start, end, placed) { return placed.slice().sort((a,b) => a.startMin - b.startMin).find(b => overlaps(start, end, b.startMin, b.endMin)); }
@@ -10568,7 +10194,7 @@ if (document.readyState === 'loading') {
 
 
 
-<!-- HOTFIX MOBILE OS+ v2.0 — pas de MutationObserver infini, bouton compact fiable -->
+
 <script id="audit-visibility-handler">
 /* Pause les rafraîchissements lourds quand le tab est en background.
    Étendu Apr 2026 : registre d'intervals pausables + audit setInterval audit (point 8 TODO).
@@ -10606,7 +10232,7 @@ if (document.readyState === 'loading') {
     for (const e of registry){
       if (e.id === null){
         // Refresh immédiat au retour pour ne pas attendre le prochain tick
-        try { if (typeof e.onResume === 'function') e.onResume(); else e.fn(); } catch(_){}
+        try { if (typeof e.onResume === 'function') e.onResume(); else e.fn(); } catch(e){ window.__warn && window.__warn('audit-catch', e); }
         e.id = setInterval(e.fn, e.ms);
       }
     }
@@ -10700,6 +10326,72 @@ if (document.readyState === 'loading') {
   } else {
     setTimeout(showBanner, 3000);
   }
+})();
+</script>
+<script id="audit-lazy-pages">
+/* Audit Apr 2026 — Lazy rendering des pages 100% statiques.
+   Au boot, ces 7 pages sont des placeholders légers.
+   Au premier clic sur leur onglet, leur HTML est injecté.
+   
+   Pages concernées : nutrition, epfc, code, ia, nl, chess, social (lecture seule).
+   Pages NON-touchées : home, routine, sport, finance, etc. (interactives).
+   
+   Gain : -51,051 chars dans le DOM au boot.
+*/
+(function(){
+  var LAZY_CONTENT = {"p-nutrition": "\n<div class=\"page-kicker\">Carburant</div>\n<h1 class=\"page-title\">Nutrition · <em>€300/mois</em></h1>\n<p class=\"page-lead\">Six repas par jour. 180g de protéines. 3L d'eau minimum. Supplémentation calibrée. Deux boissons signature — shot matin et élixir pendant la journée — qui font la différence sur 12 mois.</p>\n\n<div class=\"stats stats-4\">\n<div class=\"stat\"><div class=\"stat-v jade mono\">2800</div><div class=\"stat-l\">kcal</div></div>\n<div class=\"stat\"><div class=\"stat-v flame mono\">180g</div><div class=\"stat-l\">Protéines</div></div>\n<div class=\"stat\"><div class=\"stat-v blue mono\">310g</div><div class=\"stat-l\">Glucides</div></div>\n<div class=\"stat\"><div class=\"stat-v amber mono\">85g</div><div class=\"stat-l\">Lipides</div></div>\n</div>\n\n<h2 class=\"section-title amber\">Boissons <em>signature</em></h2>\n<div class=\"recipe\">\n<span class=\"recipe-tag amber\">Avant sport · à jeun</span>\n<div class=\"recipe-name\">🔥 Shot Feu Intérieur</div>\n<div class=\"recipe-body\">Eau tiède + ½ citron + miel + 5g gingembre + ½ c.à.c. curcuma + <strong>poivre noir</strong> + cayenne.<br><br>\n<strong>Pourquoi poivre noir</strong> — La pipérine augmente la biodisponibilité de la curcumine de <strong>2000 %</strong> (Shoba 1998, Planta Medica). Sans poivre, tu n'absorbes quasi rien de la curcumine.<br>\n<strong>Pourquoi cayenne</strong> — La capsaïcine active la thermogenèse → métabolisme + circulation.<br>\n<strong>Gingembre</strong> — anti-inflammatoire, anti-nausée, digestion (Mashhadi 2013, IJPM).\n</div>\n</div>\n\n<div class=\"recipe blue\">\n<span class=\"recipe-tag pink\">Gourde 1L · journée</span>\n<div class=\"recipe-name\">🫀 Élixir Grenade-Betterave</div>\n<div class=\"recipe-body\">250ml grenade + 250ml betterave (fraîche mixée = €0.50/L) + 400ml eau + ½ citron vert + gingembre + miel.<br><br>\n<strong>Betterave</strong> — riche en nitrates → oxyde nitrique (NO) → vasodilatation → <strong>+20 % endurance</strong> (Jones 2014, Sports Medicine).<br>\n<strong>Grenade</strong> — anthocyanines → antioxydant puissant, récupération musculaire, santé cardiovasculaire.\n</div>\n</div>\n\n<div class=\"callout callout-tip\">\n<strong>🚰 Hydratation</strong> — objectif <strong>3L d'eau/jour minimum</strong> (eau + élixir + thé). Mesure : 1 gourde 1L d'élixir + 2 gourdes d'eau. Urine jaune pâle = bien hydraté. Urine foncée = boire plus. La déshydratation de 2% réduit les performances cognitives de 10-20% (Masento 2014, Nutrients).\n</div>\n\n<h2 class=\"section-title\">Les <em>6 repas</em></h2>\n<div class=\"card\">\n<ul class=\"dlist\">\n<li><span class=\"k\"><strong>R1 post-sport</strong> · omelette 4 œufs + 2 blancs + avoine + banane + cacao</span><span class=\"v info\">42g P · 640 kcal</span></li>\n<li><span class=\"k\"><strong>R2</strong> · fromage blanc + amandes + pomme + graines de citrouille</span><span class=\"v info\">22g P · 310</span></li>\n<li><span class=\"k\"><strong>R3</strong> · 200g protéine + 200g glucide + 150g légumes (meal prep)</span><span class=\"v info\">45g P · 550</span></li>\n<li><span class=\"k\"><strong>R4</strong> · whey 30g + banane + 30g avoine</span><span class=\"v info\">32g P · 380</span></li>\n<li><span class=\"k\"><strong>R5</strong> · 200g protéine différente + 150g glucide + 200g légumes</span><span class=\"v info\">42g P · 490</span></li>\n<li><span class=\"k\"><strong>R6</strong> · fromage blanc 250g + beurre cacahuète + chia + baies</span><span class=\"v info\">28g P · 280</span></li>\n</ul>\n</div>\n\n<h2 class=\"section-title\">💊 Stack <em>compléments</em> · ~€50/mois</h2>\n\n<div class=\"card\">\n<div class=\"subsection-title flame\">🏋️ Performance & Muscle</div>\n<ul class=\"dlist\">\n<li><span class=\"k\">Whey protéine 30g</span><span class=\"v\">Post-training</span><div class=\"note\">Récupération musculaire. Isolate si intolérant lactose.</div></li>\n<li><span class=\"k\">Créatine monohydrate 5g/j</span><span class=\"v\">N'importe quand</span><div class=\"note\">+8-14% force. Aussi prouvé pour la mémoire et la cognition (Rae 2003, Psychopharmacology).</div></li>\n<li><span class=\"k\">Caféine 100-200mg (café OU pilule)</span><span class=\"v\">Avant sport ou étude matin</span><div class=\"note\">Dernière dose avant 14h. Pas de café après. Demi-vie = 5h.</div></li>\n</ul>\n\n<div class=\"subsection-title blue\" style=\"margin-top:10px\">🧠 Concentration & Énergie mentale</div>\n<ul class=\"dlist\">\n<li><span class=\"k\">L-Théanine 200mg</span><span class=\"v\">Avec le café</span><div class=\"note\">Acide aminé du thé vert. Élimine le jitter de la caféine → focus calme. Combo caféine + L-théanine = nootropique le plus prouvé (Einöther 2010). €10/mois.</div></li>\n<li><span class=\"k\">Oméga 3 · DHA 1000mg + EPA 500mg</span><span class=\"v\">Dîner</span><div class=\"note\">DHA = 60% du cerveau. Mémoire, concentration, humeur. Prendre avec repas gras. Min 1000mg DHA/j. €15/mois.</div></li>\n<li><span class=\"k\">Créatine (déjà listée)</span><span class=\"v\">—</span><div class=\"note\">Boost cognitif prouvé : +13% mémoire de travail chez les non-mangeurs de viande. Tu manges de la viande mais le boost existe sous stress/fatigue.</div></li>\n</ul>\n\n<div class=\"subsection-title violet\" style=\"margin-top:10px\">😴 Sommeil & Récupération</div>\n<ul class=\"dlist\">\n<li><span class=\"k\">Magnésium bisglycinate 400mg</span><span class=\"v\">Soir</span><div class=\"note\">Sommeil profond + récupération + testostérone. Bisglycinate &gt; oxide pour absorption.</div></li>\n<li><span class=\"k\">Zinc bisglycinate 25mg</span><span class=\"v\">Soir</span><div class=\"note\">Immunité + testostérone. Pas en même temps que café (inhibe absorption).</div></li>\n<li><span class=\"k\">Ashwagandha KSM-66 600mg</span><span class=\"v\">Soir</span><div class=\"note\">Adaptogène. Cortisol -22%, testo +14.7%, anxiété -44% (méta-analyse Bonilla 2022). 6-8 sem pour effet. Cycler 8 on / 2 off.</div></li>\n</ul>\n\n<div class=\"subsection-title amber\" style=\"margin-top:10px\">☀️ Santé générale</div>\n<ul class=\"dlist\">\n<li><span class=\"k\">Vitamine D3 4000 UI/j</span><span class=\"v\">Repas gras</span><div class=\"note\">Belgique = peu de soleil. 70% des Belges sont déficients. Essentiel pour immunité, humeur, testo, absorption calcium.</div></li>\n<li><span class=\"k\">Vitamine K2 MK-7 100mcg</span><span class=\"v\">Avec la D3</span><div class=\"note\">Synergie avec D3 : dirige le calcium vers les os (pas les artères). <strong>Toujours combiner D3+K2.</strong></div></li>\n<li><span class=\"k\">Rhodiola Rosea 300mg (optionnel)</span><span class=\"v\">Matin, jours d'étude intense</span><div class=\"note\">Adaptogène anti-fatigue. Performance cognitive sous stress (Shevtsov 2003). Ne pas combiner avec ashwagandha le même jour.</div></li>\n</ul>\n</div>\n\n<div class=\"callout callout-tip\">\n<strong>Timing compléments · résumé</strong><br><br>\n<strong>Matin (petit-déj)</strong> · café + L-théanine 200mg + D3 4000UI + K2 100mcg + créatine 5g. Rhodiola 300mg les jours d'étude intense.<br>\n<strong>Soir (dîner ou caséine)</strong> · Oméga 3 (1000mg DHA) + magnésium 400mg + zinc 25mg + ashwagandha 600mg (pas les soirs de rhodiola).<br><br>\n<strong>Budget</strong> · whey ~€20/mois + compléments ~€30/mois = <strong>~€50/mois total</strong>. MyProtein.be ou iHerb.\n</div>\n\n", "p-epfc": "\n<div class=\"page-kicker\">Bachelor · Développement d'applications</div>\n<h1 class=\"page-title\">EPFC · <em>25 cours</em> · 11 certifs</h1>\n<p class=\"page-lead\">Chaque cours EPFC mappé à sa ressource O'Reilly (livre + vidéo) <em>et</em> à la certif industrie qui le valide. En septembre, tu n'apprends pas en aveugle : tu sais exactement quelle certif tu vises pour chaque module.</p>\n\n<h2 class=\"section-title\">🖥️ Programmation · <em>PRM3 + PRO3 + PAN2 + ANC4 + PRI2</em></h2>\n<div class=\"card\"><ul class=\"dlist\">\n<li><span class=\"k\"><strong>PRM3</strong> — Principes algorithmiques et programmation</span><span class=\"v\">120p · 8 ECTS</span><div class=\"note\">📘 Think Python 3rd Ed. + Grokking Algorithms 2nd Ed. · 📹 Complete Python Course (5h, Diwan) + Python for Beginners (14h, Steele)</div></li>\n<li><span class=\"k\"><strong>PRO3</strong> — Programmation orientée objet</span><span class=\"v\">120p · 9 ECTS</span><div class=\"note\">📘 Head First Java 3rd Ed. + Head First Design Patterns 2nd Ed. · 📹 Java Programming for Complete Beginners (15h38)</div></li>\n<li><span class=\"k\"><strong>PAN2</strong> — Analyse informatique</span><span class=\"v\">60p · 4 ECTS</span><div class=\"note\">📘 Head First OO Analysis and Design · 📹 UML and Object-Oriented Design Foundations (O'Reilly)</div></li>\n<li><span class=\"k\"><strong>ANC4</strong> — Projet d'analyse et de conception</span><span class=\"v\">100p · 10 ECTS</span><div class=\"note\">UML, use cases, diagrammes de séquence. Même livre que PAN2.</div></li>\n<li><span class=\"k\"><strong>PRI2</strong> — Projet d'intégration de développement</span><span class=\"v\">100p · 9 ECTS</span><div class=\"note\">Projet intégrateur. Tout ce qui précède combiné.</div></li>\n</ul></div>\n<div class=\"card\">\n<div class=\"card-title\"><h3 class=\"flame\">🏆 Certifs programmation</h3></div>\n<ul class=\"dlist\">\n<li><span class=\"k\"><strong>PCEP — Python Entry-Level</strong> (~€60)</span><span class=\"v pos\">Avant sept.</span><div class=\"note\">Valide PRM3. Think Python → mock exams pythoninstitute.org → passer en ligne.</div></li>\n<li><span class=\"k\"><strong>Oracle Java SE 17 OCA</strong> (~€245)</span><span class=\"v info\">Année 2</span><div class=\"note\">Valide PRO3 + ANC4 + PRI2. Head First Java + OCA Study Guide (Boyarsky, O'Reilly).</div></li>\n</ul>\n</div>\n\n<h2 class=\"section-title blue\">🗄️ Bases de Données · <em>BDO1 + BDG4 + PRB2</em></h2>\n<div class=\"card\"><ul class=\"dlist\">\n<li><span class=\"k\"><strong>BDO1</strong> — Initiation aux bases de données</span><span class=\"v\">60p · 5 ECTS</span><div class=\"note\">📘 Head First SQL · 📹 SQL for Data Science (8h)</div></li>\n<li><span class=\"k\"><strong>BDG4</strong> — Gestion et exploitation BD</span><span class=\"v\">60p · 5 ECTS</span><div class=\"note\">📘 Learning SQL 3rd Ed. (Beaulieu) · 📹 Advanced SQL for Data Scientists</div></li>\n<li><span class=\"k\"><strong>PRB2</strong> — Projet de développement SGBD</span><span class=\"v\">80p · 8 ECTS</span></li>\n</ul></div>\n<div class=\"card\"><div class=\"card-title\"><h3 class=\"blue\">🏆 Certif BD</h3></div><ul class=\"dlist\">\n<li><span class=\"k\"><strong>Oracle Database SQL Associate</strong> (~€245)</span><span class=\"v info\">Année 1-2</span><div class=\"note\">Valide BDO1 + BDG4 + PRB2. SELECT, JOINs, DDL/DML, sous-requêtes, normalisation.</div></li>\n</ul></div>\n\n<h2 class=\"section-title jade\">🌐 Réseaux + Sécurité · <em>BNE2 + SNE4</em></h2>\n<div class=\"card\"><ul class=\"dlist\">\n<li><span class=\"k\"><strong>BNE2</strong> — Bases des réseaux</span><span class=\"v\">80p · 6 ECTS</span><div class=\"note\">📘 CompTIA Network+ Study Guide 6th Ed. · 📹 CompTIA Network+ N10-009 Total Course (Mike Meyers, 18h) — le meilleur cours vidéo réseau.</div></li>\n<li><span class=\"k\"><strong>SNE4</strong> — Administration, gestion, sécurisation des réseaux</span><span class=\"v\">100p · 8 ECTS</span><div class=\"note\">📘 Network+ Study Guide · 📹 CompTIA Security+ SY0-701 + labs Packet Tracer gratuit.</div></li>\n</ul></div>\n<div class=\"card\"><div class=\"card-title\"><h3 class=\"jade\">🏆 Certif réseaux</h3></div><ul class=\"dlist\">\n<li><span class=\"k\"><strong>CompTIA Network+ N10-009</strong> (~€370)</span><span class=\"v info\">Fin année 1</span><div class=\"note\">Valide BNE2 + SNE4. OSI, TCP/IP, routage, switching, Wi-Fi, sécurité, cloud.</div></li>\n</ul></div>\n\n<h2 class=\"section-title coral\">⚙️ Hardware + OS · <em>STO4 + SYS4</em></h2>\n<div class=\"card\"><ul class=\"dlist\">\n<li><span class=\"k\"><strong>STO4</strong> — Structure des ordinateurs</span><span class=\"v\">60p · 5 ECTS</span><div class=\"note\">📘 Practical Discrete Mathematics · 📹 CompTIA A+ Core 1 (220-1201) — Mike Meyers, 25h.</div></li>\n<li><span class=\"k\"><strong>SYS4</strong> — Système d'exploitation</span><span class=\"v\">100p · 8 ECTS</span><div class=\"note\">📘 The Linux Command Line 2nd Ed. + Linux with OS Concepts · 📹 CompTIA A+ Core 2 (220-1202) + Linux Essentials (12h).</div></li>\n</ul></div>\n<div class=\"card\"><div class=\"card-title\"><h3 class=\"flame\">🏆 Certifs hardware + OS</h3></div><ul class=\"dlist\">\n<li><span class=\"k\"><strong>CompTIA A+ Core 1 (220-1201)</strong> (~€253)</span><span class=\"v warn\">Année 1 sem.1</span><div class=\"note\">Valide STO4. Hardware, mobile, networking basics, virtualisation. Prof. Messer (gratuit) + Study Guide O'Reilly.</div></li>\n<li><span class=\"k\"><strong>CompTIA A+ Core 2 (220-1202)</strong> (~€253)</span><span class=\"v warn\">Année 1 sem.2</span><div class=\"note\">Valide SYS4. OS (Windows, Linux, macOS), sécurité, troubleshooting.</div></li>\n</ul></div>\n\n<h2 class=\"section-title pink\">🌐 Web · <em>WEB1 + PRW3</em></h2>\n<div class=\"card\"><ul class=\"dlist\">\n<li><span class=\"k\"><strong>WEB1</strong> — Web : principes de base</span><span class=\"v\">40p · 3 ECTS</span><div class=\"note\">📘 Learning Web Design 5th Ed. · 📹 HTML CSS JS for Beginners (14h) + Web Dev Bootcamp (Colt Steele, 60h+)</div></li>\n<li><span class=\"k\"><strong>PRW3</strong> — Projet de développement Web</span><span class=\"v\">100p · 10 ECTS</span><div class=\"note\">📘 JavaScript: The Good Parts · 📹 Hands-On Projects HTML/CSS/JS (30+ projets)</div></li>\n</ul></div>\n<div class=\"card\"><div class=\"card-title\"><h3 class=\"pink\">🏆 Certif web</h3></div><ul class=\"dlist\">\n<li><span class=\"k\"><strong>Meta Front-End Developer Certificate</strong> (Coursera, gratuit en audit)</span><span class=\"v pos\">Année 1-2</span><div class=\"note\">Valide WEB1 + PRW3. HTML, CSS, JS, React, UX/UI. 9 cours. Audit gratuit.</div></li>\n</ul></div>\n\n<h2 class=\"section-title amber\">📊 Maths + Stats · <em>MAP4 + STA1</em></h2>\n<div class=\"card\"><ul class=\"dlist\">\n<li><span class=\"k\"><strong>MAP4</strong> — Mathématique appliquée à l'informatique</span><span class=\"v\">60p · 5 ECTS</span><div class=\"note\">📘 Practical Discrete Mathematics · 📹 Discrete Math + Essential Math for ML</div></li>\n<li><span class=\"k\"><strong>STA1</strong> — Éléments de statistique</span><span class=\"v\">40p · 3 ECTS</span><div class=\"note\">📘 Head First Statistics + Think Stats 2nd Ed. · 📹 Statistics Fundamentals (StatQuest style)</div></li>\n</ul></div>\n<div class=\"card\"><div class=\"card-title\"><h3 class=\"amber\">🏆 Certif data/stats</h3></div><ul class=\"dlist\">\n<li><span class=\"k\"><strong>Google Data Analytics Certificate</strong> (Coursera, gratuit en audit)</span><span class=\"v pos\">Année 2</span><div class=\"note\">Valide MAP4 + STA1. Spreadsheets, SQL, R/Python, visualisation, analyse statistique. 8 cours. Très reconnu.</div></li>\n</ul></div>\n\n<h2 class=\"section-title violet\">📋 Gestion · <em>TGP2 + ORM1 + ASIP + ASAP</em></h2>\n<div class=\"card\"><ul class=\"dlist\">\n<li><span class=\"k\"><strong>TGP2</strong> — Techniques de gestion de projets</span><span class=\"v\">40p · 3 ECTS</span><div class=\"note\">📘 Agile PM For Dummies 4th Ed. + Scrum Guide (gratuit, scrum.org)</div></li>\n<li><span class=\"k\"><strong>ORM1</strong> — Organisation des entreprises et management</span><span class=\"v\">40p · 4 ECTS</span><div class=\"note\">Couvert par certif Scrum (rôles, organisation, leadership agile).</div></li>\n<li><span class=\"k\"><strong>ASIP</strong> — Stage d'intégration professionnelle</span><span class=\"v\">120p · 5 ECTS</span><div class=\"note\">Stage pratique. PSM I sur le CV = avantage pour trouver un bon stage.</div></li>\n<li><span class=\"k\"><strong>ASAP</strong> — Activités professionnelles de formation</span><span class=\"v\">240p · 12 ECTS</span></li>\n</ul></div>\n<div class=\"card\"><div class=\"card-title\"><h3 class=\"violet\">🏆 Certif gestion</h3></div><ul class=\"dlist\">\n<li><span class=\"k\"><strong>PSM I — Professional Scrum Master</strong> (~€150)</span><span class=\"v info\">Année 2</span><div class=\"note\">Valide TGP2 + ORM1. Scrum.org, en ligne 80min. Scrum Guide ×3 lectures + mock exams gratuits.</div></li>\n</ul></div>\n\n<h2 class=\"section-title gold\">☁️ E-business + Cloud + ERP · <em>EBN5 + VTEC + PLG3</em></h2>\n<div class=\"card\"><ul class=\"dlist\">\n<li><span class=\"k\"><strong>EBN5</strong> — Notions de e-business</span><span class=\"v\">80p · 7 ECTS</span><div class=\"note\">Cloud computing, SaaS, business models numériques.</div></li>\n<li><span class=\"k\"><strong>VTEC</strong> — Veille technologique</span><span class=\"v\">40p · 4 ECTS</span><div class=\"note\">Tendances tech, cloud, IA, méthodologies émergentes.</div></li>\n<li><span class=\"k\"><strong>PLG3</strong> — Produits logiciels de gestion intégrés</span><span class=\"v\">100p · 9 ECTS</span><div class=\"note\">📘 SAP Project Management + Manage Your SAP Projects with SAP Activate</div></li>\n</ul></div>\n<div class=\"card\"><div class=\"card-title\"><h3 class=\"gold\">🏆 Certifs cloud + ERP</h3></div><ul class=\"dlist\">\n<li><span class=\"k\"><strong>AWS Cloud Practitioner CLF-C02</strong> (~€100)</span><span class=\"v pos\">Année 2-3</span><div class=\"note\">Valide EBN5 + VTEC. EC2, S3, Lambda, IAM, pricing cloud. Datacenter AWS à Bruxelles.</div></li>\n<li><span class=\"k\"><strong>SAP TS410 — SAP S/4HANA Overview</strong> (gratuit via SAP Learning)</span><span class=\"v pos\">Année 3</span><div class=\"note\">Valide PLG3. Examen gratuit via SAP Learning Hub. Très valorisé en Belgique.</div></li>\n</ul></div>\n\n<h2 class=\"section-title cyan\">🗣️ Soft Skills · <em>ICO1 + 2GB5</em></h2>\n<div class=\"card\"><ul class=\"dlist\">\n<li><span class=\"k\"><strong>ICO1</strong> — Information et communication professionnelles</span><span class=\"v\">40p · 3 ECTS</span><div class=\"note\">Les livres Carnegie + Cialdini + Voss de ta liste couvrent ça mieux que n'importe quel cours.</div></li>\n<li><span class=\"k\"><strong>2GB5</strong> — Langue en situation appliquée UE2</span><span class=\"v\">80p · 7 ECTS</span><div class=\"note\">Ton plan néerlandais couvre ça. Certif cible : CNaVT B2 (mois 24).</div></li>\n</ul></div>\n\n<h2 class=\"section-title\">Timeline certifs · <em>11 certifs en 3 ans</em></h2>\n<div class=\"card\"><ul class=\"dlist\">\n<li><span class=\"k\">1. <strong>PCEP Python</strong> (~€60)</span><span class=\"v pos\">Avant sept.</span></li>\n<li><span class=\"k\">2. <strong>CompTIA A+ Core 1</strong> (~€253)</span><span class=\"v\">Oct-Déc an.1</span></li>\n<li><span class=\"k\">3. <strong>CompTIA A+ Core 2</strong> (~€253)</span><span class=\"v\">Jan-Mars an.1</span></li>\n<li><span class=\"k\">4. <strong>CompTIA Network+</strong> (~€370)</span><span class=\"v\">Avr-Juin an.1</span></li>\n<li><span class=\"k\">5. <strong>Meta Front-End Dev</strong> (gratuit audit)</span><span class=\"v\">Année 1-2</span></li>\n<li><span class=\"k\">6. <strong>Oracle SQL Associate</strong> (~€245)</span><span class=\"v\">Sept-Nov an.2</span></li>\n<li><span class=\"k\">7. <strong>Oracle Java OCA</strong> (~€245)</span><span class=\"v\">Jan-Mars an.2</span></li>\n<li><span class=\"k\">8. <strong>Google Data Analytics</strong> (gratuit audit)</span><span class=\"v\">Année 2</span></li>\n<li><span class=\"k\">9. <strong>PSM I Scrum</strong> (~€150)</span><span class=\"v\">Avr-Mai an.2</span></li>\n<li><span class=\"k\">10. <strong>AWS Cloud Practitioner</strong> (~€100)</span><span class=\"v\">Année 3</span></li>\n<li><span class=\"k\">11. <strong>SAP TS410</strong> (gratuit)</span><span class=\"v\">Année 3</span></li>\n</ul></div>\n<div class=\"callout callout-tip\"><strong>Budget total · ~€1 676 sur 3 ans.</strong> 4 certifs gratuites (Meta, Google, SAP en audit). Les 7 payantes = €1 676 étalées. Avec le Vinted qui tourne, <em>~2-3 mois de profit</em>. Chaque certif passée APRÈS avoir étudié le cours → tu ne paies l'examen que quand tu es prêt.</div>\n\n<h2 class=\"section-title\">Rotation d'étude <em>pré-septembre</em></h2>\n<div class=\"day-row\"><div class=\"day-tag\">LUN</div><div class=\"day-content\"><strong>Programmation</strong> → <span class=\"book\">Think Python</span> 1 chap/lundi → puis <span class=\"book\">Head First Java</span></div></div>\n<div class=\"day-row\"><div class=\"day-tag\">MAR</div><div class=\"day-content\"><strong>SQL</strong> → <span class=\"book\">Head First SQL</span> 1 chap/mardi → puis <span class=\"book\">Learning SQL</span></div></div>\n<div class=\"day-row\"><div class=\"day-tag\">MER</div><div class=\"day-content\"><strong>Réseaux</strong> → <span class=\"vid\">Network+ vidéos Meyers</span> 2-3 vidéos/mer</div></div>\n<div class=\"day-row\"><div class=\"day-tag\">JEU</div><div class=\"day-content\"><strong>Web</strong> → <span class=\"book\">Learning Web Design</span> 1 chap + coder</div></div>\n<div class=\"day-row\"><div class=\"day-tag\">VEN</div><div class=\"day-content\"><strong>Algo + Maths + Hardware</strong> → alterner <span class=\"book\">Grokking Algo</span> / <span class=\"book\">Head First Stats</span> / <span class=\"vid\">A+ vidéos Prof Messer</span></div></div>\n<div class=\"day-row\"><div class=\"day-tag\">WE</div><div class=\"day-content\">Révision + projets + mock exams certif. Si OK : <span class=\"book\">Linux Command Line</span></div></div>\n", "p-code": "\n<div class=\"page-header\">\n<h1 class=\"page-title\">Progression Code</h1>\n<p class=\"page-sub\">De <em>Hello World</em> à <em>ingénieur junior</em> — chaque plateforme a son rôle, chaque phase son verdict.</p>\n</div>\n\n<div class=\"callout callout-info\"><strong>La règle :</strong> tu ne passes à la plateforme suivante <em>que</em> quand tu fais 80% des exos de la précédente sans galérer. Ce n'est pas une course — c'est une échelle.</div>\n\n<h2 class=\"section-title jade\">Phase 0 · <em>fondations absolues</em></h2>\n<div class=\"phase\">\n<div class=\"phase-head\"><span class=\"phase-tag\">M1-M4 · avant EPFC</span><h3>Syntaxe & réflexes de base</h3></div>\n<ul class=\"dlist\">\n<li><span class=\"k\"><strong>CodingBat</strong> <span class=\"muted\">(gratuit)</span></span><span class=\"v pos\">Commence ici</span><div class=\"note\">Python + Java. 300+ mini-exos ultra-courts. Objectif : faire les 100 premiers Python Warmup + String-1 + List-1 avant septembre. 15min/jour suffit.</div></li>\n<li><span class=\"k\"><strong>Edabit</strong> <span class=\"muted\">(gratuit)</span></span><span class=\"v pos\">En parallèle</span><div class=\"note\">Gamifié, progression par niveaux. Parfait pour les soirs où CodingBat t'ennuie. Fais les \"Very Easy\" en série jusqu'à ce que ça coule.</div></li>\n<li><span class=\"k\"><strong>freeCodeCamp</strong> <span class=\"muted\">(gratuit, certifs inclus)</span></span><span class=\"v info\">Option web</span><div class=\"note\">Parcours \"Responsive Web Design\" (300h mais tu passes plus vite) = complément parfait pour WEB1 d'EPFC. Certif gratuit à la fin.</div></li>\n</ul>\n</div>\n\n<h2 class=\"section-title sapphire\">Phase 1 · <em>consolidation</em></h2>\n<div class=\"phase\">\n<div class=\"phase-head\"><span class=\"phase-tag\">Année 1 EPFC · M5-M14</span><h3>Patterns & résolution</h3></div>\n<ul class=\"dlist\">\n<li><span class=\"k\"><strong>Exercism</strong> <span class=\"muted\">(gratuit, avec mentorat humain)</span></span><span class=\"v pos\">Indispensable</span><div class=\"note\">Track Python puis Java. Gros avantage : un mentor review ton code gratuitement. Tu apprends <em>le style</em>, pas juste \"ça compile\".</div></li>\n<li><span class=\"k\"><strong>Codewars</strong> <span class=\"muted\">(gratuit)</span></span><span class=\"v pos\">Quotidien</span><div class=\"note\">Katas par niveau (8 kyu = débutant → 1 kyu = avancé). Objectif : 5 kyu à la fin de l'année 1. Tu compares ta solution à celles des autres = bond de niveau.</div></li>\n<li><span class=\"k\"><strong>CS50 Harvard</strong> <span class=\"muted\">(gratuit sur edX)</span></span><span class=\"v info\">Bonus</span><div class=\"note\">Le cours d'intro CS le plus reconnu au monde. C, Python, SQL, structures de données. Si tu le finis, tu as un avantage énorme sur tes camarades EPFC.</div></li>\n</ul>\n</div>\n\n<h2 class=\"section-title flame\">Phase 2 · <em>technique d'entretien</em></h2>\n<div class=\"phase\">\n<div class=\"phase-head\"><span class=\"phase-tag\">Année 2 EPFC · M15-M26</span><h3>LeetCode, HackerRank, algos</h3></div>\n<ul class=\"dlist\">\n<li><span class=\"k\"><strong>LeetCode</strong> <span class=\"muted\">(freemium — les Easy suffisent)</span></span><span class=\"v pos\">Le standard</span><div class=\"note\">Fais le <em>NeetCode 150</em> (liste curée, gratuite sur neetcode.io). Couvre tous les patterns d'entretien : two pointers, sliding window, DP, graphes. 150 problèmes = 6 mois à ~1/jour.</div></li>\n<li><span class=\"k\"><strong>HackerRank</strong> <span class=\"muted\">(gratuit)</span></span><span class=\"v pos\">Certifs CV</span><div class=\"note\">Passe les <em>Skills Certifications</em> : Python (Basic puis Intermediate), Java (Basic), Problem Solving (Basic), SQL (Basic puis Intermediate). Gratuit, sur ton profil LinkedIn en 1 clic.</div></li>\n<li><span class=\"k\"><strong>Advent of Code</strong> <span class=\"muted\">(gratuit, tous les décembres)</span></span><span class=\"v info\">Tradition</span><div class=\"note\">25 puzzles, 1/jour en décembre. Bloque tes soirées de décembre pour ça pendant l'EPFC. Ta communauté grandit ici.</div></li>\n</ul>\n</div>\n\n<h2 class=\"section-title violet\">Phase 3 · <em>domaine IA/Data</em></h2>\n<div class=\"phase\">\n<div class=\"phase-head\"><span class=\"phase-tag\">Année 3 EPFC · M27+</span><h3>Kaggle + projets portfolio</h3></div>\n<ul class=\"dlist\">\n<li><span class=\"k\"><strong>Kaggle</strong> <span class=\"muted\">(gratuit)</span></span><span class=\"v pos\">Spécialisation IA</span><div class=\"note\">Commence par les <em>Kaggle Learn</em> micro-cours (Intro to ML, Intermediate ML, Pandas, Data Viz). Puis compete : objectif <em>Expert tier</em> année 3.</div></li>\n<li><span class=\"k\"><strong>Hugging Face</strong> <span class=\"muted\">(gratuit)</span></span><span class=\"v pos\">Portfolio LLM</span><div class=\"note\">Course NLP + Deep RL + Audio. Tes projets finaux vont ici (Spaces publics).</div></li>\n<li><span class=\"k\"><strong>GitHub pro</strong></span><span class=\"v info\">Le vrai CV</span><div class=\"note\">Contrib open-source régulière, README propres, README.md avec démos GIF. C'est <em>ça</em> que les recruteurs regardent — pas LeetCode.</div></li>\n</ul>\n</div>\n\n<h2 class=\"section-title\">CV Tech par mois <em>(ce qui apparaît au recruteur)</em></h2>\n<div class=\"card\"><ul class=\"dlist\">\n<li><span class=\"k\"><strong>M3</strong> — CodingBat 100% Python Warmup</span><span class=\"v muted\">Personnel, pas sur CV</span></li>\n<li><span class=\"k\"><strong>M6</strong> — HackerRank Python Basic + PCEP</span><span class=\"v pos\">+2 lignes CV</span></li>\n<li><span class=\"k\"><strong>M12</strong> — freeCodeCamp Responsive + CompTIA A+ Core 1</span><span class=\"v pos\">+2 lignes</span></li>\n<li><span class=\"k\"><strong>M18</strong> — HackerRank Python Intermediate + SQL + Oracle SQL</span><span class=\"v pos\">+3 lignes</span></li>\n<li><span class=\"k\"><strong>M24</strong> — Oracle Java OCA + Meta Front-End + Google Data + PSM I</span><span class=\"v pos\">CV solide</span></li>\n<li><span class=\"k\"><strong>M30</strong> — 3 projets Kaggle + Hugging Face Spaces + AWS CP</span><span class=\"v pos\">CV IA-ready</span></li>\n<li><span class=\"k\"><strong>M36 (diplôme)</strong> — SAP TS410 + portfolio GitHub + stage</span><span class=\"v warn\">CV complet</span></li>\n</ul></div>\n\n<div class=\"callout callout-focus\"><strong>Le CV idéal au diplôme (M36)</strong> = Bachelor EPFC · 11 certifs tech · 5+ projets GitHub dont 2 IA · contrib open-source · LinkedIn à jour · stage terminé. <em>Il y a des seniors avec moins que ça.</em></div>\n", "p-ia": "\n<div class=\"page-header\">\n<h1 class=\"page-title\">Parcours IA · 30 mois</h1>\n<p class=\"page-sub\">De <em>zéro ML</em> à <em>ingénieur IA/LLM</em> employable. En parallèle d'EPFC, avec le bachelor comme fondation CS et l'IA comme spécialisation.</p>\n</div>\n\n<div class=\"callout callout-info\"><strong>Python d'abord.</strong> Les ressources IA assument que tu codes en Python. Si tu démarres, commence par CodingBat + Think Python <em>en parallèle</em> des premières leçons Kaggle Learn — pas besoin d'attendre d'être \"prêt\".</div>\n\n<h2 class=\"section-title jade\">Phase 1 · <em>Fondations Data</em> <span class=\"muted\">M5-M8</span></h2>\n<div class=\"phase\">\n<div class=\"phase-head\"><span class=\"phase-tag\">Python + Maths + Pandas</span><h3>Les outils avant les modèles</h3></div>\n<ul class=\"dlist\">\n<li><span class=\"k\"><strong>Python for Data Analysis</strong> (Wes McKinney, 3e éd.)</span><span class=\"v\">📘 O'Reilly</span><div class=\"note\">Pandas by its creator. NumPy, Pandas, Matplotlib. 2-3 chap/semaine. Le livre référence.</div></li>\n<li><span class=\"k\"><strong>Kaggle Learn</strong> — Python + Pandas + Data Viz</span><span class=\"v pos\">Gratuit</span><div class=\"note\">3 micro-cours de 4-7h chacun. Certif après chaque. Parfait pour alterner avec le livre.</div></li>\n<li><span class=\"k\"><strong>Khan Academy</strong> — Algèbre linéaire + stats + calcul</span><span class=\"v pos\">Gratuit</span><div class=\"note\">Juste ce qu'il te faut. Pas besoin de re-faire Mat Sup.</div></li>\n</ul>\n<div class=\"callout callout-tip\"><strong>Livrable M8 :</strong> 2 notebooks Kaggle publics (EDA propre sur 2 datasets).</div>\n</div>\n\n<h2 class=\"section-title sapphire\">Phase 2 · <em>ML Classique</em> <span class=\"muted\">M9-M14</span></h2>\n<div class=\"phase\">\n<div class=\"phase-head\"><span class=\"phase-tag\">Scikit-learn + théorie</span><h3>Régression, classification, clustering</h3></div>\n<ul class=\"dlist\">\n<li><span class=\"k\"><strong>Hands-On Machine Learning</strong> (Aurélien Géron, 3e éd.)</span><span class=\"v\">📘 O'Reilly · La bible</span><div class=\"note\">Parties I & II. Les chapitres 2-9. Fais les exos à la fin de chaque chap. ~4-6 mois à rythme soutenable.</div></li>\n<li><span class=\"k\"><strong>StatQuest YouTube</strong> (Josh Starmer)</span><span class=\"v pos\">Gratuit</span><div class=\"note\">Pour chaque algo du Géron, regarde le StatQuest correspondant. Les deux ensemble = compréhension profonde.</div></li>\n<li><span class=\"k\"><strong>Andrew Ng — ML Specialization</strong> (Coursera)</span><span class=\"v info\">Audit gratuit</span><div class=\"note\">3 cours. Le classique absolu. Fais-le en alternance avec Géron si tu veux plus de profondeur math.</div></li>\n</ul>\n<div class=\"callout callout-tip\"><strong>Livrable M14 :</strong> 1 compétition Kaggle tentée (ex. Titanic + House Prices) · 1 projet ML complet sur GitHub.</div>\n</div>\n\n<h2 class=\"section-title flame\">Phase 3 · <em>Deep Learning</em> <span class=\"muted\">M15-M19</span></h2>\n<div class=\"phase\">\n<div class=\"phase-head\"><span class=\"phase-tag\">PyTorch + vision + NLP</span><h3>Réseaux de neurones from scratch</h3></div>\n<ul class=\"dlist\">\n<li><span class=\"k\"><strong>Hands-On ML Géron</strong> — Partie III (DL)</span><span class=\"v\">📘 Chap. 10-19</span><div class=\"note\">Keras puis TensorFlow. CNN, RNN, Transformers. La suite logique.</div></li>\n<li><span class=\"k\"><strong>Deep Learning with PyTorch</strong> (Stevens, Antiga)</span><span class=\"v\">📘 Manning</span><div class=\"note\">PyTorch = standard industrie 2026. Ce livre est le plus accessible.</div></li>\n<li><span class=\"k\"><strong>fast.ai — Practical Deep Learning</strong></span><span class=\"v pos\">Gratuit · top-down</span><div class=\"note\">Jeremy Howard. Approche \"code d'abord, théorie ensuite\". Complémentaire à Géron (bottom-up).</div></li>\n<li><span class=\"k\"><strong>Andrej Karpathy YouTube</strong> — Neural Networks: Zero to Hero</span><span class=\"v pos\">Gratuit · or pur</span><div class=\"note\">Il construit GPT from scratch en vidéo. À voir 2 fois.</div></li>\n</ul>\n<div class=\"callout callout-tip\"><strong>Livrable M19 :</strong> 1 CNN sur image custom + 1 modèle NLP fine-tuné (Hugging Face).</div>\n</div>\n\n<h2 class=\"section-title violet\">Phase 4 · <em>Gen AI & LLMs</em> <span class=\"muted\">M20-M24</span></h2>\n<div class=\"phase\">\n<div class=\"phase-head\"><span class=\"phase-tag\">Transformers, RAG, agents</span><h3>Le cœur de l'industrie 2026</h3></div>\n<ul class=\"dlist\">\n<li><span class=\"k\"><strong>Hugging Face NLP Course</strong></span><span class=\"v pos\">Gratuit</span><div class=\"note\">Transformers, fine-tuning, déploiement. Le plus à jour qui existe.</div></li>\n<li><span class=\"k\"><strong>Natural Language Processing with Transformers</strong> (Tunstall et al.)</span><span class=\"v\">📘 O'Reilly</span><div class=\"note\">Le livre Hugging Face officiel. Parfait compagnon du cours.</div></li>\n<li><span class=\"k\"><strong>LangChain + LangGraph docs</strong></span><span class=\"v pos\">Gratuit</span><div class=\"note\">Construire des agents. Direct utilité pour ton projet JARVIS-style.</div></li>\n<li><span class=\"k\"><strong>Building LLMs for Production</strong> (Louis-François Bouchard)</span><span class=\"v\">📘 2024+</span><div class=\"note\">RAG, eval, déploiement. Un des rares livres à jour sur le sujet.</div></li>\n</ul>\n<div class=\"callout callout-tip\"><strong>Livrable M24 :</strong> 1 chatbot RAG déployé (Hugging Face Space) + 1 mini-agent LangGraph. <em>Tu peux commencer JARVIS ici.</em></div>\n</div>\n\n<h2 class=\"section-title gold\">Phase 5 · <em>MLOps</em> <span class=\"muted\">M25-M27</span></h2>\n<div class=\"phase\">\n<div class=\"phase-head\"><span class=\"phase-tag\">Docker · CI/CD · cloud · monitoring</span><h3>Mettre un modèle en prod</h3></div>\n<ul class=\"dlist\">\n<li><span class=\"k\"><strong>Designing Machine Learning Systems</strong> (Chip Huyen)</span><span class=\"v\">📘 O'Reilly · bible MLOps</span></li>\n<li><span class=\"k\"><strong>Made With ML — MLOps course</strong></span><span class=\"v pos\">Gratuit · madewithml.com</span><div class=\"note\">Goku Mohandas. Bout en bout : data → modèle → prod → monitoring.</div></li>\n<li><span class=\"k\"><strong>AWS SageMaker</strong> ou <strong>GCP Vertex AI</strong></span><span class=\"v info\">Synergies</span><div class=\"note\">L'AWS Cloud Practitioner de ton EPFC ouvre la porte. Tier gratuit AWS suffit pour apprendre.</div></li>\n</ul>\n</div>\n\n<h2 class=\"section-title pink\">Phase 6 · <em>Spécialisations</em> <span class=\"muted\">M28-M30</span></h2>\n<div class=\"phase\">\n<div class=\"phase-head\"><span class=\"phase-tag\">Une ou deux verticales</span><h3>Choisis ton couloir</h3></div>\n<ul class=\"dlist\">\n<li><span class=\"k\"><strong>Computer Vision</strong></span><span class=\"v info\">YOLO, Segment Anything, Stable Diffusion</span></li>\n<li><span class=\"k\"><strong>Agents & systèmes multi-agents</strong></span><span class=\"v info\">LangGraph avancé, CrewAI, AutoGen · ton projet JARVIS pourrait être ça</span></li>\n<li><span class=\"k\"><strong>RL</strong></span><span class=\"v info\">Stable Baselines3, Unity ML-Agents · si tu joues avec Godot</span></li>\n<li><span class=\"k\"><strong>Time Series / Finance</strong></span><span class=\"v info\">Prophet, Darts · utile pour Vinted analytics</span></li>\n</ul>\n</div>\n\n<h2 class=\"section-title cyan\">Certifs IA transverses <span class=\"muted\">budget ~€615</span></h2>\n<div class=\"card\"><ul class=\"dlist\">\n<li><span class=\"k\"><strong>TensorFlow Developer Certificate</strong> (~€100)</span><span class=\"v pos\">M19+</span></li>\n<li><span class=\"k\"><strong>AWS ML Specialty</strong> (~€280)</span><span class=\"v\">M27+</span></li>\n<li><span class=\"k\"><strong>Hugging Face Certifications</strong> (gratuites)</span><span class=\"v pos\">M24</span></li>\n<li><span class=\"k\"><strong>DeepLearning.AI specializations</strong> (Coursera, audit gratuit)</span><span class=\"v pos\">Bonus</span></li>\n</ul></div>\n\n<h2 class=\"section-title\">Portfolio cible · <em>8 projets au diplôme</em></h2>\n<div class=\"card\"><ol class=\"dlist\">\n<li><span class=\"k\">1. EDA notebook Kaggle</span><span class=\"v muted\">M8</span></li>\n<li><span class=\"k\">2. Modèle ML classique end-to-end</span><span class=\"v muted\">M14</span></li>\n<li><span class=\"k\">3. CNN vision sur dataset custom</span><span class=\"v muted\">M18</span></li>\n<li><span class=\"k\">4. NLP fine-tuning HuggingFace</span><span class=\"v muted\">M19</span></li>\n<li><span class=\"k\">5. Chatbot RAG déployé</span><span class=\"v muted\">M23</span></li>\n<li><span class=\"k\">6. Agent LangGraph (ex. mini-JARVIS)</span><span class=\"v muted\">M26</span></li>\n<li><span class=\"k\">7. Modèle en prod (Docker + cloud)</span><span class=\"v muted\">M28</span></li>\n<li><span class=\"k\">8. Projet capstone spécialisation</span><span class=\"v muted\">M30</span></li>\n</ol></div>\n\n<h2 class=\"section-title\">12 compétences résumé <em>(skills LinkedIn)</em></h2>\n<div class=\"card\"><div class=\"note\" style=\"padding:6px 0\">\nPython · SQL · Pandas · Scikit-learn · PyTorch · TensorFlow · Hugging Face · LangChain/LangGraph · Docker · AWS · MLOps · Git\n</div></div>\n\n<div class=\"callout callout-focus\"><strong>Rythme réaliste · 6-8h/semaine IA</strong> = 1 livre tous les 2-3 mois + 1 projet/trimestre. Tu as 30 mois, pas 6. La patience paie exponentiellement ici.</div>\n", "p-nl": "\n<div class=\"page-header\">\n<h1 class=\"page-title\">Néerlandais · A0 → B2</h1>\n<p class=\"page-sub\">Bruxelles bilingue · EPFC <em>2GB5</em> · CNaVT B2 à M24. Zéro euro dépensé en méthodes — tout gratuit en Région.</p>\n</div>\n\n<h2 class=\"section-title jade\">Phase A1 · <em>M1-M6</em></h2>\n<div class=\"phase\">\n<div class=\"phase-head\"><span class=\"phase-tag\">Bases absolues</span><h3>Survie + 500 mots</h3></div>\n<ul class=\"dlist\">\n<li><span class=\"k\"><strong>Taalgarage</strong> (ta ressource actuelle)</span><span class=\"v pos\">Continue · niveau 1</span><div class=\"note\">Structurée, progressive, parfaite pour démarrer. Fais 100% des exos.</div></li>\n<li><span class=\"k\"><strong>Duolingo</strong> <span class=\"muted\">15min/jour</span></span><span class=\"v pos\">Gratuit</span><div class=\"note\">Pas suffisant seul, mais excellent pour la répétition espacée + quotidienneté. Streak = habitude.</div></li>\n<li><span class=\"k\"><strong>Muntpunt</strong> (Bibliothèque NL rue Léopold)</span><span class=\"v info\">Gratuit · inscription 10€/an</span><div class=\"note\">Lectures faciles niveau A1 (livres \"Lees &amp; Lach\"). Ambiance néerlandophone totale.</div></li>\n</ul>\n</div>\n\n<h2 class=\"section-title sapphire\">Phase A2 · <em>M7-M12</em></h2>\n<div class=\"phase\">\n<div class=\"phase-head\"><span class=\"phase-tag\">Autonomie quotidienne</span><h3>1 500 mots + tout le présent</h3></div>\n<ul class=\"dlist\">\n<li><span class=\"k\"><strong>Brulingua</strong> <span class=\"muted\">(Bruxelles Formation — 100% gratuit pour Bruxellois)</span></span><span class=\"v pos\">🎯 À faire absolument</span><div class=\"note\">Plateforme en ligne + tuteur · A1 → B2. <em>Gratuit</em> si tu es inscrit Actiris ou résident Bruxelles.</div></li>\n<li><span class=\"k\"><strong>NedBox</strong></span><span class=\"v pos\">Gratuit · nedbox.be</span><div class=\"note\">Vidéos VRT + exos compréhension. Niveau A2-B1. Parfait complément.</div></li>\n<li><span class=\"k\"><strong>Zinvol met boeken</strong> — Muntpunt</span><span class=\"v info\">Club lecture NL</span><div class=\"note\">1 livre/mois A2. Discussion avec natifs.</div></li>\n</ul>\n</div>\n\n<h2 class=\"section-title flame\">Phase B1 · <em>M13-M18</em></h2>\n<div class=\"phase\">\n<div class=\"phase-head\"><span class=\"phase-tag\">Conversations réelles</span><h3>3 000 mots + passé + futur</h3></div>\n<ul class=\"dlist\">\n<li><span class=\"k\"><strong>Tandem</strong> <span class=\"muted\">(app gratuite)</span></span><span class=\"v pos\">Échange FR ↔ NL</span><div class=\"note\">Un natif NL veut pratiquer son FR = tu pratiques le NL. 30min/semaine minimum.</div></li>\n<li><span class=\"k\"><strong>iTalki</strong></span><span class=\"v info\">€8-15/heure avec tuteur</span><div class=\"note\">Investissement ponctuel quand tu veux débloquer l'oral. 1 séance/sem pendant 2 mois suffit.</div></li>\n<li><span class=\"k\"><strong>ver-taal.com</strong></span><span class=\"v pos\">Gratuit</span><div class=\"note\">Exos grammaire + compréhension pour francophones. Le site gouvernement néerlandais.</div></li>\n<li><span class=\"k\"><strong>VRT NWS + Het Laatste Nieuws</strong></span><span class=\"v pos\">Gratuit · actus</span><div class=\"note\">10 min/jour = lecture quotidienne obligatoire à ce stade.</div></li>\n</ul>\n</div>\n\n<h2 class=\"section-title violet\">Phase B2 · <em>M19-M24 · objectif CNaVT</em></h2>\n<div class=\"phase\">\n<div class=\"phase-head\"><span class=\"phase-tag\">Niveau professionnel</span><h3>5 000+ mots · abstraction</h3></div>\n<ul class=\"dlist\">\n<li><span class=\"k\"><strong>Huis van het Nederlands Brussel</strong></span><span class=\"v pos\">Cours gratuits/subsidiés</span><div class=\"note\">Conseil placement + orientation cours B2. Indispensable ici.</div></li>\n<li><span class=\"k\"><strong>CNaVT Profiel Educatief Startbekwaam</strong> (examen B2)</span><span class=\"v warn\">€75 · M24</span><div class=\"note\">Certif B2 reconnue partout en BE + NL. Valide 2GB5 EPFC. Passer en juin M24.</div></li>\n<li><span class=\"k\"><strong>Podcasts NL</strong> — <em>De Correspondent</em>, <em>De Volkskrant</em>, <em>NOS Journaal</em></span><span class=\"v pos\">Gratuit</span><div class=\"note\">30min trajet = 30min NL quotidien. Compréhension native = B2 réel.</div></li>\n</ul>\n</div>\n\n<h2 class=\"section-title gold\">Règles de progression</h2>\n<div class=\"card\"><ul class=\"dlist\">\n<li><span class=\"k\"><strong>Quotidien &gt; intensif</strong></span><span class=\"v pos\">20min/jour &gt; 3h/semaine</span></li>\n<li><span class=\"k\"><strong>Immersion passive</strong></span><span class=\"v info\">Netflix en VO NL + sous-titres NL dès B1</span></li>\n<li><span class=\"k\"><strong>Erreur = normal</strong></span><span class=\"v muted\">Les Belges pardonnent le FR avec accent. Ils pardonneront ton NL avec accent.</span></li>\n<li><span class=\"k\"><strong>Zone Dansaert</strong></span><span class=\"v pos\">Sortir dans les quartiers NL de Bruxelles · forçage d'usage</span></li>\n</ul></div>\n\n<div class=\"callout callout-focus\"><strong>Budget total 24 mois :</strong> <em>~€85</em> (CNaVT €75 + Muntpunt €10). Tout le reste est gratuit en Région bruxelloise si tu actionnes Brulingua + Huis van het Nederlands.</div>\n", "p-chess": "\n<div class=\"page-header\">\n<h1 class=\"page-title\">Échecs · 500 → 1500 Elo</h1>\n<p class=\"page-sub\">Discipline mentale · reconnaissance de patterns · gratuit à 100%. Sur Chess.com.</p>\n</div>\n\n<h2 class=\"section-title jade\">Phase 1 · <em>0 → 800 Elo</em></h2>\n<div class=\"phase\">\n<div class=\"phase-head\"><span class=\"phase-tag\">M1-M3 · Bases absolues</span><h3>Arrête de perdre sur des fourchettes</h3></div>\n<ul class=\"dlist\">\n<li><span class=\"k\"><strong>Chess.com — Lessons basiques</strong></span><span class=\"v pos\">Gratuit (partiel)</span><div class=\"note\">Règles + mat simples + principes d'ouverture. 10 leçons suffisent.</div></li>\n<li><span class=\"k\"><strong>GothamChess</strong> — YouTube (Levy Rozman)</span><span class=\"v pos\">Gratuit</span><div class=\"note\">Playlist \"How to Play Chess\". Le maître de la pédagogie en 2026. Drôle + rigoureux.</div></li>\n<li><span class=\"k\"><strong>Puzzles Rush</strong> <span class=\"muted\">(Chess.com)</span></span><span class=\"v pos\">10 min/jour</span><div class=\"note\">La mécanique la plus rentable pour monter. 1 session quotidienne &gt; 10 parties rapides.</div></li>\n<li><span class=\"k\"><strong>Ouverture fixe</strong> : Italien + Caro-Kann</span><span class=\"v info\">Simple, robuste</span><div class=\"note\">Ne change pas d'ouverture avant 1000 Elo. La répétition bat la variété à ce niveau.</div></li>\n</ul>\n</div>\n\n<h2 class=\"section-title sapphire\">Phase 2 · <em>800 → 1200 Elo</em></h2>\n<div class=\"phase\">\n<div class=\"phase-head\"><span class=\"phase-tag\">M4-M9 · Tactiques & patterns</span><h3>Voir les combinaisons</h3></div>\n<ul class=\"dlist\">\n<li><span class=\"k\"><strong>Bobby Fischer Teaches Chess</strong></span><span class=\"v\">📘 Classique</span><div class=\"note\">Mates en 1, 2, 3 coups. Méthode programmée. Réponds aux diagrammes. 150 exercices.</div></li>\n<li><span class=\"k\"><strong>ChessBrah — Building Habits</strong> (YouTube)</span><span class=\"v pos\">Gratuit</span><div class=\"note\">Aman Hambleton joue de 0 à 2000 Elo en suivant 5 règles simples. Série culte.</div></li>\n<li><span class=\"k\"><strong>Puzzles thématiques</strong> <span class=\"muted\">(Chess.com ou Lichess gratuit)</span></span><span class=\"v pos\">Plus rentable que Puzzle Rush</span><div class=\"note\">Fourchettes → clouages → enfilades → découvertes. 20 puzzles/jour du même thème jusqu'à maîtrise.</div></li>\n<li><span class=\"k\"><strong>Chessable</strong> — <em>Short &amp; Sweet</em> (gratuit)</span><span class=\"v pos\">Répétition espacée</span><div class=\"note\">Ouvertures apprises par SRS. Choisis <em>Caro-Kann Short &amp; Sweet</em> + <em>Italian Short &amp; Sweet</em>.</div></li>\n</ul>\n</div>\n\n<h2 class=\"section-title flame\">Phase 3 · <em>1200 → 1500 Elo</em></h2>\n<div class=\"phase\">\n<div class=\"phase-head\"><span class=\"phase-tag\">M10+ · Stratégie &amp; finales</span><h3>Comprendre les positions</h3></div>\n<ul class=\"dlist\">\n<li><span class=\"k\"><strong>100 Endgames You Must Know</strong> (Jesús de la Villa)</span><span class=\"v\">📘 Le livre de finales</span></li>\n<li><span class=\"k\"><strong>Logical Chess: Move by Move</strong> (Chernev)</span><span class=\"v\">📘 Stratégie narrative</span><div class=\"note\">33 parties expliquées coup par coup. Le livre qui fait cliquer les \"pourquoi\".</div></li>\n<li><span class=\"k\"><strong>How to Reassess Your Chess</strong> (Silman)</span><span class=\"v\">📘 Stratégie avancée</span></li>\n<li><span class=\"k\"><strong>Daniel Naroditsky</strong> — YouTube Speedruns</span><span class=\"v pos\">Gratuit · or</span><div class=\"note\">GM qui joue à ton niveau Elo et commente. Le meilleur enseignant online.</div></li>\n</ul>\n</div>\n\n<h2 class=\"section-title violet\">Objectifs mensuels</h2>\n<div class=\"card\"><ul class=\"dlist\">\n<li><span class=\"k\">M1 — Règles solides + premier mat</span><span class=\"v muted\">500 Elo</span></li>\n<li><span class=\"k\">M3 — Ouverture auto · 10 parties/sem</span><span class=\"v muted\">700</span></li>\n<li><span class=\"k\">M6 — Fischer fini · tactiques basiques auto</span><span class=\"v muted\">900</span></li>\n<li><span class=\"k\">M9 — Chessable ouvertures · patterns tactiques</span><span class=\"v muted\">1100</span></li>\n<li><span class=\"k\">M12 — De la Villa (partiel) + Chernev</span><span class=\"v muted\">1300</span></li>\n<li><span class=\"k\">M18 — Silman · analyse post-partie systématique</span><span class=\"v pos\">1500</span></li>\n</ul></div>\n\n<div class=\"callout callout-tip\"><strong>Intégration routine :</strong> 10-15 min puzzles à l'éveil (café) + 1 partie rapide 10+5 le soir + 1 partie classique 30+0 samedi. Pas plus — au-delà, la courbe rendement chute vite et l'EPFC passe avant.</div>\n\n<div class=\"callout callout-focus\"><strong>Règle Ben Finegold :</strong> <em>« Perds tes parties rapidement, analyse-les longuement. »</em> 1 partie + 10 min d'analyse &gt; 5 parties blitz à la suite.</div>\n", "p-social": "\n<div class=\"page-header\">\n<h1 class=\"page-title\">Liens · <em>Relations humaines</em></h1>\n<p class=\"page-sub\">Le plan personnel ne sert à rien si tu t'isoles. L'humain est un animal social — l'ignorer = dépression à M8.</p>\n</div>\n\n<div class=\"callout callout-warn\"><strong>Le piège du haut-performeur :</strong> 18-24 mois d'intensité → <em>\"plus tard je verrai mes amis\"</em> → isolement → effondrement. Cette page est une ceinture de sécurité.</div>\n\n<h2 class=\"section-title jade\">Non-négociables hebdomadaires</h2>\n<div class=\"card\"><ul class=\"dlist\">\n<li><span class=\"k\"><strong>1 appel famille/semaine</strong></span><span class=\"v pos\">Dimanche après-midi · fixe</span><div class=\"note\">Parents, frères/sœurs. 20-30min. Mets-le dans ton agenda comme un meeting pro.</div></li>\n<li><span class=\"k\"><strong>1 soirée libre / semaine</strong></span><span class=\"v pos\">Samedi soir ou autre</span><div class=\"note\">Pas d'étude, pas de sport, pas de Vinted. Temps pour vie perso, amis, sortie, rien. <em>Sacré.</em></div></li>\n<li><span class=\"k\"><strong>1 contact ami / semaine</strong></span><span class=\"v info\">Message, café, appel</span><div class=\"note\">Même 10 min suffisent. Tour de rôle : un ami différent chaque semaine.</div></li>\n<li><span class=\"k\"><strong>Temps fils</strong> (si applicable)</span><span class=\"v flame\">Priorité absolue</span><div class=\"note\">Le plan entier existe pour pouvoir lui offrir mieux. Ne sacrifie jamais les moments avec lui pour 30 minutes d'étude.</div></li>\n</ul></div>\n\n<h2 class=\"section-title sapphire\">Règles anti-isolement</h2>\n<div class=\"card\"><ul class=\"dlist\">\n<li><span class=\"k\"><strong>Dire oui par défaut</strong></span><span class=\"v info\">Aux invitations sociales raisonnables</span><div class=\"note\">Dire non t'isole cumulativement. Une sortie \"perdue\" = 5h, soutenable. Un ami perdu = 10 ans pour le remplacer.</div></li>\n<li><span class=\"k\"><strong>Programmer les retrouvailles</strong></span><span class=\"v pos\">Pas \"quand on pourra\"</span><div class=\"note\">\"Vendredi 19h, Place Flagey\" &gt; \"faudrait qu'on se voie\". Le concret seul se concrétise.</div></li>\n<li><span class=\"k\"><strong>Être honnête sur le rythme</strong></span><span class=\"v muted\">\"Je suis en bachelor, je peux 1×/mois — mais vraiment\"</span><div class=\"note\">Les vrais amis comprennent. Ceux qui pas = tri naturel sain.</div></li>\n<li><span class=\"k\"><strong>Pas de messages vocaux de 10 min</strong></span><span class=\"v warn\">Règle de santé mentale</span><div class=\"note\">Un appel de 5 min bat un vocal de 10 min et un chat Whatsapp de 30 échanges.</div></li>\n</ul></div>\n\n<h2 class=\"section-title flame\">Ressources Bruxelles <em>(gratuites)</em></h2>\n<div class=\"card\"><ul class=\"dlist\">\n<li><span class=\"k\"><strong>Meetup.com</strong> groupes tech + langue</span><span class=\"v pos\">Networking professionnel</span><div class=\"note\">Brussels Python User Group, Bruxelles AI, Tandem NL-FR. 1/mois suffit, pose-le au calendrier.</div></li>\n<li><span class=\"k\"><strong>Huis van het Nederlands — Babbelclub</strong></span><span class=\"v pos\">Gratuit · synergie NL</span><div class=\"note\">Conversation NL + socialisation + progrès linguistique. Combo parfait.</div></li>\n<li><span class=\"k\"><strong>Boules Bouliniste Place du Jeu de Balle</strong></span><span class=\"v info\">Dimanche</span><div class=\"note\">Pour sortir de ta bulle étudiante quelques heures.</div></li>\n<li><span class=\"k\"><strong>Club d'échecs Bruxelles</strong> (CRECC, Cercle Brugmann)</span><span class=\"v info\">~€50/an</span><div class=\"note\">Synergie chess + rencontres. Ambiance bienveillante, tous niveaux.</div></li>\n</ul></div>\n\n<h2 class=\"section-title violet\">Signaux d'alerte · <em>quand consulter</em></h2>\n<div class=\"card\"><ul class=\"dlist\">\n<li><span class=\"k\">Plus envie de voir personne pendant 3+ semaines</span><span class=\"v warn\">Signal</span></li>\n<li><span class=\"k\">Sommeil dégradé malgré routine</span><span class=\"v warn\">Signal</span></li>\n<li><span class=\"k\">Perte d'intérêt pour tout (y compris échecs, lecture)</span><span class=\"v warn\">Signal</span></li>\n<li><span class=\"k\">Pensées noires récurrentes</span><span class=\"v danger\">Consulter rapidement</span></li>\n</ul>\n<div class=\"note\" style=\"margin-top:12px\"><strong>Ressources BE :</strong> Service Santé Mentale de Bruxelles (consultations ~€11/session remboursables) · <strong>Télé-Accueil</strong> 107 (écoute 24/7, gratuit, anonyme) · médecin traitant pour prescription psy au besoin.</div>\n</div>\n\n<div class=\"callout callout-focus\"><strong>Vérité finale :</strong> tu n'as pas lancé ce plan pour devenir une machine d'optimisation seule dans son appart. Tu l'as lancé pour <em>construire une vie qui te rend fier</em>. Les relations font partie de cette vie — pas optionnelles, pas au \"plus tard\".</div>\n"};
+  var loaded = {};
+  
+  function injectPage(pageId){
+    if (loaded[pageId]) return true;
+    var content = LAZY_CONTENT[pageId];
+    if (!content) return false;
+    var section = document.getElementById(pageId);
+    if (!section) return false;
+    var placeholder = section.querySelector('.lazy-placeholder');
+    if (placeholder){
+      // Replace placeholder with real content
+      section.innerHTML = content;
+      loaded[pageId] = true;
+      // Dispatch event so other scripts can react
+      document.dispatchEvent(new CustomEvent('lazy-page-loaded', { detail: { pageId: pageId } }));
+    }
+    return true;
+  }
+  
+  // Hook tab clicks
+  document.addEventListener('click', function(e){
+    var tab = e.target.closest('[data-tab]');
+    if (!tab) return;
+    var tabName = tab.dataset.tab;
+    if (!tabName) return;
+    var pageId = 'p-' + tabName;
+    if (LAZY_CONTENT[pageId] && !loaded[pageId]){
+      injectPage(pageId);
+    }
+  }, true);  // capture phase to inject BEFORE other handlers
+  
+  // Aussi : si la URL pointe directement vers une lazy page au load
+  if (window.location.hash){
+    var hashTab = window.location.hash.replace(/^#/, '').replace(/^p-/, '');
+    var pageId = 'p-' + hashTab;
+    if (LAZY_CONTENT[pageId]){
+      // Inject after DOM ready
+      if (document.readyState === 'loading'){
+        document.addEventListener('DOMContentLoaded', function(){ injectPage(pageId); });
+      } else {
+        injectPage(pageId);
+      }
+    }
+  }
+  
+  // Expose pour debug
+  window.__lazyInject = injectPage;
+  window.__lazyStatus = function(){
+    var status = {};
+    Object.keys(LAZY_CONTENT).forEach(function(k){ status[k] = !!loaded[k]; });
+    return status;
+  };
 })();
 </script>
 </body>
