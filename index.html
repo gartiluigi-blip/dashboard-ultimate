@@ -10275,7 +10275,7 @@ window.__UD_ROUTINE_CHECKIN_ENGINE_V1__ = true;
       .u20-section{border-top:1px solid rgba(148,163,184,.16);padding-top:12px;margin-top:12px}
       #u20-drawer{position:fixed;inset:0;z-index:999990;background:rgba(0,0,0,.62);display:none;overflow:auto;padding:16px}#u20-drawer.open{display:block}.u20-drawer-card{max-width:860px;margin:0 auto 60px}
       #u20-modal{position:fixed;inset:0;z-index:999995;background:rgba(0,0,0,.68);display:none;overflow:auto;padding:16px}#u20-modal.open{display:block}.u20-modal-card{max-width:620px;margin:4vh auto}.u20-form{display:grid;gap:8px}
-      .u20-fab{position:fixed;right:18px;bottom:calc(88px + env(safe-area-inset-bottom,0px));z-index:999980;border:1px solid rgba(249,115,22,.65);background:linear-gradient(135deg,#f97316,#f59e0b);color:#0a0a10;border-radius:999px;padding:12px 15px;font:900 13px system-ui;box-shadow:0 14px 40px rgba(0,0,0,.35)}
+      .u20-fab{position:fixed;right:12px;top:calc(env(safe-area-inset-top,0px) + 12px);z-index:999980;border:1px solid rgba(249,115,22,.65);background:linear-gradient(135deg,#f97316,#f59e0b);color:#0a0a10;border-radius:999px;padding:8px 12px;font:900 12px system-ui;box-shadow:0 4px 16px rgba(0,0,0,.35);min-height:36px}
       .u20-toast{position:fixed;left:16px;right:16px;bottom:18px;z-index:999999;background:#020617;color:#fff;border:1px solid #334155;padding:12px 14px;border-radius:14px;font:800 13px system-ui;box-shadow:0 12px 40px rgba(0,0,0,.42);opacity:0;transform:translateY(8px);transition:.22s}.u20-toast.show{opacity:1;transform:translateY(0)}
       .u20-resume-card{border-left:3px solid #f97316}.u20-ok{padding:10px;border-radius:12px;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.32);color:#bbf7d0}.u20-warn{padding:10px;border-radius:12px;background:rgba(239,68,68,.14);border:1px solid rgba(239,68,68,.35);color:#fecaca}.u20-report{white-space:pre-wrap;background:#020617;border:1px solid rgba(148,163,184,.22);border-radius:12px;padding:10px;color:#cbd5e1;font-size:12px}
       @media(max-width:620px){.u20-grid,.u20-grid2,.u20-command{grid-template-columns:1fr}.u20-topline,.u20-drawer-head{align-items:flex-start}.u20-card-head{display:grid}.u20-fab{right:12px;bottom:calc(78px + env(safe-area-inset-bottom,0px))}}
@@ -10516,6 +10516,432 @@ window.__UD_ROUTINE_CHECKIN_ENGINE_V1__ = true;
   } else {
     setTimeout(showBanner, 3000);
   }
+})();
+</script>
+<script id="audit-voice-pipeline">
+/* Audit Apr 2026 — Pipeline vocal intelligent.
+   Bouton micro → transcription → coach (mode voice) → action automatique.
+   
+   Flow :
+   1. Tap micro → SpeechRecognition lance
+   2. Transcript en temps réel (overlay)
+   3. End → POST /.netlify/functions/coach { mode: "voice", question: transcript }
+   4. Claude renvoie { action, module, duration, title, note, summary, confidence }
+   5. Si confidence < 0.7 → modal de confirmation
+   6. Sinon → exécution directe + toast
+   
+   Actions supportées :
+   - log_session : incrémente module_progress[module].totalMinutes += duration
+   - add_task : ajoute dans tasks_YYYY-MM-DD
+   - add_note : ajoute dans inbox
+   - add_bookmark : update bookmark module
+   - question : affiche réponse comme un coach
+*/
+(function(){
+  if (window.__voicePipelineInstalled) return;
+  window.__voicePipelineInstalled = true;
+  
+  const NS = 'dashv2_';
+  const COACH_URL = '/.netlify/functions/coach';
+  
+  // ───────── Helpers
+  function todayKey(){
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+  function safeParse(json, fallback){
+    try { return JSON.parse(json); } catch(_){ return fallback; }
+  }
+  function safeGet(key, fallback){
+    try { 
+      const raw = localStorage.getItem(NS + key);
+      return raw ? safeParse(raw, fallback) : fallback;
+    } catch(e){ return fallback; }
+  }
+  function safeSet(key, value){
+    try { localStorage.setItem(NS + key, JSON.stringify(value)); return true; }
+    catch(e){ window.__warn && window.__warn('voice-storage', e); return false; }
+  }
+  function showToast(msg, type){
+    if (typeof window.showToast === 'function') return window.showToast(msg, type);
+    // Fallback
+    const t = document.createElement('div');
+    t.style.cssText = 'position:fixed;top:50px;left:50%;transform:translateX(-50%);background:#1f1f2e;color:#fff;padding:14px 20px;border-radius:10px;z-index:1000000;font:600 14px system-ui;box-shadow:0 8px 24px rgba(0,0,0,.4);max-width:90%';
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 4000);
+  }
+  
+  // ───────── UI : overlay de capture vocale
+  let overlayEl = null;
+  function showOverlay(state){
+    if (!overlayEl){
+      overlayEl = document.createElement('div');
+      overlayEl.id = 'voice-pipeline-overlay';
+      overlayEl.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:1000001;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(8px)';
+      overlayEl.innerHTML = `
+        <div style="max-width:540px;width:100%;text-align:center">
+          <div id="vp-pulse" style="width:120px;height:120px;border-radius:50%;background:radial-gradient(circle,#f97316,#dc2626);margin:0 auto 24px;display:flex;align-items:center;justify-content:center;font-size:54px;animation:vp-pulse 1.4s ease-in-out infinite">🎙️</div>
+          <div id="vp-status" style="color:#fff;font:600 18px system-ui;margin-bottom:12px">Parle maintenant…</div>
+          <div id="vp-transcript" style="color:#fbbf24;font:400 16px system-ui;min-height:60px;padding:14px;background:rgba(255,255,255,.05);border-radius:12px;margin-bottom:16px;text-align:left"></div>
+          <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+            <button id="vp-stop" style="padding:12px 22px;background:#dc2626;color:#fff;border:none;border-radius:10px;font:600 14px system-ui;cursor:pointer;min-height:44px">⏹ Arrêter & Envoyer</button>
+            <button id="vp-cancel" style="padding:12px 22px;background:transparent;color:#fff;border:1px solid #555;border-radius:10px;font:600 14px system-ui;cursor:pointer;min-height:44px">Annuler</button>
+          </div>
+        </div>
+        <style>@keyframes vp-pulse{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(249,115,22,.4)}50%{transform:scale(1.08);box-shadow:0 0 0 30px rgba(249,115,22,0)}}</style>
+      `;
+      document.body.appendChild(overlayEl);
+    }
+    overlayEl.style.display = 'flex';
+    return overlayEl;
+  }
+  function updateStatus(text){
+    const el = overlayEl && overlayEl.querySelector('#vp-status');
+    if (el) el.textContent = text;
+  }
+  function updateTranscript(text){
+    const el = overlayEl && overlayEl.querySelector('#vp-transcript');
+    if (el) el.textContent = text || '(en attente…)';
+  }
+  function hideOverlay(){
+    if (overlayEl) overlayEl.style.display = 'none';
+  }
+  
+  // ───────── Speech Recognition
+  let currentRec = null;
+  let lastTranscript = '';
+  
+  function startRecording(){
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR){
+      showToast('Reconnaissance vocale non supportée sur ce navigateur', 'error');
+      return;
+    }
+    
+    showOverlay('recording');
+    updateStatus('🎙️ Parle maintenant…');
+    updateTranscript('');
+    lastTranscript = '';
+    
+    const rec = new SR();
+    rec.lang = 'fr-FR';
+    rec.continuous = true;
+    rec.interimResults = true;
+    
+    rec.onresult = (e) => {
+      let interim = '';
+      let final = '';
+      for (let i = e.resultIndex; i < e.results.length; i++){
+        const t = e.results[i][0].transcript;
+        if (e.results[i].isFinal) final += t;
+        else interim += t;
+      }
+      if (final) lastTranscript += final;
+      updateTranscript(lastTranscript + (interim ? ' [' + interim + ']' : ''));
+    };
+    
+    rec.onend = () => { currentRec = null; };
+    rec.onerror = (e) => {
+      window.__warn && window.__warn('voice-rec', e);
+      if (e.error === 'not-allowed' || e.error === 'permission-denied'){
+        showToast('Micro refusé — autorise dans les paramètres du navigateur', 'error');
+        hideOverlay();
+      } else if (e.error === 'no-speech'){
+        updateStatus('Aucun son détecté, réessaye…');
+      }
+    };
+    
+    try {
+      rec.start();
+      currentRec = rec;
+    } catch(e){
+      window.__warn && window.__warn('voice-rec-start', e);
+      showToast('Impossible de démarrer le micro', 'error');
+      hideOverlay();
+    }
+    
+    // Hook stop & cancel buttons
+    const stopBtn = overlayEl.querySelector('#vp-stop');
+    const cancelBtn = overlayEl.querySelector('#vp-cancel');
+    
+    stopBtn.onclick = () => {
+      try { if (currentRec) currentRec.stop(); } catch(_){}
+      currentRec = null;
+      processTranscript(lastTranscript.trim());
+    };
+    cancelBtn.onclick = () => {
+      try { if (currentRec) currentRec.abort(); } catch(_){}
+      currentRec = null;
+      hideOverlay();
+    };
+  }
+  
+  // ───────── Process avec coach
+  async function processTranscript(transcript){
+    if (!transcript || transcript.length < 3){
+      showToast('Transcription vide — rien à analyser');
+      hideOverlay();
+      return;
+    }
+    
+    updateStatus('🧠 Claude analyse…');
+    updateTranscript(transcript);
+    
+    // Récupérer un peu de contexte (modules progress)
+    const moduleProgress = safeGet('module_progress', {});
+    const today = todayKey();
+    const tasksToday = safeGet('tasks_' + today, []);
+    
+    const ctx = {
+      currentDate: today,
+      modules_known: ['epfc', 'code', 'nl', 'ia', 'sport', 'flex', 'lecture', 'vinted', 'trading', 'chess', 'finance'],
+      tasksToday_count: tasksToday.length,
+      module_progress_summary: Object.keys(moduleProgress).slice(0, 8).reduce((acc, k) => {
+        const mp = moduleProgress[k];
+        acc[k] = mp && mp.totalMinutes ? Math.round(mp.totalMinutes) : 0;
+        return acc;
+      }, {})
+    };
+    
+    let response;
+    try {
+      const res = await fetch(COACH_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mode: 'voice',
+          question: transcript,
+          context: ctx,
+          max_tokens: 400
+        })
+      });
+      
+      if (!res.ok){
+        const errText = await res.text().catch(() => '');
+        showToast('Erreur coach (' + res.status + ')', 'error');
+        window.__warn && window.__warn('voice-coach', errText);
+        hideOverlay();
+        return;
+      }
+      
+      const data = await res.json();
+      // Extract content
+      let answer = '';
+      if (data.content && Array.isArray(data.content)){
+        answer = data.content.map(c => c.text || '').join('');
+      } else if (typeof data.answer === 'string'){
+        answer = data.answer;
+      } else if (typeof data === 'string'){
+        answer = data;
+      }
+      
+      // Parse JSON inside answer (Claude can wrap in ```json sometimes)
+      let parsed = null;
+      try {
+        // Strip markdown fences if present
+        let clean = answer.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+        parsed = JSON.parse(clean);
+      } catch(e){
+        // Fallback : try to find JSON in text
+        const m = answer.match(/\{[\s\S]*\}/);
+        if (m){
+          try { parsed = JSON.parse(m[0]); } catch(_){}
+        }
+      }
+      
+      if (!parsed || !parsed.action){
+        showToast('Réponse Claude non comprise', 'error');
+        window.__warn && window.__warn('voice-parse', answer);
+        hideOverlay();
+        return;
+      }
+      
+      response = parsed;
+    } catch(e){
+      window.__warn && window.__warn('voice-fetch', e);
+      showToast('Erreur réseau — réessaye', 'error');
+      hideOverlay();
+      return;
+    }
+    
+    // ───────── Confirmation si confidence basse
+    const confidence = response.confidence || 0;
+    const summary = response.summary || 'Action détectée';
+    
+    if (confidence < 0.7){
+      showConfirmModal(transcript, response, () => executeAction(response));
+    } else {
+      hideOverlay();
+      executeAction(response);
+    }
+  }
+  
+  function showConfirmModal(transcript, response, onConfirm){
+    if (!overlayEl) showOverlay('confirm');
+    updateStatus('🤔 J\'ai un doute…');
+    const el = overlayEl;
+    if (!el || !el.querySelector){
+      if (typeof confirm === 'function' && confirm(response.summary + ' ?')) onConfirm();
+      else hideOverlay();
+      return;
+    }
+    const pulseEl = el.querySelector('#vp-pulse');
+    if (pulseEl){
+      pulseEl.style.animation = 'none';
+      pulseEl.textContent = '🤔';
+      pulseEl.style.background = '#fbbf24';
+    }
+    const transcriptEl = el.querySelector('#vp-transcript');
+    if (transcriptEl) transcriptEl.innerHTML = 
+      '<div style="font-size:13px;opacity:.7;margin-bottom:6px">Tu as dit :</div>' +
+      '<div style="margin-bottom:12px">"' + (transcript.replace(/[<>]/g, '') || '') + '"</div>' +
+      '<div style="font-size:13px;opacity:.7;margin-bottom:6px">J\'ai compris :</div>' +
+      '<div style="color:#fff;font-weight:600">' + (response.summary || '?').replace(/[<>]/g, '') + '</div>' +
+      '<div style="font-size:11px;opacity:.5;margin-top:8px">Confiance : ' + Math.round((response.confidence||0)*100) + '%</div>';
+    
+    const stopBtn = el.querySelector('#vp-stop');
+    const cancelBtn = el.querySelector('#vp-cancel');
+    if (stopBtn){
+      stopBtn.textContent = '✓ Confirmer';
+      stopBtn.style.background = '#16a34a';
+      stopBtn.onclick = () => { hideOverlay(); onConfirm(); };
+    }
+    if (cancelBtn){
+      cancelBtn.textContent = 'Annuler';
+      cancelBtn.onclick = hideOverlay;
+    }
+  }
+  
+  // ───────── Actions
+  function executeAction(r){
+    const action = r.action;
+    
+    if (action === 'log_session'){
+      const module = (r.module || '').toLowerCase();
+      const duration = parseInt(r.duration, 10) || 0;
+      if (!module || duration <= 0){
+        showToast('Module ou durée manquant', 'error');
+        return;
+      }
+      const mp = safeGet('module_progress', {});
+      mp[module] = mp[module] || { totalMinutes: 0, sessions: 0, lastSession: null };
+      mp[module].totalMinutes = (mp[module].totalMinutes || 0) + duration;
+      mp[module].sessions = (mp[module].sessions || 0) + 1;
+      mp[module].lastSession = new Date().toISOString();
+      if (r.note) mp[module].lastNote = r.note;
+      safeSet('module_progress', mp);
+      
+      // Bookmark si note
+      if (r.note){
+        const bm = safeGet('bookmarks', {});
+        bm[module] = { text: r.note, ts: new Date().toISOString() };
+        safeSet('bookmarks', bm);
+      }
+      
+      showToast('✓ ' + duration + ' min ' + module.toUpperCase() + ' enregistrées' + (r.note ? ' + bookmark' : ''));
+      
+    } else if (action === 'add_task'){
+      const today = todayKey();
+      const tasks = safeGet('tasks_' + today, []);
+      tasks.push({
+        id: 'voice_' + Date.now(),
+        title: r.title || 'Tâche dictée',
+        priority: r.priority || 'medium',
+        cat: r.module || '',
+        done: false,
+        createdAt: new Date().toISOString(),
+        source: 'voice'
+      });
+      safeSet('tasks_' + today, tasks);
+      showToast('✓ Tâche ajoutée : ' + (r.title || '...'));
+      
+    } else if (action === 'add_note'){
+      const inbox = safeGet('inbox_v2', []);
+      inbox.push({
+        id: 'voice_' + Date.now(),
+        text: r.note || '',
+        module: r.module || '',
+        ts: new Date().toISOString(),
+        source: 'voice'
+      });
+      safeSet('inbox_v2', inbox);
+      showToast('✓ Note ajoutée à l\'inbox');
+      
+    } else if (action === 'add_bookmark'){
+      const module = (r.module || '').toLowerCase();
+      if (!module){
+        showToast('Module manquant pour bookmark', 'error');
+        return;
+      }
+      const bm = safeGet('bookmarks', {});
+      bm[module] = { text: r.note || '', ts: new Date().toISOString() };
+      safeSet('bookmarks', bm);
+      showToast('✓ Bookmark ' + module.toUpperCase() + ' mis à jour');
+      
+    } else if (action === 'question'){
+      // Re-run en mode coach normal pour avoir une vraie réponse
+      hideOverlay();
+      const evt = new CustomEvent('voice-question', { detail: { question: r.question || '' } });
+      document.dispatchEvent(evt);
+      // Si l'app a un coach UI, ouvrir avec la question préremplie
+      const coachInput = document.querySelector('input[id*="coach"], textarea[id*="coach"], input[placeholder*="question"], textarea[placeholder*="question"]');
+      if (coachInput){
+        coachInput.value = r.question || '';
+        coachInput.focus();
+        showToast('Question prête dans le coach — appuie Entrée');
+      } else {
+        showToast('Question : ' + (r.question || ''));
+      }
+      return;
+      
+    } else {
+      showToast('Action inconnue : ' + action);
+    }
+    
+    // Refresh certains affichages si possible
+    setTimeout(() => {
+      if (typeof window.renderToday === 'function') try { window.renderToday(); } catch(_){}
+      if (typeof window.renderBookmarks === 'function') try { window.renderBookmarks(); } catch(_){}
+      if (typeof window.renderTasks === 'function') try { window.renderTasks(); } catch(_){}
+    }, 100);
+  }
+  
+  // ───────── Hook les boutons existants
+  function hookButtons(){
+    // Bouton #log-voice (Home)
+    const logVoice = document.getElementById('log-voice');
+    if (logVoice && !logVoice.dataset.voiceHooked){
+      logVoice.dataset.voiceHooked = '1';
+      logVoice.addEventListener('click', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        startRecording();
+      }, true);
+    }
+    
+    // Bouton [data-u20-voice]
+    const u20Voice = document.querySelector('[data-u20-voice]');
+    if (u20Voice && !u20Voice.dataset.voiceHooked){
+      u20Voice.dataset.voiceHooked = '1';
+      u20Voice.addEventListener('click', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        startRecording();
+      }, true);
+    }
+  }
+  
+  // Hook au boot et à chaque changement DOM (les boutons peuvent apparaitre tard)
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', hookButtons);
+  } else {
+    hookButtons();
+  }
+  setInterval(hookButtons, 2000);
+  
+  // Expose pour debug
+  window.__voicePipeline = { startRecording, processTranscript, executeAction };
 })();
 </script>
 </body>
