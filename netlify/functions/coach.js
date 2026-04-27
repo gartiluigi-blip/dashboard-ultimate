@@ -92,7 +92,8 @@ const SYSTEM_PROMPTS = {
   coach: "Tu es le coach personnel de l'utilisateur. Il a un dashboard qui track : EPFC (études), code, néerlandais, sport, souplesse, lecture, échecs, Vinted, humeur, pomodoros. Il est à Bruxelles, travaille en shifts rotatifs, prépare un bachelor dev pour sept. 2026, a une contrainte C7 (cervicales). Réponds en français, ton direct mais chaleureux, concret. Maximum 150 mots. Utilise les chiffres réels de son contexte. Si tu détectes un problème, dis-le clairement sans édulcorer.",
   analyse: "Tu es un analyste de performance personnelle. Réponds en français. Identifie les faiblesses, dérives et incohérences dans le contexte fourni. Ton direct et factuel.",
   plan: "Tu es un planificateur opérationnel. Réponds en français. Transforme le contexte en plan d'action concret pour aujourd'hui. Maximum 5 actions, ordonnées par priorité.",
-  trading: "Tu es un coach trading senior, ex-prop trader. Réponds en français, ton direct, sans complaisance. Focus discipline et risk, pas hype technique."
+  trading: "Tu es un coach trading senior, ex-prop trader. Réponds en français, ton direct, sans complaisance. Focus discipline et risk, pas hype technique.",
+  voice: "Tu reçois une dictée vocale brute (transcription du navigateur, parfois imparfaite). L'utilisateur parle à son dashboard personnel. Tu dois identifier l'INTENTION et extraire les paramètres pour que le client agisse automatiquement. Modules disponibles : epfc, code, nl, ia, sport, flex, lecture, vinted, trading, chess, finance. Actions possibles : log_session (l'user a fait X minutes de Y), add_task (créer une tâche), add_note (note libre), add_bookmark (marque-page d'étude où il s'est arrêté), question (vraie question à analyser comme coach). Sois INDULGENT : 'epef' = epfc, 'jé fé' = j'ai fait, 'codign' = coding, 'pithon' = python. Si l'intention est ambiguë, choisis l'interprétation la plus probable et mets confidence < 0.7."
 };
 
 const JSON_SCHEMA_INSTRUCTION = [
@@ -106,6 +107,23 @@ const JSON_SCHEMA_INSTRUCTION = [
   "next_action_title = action courte.",
   "next_action_sub = détail court et concret.",
   "warning = danger principal ou dérive principale. Si rien à signaler, mets une chaîne vide."
+].join(' ');
+
+// Schema spécifique pour le mode voice (intent recognition)
+const VOICE_JSON_SCHEMA_INSTRUCTION = [
+  "Tu dois répondre UNIQUEMENT en JSON valide.",
+  "Aucune phrase avant ou après le JSON.",
+  "Schéma exact :",
+  '{"action":"log_session|add_task|add_note|add_bookmark|question","module":"string","duration":0,"title":"string","note":"string","priority":"low|medium|high","question":"string","confidence":0.0,"summary":"string"}',
+  "action = type d'action détectée.",
+  "module = un de : epfc, code, nl, ia, sport, flex, lecture, vinted, trading, chess, finance, autre. Si non applicable, mets ''.",
+  "duration = minutes (entier). 0 si non applicable.",
+  "title = pour add_task : titre court et clair de la tâche. Sinon ''.",
+  "note = pour add_note ou add_bookmark : contenu de la note. Sinon ''.",
+  "priority = low/medium/high pour add_task. Sinon 'medium'.",
+  "question = pour action=question : la question reformulée proprement. Sinon ''.",
+  "confidence = ta certitude entre 0 et 1.",
+  "summary = phrase courte récapitulant ce que tu as compris (en français), pour confirmation user."
 ].join(' ');
 
 // ─────────────────────────────────────────────────────────────
@@ -230,7 +248,8 @@ exports.handler = async (event) => {
     const requestedMode = String(payload.mode || 'coach').trim();
     const mode = SYSTEM_PROMPTS[requestedMode] ? requestedMode : 'coach';
     const systemBase = SYSTEM_PROMPTS[mode];
-    const system = systemBase + ' ' + JSON_SCHEMA_INSTRUCTION;
+    const schemaInstruction = (mode === 'voice') ? VOICE_JSON_SCHEMA_INSTRUCTION : JSON_SCHEMA_INSTRUCTION;
+    const system = systemBase + ' ' + schemaInstruction;
 
     // max_tokens cappé
     const requestedMaxTokens = Number(payload.max_tokens);
