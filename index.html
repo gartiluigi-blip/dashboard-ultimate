@@ -12,6 +12,175 @@ if (typeof window.Notification === 'undefined'){
   window.Notification.requestPermission = function(){ return Promise.resolve('denied'); };
 }
 </script>
+<script id="audit-private-mode-check">
+(function(){
+  var ok = false;
+  try { var k = '__t_'+Date.now(); localStorage.setItem(k,'1'); localStorage.removeItem(k); ok = true; }
+  catch(e){ ok = false; }
+  if (!ok){
+    document.addEventListener('DOMContentLoaded', function(){
+      var bar = document.createElement('div');
+      bar.id = 'audit-storage-warning';
+      bar.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#dc2626;color:#fff;padding:12px 16px;font:600 13px system-ui,sans-serif;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.4)';
+      bar.innerHTML = '⚠️ Mode privé ou stockage indisponible — Tes données ne seront PAS sauvegardées. <button aria-label="Fermer" style="margin-left:12px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;padding:4px 10px;border-radius:6px;cursor:pointer">Compris</button>';
+      bar.querySelector('button').addEventListener('click', function(){ bar.remove(); document.body.style.paddingTop=''; });
+      document.body.appendChild(bar);
+      document.body.style.paddingTop = (bar.offsetHeight + 8) + 'px';
+    });
+  }
+})();
+</script>
+<script id="audit-localstorage-safe">
+(function(){
+  var stats = { ok:0, errors:0, lastError:null };
+  var oG = Storage.prototype.getItem;
+  var oS = Storage.prototype.setItem;
+  var oR = Storage.prototype.removeItem;
+  Storage.prototype.getItem = function(k){
+    try { var v = oG.call(this,k); stats.ok++; return v; }
+    catch(e){ stats.errors++; stats.lastError = String(e); return null; }
+  };
+  Storage.prototype.setItem = function(k,v){
+    try { oS.call(this,k,v); stats.ok++; }
+    catch(e){
+      stats.errors++; stats.lastError = String(e);
+      if (e && /quota/i.test(String(e))){
+        try {
+          var keys = [];
+          for (var i = 0; i < this.length; i++){
+            var key = this.key(i);
+            if (key && /\d{4}-\d{2}-\d{2}/.test(key)) keys.push(key);
+          }
+          keys.sort();
+          for (var j = 0; j < Math.min(10, keys.length-5); j++){
+            try { oR.call(this, keys[j]); } catch(_){}
+          }
+          try { oS.call(this,k,v); stats.ok++; stats.errors--; } catch(e){ window.__warn && window.__warn('audit-catch', e); }
+        } catch(_){}
+      }
+    }
+  };
+  Storage.prototype.removeItem = function(k){
+    try { oR.call(this,k); stats.ok++; }
+    catch(e){ stats.errors++; stats.lastError = String(e); }
+  };
+  window.__storageStats = stats;
+})();
+</script>
+<script id="audit-helpers">
+(function(){
+  if (!window.escapeHTML){
+    var m = { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' };
+    window.escapeHTML = function(s){ return s == null ? '' : String(s).replace(/[&<>"']/g, function(c){ return m[c]; }); };
+  }
+  if (!window.bindOnce){
+    window.bindOnce = function(el, ev, h, k){
+      if (!el) return false;
+      var dk = '_bound_' + (k || ev);
+      if (el.dataset && el.dataset[dk]) return false;
+      el.addEventListener(ev, h);
+      if (el.dataset) el.dataset[dk] = '1';
+      return true;
+    };
+    window.delegate = function(p, sel, ev, h){
+      if (!p) return false;
+      var dk = '_delegate_' + sel + '_' + ev;
+      if (p.dataset && p.dataset[dk]) return false;
+      p.addEventListener(ev, function(e){
+        var match = e.target.closest(sel);
+        if (match && p.contains(match)) h.call(match, e);
+      });
+      if (p.dataset) p.dataset[dk] = '1';
+      return true;
+    };
+  }
+  window.__warn = function(ctx, err){ if (window.__debugMode) console.warn('['+ctx+']', err); };
+  window.__debugMode = false;
+  window.__memoryStatus = function(){
+    if (!performance || !performance.memory) return 'unavailable';
+    return {
+      usedMB: (performance.memory.usedJSHeapSize/1048576).toFixed(1),
+      limitMB: (performance.memory.jsHeapSizeLimit/1048576).toFixed(0),
+      percentUsed: (performance.memory.usedJSHeapSize/performance.memory.jsHeapSizeLimit*100).toFixed(1)+'%'
+    };
+  };
+})();
+</script>
+<script id="audit-storage-cleanup">
+/* Audit Apr 2026 — Cleanup PRÉVENTIF du localStorage.
+   Tu as ~43 clés dans dashv2_*. Plusieurs sont datées (logs_2025-12-15, freeze_2026-01-03, etc.).
+   Sans rétention, elles s'accumulent jusqu'au quota (5 MB). 
+   Ce script supprime les clés date-based > 90 jours, 1× au boot, max 1×/24h.
+
+   Préserve : tous les noms de clés non-datées, les snapshots datés volontaires
+   (snapshot_*, qui sont gérés par autoBackupCheck avec rotation 30).
+*/
+(function(){
+  if (window.__auditStorageCleanupDone) return;
+  window.__auditStorageCleanupDone = true;
+  
+  var LAST_CLEANUP_KEY = 'dashv2___last_cleanup';
+  var ONE_DAY_MS = 24 * 60 * 60 * 1000;
+  var RETENTION_DAYS = 90;
+  
+  try {
+    var lastCleanup = parseInt(localStorage.getItem(LAST_CLEANUP_KEY) || '0', 10);
+    var now = Date.now();
+    if (now - lastCleanup < ONE_DAY_MS) return; // Pas plus d'1 cleanup par jour
+    
+    var threshold = new Date(now - RETENTION_DAYS * ONE_DAY_MS);
+    var thresholdYear = threshold.getFullYear();
+    var thresholdMonth = threshold.getMonth() + 1;
+    var thresholdDay = threshold.getDate();
+    
+    // Format ISO YYYY-MM-DD comparable lexicographiquement
+    var thresholdISO = thresholdYear + '-' + 
+                       String(thresholdMonth).padStart(2, '0') + '-' +
+                       String(thresholdDay).padStart(2, '0');
+    
+    var deleted = 0;
+    var keysToDelete = [];
+    
+    for (var i = 0; i < localStorage.length; i++){
+      var key = localStorage.key(i);
+      if (!key) continue;
+      
+      // PRÉSERVATIONS — ne JAMAIS toucher :
+      if (key.indexOf('snapshot_') !== -1) continue;       // snapshots gérés par rotation
+      if (key.indexOf('__last_cleanup') !== -1) continue;  // notre propre clé
+      if (key.indexOf('schema_version') !== -1) continue;  // versioning
+      if (key.indexOf('gh_token') !== -1) continue;        // backup token
+      if (key.indexOf('gist_id') !== -1) continue;
+      
+      // Match clé avec date YYYY-MM-DD à la fin
+      var dateMatch = key.match(/(\d{4}-\d{2}-\d{2})(?:_|$)/);
+      if (!dateMatch) continue; // Pas une clé datée
+      
+      var keyDate = dateMatch[1];
+      // Comparison lexicographique (ISO date)
+      if (keyDate < thresholdISO){
+        keysToDelete.push(key);
+      }
+    }
+    
+    // Supprimer
+    keysToDelete.forEach(function(k){
+      try { localStorage.removeItem(k); deleted++; } catch(e){ window.__warn && window.__warn('storage-cleanup', e); }
+    });
+    
+    localStorage.setItem(LAST_CLEANUP_KEY, String(now));
+    
+    if (deleted > 0 && window.__debugMode){
+      console.log('[storage-cleanup] Removed ' + deleted + ' keys older than ' + RETENTION_DAYS + ' days');
+    }
+    
+    window.__lastCleanupStats = { deleted: deleted, ranAt: new Date().toISOString(), thresholdISO: thresholdISO };
+  } catch(e){
+    window.__warn && window.__warn('storage-cleanup', e);
+  }
+})();
+</script>
+
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
@@ -53,7 +222,7 @@ if (typeof window.Notification === 'undefined'){
     size-adjust:96%;
   }
 </style>
-<link rel="stylesheet" href="/assets/main.bb7b8c4f.css">
+<link rel="stylesheet" href="/assets/main.b19fca0a.css">
 
 <style id="ud-performance-step1-style">
 @media (max-width: 640px){
@@ -92,9 +261,7 @@ if (typeof window.Notification === 'undefined'){
 <body>
 <div class="app">
 
-<!-- ═══════════════════════════════════════════════════════════
-     MASTHEAD
-     ═══════════════════════════════════════════════════════════ -->
+
 <header class="masthead">
 <div class="masthead-inner">
 <div class="brand">
@@ -135,9 +302,7 @@ if (typeof window.Notification === 'undefined'){
 <main class="main">
 
 
-<!-- ═══════════════════════════════════════════════════════════
-     HOME · AUJOURD'HUI
-     ═══════════════════════════════════════════════════════════ -->
+
 <section class="page active" id="p-home">
 
 <div class="home-search">
@@ -148,7 +313,7 @@ if (typeof window.Notification === 'undefined'){
 </button>
 </div>
 
-<!-- NEXT ACTION · l'instruction principale du moment -->
+
 <div class="next-action" id="next-action" aria-live="polite">
   <div class="na-head">
     <span class="na-label" id="na-label">Prochaine action</span>
@@ -591,15 +756,15 @@ Bachelor dev en septembre. Bilingue NL+FR d'ici 2 ans. Corps robuste malgré la 
 <h2 class="section-title amber">Raccourcis <em>utiles</em></h2>
 
 <div class="stats stats-3">
-<button class="stat" data-go="sport" style="cursor:pointer"><div class="stat-v flame" style="font-size:22px">💪</div><div class="stat-l">Séance du jour</div></button>
-<button class="stat" data-go="nutrition" style="cursor:pointer"><div class="stat-v amber" style="font-size:22px">🍳</div><div class="stat-l">Mes 6 repas</div></button>
-<button class="stat" data-go="stats" style="cursor:pointer"><div class="stat-v jade" style="font-size:22px">📊</div><div class="stat-l">Mes stats</div></button>
+<button aria-label="Action" class="stat" data-go="sport" style="cursor:pointer"><div class="stat-v flame" style="font-size:22px">💪</div><div class="stat-l">Séance du jour</div></button>
+<button aria-label="Action" class="stat" data-go="nutrition" style="cursor:pointer"><div class="stat-v amber" style="font-size:22px">🍳</div><div class="stat-l">Mes 6 repas</div></button>
+<button aria-label="Action" class="stat" data-go="stats" style="cursor:pointer"><div class="stat-v jade" style="font-size:22px">📊</div><div class="stat-l">Mes stats</div></button>
 </div>
 
 <div class="stats stats-3" style="margin-top:10px">
-<button class="stat" data-action="pomo-open" style="cursor:pointer"><div class="stat-v coral" style="font-size:22px">⏱️</div><div class="stat-l">Pomodoro 25/5</div></button>
-<button class="stat" data-go="code" style="cursor:pointer"><div class="stat-v violet" style="font-size:22px">💻</div><div class="stat-l">Où coder</div></button>
-<button class="stat" data-go="plan" style="cursor:pointer"><div class="stat-v blue" style="font-size:22px">📋</div><div class="stat-l">Mon plan</div></button>
+<button aria-label="Action" class="stat" data-action="pomo-open" style="cursor:pointer"><div class="stat-v coral" style="font-size:22px">⏱️</div><div class="stat-l">Pomodoro 25/5</div></button>
+<button aria-label="Action" class="stat" data-go="code" style="cursor:pointer"><div class="stat-v violet" style="font-size:22px">💻</div><div class="stat-l">Où coder</div></button>
+<button aria-label="Action" class="stat" data-go="plan" style="cursor:pointer"><div class="stat-v blue" style="font-size:22px">📋</div><div class="stat-l">Mon plan</div></button>
 </div>
 
 <h2 class="section-title coral">Mes données</h2>
@@ -617,9 +782,7 @@ Bachelor dev en septembre. Bilingue NL+FR d'ici 2 ans. Corps robuste malgré la 
 </section>
 
 
-<!-- ═══════════════════════════════════════════════════════════
-     STATS (new tab)
-     ═══════════════════════════════════════════════════════════ -->
+
 <section class="page" id="p-stats">
 <div class="page-header">
 <h1 class="page-title">Stats · <em>ta progression</em></h1>
@@ -693,9 +856,7 @@ Bachelor dev en septembre. Bilingue NL+FR d'ici 2 ans. Corps robuste malgré la 
 </section>
 
 
-<!-- ═══════════════════════════════════════════════════════════
-     ROUTINE
-     ═══════════════════════════════════════════════════════════ -->
+
 <section class="page" id="p-routine">
 <div class="page-kicker">Routine</div>
 <h1 class="page-title">Ton <em>rythme</em> quotidien</h1>
@@ -880,9 +1041,7 @@ Si t'as de la fièvre, douleurs fortes, ou t'es vraiment KO : <strong>protocole 
 </section>
 
 
-<!-- ═══════════════════════════════════════════════════════════
-     SPORT
-     ═══════════════════════════════════════════════════════════ -->
+
 <section class="page" id="p-sport">
 <div class="page-kicker">Force & Mouvement</div>
 <h1 class="page-title">Push <em>Pull</em> Legs</h1>
@@ -931,13 +1090,13 @@ Si t'as de la fièvre, douleurs fortes, ou t'es vraiment KO : <strong>protocole 
 
 <h2 class="section-title">Semaine <em>type</em></h2>
 <div class="weekrow">
-<button class="wday active" data-d="d1"><b>L</b><em>Push</em></button>
-<button class="wday" data-d="d2"><b>M</b><em>Pull</em></button>
-<button class="wday" data-d="d3"><b>Me</b><em>Legs</em></button>
-<button class="wday" data-d="d4"><b>J</b><em>Push</em></button>
-<button class="wday" data-d="d5"><b>V</b><em>Pull</em></button>
-<button class="wday" data-d="d6"><b>S</b><em>Legs</em></button>
-<button class="wday" data-d="d7"><b>D</b><em>Repos</em></button>
+<button aria-label="Action" class="wday active" data-d="d1"><b>L</b><em>Push</em></button>
+<button aria-label="Action" class="wday" data-d="d2"><b>M</b><em>Pull</em></button>
+<button aria-label="Action" class="wday" data-d="d3"><b>Me</b><em>Legs</em></button>
+<button aria-label="Action" class="wday" data-d="d4"><b>J</b><em>Push</em></button>
+<button aria-label="Action" class="wday" data-d="d5"><b>V</b><em>Pull</em></button>
+<button aria-label="Action" class="wday" data-d="d6"><b>S</b><em>Legs</em></button>
+<button aria-label="Action" class="wday" data-d="d7"><b>D</b><em>Repos</em></button>
 </div>
 
 <div class="day-view" id="day-d1">
@@ -1033,9 +1192,7 @@ Si t'as de la fièvre, douleurs fortes, ou t'es vraiment KO : <strong>protocole 
 
 </section>
 
-<!-- ═══════════════════════════════════════════════════════════
-     SOUPLESSE
-     ═══════════════════════════════════════════════════════════ -->
+
 <section class="page" id="p-flex">
 <div class="page-kicker">Souplesse · Mobilité</div>
 <h1 class="page-title">Du sol <em>au grand écart</em></h1>
@@ -1226,9 +1383,7 @@ Si t'as de la fièvre, douleurs fortes, ou t'es vraiment KO : <strong>protocole 
 </section>
 
 
-<!-- ═══════════════════════════════════════════════════════════
-     NUTRITION
-     ═══════════════════════════════════════════════════════════ -->
+
 <section class="page" id="p-nutrition">
 <div class="page-kicker">Carburant</div>
 <h1 class="page-title">Nutrition · <em>€300/mois</em></h1>
@@ -1318,9 +1473,7 @@ Si t'as de la fièvre, douleurs fortes, ou t'es vraiment KO : <strong>protocole 
 
 </section>
 
-<!-- ═══════════════════════════════════════════════════════════
-     EPFC
-     ═══════════════════════════════════════════════════════════ -->
+
 <section class="page" id="p-epfc">
 <div class="page-kicker">Bachelor · Développement d'applications</div>
 <h1 class="page-title">EPFC · <em>25 cours</em> · 11 certifs</h1>
@@ -1443,181 +1596,20 @@ Si t'as de la fièvre, douleurs fortes, ou t'es vraiment KO : <strong>protocole 
 </section>
 
 
-<!-- ============================================================= -->
+
 <!-- TAB : CODE -->
-<!-- ============================================================= -->
-<section class="page" id="p-code" data-page="code">
-<div class="page-header">
-<h1 class="page-title">Progression Code</h1>
-<p class="page-sub">De <em>Hello World</em> à <em>ingénieur junior</em> — chaque plateforme a son rôle, chaque phase son verdict.</p>
-</div>
 
-<div class="callout callout-info"><strong>La règle :</strong> tu ne passes à la plateforme suivante <em>que</em> quand tu fais 80% des exos de la précédente sans galérer. Ce n'est pas une course — c'est une échelle.</div>
 
-<h2 class="section-title jade">Phase 0 · <em>fondations absolues</em></h2>
-<div class="phase">
-<div class="phase-head"><span class="phase-tag">M1-M4 · avant EPFC</span><h3>Syntaxe & réflexes de base</h3></div>
-<ul class="dlist">
-<li><span class="k"><strong>CodingBat</strong> <span class="muted">(gratuit)</span></span><span class="v pos">Commence ici</span><div class="note">Python + Java. 300+ mini-exos ultra-courts. Objectif : faire les 100 premiers Python Warmup + String-1 + List-1 avant septembre. 15min/jour suffit.</div></li>
-<li><span class="k"><strong>Edabit</strong> <span class="muted">(gratuit)</span></span><span class="v pos">En parallèle</span><div class="note">Gamifié, progression par niveaux. Parfait pour les soirs où CodingBat t'ennuie. Fais les "Very Easy" en série jusqu'à ce que ça coule.</div></li>
-<li><span class="k"><strong>freeCodeCamp</strong> <span class="muted">(gratuit, certifs inclus)</span></span><span class="v info">Option web</span><div class="note">Parcours "Responsive Web Design" (300h mais tu passes plus vite) = complément parfait pour WEB1 d'EPFC. Certif gratuit à la fin.</div></li>
-</ul>
-</div>
 
-<h2 class="section-title sapphire">Phase 1 · <em>consolidation</em></h2>
-<div class="phase">
-<div class="phase-head"><span class="phase-tag">Année 1 EPFC · M5-M14</span><h3>Patterns & résolution</h3></div>
-<ul class="dlist">
-<li><span class="k"><strong>Exercism</strong> <span class="muted">(gratuit, avec mentorat humain)</span></span><span class="v pos">Indispensable</span><div class="note">Track Python puis Java. Gros avantage : un mentor review ton code gratuitement. Tu apprends <em>le style</em>, pas juste "ça compile".</div></li>
-<li><span class="k"><strong>Codewars</strong> <span class="muted">(gratuit)</span></span><span class="v pos">Quotidien</span><div class="note">Katas par niveau (8 kyu = débutant → 1 kyu = avancé). Objectif : 5 kyu à la fin de l'année 1. Tu compares ta solution à celles des autres = bond de niveau.</div></li>
-<li><span class="k"><strong>CS50 Harvard</strong> <span class="muted">(gratuit sur edX)</span></span><span class="v info">Bonus</span><div class="note">Le cours d'intro CS le plus reconnu au monde. C, Python, SQL, structures de données. Si tu le finis, tu as un avantage énorme sur tes camarades EPFC.</div></li>
-</ul>
-</div>
 
-<h2 class="section-title flame">Phase 2 · <em>technique d'entretien</em></h2>
-<div class="phase">
-<div class="phase-head"><span class="phase-tag">Année 2 EPFC · M15-M26</span><h3>LeetCode, HackerRank, algos</h3></div>
-<ul class="dlist">
-<li><span class="k"><strong>LeetCode</strong> <span class="muted">(freemium — les Easy suffisent)</span></span><span class="v pos">Le standard</span><div class="note">Fais le <em>NeetCode 150</em> (liste curée, gratuite sur neetcode.io). Couvre tous les patterns d'entretien : two pointers, sliding window, DP, graphes. 150 problèmes = 6 mois à ~1/jour.</div></li>
-<li><span class="k"><strong>HackerRank</strong> <span class="muted">(gratuit)</span></span><span class="v pos">Certifs CV</span><div class="note">Passe les <em>Skills Certifications</em> : Python (Basic puis Intermediate), Java (Basic), Problem Solving (Basic), SQL (Basic puis Intermediate). Gratuit, sur ton profil LinkedIn en 1 clic.</div></li>
-<li><span class="k"><strong>Advent of Code</strong> <span class="muted">(gratuit, tous les décembres)</span></span><span class="v info">Tradition</span><div class="note">25 puzzles, 1/jour en décembre. Bloque tes soirées de décembre pour ça pendant l'EPFC. Ta communauté grandit ici.</div></li>
-</ul>
-</div>
-
-<h2 class="section-title violet">Phase 3 · <em>domaine IA/Data</em></h2>
-<div class="phase">
-<div class="phase-head"><span class="phase-tag">Année 3 EPFC · M27+</span><h3>Kaggle + projets portfolio</h3></div>
-<ul class="dlist">
-<li><span class="k"><strong>Kaggle</strong> <span class="muted">(gratuit)</span></span><span class="v pos">Spécialisation IA</span><div class="note">Commence par les <em>Kaggle Learn</em> micro-cours (Intro to ML, Intermediate ML, Pandas, Data Viz). Puis compete : objectif <em>Expert tier</em> année 3.</div></li>
-<li><span class="k"><strong>Hugging Face</strong> <span class="muted">(gratuit)</span></span><span class="v pos">Portfolio LLM</span><div class="note">Course NLP + Deep RL + Audio. Tes projets finaux vont ici (Spaces publics).</div></li>
-<li><span class="k"><strong>GitHub pro</strong></span><span class="v info">Le vrai CV</span><div class="note">Contrib open-source régulière, README propres, README.md avec démos GIF. C'est <em>ça</em> que les recruteurs regardent — pas LeetCode.</div></li>
-</ul>
-</div>
-
-<h2 class="section-title">CV Tech par mois <em>(ce qui apparaît au recruteur)</em></h2>
-<div class="card"><ul class="dlist">
-<li><span class="k"><strong>M3</strong> — CodingBat 100% Python Warmup</span><span class="v muted">Personnel, pas sur CV</span></li>
-<li><span class="k"><strong>M6</strong> — HackerRank Python Basic + PCEP</span><span class="v pos">+2 lignes CV</span></li>
-<li><span class="k"><strong>M12</strong> — freeCodeCamp Responsive + CompTIA A+ Core 1</span><span class="v pos">+2 lignes</span></li>
-<li><span class="k"><strong>M18</strong> — HackerRank Python Intermediate + SQL + Oracle SQL</span><span class="v pos">+3 lignes</span></li>
-<li><span class="k"><strong>M24</strong> — Oracle Java OCA + Meta Front-End + Google Data + PSM I</span><span class="v pos">CV solide</span></li>
-<li><span class="k"><strong>M30</strong> — 3 projets Kaggle + Hugging Face Spaces + AWS CP</span><span class="v pos">CV IA-ready</span></li>
-<li><span class="k"><strong>M36 (diplôme)</strong> — SAP TS410 + portfolio GitHub + stage</span><span class="v warn">CV complet</span></li>
-</ul></div>
-
-<div class="callout callout-focus"><strong>Le CV idéal au diplôme (M36)</strong> = Bachelor EPFC · 11 certifs tech · 5+ projets GitHub dont 2 IA · contrib open-source · LinkedIn à jour · stage terminé. <em>Il y a des seniors avec moins que ça.</em></div>
-</section>
-
-<!-- ============================================================= -->
 <!-- TAB : IA -->
-<!-- ============================================================= -->
-<section class="page" id="p-ia" data-page="ia">
-<div class="page-header">
-<h1 class="page-title">Parcours IA · 30 mois</h1>
-<p class="page-sub">De <em>zéro ML</em> à <em>ingénieur IA/LLM</em> employable. En parallèle d'EPFC, avec le bachelor comme fondation CS et l'IA comme spécialisation.</p>
-</div>
-
-<div class="callout callout-info"><strong>Python d'abord.</strong> Les ressources IA assument que tu codes en Python. Si tu démarres, commence par CodingBat + Think Python <em>en parallèle</em> des premières leçons Kaggle Learn — pas besoin d'attendre d'être "prêt".</div>
-
-<h2 class="section-title jade">Phase 1 · <em>Fondations Data</em> <span class="muted">M5-M8</span></h2>
-<div class="phase">
-<div class="phase-head"><span class="phase-tag">Python + Maths + Pandas</span><h3>Les outils avant les modèles</h3></div>
-<ul class="dlist">
-<li><span class="k"><strong>Python for Data Analysis</strong> (Wes McKinney, 3e éd.)</span><span class="v">📘 O'Reilly</span><div class="note">Pandas by its creator. NumPy, Pandas, Matplotlib. 2-3 chap/semaine. Le livre référence.</div></li>
-<li><span class="k"><strong>Kaggle Learn</strong> — Python + Pandas + Data Viz</span><span class="v pos">Gratuit</span><div class="note">3 micro-cours de 4-7h chacun. Certif après chaque. Parfait pour alterner avec le livre.</div></li>
-<li><span class="k"><strong>Khan Academy</strong> — Algèbre linéaire + stats + calcul</span><span class="v pos">Gratuit</span><div class="note">Juste ce qu'il te faut. Pas besoin de re-faire Mat Sup.</div></li>
-</ul>
-<div class="callout callout-tip"><strong>Livrable M8 :</strong> 2 notebooks Kaggle publics (EDA propre sur 2 datasets).</div>
-</div>
-
-<h2 class="section-title sapphire">Phase 2 · <em>ML Classique</em> <span class="muted">M9-M14</span></h2>
-<div class="phase">
-<div class="phase-head"><span class="phase-tag">Scikit-learn + théorie</span><h3>Régression, classification, clustering</h3></div>
-<ul class="dlist">
-<li><span class="k"><strong>Hands-On Machine Learning</strong> (Aurélien Géron, 3e éd.)</span><span class="v">📘 O'Reilly · La bible</span><div class="note">Parties I & II. Les chapitres 2-9. Fais les exos à la fin de chaque chap. ~4-6 mois à rythme soutenable.</div></li>
-<li><span class="k"><strong>StatQuest YouTube</strong> (Josh Starmer)</span><span class="v pos">Gratuit</span><div class="note">Pour chaque algo du Géron, regarde le StatQuest correspondant. Les deux ensemble = compréhension profonde.</div></li>
-<li><span class="k"><strong>Andrew Ng — ML Specialization</strong> (Coursera)</span><span class="v info">Audit gratuit</span><div class="note">3 cours. Le classique absolu. Fais-le en alternance avec Géron si tu veux plus de profondeur math.</div></li>
-</ul>
-<div class="callout callout-tip"><strong>Livrable M14 :</strong> 1 compétition Kaggle tentée (ex. Titanic + House Prices) · 1 projet ML complet sur GitHub.</div>
-</div>
-
-<h2 class="section-title flame">Phase 3 · <em>Deep Learning</em> <span class="muted">M15-M19</span></h2>
-<div class="phase">
-<div class="phase-head"><span class="phase-tag">PyTorch + vision + NLP</span><h3>Réseaux de neurones from scratch</h3></div>
-<ul class="dlist">
-<li><span class="k"><strong>Hands-On ML Géron</strong> — Partie III (DL)</span><span class="v">📘 Chap. 10-19</span><div class="note">Keras puis TensorFlow. CNN, RNN, Transformers. La suite logique.</div></li>
-<li><span class="k"><strong>Deep Learning with PyTorch</strong> (Stevens, Antiga)</span><span class="v">📘 Manning</span><div class="note">PyTorch = standard industrie 2026. Ce livre est le plus accessible.</div></li>
-<li><span class="k"><strong>fast.ai — Practical Deep Learning</strong></span><span class="v pos">Gratuit · top-down</span><div class="note">Jeremy Howard. Approche "code d'abord, théorie ensuite". Complémentaire à Géron (bottom-up).</div></li>
-<li><span class="k"><strong>Andrej Karpathy YouTube</strong> — Neural Networks: Zero to Hero</span><span class="v pos">Gratuit · or pur</span><div class="note">Il construit GPT from scratch en vidéo. À voir 2 fois.</div></li>
-</ul>
-<div class="callout callout-tip"><strong>Livrable M19 :</strong> 1 CNN sur image custom + 1 modèle NLP fine-tuné (Hugging Face).</div>
-</div>
-
-<h2 class="section-title violet">Phase 4 · <em>Gen AI & LLMs</em> <span class="muted">M20-M24</span></h2>
-<div class="phase">
-<div class="phase-head"><span class="phase-tag">Transformers, RAG, agents</span><h3>Le cœur de l'industrie 2026</h3></div>
-<ul class="dlist">
-<li><span class="k"><strong>Hugging Face NLP Course</strong></span><span class="v pos">Gratuit</span><div class="note">Transformers, fine-tuning, déploiement. Le plus à jour qui existe.</div></li>
-<li><span class="k"><strong>Natural Language Processing with Transformers</strong> (Tunstall et al.)</span><span class="v">📘 O'Reilly</span><div class="note">Le livre Hugging Face officiel. Parfait compagnon du cours.</div></li>
-<li><span class="k"><strong>LangChain + LangGraph docs</strong></span><span class="v pos">Gratuit</span><div class="note">Construire des agents. Direct utilité pour ton projet JARVIS-style.</div></li>
-<li><span class="k"><strong>Building LLMs for Production</strong> (Louis-François Bouchard)</span><span class="v">📘 2024+</span><div class="note">RAG, eval, déploiement. Un des rares livres à jour sur le sujet.</div></li>
-</ul>
-<div class="callout callout-tip"><strong>Livrable M24 :</strong> 1 chatbot RAG déployé (Hugging Face Space) + 1 mini-agent LangGraph. <em>Tu peux commencer JARVIS ici.</em></div>
-</div>
-
-<h2 class="section-title gold">Phase 5 · <em>MLOps</em> <span class="muted">M25-M27</span></h2>
-<div class="phase">
-<div class="phase-head"><span class="phase-tag">Docker · CI/CD · cloud · monitoring</span><h3>Mettre un modèle en prod</h3></div>
-<ul class="dlist">
-<li><span class="k"><strong>Designing Machine Learning Systems</strong> (Chip Huyen)</span><span class="v">📘 O'Reilly · bible MLOps</span></li>
-<li><span class="k"><strong>Made With ML — MLOps course</strong></span><span class="v pos">Gratuit · madewithml.com</span><div class="note">Goku Mohandas. Bout en bout : data → modèle → prod → monitoring.</div></li>
-<li><span class="k"><strong>AWS SageMaker</strong> ou <strong>GCP Vertex AI</strong></span><span class="v info">Synergies</span><div class="note">L'AWS Cloud Practitioner de ton EPFC ouvre la porte. Tier gratuit AWS suffit pour apprendre.</div></li>
-</ul>
-</div>
-
-<h2 class="section-title pink">Phase 6 · <em>Spécialisations</em> <span class="muted">M28-M30</span></h2>
-<div class="phase">
-<div class="phase-head"><span class="phase-tag">Une ou deux verticales</span><h3>Choisis ton couloir</h3></div>
-<ul class="dlist">
-<li><span class="k"><strong>Computer Vision</strong></span><span class="v info">YOLO, Segment Anything, Stable Diffusion</span></li>
-<li><span class="k"><strong>Agents & systèmes multi-agents</strong></span><span class="v info">LangGraph avancé, CrewAI, AutoGen · ton projet JARVIS pourrait être ça</span></li>
-<li><span class="k"><strong>RL</strong></span><span class="v info">Stable Baselines3, Unity ML-Agents · si tu joues avec Godot</span></li>
-<li><span class="k"><strong>Time Series / Finance</strong></span><span class="v info">Prophet, Darts · utile pour Vinted analytics</span></li>
-</ul>
-</div>
-
-<h2 class="section-title cyan">Certifs IA transverses <span class="muted">budget ~€615</span></h2>
-<div class="card"><ul class="dlist">
-<li><span class="k"><strong>TensorFlow Developer Certificate</strong> (~€100)</span><span class="v pos">M19+</span></li>
-<li><span class="k"><strong>AWS ML Specialty</strong> (~€280)</span><span class="v">M27+</span></li>
-<li><span class="k"><strong>Hugging Face Certifications</strong> (gratuites)</span><span class="v pos">M24</span></li>
-<li><span class="k"><strong>DeepLearning.AI specializations</strong> (Coursera, audit gratuit)</span><span class="v pos">Bonus</span></li>
-</ul></div>
-
-<h2 class="section-title">Portfolio cible · <em>8 projets au diplôme</em></h2>
-<div class="card"><ol class="dlist">
-<li><span class="k">1. EDA notebook Kaggle</span><span class="v muted">M8</span></li>
-<li><span class="k">2. Modèle ML classique end-to-end</span><span class="v muted">M14</span></li>
-<li><span class="k">3. CNN vision sur dataset custom</span><span class="v muted">M18</span></li>
-<li><span class="k">4. NLP fine-tuning HuggingFace</span><span class="v muted">M19</span></li>
-<li><span class="k">5. Chatbot RAG déployé</span><span class="v muted">M23</span></li>
-<li><span class="k">6. Agent LangGraph (ex. mini-JARVIS)</span><span class="v muted">M26</span></li>
-<li><span class="k">7. Modèle en prod (Docker + cloud)</span><span class="v muted">M28</span></li>
-<li><span class="k">8. Projet capstone spécialisation</span><span class="v muted">M30</span></li>
-</ol></div>
-
-<h2 class="section-title">12 compétences résumé <em>(skills LinkedIn)</em></h2>
-<div class="card"><div class="note" style="padding:6px 0">
-Python · SQL · Pandas · Scikit-learn · PyTorch · TensorFlow · Hugging Face · LangChain/LangGraph · Docker · AWS · MLOps · Git
-</div></div>
-
-<div class="callout callout-focus"><strong>Rythme réaliste · 6-8h/semaine IA</strong> = 1 livre tous les 2-3 mois + 1 projet/trimestre. Tu as 30 mois, pas 6. La patience paie exponentiellement ici.</div>
-</section>
 
 
-<!-- ============================================================= -->
+
+
+
 <!-- TAB : VINTED -->
-<!-- ============================================================= -->
+
 <section class="page" id="p-vinted" data-page="vinted">
 <div class="page-header">
 <h1 class="page-title">Vinted · <em>Business Plan</em></h1>
@@ -1711,128 +1703,20 @@ Python · SQL · Pandas · Scikit-learn · PyTorch · TensorFlow · Hugging Face
 
 </section>
 
-<!-- ============================================================= -->
+
 <!-- TAB : NL -->
-<!-- ============================================================= -->
-<section class="page" id="p-nl" data-page="nl">
-<div class="page-header">
-<h1 class="page-title">Néerlandais · A0 → B2</h1>
-<p class="page-sub">Bruxelles bilingue · EPFC <em>2GB5</em> · CNaVT B2 à M24. Zéro euro dépensé en méthodes — tout gratuit en Région.</p>
-</div>
-
-<h2 class="section-title jade">Phase A1 · <em>M1-M6</em></h2>
-<div class="phase">
-<div class="phase-head"><span class="phase-tag">Bases absolues</span><h3>Survie + 500 mots</h3></div>
-<ul class="dlist">
-<li><span class="k"><strong>Taalgarage</strong> (ta ressource actuelle)</span><span class="v pos">Continue · niveau 1</span><div class="note">Structurée, progressive, parfaite pour démarrer. Fais 100% des exos.</div></li>
-<li><span class="k"><strong>Duolingo</strong> <span class="muted">15min/jour</span></span><span class="v pos">Gratuit</span><div class="note">Pas suffisant seul, mais excellent pour la répétition espacée + quotidienneté. Streak = habitude.</div></li>
-<li><span class="k"><strong>Muntpunt</strong> (Bibliothèque NL rue Léopold)</span><span class="v info">Gratuit · inscription 10€/an</span><div class="note">Lectures faciles niveau A1 (livres "Lees &amp; Lach"). Ambiance néerlandophone totale.</div></li>
-</ul>
-</div>
-
-<h2 class="section-title sapphire">Phase A2 · <em>M7-M12</em></h2>
-<div class="phase">
-<div class="phase-head"><span class="phase-tag">Autonomie quotidienne</span><h3>1 500 mots + tout le présent</h3></div>
-<ul class="dlist">
-<li><span class="k"><strong>Brulingua</strong> <span class="muted">(Bruxelles Formation — 100% gratuit pour Bruxellois)</span></span><span class="v pos">🎯 À faire absolument</span><div class="note">Plateforme en ligne + tuteur · A1 → B2. <em>Gratuit</em> si tu es inscrit Actiris ou résident Bruxelles.</div></li>
-<li><span class="k"><strong>NedBox</strong></span><span class="v pos">Gratuit · nedbox.be</span><div class="note">Vidéos VRT + exos compréhension. Niveau A2-B1. Parfait complément.</div></li>
-<li><span class="k"><strong>Zinvol met boeken</strong> — Muntpunt</span><span class="v info">Club lecture NL</span><div class="note">1 livre/mois A2. Discussion avec natifs.</div></li>
-</ul>
-</div>
-
-<h2 class="section-title flame">Phase B1 · <em>M13-M18</em></h2>
-<div class="phase">
-<div class="phase-head"><span class="phase-tag">Conversations réelles</span><h3>3 000 mots + passé + futur</h3></div>
-<ul class="dlist">
-<li><span class="k"><strong>Tandem</strong> <span class="muted">(app gratuite)</span></span><span class="v pos">Échange FR ↔ NL</span><div class="note">Un natif NL veut pratiquer son FR = tu pratiques le NL. 30min/semaine minimum.</div></li>
-<li><span class="k"><strong>iTalki</strong></span><span class="v info">€8-15/heure avec tuteur</span><div class="note">Investissement ponctuel quand tu veux débloquer l'oral. 1 séance/sem pendant 2 mois suffit.</div></li>
-<li><span class="k"><strong>ver-taal.com</strong></span><span class="v pos">Gratuit</span><div class="note">Exos grammaire + compréhension pour francophones. Le site gouvernement néerlandais.</div></li>
-<li><span class="k"><strong>VRT NWS + Het Laatste Nieuws</strong></span><span class="v pos">Gratuit · actus</span><div class="note">10 min/jour = lecture quotidienne obligatoire à ce stade.</div></li>
-</ul>
-</div>
-
-<h2 class="section-title violet">Phase B2 · <em>M19-M24 · objectif CNaVT</em></h2>
-<div class="phase">
-<div class="phase-head"><span class="phase-tag">Niveau professionnel</span><h3>5 000+ mots · abstraction</h3></div>
-<ul class="dlist">
-<li><span class="k"><strong>Huis van het Nederlands Brussel</strong></span><span class="v pos">Cours gratuits/subsidiés</span><div class="note">Conseil placement + orientation cours B2. Indispensable ici.</div></li>
-<li><span class="k"><strong>CNaVT Profiel Educatief Startbekwaam</strong> (examen B2)</span><span class="v warn">€75 · M24</span><div class="note">Certif B2 reconnue partout en BE + NL. Valide 2GB5 EPFC. Passer en juin M24.</div></li>
-<li><span class="k"><strong>Podcasts NL</strong> — <em>De Correspondent</em>, <em>De Volkskrant</em>, <em>NOS Journaal</em></span><span class="v pos">Gratuit</span><div class="note">30min trajet = 30min NL quotidien. Compréhension native = B2 réel.</div></li>
-</ul>
-</div>
-
-<h2 class="section-title gold">Règles de progression</h2>
-<div class="card"><ul class="dlist">
-<li><span class="k"><strong>Quotidien &gt; intensif</strong></span><span class="v pos">20min/jour &gt; 3h/semaine</span></li>
-<li><span class="k"><strong>Immersion passive</strong></span><span class="v info">Netflix en VO NL + sous-titres NL dès B1</span></li>
-<li><span class="k"><strong>Erreur = normal</strong></span><span class="v muted">Les Belges pardonnent le FR avec accent. Ils pardonneront ton NL avec accent.</span></li>
-<li><span class="k"><strong>Zone Dansaert</strong></span><span class="v pos">Sortir dans les quartiers NL de Bruxelles · forçage d'usage</span></li>
-</ul></div>
-
-<div class="callout callout-focus"><strong>Budget total 24 mois :</strong> <em>~€85</em> (CNaVT €75 + Muntpunt €10). Tout le reste est gratuit en Région bruxelloise si tu actionnes Brulingua + Huis van het Nederlands.</div>
-</section>
 
 
-<!-- ============================================================= -->
+
+
+
 <!-- TAB : CHESS -->
-<!-- ============================================================= -->
-<section class="page" id="p-chess" data-page="chess">
-<div class="page-header">
-<h1 class="page-title">Échecs · 500 → 1500 Elo</h1>
-<p class="page-sub">Discipline mentale · reconnaissance de patterns · gratuit à 100%. Sur Chess.com.</p>
-</div>
 
-<h2 class="section-title jade">Phase 1 · <em>0 → 800 Elo</em></h2>
-<div class="phase">
-<div class="phase-head"><span class="phase-tag">M1-M3 · Bases absolues</span><h3>Arrête de perdre sur des fourchettes</h3></div>
-<ul class="dlist">
-<li><span class="k"><strong>Chess.com — Lessons basiques</strong></span><span class="v pos">Gratuit (partiel)</span><div class="note">Règles + mat simples + principes d'ouverture. 10 leçons suffisent.</div></li>
-<li><span class="k"><strong>GothamChess</strong> — YouTube (Levy Rozman)</span><span class="v pos">Gratuit</span><div class="note">Playlist "How to Play Chess". Le maître de la pédagogie en 2026. Drôle + rigoureux.</div></li>
-<li><span class="k"><strong>Puzzles Rush</strong> <span class="muted">(Chess.com)</span></span><span class="v pos">10 min/jour</span><div class="note">La mécanique la plus rentable pour monter. 1 session quotidienne &gt; 10 parties rapides.</div></li>
-<li><span class="k"><strong>Ouverture fixe</strong> : Italien + Caro-Kann</span><span class="v info">Simple, robuste</span><div class="note">Ne change pas d'ouverture avant 1000 Elo. La répétition bat la variété à ce niveau.</div></li>
-</ul>
-</div>
 
-<h2 class="section-title sapphire">Phase 2 · <em>800 → 1200 Elo</em></h2>
-<div class="phase">
-<div class="phase-head"><span class="phase-tag">M4-M9 · Tactiques & patterns</span><h3>Voir les combinaisons</h3></div>
-<ul class="dlist">
-<li><span class="k"><strong>Bobby Fischer Teaches Chess</strong></span><span class="v">📘 Classique</span><div class="note">Mates en 1, 2, 3 coups. Méthode programmée. Réponds aux diagrammes. 150 exercices.</div></li>
-<li><span class="k"><strong>ChessBrah — Building Habits</strong> (YouTube)</span><span class="v pos">Gratuit</span><div class="note">Aman Hambleton joue de 0 à 2000 Elo en suivant 5 règles simples. Série culte.</div></li>
-<li><span class="k"><strong>Puzzles thématiques</strong> <span class="muted">(Chess.com ou Lichess gratuit)</span></span><span class="v pos">Plus rentable que Puzzle Rush</span><div class="note">Fourchettes → clouages → enfilades → découvertes. 20 puzzles/jour du même thème jusqu'à maîtrise.</div></li>
-<li><span class="k"><strong>Chessable</strong> — <em>Short &amp; Sweet</em> (gratuit)</span><span class="v pos">Répétition espacée</span><div class="note">Ouvertures apprises par SRS. Choisis <em>Caro-Kann Short &amp; Sweet</em> + <em>Italian Short &amp; Sweet</em>.</div></li>
-</ul>
-</div>
 
-<h2 class="section-title flame">Phase 3 · <em>1200 → 1500 Elo</em></h2>
-<div class="phase">
-<div class="phase-head"><span class="phase-tag">M10+ · Stratégie &amp; finales</span><h3>Comprendre les positions</h3></div>
-<ul class="dlist">
-<li><span class="k"><strong>100 Endgames You Must Know</strong> (Jesús de la Villa)</span><span class="v">📘 Le livre de finales</span></li>
-<li><span class="k"><strong>Logical Chess: Move by Move</strong> (Chernev)</span><span class="v">📘 Stratégie narrative</span><div class="note">33 parties expliquées coup par coup. Le livre qui fait cliquer les "pourquoi".</div></li>
-<li><span class="k"><strong>How to Reassess Your Chess</strong> (Silman)</span><span class="v">📘 Stratégie avancée</span></li>
-<li><span class="k"><strong>Daniel Naroditsky</strong> — YouTube Speedruns</span><span class="v pos">Gratuit · or</span><div class="note">GM qui joue à ton niveau Elo et commente. Le meilleur enseignant online.</div></li>
-</ul>
-</div>
 
-<h2 class="section-title violet">Objectifs mensuels</h2>
-<div class="card"><ul class="dlist">
-<li><span class="k">M1 — Règles solides + premier mat</span><span class="v muted">500 Elo</span></li>
-<li><span class="k">M3 — Ouverture auto · 10 parties/sem</span><span class="v muted">700</span></li>
-<li><span class="k">M6 — Fischer fini · tactiques basiques auto</span><span class="v muted">900</span></li>
-<li><span class="k">M9 — Chessable ouvertures · patterns tactiques</span><span class="v muted">1100</span></li>
-<li><span class="k">M12 — De la Villa (partiel) + Chernev</span><span class="v muted">1300</span></li>
-<li><span class="k">M18 — Silman · analyse post-partie systématique</span><span class="v pos">1500</span></li>
-</ul></div>
-
-<div class="callout callout-tip"><strong>Intégration routine :</strong> 10-15 min puzzles à l'éveil (café) + 1 partie rapide 10+5 le soir + 1 partie classique 30+0 samedi. Pas plus — au-delà, la courbe rendement chute vite et l'EPFC passe avant.</div>
-
-<div class="callout callout-focus"><strong>Règle Ben Finegold :</strong> <em>« Perds tes parties rapidement, analyse-les longuement. »</em> 1 partie + 10 min d'analyse &gt; 5 parties blitz à la suite.</div>
-</section>
-
-<!-- ============================================================= -->
 <!-- TAB : FINANCE -->
-<!-- ============================================================= -->
+
 <section class="page" id="p-finance" data-page="finance">
 <div class="page-header">
 <h1 class="page-title">Finance · <em>Plan 10 ans</em></h1>
@@ -1928,57 +1812,14 @@ Python · SQL · Pandas · Scikit-learn · PyTorch · TensorFlow · Hugging Face
 </section>
 
 
-<!-- ============================================================= -->
+
 <!-- TAB : SOCIAL / LIENS -->
-<!-- ============================================================= -->
-<section class="page" id="p-social" data-page="social">
-<div class="page-header">
-<h1 class="page-title">Liens · <em>Relations humaines</em></h1>
-<p class="page-sub">Le plan personnel ne sert à rien si tu t'isoles. L'humain est un animal social — l'ignorer = dépression à M8.</p>
-</div>
 
-<div class="callout callout-warn"><strong>Le piège du haut-performeur :</strong> 18-24 mois d'intensité → <em>"plus tard je verrai mes amis"</em> → isolement → effondrement. Cette page est une ceinture de sécurité.</div>
 
-<h2 class="section-title jade">Non-négociables hebdomadaires</h2>
-<div class="card"><ul class="dlist">
-<li><span class="k"><strong>1 appel famille/semaine</strong></span><span class="v pos">Dimanche après-midi · fixe</span><div class="note">Parents, frères/sœurs. 20-30min. Mets-le dans ton agenda comme un meeting pro.</div></li>
-<li><span class="k"><strong>1 soirée libre / semaine</strong></span><span class="v pos">Samedi soir ou autre</span><div class="note">Pas d'étude, pas de sport, pas de Vinted. Temps pour vie perso, amis, sortie, rien. <em>Sacré.</em></div></li>
-<li><span class="k"><strong>1 contact ami / semaine</strong></span><span class="v info">Message, café, appel</span><div class="note">Même 10 min suffisent. Tour de rôle : un ami différent chaque semaine.</div></li>
-<li><span class="k"><strong>Temps fils</strong> (si applicable)</span><span class="v flame">Priorité absolue</span><div class="note">Le plan entier existe pour pouvoir lui offrir mieux. Ne sacrifie jamais les moments avec lui pour 30 minutes d'étude.</div></li>
-</ul></div>
 
-<h2 class="section-title sapphire">Règles anti-isolement</h2>
-<div class="card"><ul class="dlist">
-<li><span class="k"><strong>Dire oui par défaut</strong></span><span class="v info">Aux invitations sociales raisonnables</span><div class="note">Dire non t'isole cumulativement. Une sortie "perdue" = 5h, soutenable. Un ami perdu = 10 ans pour le remplacer.</div></li>
-<li><span class="k"><strong>Programmer les retrouvailles</strong></span><span class="v pos">Pas "quand on pourra"</span><div class="note">"Vendredi 19h, Place Flagey" &gt; "faudrait qu'on se voie". Le concret seul se concrétise.</div></li>
-<li><span class="k"><strong>Être honnête sur le rythme</strong></span><span class="v muted">"Je suis en bachelor, je peux 1×/mois — mais vraiment"</span><div class="note">Les vrais amis comprennent. Ceux qui pas = tri naturel sain.</div></li>
-<li><span class="k"><strong>Pas de messages vocaux de 10 min</strong></span><span class="v warn">Règle de santé mentale</span><div class="note">Un appel de 5 min bat un vocal de 10 min et un chat Whatsapp de 30 échanges.</div></li>
-</ul></div>
 
-<h2 class="section-title flame">Ressources Bruxelles <em>(gratuites)</em></h2>
-<div class="card"><ul class="dlist">
-<li><span class="k"><strong>Meetup.com</strong> groupes tech + langue</span><span class="v pos">Networking professionnel</span><div class="note">Brussels Python User Group, Bruxelles AI, Tandem NL-FR. 1/mois suffit, pose-le au calendrier.</div></li>
-<li><span class="k"><strong>Huis van het Nederlands — Babbelclub</strong></span><span class="v pos">Gratuit · synergie NL</span><div class="note">Conversation NL + socialisation + progrès linguistique. Combo parfait.</div></li>
-<li><span class="k"><strong>Boules Bouliniste Place du Jeu de Balle</strong></span><span class="v info">Dimanche</span><div class="note">Pour sortir de ta bulle étudiante quelques heures.</div></li>
-<li><span class="k"><strong>Club d'échecs Bruxelles</strong> (CRECC, Cercle Brugmann)</span><span class="v info">~€50/an</span><div class="note">Synergie chess + rencontres. Ambiance bienveillante, tous niveaux.</div></li>
-</ul></div>
-
-<h2 class="section-title violet">Signaux d'alerte · <em>quand consulter</em></h2>
-<div class="card"><ul class="dlist">
-<li><span class="k">Plus envie de voir personne pendant 3+ semaines</span><span class="v warn">Signal</span></li>
-<li><span class="k">Sommeil dégradé malgré routine</span><span class="v warn">Signal</span></li>
-<li><span class="k">Perte d'intérêt pour tout (y compris échecs, lecture)</span><span class="v warn">Signal</span></li>
-<li><span class="k">Pensées noires récurrentes</span><span class="v danger">Consulter rapidement</span></li>
-</ul>
-<div class="note" style="margin-top:12px"><strong>Ressources BE :</strong> Service Santé Mentale de Bruxelles (consultations ~€11/session remboursables) · <strong>Télé-Accueil</strong> 107 (écoute 24/7, gratuit, anonyme) · médecin traitant pour prescription psy au besoin.</div>
-</div>
-
-<div class="callout callout-focus"><strong>Vérité finale :</strong> tu n'as pas lancé ce plan pour devenir une machine d'optimisation seule dans son appart. Tu l'as lancé pour <em>construire une vie qui te rend fier</em>. Les relations font partie de cette vie — pas optionnelles, pas au "plus tard".</div>
-</section>
-
-<!-- ============================================================= -->
 <!-- TAB : PLAN -->
-<!-- ============================================================= -->
+
 <section class="page" id="p-plan" data-page="plan">
 <div class="page-header">
 <h1 class="page-title">Plan d'action</h1>
@@ -2093,7 +1934,7 @@ Python · SQL · Pandas · Scikit-learn · PyTorch · TensorFlow · Hugging Face
 </section>
 
 
-<!-- Sections injectées en statique pour le router natif -->
+
 <section class="page" id="p-trading" data-page="trading">
 <div class="page-kicker">Discipline · Probabilités · Long terme</div>
 <h1 class="page-title">Trading · <em>30 mois</em> · de zéro à propfirm payé</h1>
@@ -2443,9 +2284,7 @@ Python · SQL · Pandas · Scikit-learn · PyTorch · TensorFlow · Hugging Face
 
 <script src="/assets/main.cfc54acb.js"></script>
 
-<!-- ═══════════════════════════════════════════════════════════
-     WRAPPED · récap année (type Spotify Wrapped)
-     ═══════════════════════════════════════════════════════════ -->
+
 <div class="wrapped" id="wrapped" aria-hidden="true">
   <button class="wrapped-close" id="wrapped-close" aria-label="Fermer">✕</button>
   <div class="wrapped-scroller" id="wrapped-scroller">
@@ -2458,9 +2297,7 @@ Python · SQL · Pandas · Scikit-learn · PyTorch · TensorFlow · Hugging Face
   </div>
 </div>
 
-<!-- ═══════════════════════════════════════════════════════════
-     ASK CLAUDE · chat contextuel
-     ═══════════════════════════════════════════════════════════ -->
+
 <div class="ask-claude" id="ask-claude" aria-hidden="true">
   <div class="ac-box">
     <div class="ac-head">
@@ -2481,9 +2318,7 @@ Python · SQL · Pandas · Scikit-learn · PyTorch · TensorFlow · Hugging Face
       <input type="text" id="ac-input" placeholder="Pose ta question… (ex. pourquoi ma constance baisse ?)" autocomplete="off">
       <button class="ac-send" id="ac-send">→</button>
     </div>
-    <!-- Mode "clé API locale" désactivé pour raisons de sécurité (audit Apr 2026).
-     Le coach utilise désormais EXCLUSIVEMENT la Netlify Function /.netlify/functions/coach.
-     Pour réactiver (déconseillé) : retirer style="display:none" et hidden ci-dessous. -->
+    
 <div class="ac-config" style="display:none" hidden aria-hidden="true">
       <details>
         <summary>⚙️ Configurer la clé API Claude</summary>
@@ -2647,7 +2482,7 @@ Python · SQL · Pandas · Scikit-learn · PyTorch · TensorFlow · Hugging Face
     renderWrapped();
     wrapped.classList.add('open');
     wrapped.setAttribute('aria-hidden', 'false');
-    try { navigator.vibrate && navigator.vibrate(10); } catch(_){}
+    try { navigator.vibrate && navigator.vibrate(10); } catch(e){ window.__warn && window.__warn('audit-catch', e); }
   });
   closeBtn.addEventListener('click', () => {
     wrapped.classList.remove('open');
@@ -2934,9 +2769,7 @@ Python · SQL · Pandas · Scikit-learn · PyTorch · TensorFlow · Hugging Face
 })();
 </script>
 
-<!-- ═══════════════════════════════════════════════════════════
-     AMBIENT MODE · plein écran focus — clock XXL + current block
-     ═══════════════════════════════════════════════════════════ -->
+
 <div class="ambient" id="ambient" aria-hidden="true">
   <button class="ambient-close" id="ambient-close" aria-label="Quitter le mode Ambient">✕</button>
   <div class="amb-clock" id="amb-clock">—</div>
@@ -3016,14 +2849,14 @@ Python · SQL · Pandas · Scikit-learn · PyTorch · TensorFlow · Hugging Face
     tick();
     ambInterval = setInterval(tick, 1000);
     // Try fullscreen if supported
-    try { document.documentElement.requestFullscreen && document.documentElement.requestFullscreen(); } catch(_){}
-    try { navigator.vibrate && navigator.vibrate(10); } catch(_){}
+    try { document.documentElement.requestFullscreen && document.documentElement.requestFullscreen(); } catch(e){ window.__warn && window.__warn('audit-catch', e); }
+    try { navigator.vibrate && navigator.vibrate(10); } catch(e){ window.__warn && window.__warn('audit-catch', e); }
   }
   function close(){
     amb.classList.remove('open');
     amb.setAttribute('aria-hidden', 'true');
     if (ambInterval){ clearInterval(ambInterval); ambInterval = null; }
-    try { document.exitFullscreen && document.fullscreenElement && document.exitFullscreen(); } catch(_){}
+    try { document.exitFullscreen && document.fullscreenElement && document.exitFullscreen(); } catch(e){ window.__warn && window.__warn('audit-catch', e); }
   }
   ambFab.addEventListener('click', open);
   ambClose.addEventListener('click', close);
@@ -3177,7 +3010,7 @@ Python · SQL · Pandas · Scikit-learn · PyTorch · TensorFlow · Hugging Face
   setServerMode();
   setTimeout(setServerMode, 300);
 })();
-  </script><!-- T1 v2 · bloc supprimé : remplacé par window.__aiCore (XHR + buildContextV2 + Bookmarks + History + Cost guard) --><!-- T1 v2 · bloc supprimé : remplacé par window.__aiCore (XHR + buildContextV2 + Bookmarks + History + Cost guard) --><!-- T1 v2 · bloc supprimé : remplacé par window.__aiCore (XHR + buildContextV2 + Bookmarks + History + Cost guard) --><!-- T1 v2 · bloc supprimé : remplacé par window.__aiCore (XHR + buildContextV2 + Bookmarks + History + Cost guard) --><!-- T1 v2 · bloc supprimé : remplacé par window.__aiCore (XHR + buildContextV2 + Bookmarks + History + Cost guard) --><!-- T1 v2 · bloc supprimé : remplacé par window.__aiCore (XHR + buildContextV2 + Bookmarks + History + Cost guard) -->
+  </script>
   <script>
 (function(){
   if (window.__coachApplyIgnoreV2Installed) return;
@@ -3273,7 +3106,7 @@ Python · SQL · Pandas · Scikit-learn · PyTorch · TensorFlow · Hugging Face
       const current = readCard();
       try {
         localStorage.setItem(STORE_KEY, JSON.stringify(current));
-      } catch (_) {}
+      } catch(e){ window.__warn && window.__warn('audit-catch', e); }
       writeCard(current, true);
       bar.style.display = 'none';
     });
@@ -3281,7 +3114,7 @@ Python · SQL · Pandas · Scikit-learn · PyTorch · TensorFlow · Hugging Face
     ignore.addEventListener('click', function(){
       try {
         localStorage.removeItem(STORE_KEY);
-      } catch (_) {}
+      } catch(e){ window.__warn && window.__warn('audit-catch', e); }
       bar.style.display = 'none';
       if (typeof renderNextAction === 'function') {
         renderNextAction();
@@ -3326,13 +3159,9 @@ Python · SQL · Pandas · Scikit-learn · PyTorch · TensorFlow · Hugging Face
     setInterval(refreshBar, 800);
   }
 })();
-  </script><!-- T1 v2 · bloc supprimé : remplacé par window.__aiCore (XHR + buildContextV2 + Bookmarks + History + Cost guard) --><!-- T1 v2 · bloc supprimé : remplacé par window.__aiCore (XHR + buildContextV2 + Bookmarks + History + Cost guard) --><!-- T1 v2 · bloc supprimé : remplacé par window.__aiCore (XHR + buildContextV2 + Bookmarks + History + Cost guard) --><!-- T1 v2 · bloc supprimé : remplacé par window.__aiCore (XHR + buildContextV2 + Bookmarks + History + Cost guard) --><!-- T1 v2 · bloc supprimé : remplacé par window.__aiCore (XHR + buildContextV2 + Bookmarks + History + Cost guard) --><!-- T1 v2 · bloc supprimé : remplacé par window.__aiCore (XHR + buildContextV2 + Bookmarks + History + Cost guard) --><!-- T1 v2 · bloc supprimé : remplacé par window.__aiCore (XHR + buildContextV2 + Bookmarks + History + Cost guard) --><!-- T1 v2 · bloc supprimé : remplacé par window.__aiCore (XHR + buildContextV2 + Bookmarks + History + Cost guard) --><!-- T1 v2 · bloc supprimé : remplacé par window.__aiCore (XHR + buildContextV2 + Bookmarks + History + Cost guard) --><!-- T1 v2 · bloc supprimé : remplacé par window.__aiCore (XHR + buildContextV2 + Bookmarks + History + Cost guard) -->
+  </script>
 
-<!-- ═══════════════════════════════════════════════════════════
-     CONSOLIDATED AI CORE · v2.0 (T1→T10)
-     Tout-en-un. Anti-double-bind. Bypass des wrappers via XHR.
-     Backward-compat avec localStorage existant.
-     ═══════════════════════════════════════════════════════════ -->
+
 <style id="ai-core-styles-v2">
 /* T10 — Hiérarchie z-index claire pour éviter les overlaps */
 .ai-core-debug-panel{z-index:9998}
@@ -3448,7 +3277,7 @@ window.__aiCoreV2Installed = true;
 const NS = 'dashv2_';
 const sg = (k, d) => { try { return JSON.parse(localStorage.getItem(NS+k)) ?? d; } catch(_) { return d; } };
 const ss = (k, v) => { try { localStorage.setItem(NS+k, JSON.stringify(v)); return true; } catch(_) { return false; } };
-const log = (...args) => { try { console.warn('[aiCore]', ...args); } catch(_){} };
+const log = (...args) => { try { console.warn('[aiCore]', ...args); } catch(e){ window.__warn && window.__warn('audit-catch', e); } };
 
 // ─────────────────────────────────────────────────────────────
 // T6 · COST GUARD officiel
@@ -3600,7 +3429,7 @@ const Bookmarks = {
           data[k] = { key:k, label: KNOWN_DOMAINS[k]||k, text: old[k], updatedAt:'', history:[] };
         }
       });
-    } catch(_){}
+    } catch(e){ window.__warn && window.__warn('audit-catch', e); }
     return data;
   },
 
@@ -3627,7 +3456,7 @@ const Bookmarks = {
       document.querySelectorAll('[data-bookmark-key]').forEach(el => {
         out.push({ key: el.dataset.bookmarkKey, label: el.dataset.bookmarkLabel || '', text: (el.textContent||'').trim() });
       });
-    } catch(_){}
+    } catch(e){ window.__warn && window.__warn('audit-catch', e); }
     return out;
   },
 
@@ -3677,7 +3506,7 @@ function buildContextV2(){
       };
     });
     last30Sum.count = dates.slice(0, 30).length;
-  } catch(_){}
+  } catch(e){ window.__warn && window.__warn('audit-catch', e); }
 
   // Pomodoro state (best-effort)
   let pomo = { active: false };
@@ -4104,7 +3933,7 @@ function rebindCoachModal(){
 // ─────────────────────────────────────────────────────────────
 function showToast(text){
   if (typeof window.showToast === 'function' && window.showToast !== showToast) {
-    try { return window.showToast(text); } catch(_){}
+    try { return window.showToast(text); } catch(e){ window.__warn && window.__warn('audit-catch', e); }
   }
   const t = document.createElement('div');
   t.className = 'ai-core-toast';
@@ -4155,14 +3984,10 @@ if (document.readyState === 'loading'){
 
 })();
 </script>
-<!-- ═══════════════════════════════════════════════════════════
-     FIN AI CORE v2.0
-     ═══════════════════════════════════════════════════════════ -->
 
 
-<!-- ═══════════════════════════════════════════════════════════
-     TRADING · onglet propfirm (ajouté par AI core extension)
-     ═══════════════════════════════════════════════════════════ -->
+
+
 <style id="trading-styles">
 .trd-phase-card{background:linear-gradient(135deg,rgba(167,139,250,.10),rgba(106,165,250,.06));
   border:1px solid var(--border);border-radius:14px;padding:16px;margin:14px 0 18px;}
@@ -4673,10 +4498,7 @@ if (document.readyState === 'loading'){
 </script>
 
 
-<!-- ═══════════════════════════════════════════════════════════
-     ULTIMATE ASSISTANT v3.0
-     Today view · Backup · Health · Voice · Offline · IndexedDB · Quick Capture
-     ═══════════════════════════════════════════════════════════ -->
+
 <style id="ultimate-styles-v3">
 /* ─── TODAY VIEW ─── */
 .today-hero{padding:20px 16px;background:linear-gradient(135deg,rgba(255,107,53,.12),rgba(106,165,250,.06));
@@ -4788,7 +4610,7 @@ window.__ultimateV3 = true;
 const NS = 'dashv2_';
 const sg = (k, d) => { try { return JSON.parse(localStorage.getItem(NS+k)) ?? d; } catch(_){ return d; } };
 const ss = (k, v) => { try { localStorage.setItem(NS+k, JSON.stringify(v)); return true; } catch(_){ return false; } };
-const log = (...a) => { try { console.warn('[v3]', ...a); } catch(_){} };
+const log = (...a) => { try { console.warn('[v3]', ...a); } catch(e){ window.__warn && window.__warn('audit-catch', e); } };
 
 // ═══════════════════════════════════════════════════════════
 // 1. INDEXEDDB (large datasets)
@@ -4914,7 +4736,7 @@ const Backup = {
 
     // localStorage
     for (const k in data.localStorage){
-      try { localStorage.setItem(k, data.localStorage[k]); } catch(_){}
+      try { localStorage.setItem(k, data.localStorage[k]); } catch(e){ window.__warn && window.__warn('audit-catch', e); }
     }
     // IndexedDB
     if (data.idb){
@@ -4974,7 +4796,7 @@ const Backup = {
           const snapJson = await snapRes.json();
           // Track snapshot IDs
           let snapIds = [];
-          try { snapIds = JSON.parse(sg('gist_snapshot_ids', '[]')); } catch(_){}
+          try { snapIds = JSON.parse(sg('gist_snapshot_ids', '[]')); } catch(e){ window.__warn && window.__warn('audit-catch', e); }
           if (!Array.isArray(snapIds)) snapIds = [];
           snapIds.push({ id: snapJson.id, ts: Date.now() });
           // Rotation : garde les 30 derniers, delete les plus anciens
@@ -4985,7 +4807,7 @@ const Backup = {
                 method: 'DELETE',
                 headers: { 'Authorization': 'token '+token }
               });
-            } catch(_){}
+            } catch(e){ window.__warn && window.__warn('audit-catch', e); }
           }
           ss('gist_snapshot_ids', JSON.stringify(snapIds));
           ss('last_gist_weekly_snapshot', Date.now());
@@ -5439,7 +5261,7 @@ const Health = {
         const existing = (await DB.getAll('logs')).find(l => l.date === todayKey) || { date: todayKey };
         Object.assign(existing, { health: data });
         await DB.put('logs', existing);
-      } catch(_){}
+      } catch(e){ window.__warn && window.__warn('audit-catch', e); }
       // Alerte si douleur élevée
       if (data.pain >= 6){
         showToast('⚠️ Douleur ' + data.pain + '/10 — repos obligatoire. Pas de sport ni longue session écran.');
@@ -5693,7 +5515,7 @@ function setupOffline(){
         e.respondWith(
           caches.open(CACHE).then(cache =>
             cache.match(e.request).then(hit => hit || fetch(e.request).then(res => {
-              try { cache.put(e.request, res.clone()); } catch(_){}
+              try { cache.put(e.request, res.clone()); } catch(e){ window.__warn && window.__warn('audit-catch', e); }
               return res;
             }).catch(() => hit))
           )
@@ -5704,7 +5526,7 @@ function setupOffline(){
       const blob = new Blob([swCode], { type: 'text/javascript' });
       const url = URL.createObjectURL(blob);
       navigator.serviceWorker.register(url).catch(e => log('SW register fail (normal en dev local)', e.message));
-    } catch(_){}
+    } catch(e){ window.__warn && window.__warn('audit-catch', e); }
   }
 }
 
@@ -5775,16 +5597,14 @@ if (document.readyState === 'loading'){
 </script>
 
 
-<!-- ═══════════════════════════════════════════════════════════
-     HOTFIX v3.1 — Tabs rebind + voice permission + section placement
-     ═══════════════════════════════════════════════════════════ -->
+
 <script id="hotfix-v3-1">
 (function(){
 'use strict';
 if (window.__hotfix31) return;
 window.__hotfix31 = true;
 
-const log = (...a) => { try { console.warn('[hotfix3.1]', ...a); } catch(_){} };
+const log = (...a) => { try { console.warn('[hotfix3.1]', ...a); } catch(e){ window.__warn && window.__warn('audit-catch', e); } };
 
 // ────────────────────────────────────────────────────────────
 // FIX 1 : ROUTER ÉTENDU pour les nouveaux onglets
@@ -6045,17 +5865,14 @@ if (document.readyState === 'loading'){
 </script>
 
 
-<!-- ═══════════════════════════════════════════════════════════
-     HOTFIX v3.2 — Notification guards + Voice command parser
-     + Weekly Review fix + SW disable + Voice "mets une task"
-     ═══════════════════════════════════════════════════════════ -->
+
 <script id="hotfix-v3-2">
 (function(){
 'use strict';
 if (window.__hotfix32) return;
 window.__hotfix32 = true;
 
-const log = (...a) => { try { console.warn('[hotfix3.2]', ...a); } catch(_){} };
+const log = (...a) => { try { console.warn('[hotfix3.2]', ...a); } catch(e){ window.__warn && window.__warn('audit-catch', e); } };
 
 // ════════════════════════════════════════════════════════════
 // FIX 1 : Notification API guard global
@@ -6519,354 +6336,6 @@ if (document.readyState === 'loading'){
 </script>
 
 
-<!-- ═══════════════════════════════════════════════════════════
-     DEBUG PANEL VISIBLE v3.3
-     Affiche en permanence l'état de chaque système.
-     Plus besoin de console F12 — tout est lisible sur mobile.
-     ═══════════════════════════════════════════════════════════ -->
-<style id="dbg-panel-styles">
-.dbg-panel{position:fixed;top:8px;left:8px;right:8px;z-index:9997;
-  background:rgba(20,20,30,.95);backdrop-filter:blur(12px);
-  border:1px solid var(--border,#444);border-radius:10px;
-  padding:8px 10px;font:11px var(--f-mono,monospace);color:#fff;
-  box-shadow:0 4px 12px rgba(0,0,0,.5);
-  max-height:50vh;overflow-y:auto;display:none}
-.dbg-panel.open{display:block}
-.dbg-panel h5{font:700 11px var(--f-sans,sans-serif);color:#fb923c;
-  margin:6px 0 4px;text-transform:uppercase;letter-spacing:.05em}
-.dbg-row{display:flex;justify-content:space-between;gap:8px;padding:3px 0;
-  border-bottom:1px dashed rgba(255,255,255,.1);font-size:10px}
-.dbg-row:last-child{border:none}
-.dbg-row .k{color:#888}
-.dbg-row .v{font-weight:700}
-.dbg-row .v.ok{color:#34d399}
-.dbg-row .v.fail{color:#f87171}
-.dbg-row .v.warn{color:#fbbf24}
-
-.dbg-toggle{position:fixed;top:8px;right:8px;z-index:9998;
-  width:36px;height:36px;border-radius:50%;
-  background:rgba(20,20,30,.85);color:#fb923c;
-  border:1px solid #fb923c;font-size:14px;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;
-  touch-action:manipulation}
-.dbg-toggle.alert{background:#dc2626;color:white;animation:dbg-blink 1s infinite}
-@keyframes dbg-blink{0%,100%{opacity:1}50%{opacity:.5}}
-
-.dbg-actions{display:grid;grid-template-columns:repeat(2,1fr);gap:4px;margin-top:6px}
-.dbg-actions button{padding:6px;font:600 10px var(--f-mono,monospace);
-  background:#1f2937;color:#fff;border:1px solid #374151;border-radius:4px;
-  cursor:pointer;touch-action:manipulation;min-height:32px}
-
-.dbg-log{max-height:120px;overflow-y:auto;background:rgba(0,0,0,.3);
-  padding:6px;border-radius:4px;font-size:9px;line-height:1.4}
-.dbg-log .e{color:#f87171}
-.dbg-log .w{color:#fbbf24}
-.dbg-log .i{color:#94a3b8}
-.dbg-log .ok{color:#34d399}
-</style>
-
-<script id="dbg-panel-v3-3">
-(function(){
-'use strict';
-if (window.__dbgPanel33) return;
-window.__dbgPanel33 = true;
-
-// ─── Capture log buffer ─────────────────────────────────────
-const logs = [];
-const MAX_LOGS = 80;
-function capture(level, ...args){
-  const msg = args.map(a => {
-    if (typeof a === 'string') return a;
-    if (a instanceof Error) return a.message;
-    try { return JSON.stringify(a).slice(0, 200); } catch(_) { return String(a); }
-  }).join(' ');
-  logs.push({ t: new Date().toLocaleTimeString('fr-FR'), level, msg });
-  while (logs.length > MAX_LOGS) logs.shift();
-  refreshIfOpen();
-}
-
-// Wrap console.error / warn / log
-const origErr = console.error.bind(console);
-const origWarn = console.warn.bind(console);
-const origLog = console.log.bind(console);
-console.error = (...a) => { capture('e', ...a); origErr(...a); markAlert(); };
-console.warn  = (...a) => { capture('w', ...a); origWarn(...a); };
-console.log   = (...a) => { capture('i', ...a); origLog(...a); };
-
-// Capture errors globales
-window.addEventListener('error', e => {
-  capture('e', `[ERR] ${e.message} @ ${(e.filename||'').split('/').pop()}:${e.lineno}`);
-  markAlert();
-});
-window.addEventListener('unhandledrejection', e => {
-  capture('e', `[PROMISE] ${e.reason?.message || e.reason}`);
-  markAlert();
-});
-
-let alertOn = false;
-function markAlert(){
-  alertOn = true;
-  const t = document.getElementById('dbg-toggle');
-  if (t) t.classList.add('alert');
-}
-
-// ─── État système ──────────────────────────────────────────
-async function checkAll(){
-  const checks = [];
-
-  // 1. Voice
-  const voiceOk = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
-  checks.push({ k: 'SpeechRecognition API', v: voiceOk ? 'OK' : 'ABSENT', ok: voiceOk });
-
-  let micPerm = '?';
-  try {
-    if (navigator.permissions){
-      const p = await navigator.permissions.query({ name: 'microphone' });
-      micPerm = p.state; // 'granted' | 'denied' | 'prompt'
-    }
-  } catch(_){}
-  checks.push({ k: 'Permission micro', v: micPerm, ok: micPerm === 'granted', warn: micPerm === 'prompt' });
-
-  checks.push({ k: 'Contexte HTTPS', v: location.protocol === 'https:' ? 'OK' : 'NON',
-    ok: location.protocol === 'https:' });
-
-  // 2. Modules core
-  checks.push({ k: '__aiCore', v: window.__aiCore ? 'OK' : 'KO', ok: !!window.__aiCore });
-  checks.push({ k: '__ultimate', v: window.__ultimate ? 'OK' : 'KO', ok: !!window.__ultimate });
-  checks.push({ k: '__cmd (parser vocal)', v: window.__cmd ? 'OK' : 'KO', ok: !!window.__cmd });
-  checks.push({ k: '__hotfix31', v: window.__hotfix31 ? 'OK' : 'KO', ok: !!window.__hotfix31 });
-  checks.push({ k: '__hotfix32', v: window.__hotfix32 ? 'OK' : 'KO', ok: !!window.__hotfix32 });
-
-  // 3. Onglets
-  const tabs = ['home','stats','routine','sport','trading','settings'];
-  tabs.forEach(t => {
-    const tabEl = document.querySelector(`.tab[data-tab="${t}"]`);
-    const sec = document.getElementById('p-' + t);
-    const present = tabEl && sec;
-    checks.push({ k: `Onglet ${t}`, v: present ? 'OK' : (sec ? 'tab manque' : 'section manque'), ok: present });
-  });
-
-  // 4. Storage
-  try {
-    let lsBytes = 0, count = 0;
-    for (let i = 0; i < localStorage.length; i++){
-      const k = localStorage.key(i);
-      if (k && k.startsWith('dashv2_')){ lsBytes += (localStorage.getItem(k)||'').length; count++; }
-    }
-    checks.push({ k: `localStorage`, v: `${count} clés · ${(lsBytes/1024).toFixed(0)} KB`, ok: lsBytes < 4*1024*1024, warn: lsBytes > 2*1024*1024 });
-  } catch(e){
-    checks.push({ k: `localStorage`, v: 'ERREUR', ok: false });
-  }
-
-  // 5. IDB
-  try {
-    const idb = window.__ultimate?.DB;
-    if (idb){
-      const c = (await idb.getAll('logs')).length + (await idb.getAll('trades')).length + (await idb.getAll('aiHist')).length;
-      checks.push({ k: 'IndexedDB', v: c + ' entrées', ok: true });
-    } else {
-      checks.push({ k: 'IndexedDB', v: 'non init', ok: false });
-    }
-  } catch(_){
-    checks.push({ k: 'IndexedDB', v: 'erreur', ok: false });
-  }
-
-  // 6. Network
-  checks.push({ k: 'Online', v: navigator.onLine ? 'OK' : 'OFFLINE', ok: navigator.onLine });
-
-  // 7. AI Cost
-  if (window.__aiCore?.Cost){
-    const c = window.__aiCore.Cost;
-    checks.push({ k: 'AI quota jour', v: `${c.getUsedToday()}/${c.DAILY_LIMIT}`, ok: c.getRemaining() > 0, warn: c.getRemaining() <= 5 });
-  }
-
-  // 8. Tasks vocales
-  try {
-    const tasks = JSON.parse(localStorage.getItem('dashv2_voice_tasks') || '[]');
-    const today = new Date().toISOString().slice(0,10);
-    const todayTasks = tasks.filter(t => t.date === today && !t.done);
-    checks.push({ k: 'Tasks vocales aujourd\'hui', v: todayTasks.length, ok: true });
-  } catch(_){}
-
-  return checks;
-}
-
-// ─── UI ─────────────────────────────────────────────────────
-function buildUI(){
-  if (document.getElementById('dbg-panel')) return;
-
-  const toggle = document.createElement('button');
-  toggle.id = 'dbg-toggle';
-  toggle.className = 'dbg-toggle';
-  toggle.title = 'Diagnostic système';
-  toggle.innerHTML = '🔍';
-  toggle.addEventListener('click', () => {
-    const panel = document.getElementById('dbg-panel');
-    panel.classList.toggle('open');
-    if (panel.classList.contains('open')){
-      refresh();
-      toggle.classList.remove('alert');
-      alertOn = false;
-    }
-  });
-  document.body.appendChild(toggle);
-
-  const panel = document.createElement('div');
-  panel.id = 'dbg-panel';
-  panel.className = 'dbg-panel';
-  panel.innerHTML = `
-    <h5>🩺 Diagnostic système</h5>
-    <div id="dbg-status"></div>
-    <h5>📋 Actions test</h5>
-    <div class="dbg-actions">
-      <button id="dbg-test-mic">Test micro</button>
-      <button id="dbg-test-tab-trading">Open Trading</button>
-      <button id="dbg-test-tab-settings">Open Settings</button>
-      <button id="dbg-test-cmd">Test cmd vocale</button>
-      <button id="dbg-clear-cache">Vider cache</button>
-      <button id="dbg-export-logs">Copier logs</button>
-    </div>
-    <h5>📜 Logs récents</h5>
-    <div class="dbg-log" id="dbg-log"></div>
-  `;
-  document.body.appendChild(panel);
-
-  // Bind actions
-  document.getElementById('dbg-test-mic').addEventListener('click', testMic);
-  document.getElementById('dbg-test-tab-trading').addEventListener('click', () => {
-    capture('i', '[test] click trading');
-    if (window.go) window.go('trading');
-    else document.querySelector('.tab[data-tab="trading"]')?.click();
-    setTimeout(() => {
-      const sec = document.getElementById('p-trading');
-      const visible = sec && getComputedStyle(sec).display !== 'none';
-      capture(visible?'ok':'e', `[test] Trading section visible: ${visible}`);
-    }, 300);
-  });
-  document.getElementById('dbg-test-tab-settings').addEventListener('click', () => {
-    capture('i', '[test] click settings');
-    if (window.go) window.go('settings');
-    else document.querySelector('.tab[data-tab="settings"]')?.click();
-    setTimeout(() => {
-      const sec = document.getElementById('p-settings');
-      const visible = sec && getComputedStyle(sec).display !== 'none';
-      capture(visible?'ok':'e', `[test] Settings section visible: ${visible}`);
-    }, 300);
-  });
-  document.getElementById('dbg-test-cmd').addEventListener('click', () => {
-    if (!window.__cmd){ capture('e', '[test] __cmd absent'); return; }
-    const r = window.__cmd.parse('mets une task pour demain : test depuis debug panel');
-    capture(r?.ok ? 'ok' : 'e', `[test] cmd parse: ${r ? r.msg : 'pattern non reconnu'}`);
-    refresh();
-  });
-  document.getElementById('dbg-clear-cache').addEventListener('click', () => {
-    let n = 0;
-    for (let i = localStorage.length - 1; i >= 0; i--){
-      const k = localStorage.key(i);
-      if (k && k.includes('ai_cache_v2_')){ localStorage.removeItem(k); n++; }
-    }
-    capture('ok', `[cache] ${n} entrées vidées`);
-  });
-  document.getElementById('dbg-export-logs').addEventListener('click', async () => {
-    const checks = await checkAll();
-    const text = [
-      '=== ULTIMATE DASHBOARD DIAGNOSTIC ===',
-      'URL: ' + location.href,
-      'UA: ' + navigator.userAgent,
-      'Date: ' + new Date().toISOString(),
-      '',
-      '--- État système ---',
-      ...checks.map(c => `${c.k}: ${c.v} ${c.ok ? '✓' : '✗'}`),
-      '',
-      '--- Logs (' + logs.length + ') ---',
-      ...logs.map(l => `[${l.t}] ${l.level.toUpperCase()} ${l.msg}`)
-    ].join('\n');
-    try {
-      await navigator.clipboard.writeText(text);
-      capture('ok', '[export] Diagnostic copié dans presse-papier — colle-le à Claude');
-    } catch(_){
-      // Fallback : montre dans une textarea
-      const ta = document.createElement('textarea');
-      ta.value = text;
-      ta.style.cssText = 'position:fixed;inset:5%;z-index:99999;background:#000;color:#fff;padding:10px;font-size:10px';
-      document.body.appendChild(ta);
-      ta.select();
-      capture('w', '[export] Sélectionne tout (Ctrl+A) et copie manuellement');
-    }
-  });
-}
-
-async function testMic(){
-  capture('i', '[test] micro start');
-  if (!navigator.mediaDevices?.getUserMedia){
-    capture('e', '[test] getUserMedia absent — navigateur trop vieux ou contexte non sécurisé');
-    return;
-  }
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    capture('ok', '[test] micro OK · ' + stream.getAudioTracks().length + ' track(s)');
-    stream.getTracks().forEach(t => t.stop());
-  } catch(e){
-    capture('e', `[test] micro REFUSÉ · ${e.name}: ${e.message}`);
-    if (e.name === 'NotAllowedError'){
-      capture('w', '[fix] Va dans : Réglages site → Microphone → Autoriser');
-    }
-  }
-  refresh();
-}
-
-// ─── Refresh affichage ──────────────────────────────────────
-let refreshing = false;
-async function refresh(){
-  if (refreshing) return;
-  refreshing = true;
-  try {
-    const checks = await checkAll();
-    const status = document.getElementById('dbg-status');
-    if (status){
-      status.innerHTML = checks.map(c => {
-        const cls = c.ok ? 'ok' : (c.warn ? 'warn' : 'fail');
-        return `<div class="dbg-row"><span class="k">${c.k}</span><span class="v ${cls}">${c.v}</span></div>`;
-      }).join('');
-    }
-    const logEl = document.getElementById('dbg-log');
-    if (logEl){
-      logEl.innerHTML = logs.slice().reverse().map(l =>
-        `<div class="${l.level}">[${l.t}] ${escapeHTML(l.msg)}</div>`
-      ).join('');
-    }
-  } finally { refreshing = false; }
-}
-function refreshIfOpen(){
-  const p = document.getElementById('dbg-panel');
-  if (p && p.classList.contains('open')) refresh();
-}
-function escapeHTML(s){
-  return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-}
-
-// ─── Init ───────────────────────────────────────────────────
-function init(){
-  buildUI();
-  capture('ok', '[debug-panel] v3.3 ready');
-  /* Audit Apr 2026 : pausable en background. */
-  if (typeof window.__pausableInterval === 'function'){
-    window.__pausableInterval(() => refreshIfOpen(), 5000);
-  } else {
-    setInterval(() => refreshIfOpen(), 5000);
-  }
-}
-
-if (document.readyState === 'loading'){
-  document.addEventListener('DOMContentLoaded', () => setTimeout(init, 200));
-} else {
-  setTimeout(init, 200);
-}
-
-})();
-</script>
-
-
 <script id="lazy-content-loader">
 (function(){
 'use strict';
@@ -7107,7 +6576,7 @@ function loadSettings(){
   });
   const ghToken = document.getElementById('gh-token');
   if (ghToken){
-    try { ghToken.value = JSON.parse(localStorage.getItem('dashv2_gh_token') || '""'); } catch(_){}
+    try { ghToken.value = JSON.parse(localStorage.getItem('dashv2_gh_token') || '""'); } catch(e){ window.__warn && window.__warn('audit-catch', e); }
   }
   const ghPush = document.getElementById('gh-push');
   if (ghPush) ghPush.addEventListener('click', pushGist);
@@ -7168,7 +6637,7 @@ async function restoreData(e){
     const data = JSON.parse(text);
     if (!data.localStorage) throw new Error('Format invalide');
     for (const k in data.localStorage){
-      try { localStorage.setItem(k, data.localStorage[k]); } catch(_){}
+      try { localStorage.setItem(k, data.localStorage[k]); } catch(e){ window.__warn && window.__warn('audit-catch', e); }
     }
     showToast('Restauré. Rechargement…');
     location.reload();
@@ -7217,7 +6686,7 @@ async function pullGist(){
     const file = json.files['ultimate-backup.json'];
     const data = JSON.parse(file.content);
     for (const k in data.localStorage){
-      try { localStorage.setItem(k, data.localStorage[k]); } catch(_){}
+      try { localStorage.setItem(k, data.localStorage[k]); } catch(e){ window.__warn && window.__warn('audit-catch', e); }
     }
     showToast('Pulled. Rechargement…');
     location.reload();
@@ -7345,7 +6814,7 @@ function executeCleanup(previewEl, groups){
   if (!confirm(`Supprimer ${keys.length} entrée${keys.length > 1 ? 's' : ''} (${kb} KB) ?\n\nCette action est irréversible.\nFais un backup avant si besoin.`)) return;
 
   let n = 0;
-  keys.forEach(k => { try { localStorage.removeItem(k); n++; } catch(_){} });
+  keys.forEach(k => { try { localStorage.removeItem(k); n++; } catch(e){ window.__warn && window.__warn('audit-catch', e); } });
 
   previewEl.innerHTML = `<div style="font:12px var(--f-mono,monospace);color:#34d399;padding:8px 0">✓ ${n} entrée${n > 1 ? 's' : ''} supprimée${n > 1 ? 's' : ''} — ${kb} KB libérés.</div>`;
   if (typeof refreshStorageInfo === 'function') refreshStorageInfo();
@@ -7539,7 +7008,7 @@ function loadPhase(){
     if (data.phase !== undefined) sel.value = data.phase;
     if (data.start) start.value = data.start;
     if (data.notes) notes.value = data.notes;
-  } catch(_){}
+  } catch(e){ window.__warn && window.__warn('audit-catch', e); }
 
   save.addEventListener('click', () => {
     const data = {
@@ -7577,9 +7046,7 @@ setTimeout(() => {
 </script>
 
 
-<!-- ═══════════════════════════════════════════════════════════
-     FIXES v3.4 — Largeur mobile · Priorités couleurs · Routine adaptative
-     ═══════════════════════════════════════════════════════════ -->
+
 <style id="fixes-v34">
 /* ════════════════════════════════════════════════════════
    FIX 1 · Largeur mobile (anti-débordement horizontal)
@@ -8132,10 +7599,7 @@ window.__v34 = {
 </script>
 
 
-<!-- ═══════════════════════════════════════════════════════════
-     FINAL FIX v3.5 — mobile routing, no duplicated home/TOC,
-     priority colors, adaptive routine validation.
-     ═══════════════════════════════════════════════════════════ -->
+
 <style id="final-v35-css">
 /* Verrou mobile : aucun enfant ne doit forcer la largeur écran */
 html, body, #root, .app, .shell, .main, main, section.page, .page, .card, .panel, .module, .hero, .masthead, .masthead-inner, .tabs-wrap, .tabs{
@@ -8253,6 +7717,622 @@ section.page.active{
 }
 </style>
 
+<script id="audit-fixed-events-shift">
+/* Audit Apr 2026 — Patche applyRoutineStateV35 pour décaler les blocs
+   qui chevauchent un fixed-event.
+
+   Logique :
+   - V35 recalcule les heures avec totalGain (gain en avance)
+   - On ajoute un totalLoss (perte due aux fixed-events)
+   - Pour chaque bloc, on calcule la perte cumulée des fixed-events qui se terminent avant le bloc
+     ET qui chevauchent le bloc original
+   - On décale le bloc de cette perte
+*/
+(function(){
+  if (window.__auditFixedEventsShift) return;
+  window.__auditFixedEventsShift = true;
+
+  function patchV35(){
+    if (typeof window.applyRoutineStateV35 !== 'function') return false;
+    const original = window.applyRoutineStateV35;
+
+    window.applyRoutineStateV35 = function(){
+      // Appel original (qui pose les heures de base)
+      original.apply(this, arguments);
+
+      // Maintenant on applique le décalage dû aux fixed-events
+      try {
+        applyFixedEventsShift();
+      } catch(e){
+        console.error('[fixed-events-shift]', e);
+      }
+    };
+    console.log('[audit-fixed-events-shift] V35 patched');
+    return true;
+  }
+
+  function parseTimeFromEl(el){
+    if (!el) return null;
+    const text = el.textContent || el.dataset.orig || '';
+    const m = text.match(/(\d{1,2})[:hH](\d{2})/);
+    if (!m) return null;
+    return parseInt(m[1],10)*60 + parseInt(m[2],10);
+  }
+  function fmtHM(min){
+    const h = Math.floor(min/60);
+    const m = min%60;
+    return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0');
+  }
+  function fmtRange(start, end){
+    if (end == null) return fmtHM(start);
+    return fmtHM(start) + ' – ' + fmtHM(end);
+  }
+
+  function applyFixedEventsShift(){
+    const view = document.querySelector('.shift-view:not(.hidden)');
+    if (!view) return;
+    const items = Array.from(view.querySelectorAll('.tl-item'));
+    if (!items.length) return;
+
+    // Récupérer les fixed-events triés
+    const fixedEvents = items
+      .filter(item => item.classList.contains('routine-fixed-event'))
+      .map(item => {
+        const start = parseInt(item.dataset.fixedStartMin || '', 10);
+        const end = parseInt(item.dataset.fixedEndMin || '', 10);
+        return isNaN(start) || isNaN(end) ? null : { item, start, end };
+      })
+      .filter(Boolean);
+
+    if (!fixedEvents.length) return;
+
+    // Pour chaque bloc normal (non fixed-event, non hidden), recalculer son heure
+    // en tenant compte des fixed-events qui le chevauchent
+    items.forEach(item => {
+      if (item.classList.contains('routine-fixed-event')) return;
+      if (item.style.display === 'none') return; // bloc déjà validé en avance
+
+      const timeEl = item.querySelector('.tl-time');
+      if (!timeEl) return;
+
+      // Heure ACTUELLEMENT affichée (après le calcul V35 avec totalGain)
+      const currentText = timeEl.textContent || '';
+      // Match "HH:MM" ou "HH:MM – HH:MM"
+      const rangeMatch = currentText.match(/(\d{1,2})[:hH](\d{2})(?:\s*[–\-—]\s*(\d{1,2})[:hH](\d{2}))?/);
+      if (!rangeMatch) return;
+
+      let blockStart = parseInt(rangeMatch[1],10)*60 + parseInt(rangeMatch[2],10);
+      let blockEnd = rangeMatch[3] != null ? parseInt(rangeMatch[3],10)*60 + parseInt(rangeMatch[4],10) : null;
+      const duration = blockEnd != null ? (blockEnd - blockStart) : null;
+
+      // Calculer le décalage à appliquer
+      let shiftMinutes = 0;
+      for (const fe of fixedEvents){
+        // Si le bloc commence pendant le fixed-event, le décaler à la fin du fixed-event
+        const adjStart = blockStart + shiftMinutes;
+        const adjEnd = blockEnd != null ? blockEnd + shiftMinutes : adjStart + 1;
+        // Conflit si [adjStart, adjEnd) ∩ [fe.start, fe.end) non vide
+        if (adjStart < fe.end && adjEnd > fe.start){
+          // Pousser le bloc à la fin du fixed-event
+          shiftMinutes += (fe.end - adjStart);
+        }
+      }
+
+      if (shiftMinutes > 0){
+        const newStart = blockStart + shiftMinutes;
+        const newEnd = blockEnd != null ? blockEnd + shiftMinutes : null;
+        // Préserver les badges existants (ex: ↑ -X min, ✓ fait)
+        const badges = Array.from(timeEl.querySelectorAll('.tl-badge-v35'));
+        timeEl.textContent = fmtRange(newStart, newEnd);
+        badges.forEach(b => timeEl.appendChild(b));
+
+        // Ajouter un badge "↓ +X min" pour montrer le décalage
+        const existingShiftBadge = timeEl.querySelector('.tl-badge-fixed-shift');
+        if (existingShiftBadge) existingShiftBadge.remove();
+        const b = document.createElement('span');
+        b.className = 'tl-badge-v35 tl-badge-fixed-shift';
+        b.textContent = `↓ +${shiftMinutes} min`;
+        b.style.cssText = 'background:rgba(167,139,250,.15);color:#c4b5fd;border:1px solid rgba(167,139,250,.3);';
+        timeEl.appendChild(b);
+
+        item.classList.add('routine-shifted-by-fixed');
+      }
+    });
+  }
+
+  // Tenter de patcher V35 dès qu'il est défini
+  if (typeof window.applyRoutineStateV35 === 'function'){
+    patchV35();
+  } else {
+    // Polling tant que V35 n'est pas défini
+    let attempts = 0;
+    const poll = setInterval(() => {
+      attempts++;
+      if (patchV35() || attempts > 50){
+        clearInterval(poll);
+      }
+    }, 100);
+  }
+})();
+</script>
+<script id="audit-validation-modal">
+/* Audit Apr 2026 — Modal de validation enrichi.
+   Quand l'utilisateur clique sur le bouton check de la timeline (.tl-check-v35)
+   pour un bloc d'apprentissage (étude, code, nl, ia, lecture, sport, vinted),
+   on intercepte et on ouvre une modale qui demande :
+   - Où il s'est arrêté (note de reprise pour la prochaine session)
+   - Combien de minutes il a vraiment étudié
+
+   La validation V35 (le check normal) continue d'opérer en arrière-plan.
+   Les data sont sauvées dans module_progress + Bookmarks (qui alimente
+   le widget "Reprendre où t'as arrêté" en accueil).
+*/
+(function(){
+  if (window.__auditValidationModalInstalled) return;
+  window.__auditValidationModalInstalled = true;
+
+  // Mapping tl-dot.X → module_progress key + label affiché
+  const DOT_TO_MODULE = {
+    study:  { key: 'epfc',   label: 'EPFC',         bookmarkKey: 'epfc'    },
+    code:   { key: 'coding', label: 'Coding',       bookmarkKey: 'code'    },
+    nl:     { key: 'nl',     label: 'Néerlandais',  bookmarkKey: 'nl'      },
+    ai:     { key: 'ia',     label: 'IA',           bookmarkKey: 'ia'      },
+    read:   { key: 'lecture',label: 'Lecture',      bookmarkKey: 'read'    },
+    sport:  { key: 'sport',  label: 'Sport',        bookmarkKey: 'sport'   },
+    vinted: { key: 'vinted', label: 'Vinted',       bookmarkKey: 'vinted'  }
+  };
+
+  const NS = 'dashv2_';
+
+  function readJSON(key, fallback){
+    try {
+      const raw = localStorage.getItem(NS + key);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch(_){ return fallback; }
+  }
+  function writeJSON(key, val){
+    try { localStorage.setItem(NS + key, JSON.stringify(val)); }
+    catch(e){ window.__warn && window.__warn('audit-catch', e); }
+  }
+
+  // Mise à jour de module_progress (avec totalMinutes cumulé)
+  function updateModuleProgress(moduleKey, data){
+    const all = readJSON('module_progress', {});
+    const prev = all[moduleKey] || {};
+    const minutes = Number(data.minutes || 0) || 0;
+    all[moduleKey] = {
+      ...prev,
+      ...data,
+      module: moduleKey,
+      resume: data.resume || data.notes || prev.resume || '',
+      updatedAt: new Date().toISOString(),
+      totalMinutes: Number(prev.totalMinutes || 0) + minutes,
+      lastSessionMinutes: minutes,
+      lastSessionDate: new Date().toISOString().slice(0,10)
+    };
+    writeJSON('module_progress', all);
+    return all[moduleKey];
+  }
+
+  // Update Bookmarks (widget "Reprendre où t'as arrêté")
+  function updateBookmark(bookmarkKey, label, text){
+    if (!bookmarkKey || !text) return;
+    try {
+      if (window.Bookmarks && typeof window.Bookmarks.set === 'function'){
+        window.Bookmarks.set(bookmarkKey, text, label);
+      } else {
+        // Fallback direct localStorage if Bookmarks not exposed
+        const all = readJSON('bk_v2', {});
+        const prev = all[bookmarkKey];
+        all[bookmarkKey] = {
+          key: bookmarkKey,
+          label: label,
+          text: String(text).trim(),
+          updatedAt: new Date().toISOString(),
+          history: prev ? [{ text: prev.text, updatedAt: prev.updatedAt }, ...(prev.history || [])].slice(0, 10) : []
+        };
+        writeJSON('bk_v2', all);
+      }
+    } catch(_){}
+  }
+
+  // Estimation de la durée du bloc à partir de son texte d'horaire
+  function estimateMinutes(item){
+    try {
+      const timeEl = item.querySelector('.tl-time');
+      if (!timeEl) return null;
+      const text = timeEl.textContent || timeEl.dataset.orig || '';
+      // Match "9:00 – 10:15" ou "9h00 – 10h15"
+      const m = text.match(/(\d{1,2})[:hH](\d{2})\s*[–\-—]\s*(\d{1,2})[:hH](\d{2})/);
+      if (m){
+        const startMin = parseInt(m[1],10)*60 + parseInt(m[2],10);
+        const endMin = parseInt(m[3],10)*60 + parseInt(m[4],10);
+        const diff = endMin - startMin;
+        return diff > 0 && diff < 600 ? diff : null;
+      }
+      // Match "(75 min)" dans le titre
+      const nameEl = item.querySelector('.tl-name');
+      if (nameEl){
+        const m2 = nameEl.textContent.match(/\((\d{1,3})\s*min\)/i);
+        if (m2) return parseInt(m2[1],10);
+      }
+    } catch(_){}
+    return null;
+  }
+
+  // Création du dialog une seule fois
+  let dialog = null;
+  function ensureDialog(){
+    if (dialog) return dialog;
+    dialog = document.createElement('dialog');
+    dialog.id = 'auditValidationDialog';
+    dialog.setAttribute('aria-labelledby', 'avd-title');
+    dialog.style.cssText = [
+      'border:1px solid var(--border, #2a2a3e)',
+      'background:var(--surface, #14141d)',
+      'color:var(--text, #e7e7ee)',
+      'border-radius:14px',
+      'padding:0',
+      'max-width:480px',
+      'width:calc(100vw - 24px)',
+      'box-shadow:0 20px 60px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.04)',
+      'overflow:hidden'
+    ].join(';');
+    dialog.innerHTML = `
+      <form method="dialog" id="avd-form" style="display:flex;flex-direction:column">
+        <div style="display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border,#2a2a3e);background:linear-gradient(180deg,rgba(52,211,153,.08),transparent)">
+          <span style="font-size:18px">✓</span>
+          <h3 id="avd-title" style="flex:1;margin:0;font:700 14px var(--f-sans,system-ui,sans-serif);text-transform:uppercase;letter-spacing:.04em">Validation</h3>
+          <button type="button" id="avd-close" aria-label="Fermer" style="background:transparent;color:var(--text,#fff);border:1px solid var(--border,#2a2a3e);border-radius:8px;width:32px;height:32px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;padding:0;touch-action:manipulation">✕</button>
+        </div>
+        <div style="padding:16px;display:flex;flex-direction:column;gap:14px">
+          <div id="avd-block-info" style="font:600 13px var(--f-sans);color:var(--text-faint,#8a8aa4)"></div>
+          <label style="display:flex;flex-direction:column;gap:6px">
+            <span style="font:600 11px var(--f-mono,monospace);text-transform:uppercase;letter-spacing:.06em;color:var(--text-faint,#8a8aa4)">Où t'as arrêté ?</span>
+            <textarea id="avd-resume" rows="3" placeholder="Ex: chap 4 page 87, exo 3 fini, exo 4 à faire" style="background:var(--surface-2,#0d0d15);color:var(--text,#fff);border:1px solid var(--border,#2a2a3e);border-radius:10px;padding:10px;font:500 14px var(--f-sans);resize:vertical;min-height:60px;outline:none" required></textarea>
+          </label>
+          <label style="display:flex;flex-direction:column;gap:6px">
+            <span style="font:600 11px var(--f-mono,monospace);text-transform:uppercase;letter-spacing:.06em;color:var(--text-faint,#8a8aa4)">Minutes vraiment étudiées</span>
+            <input id="avd-minutes" type="number" min="0" max="600" step="5" placeholder="Ex: 45" style="background:var(--surface-2,#0d0d15);color:var(--text,#fff);border:1px solid var(--border,#2a2a3e);border-radius:10px;padding:10px;font:500 14px var(--f-mono,monospace);outline:none" required>
+          </label>
+        </div>
+        <div style="display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--border,#2a2a3e);background:rgba(255,255,255,.02)">
+          <button type="button" id="avd-skip" style="flex:1;background:transparent;color:var(--text-faint,#8a8aa4);border:1px solid var(--border,#2a2a3e);border-radius:10px;padding:10px;font:600 13px var(--f-sans);cursor:pointer;touch-action:manipulation">Valider sans noter</button>
+          <button type="submit" id="avd-submit" style="flex:1;background:linear-gradient(135deg,#fb923c,#f97316);color:#0a0a10;border:none;border-radius:10px;padding:10px;font:700 13px var(--f-sans);cursor:pointer;touch-action:manipulation">Valider + sauver</button>
+        </div>
+      </form>
+    `;
+    document.body.appendChild(dialog);
+
+    dialog.querySelector('#avd-close').addEventListener('click', () => dialog.close('cancel'));
+    dialog.querySelector('#avd-skip').addEventListener('click', () => dialog.close('skip'));
+
+    // Click backdrop = cancel
+    dialog.addEventListener('click', e => {
+      const r = dialog.getBoundingClientRect();
+      const inside = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+      if (!inside) dialog.close('cancel');
+    });
+
+    return dialog;
+  }
+
+  // Open dialog — return Promise<{action, resume, minutes} | null>
+  function openValidationModal(moduleInfo, item){
+    return new Promise(resolve => {
+      const dlg = ensureDialog();
+      const form = dlg.querySelector('#avd-form');
+      const titleEl = dlg.querySelector('#avd-title');
+      const blockInfoEl = dlg.querySelector('#avd-block-info');
+      const resumeEl = dlg.querySelector('#avd-resume');
+      const minutesEl = dlg.querySelector('#avd-minutes');
+
+      titleEl.textContent = 'Validation · ' + moduleInfo.label;
+      const blockTitle = item.querySelector('.tl-name')?.textContent?.trim() || '';
+      blockInfoEl.textContent = blockTitle;
+
+      // Pré-remplir avec dernière progression (si existe)
+      const last = readJSON('module_progress', {})[moduleInfo.key];
+      resumeEl.value = ''; // Always start empty for "où t'as arrêté CE soir"
+      if (last && last.resume){
+        resumeEl.placeholder = 'Dernière fois : ' + last.resume;
+      }
+
+      // Pré-remplir minutes avec estimation du bloc
+      const estimated = estimateMinutes(item);
+      minutesEl.value = estimated != null ? estimated : '';
+
+      // Submit handler
+      const submitHandler = e => {
+        // dialog form method="dialog" closes natively, but we need data first
+        e.preventDefault();
+        const resume = resumeEl.value.trim();
+        const minutes = parseInt(minutesEl.value, 10);
+        if (!resume || isNaN(minutes) || minutes < 0){
+          if (!resume) resumeEl.focus();
+          else minutesEl.focus();
+          return;
+        }
+        dlg.close('submit');
+        resolve({ action: 'submit', resume, minutes });
+      };
+      form.removeEventListener('submit', form.__auditSubmit || (() => {}));
+      form.__auditSubmit = submitHandler;
+      form.addEventListener('submit', submitHandler);
+
+      // Close handler (cancel/skip)
+      const closeHandler = () => {
+        dlg.removeEventListener('close', closeHandler);
+        if (dlg.returnValue === 'submit'){
+          // already handled in submitHandler
+        } else if (dlg.returnValue === 'skip'){
+          resolve({ action: 'skip' });
+        } else {
+          resolve({ action: 'cancel' });
+        }
+      };
+      dlg.addEventListener('close', closeHandler);
+
+      try { dlg.showModal(); } catch(_){ dlg.setAttribute('open', ''); }
+      setTimeout(() => resumeEl.focus(), 100);
+    });
+  }
+
+  // Détecter le module à partir d'un .tl-item
+  function detectModule(item){
+    const dot = item.querySelector('.tl-dot');
+    if (!dot) return null;
+    for (const cls of dot.classList){
+      if (DOT_TO_MODULE[cls]) return DOT_TO_MODULE[cls];
+    }
+    return null;
+  }
+
+  // Hook la timeline : intercepte les clics sur .tl-check-v35 pour ouvrir le modal
+  // mais SEULEMENT si :
+  //  - C'est un module trackable
+  //  - Le bloc n'est pas déjà coché (sinon on uncheck simplement)
+  document.addEventListener('click', e => {
+    // Skip si c'est notre clic synthétique (post-modal) — laisse passer V35
+    if (e.__auditValidationDone) return;
+
+    const btn = e.target.closest('.tl-check-v35');
+    if (!btn) return;
+    const item = btn.closest('.tl-item');
+    if (!item) return;
+
+    // Skip si c'est un fixed-event (tâche horaire ajoutée par l'user)
+    if (item.classList.contains('routine-fixed-event')) return;
+
+    // Skip si déjà coché (uncheck normal)
+    if (btn.classList.contains('checked')) return;
+
+    const moduleInfo = detectModule(item);
+    if (!moduleInfo) return; // Bloc non trackable (food, sleep, hygiene, work, rest)
+
+    // STOP propagation — on prend le contrôle
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+
+    openValidationModal(moduleInfo, item).then(result => {
+      if (result.action === 'cancel'){
+        // Ne rien faire, juste re-fermer
+        return;
+      }
+
+      if (result.action === 'submit'){
+        // Sauver la progression
+        const updated = updateModuleProgress(moduleInfo.key, {
+          resume: result.resume,
+          minutes: result.minutes,
+          notes: result.resume
+        });
+        // Mettre à jour le widget Bookmarks (Reprendre où t'as arrêté)
+        if (moduleInfo.bookmarkKey){
+          updateBookmark(moduleInfo.bookmarkKey, moduleInfo.label, result.resume);
+        }
+        // Toast de confirmation
+        try {
+          if (typeof showToast === 'function'){
+            const mins = result.minutes;
+            const total = updated.totalMinutes || mins;
+            const totalH = Math.floor(total/60);
+            const totalM = total % 60;
+            const totalStr = totalH > 0 ? `${totalH}h${String(totalM).padStart(2,'0')}` : `${totalM}min`;
+            showToast(`✓ ${moduleInfo.label} · +${mins}min · total ${totalStr}`);
+          }
+        } catch(_){}
+      }
+      // result.action === 'skip' : on valide juste le bloc sans modal
+
+      // Re-déclencher le clic original sur le bouton (pour la validation V35)
+      // On crée un nouveau clic synthétique avec un flag pour éviter la boucle
+      const synthetic = new MouseEvent('click', { bubbles: true, cancelable: true });
+      synthetic.__auditValidationDone = true;
+      btn.dispatchEvent(synthetic);
+    });
+  }, true); // capture phase pour intercepter avant les autres handlers
+
+  console.log('[audit-validation-modal] Installed');
+})();
+</script>
+
+<script id="audit-render-routine-fixed-events">
+/* Audit Apr 2026 — `window.renderRoutineFixedEvents` qui était référencée
+   mais jamais définie. Implémente l'intégration des tâches horaires fixes
+   dans la timeline + le décalage automatique des blocs en conflit.
+
+   v2 (Apr 2026) : ajout d'un bouton suppression sur chaque fixed-event,
+                   et patch de applyRoutineStateV35 pour décaler les blocs
+                   qui chevauchent un fixed-event.
+*/
+(function(){
+  if (window.__renderRoutineFixedEventsV2) return;
+  window.__renderRoutineFixedEventsV2 = true;
+
+  const NS = 'dashv2_';
+
+  function todayKey(){
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+  function tasksKey(){ return NS + 'tasks_' + todayKey(); }
+
+  function loadTasksToday(){
+    try {
+      const raw = localStorage.getItem(tasksKey());
+      return raw ? JSON.parse(raw) : [];
+    } catch(_){ return []; }
+  }
+  function saveTasksToday(tasks){
+    try { localStorage.setItem(tasksKey(), JSON.stringify(tasks)); } catch(e){ window.__warn && window.__warn('audit-catch', e); }
+  }
+
+  function parseHM(s){
+    if (!s) return null;
+    const m = String(s).match(/^(\d{1,2}):(\d{2})$/);
+    if (!m) return null;
+    return parseInt(m[1],10)*60 + parseInt(m[2],10);
+  }
+  function fmtHM(min){
+    if (min == null) return '';
+    const h = Math.floor(min/60);
+    const m = min%60;
+    return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0');
+  }
+  function catEmoji(cat){
+    const map = {
+      sante:'🩺', perso:'👤', admin:'📄', maison:'🏠',
+      etudes:'🎓', boulot:'💼', sport:'💪', famille:'👨‍👩‍👧'
+    };
+    if (!cat) return '📌';
+    const k = String(cat).toLowerCase();
+    return map[k] || '📌';
+  }
+
+  // Récupère les fixed-events triés chronologiquement
+  function getFixedEvents(){
+    return loadTasksToday()
+      .filter(t => t.time && t.endTime && !t.done && parseHM(t.time) != null && parseHM(t.endTime) != null)
+      .map(t => ({
+        id: t.id,
+        title: t.title || 'Tâche fixe',
+        cat: t.cat,
+        startMin: parseHM(t.time),
+        endMin: parseHM(t.endTime),
+        time: t.time,
+        endTime: t.endTime
+      }))
+      .sort((a, b) => a.startMin - b.startMin);
+  }
+  // Expose pour V35
+  window.__getFixedEventsForRoutine = getFixedEvents;
+
+  // Suppression d'un fixed-event (depuis la timeline)
+  function removeFixedTask(taskId){
+    const tasks = loadTasksToday();
+    const idx = tasks.findIndex(t => t.id === taskId);
+    if (idx === -1) return false;
+    tasks.splice(idx, 1);
+    saveTasksToday(tasks);
+    // Re-render et trigger V35
+    if (typeof window.renderRoutineFixedEvents === 'function'){
+      window.renderRoutineFixedEvents();
+    }
+    if (typeof window.applyRoutineStateV35 === 'function'){
+      setTimeout(window.applyRoutineStateV35, 50);
+    }
+    if (typeof window.showToast === 'function'){
+      window.showToast('🗑 Tâche fixe retirée de la routine');
+    }
+    return true;
+  }
+
+  window.renderRoutineFixedEvents = function(skipApply){
+    try {
+      const view = document.querySelector('.shift-view:not(.hidden)');
+      if (!view) return;
+      const timeline = view.querySelector('.timeline');
+      if (!timeline) return;
+
+      // Nettoyer les fixed-events existants (régénérés à chaque appel)
+      view.querySelectorAll('.tl-item.routine-fixed-event').forEach(el => el.remove());
+
+      const events = getFixedEvents();
+      if (!events.length) {
+        if (!skipApply && typeof window.applyRoutineStateV35 === 'function'){
+          setTimeout(() => { try { window.applyRoutineStateV35(); } catch(e){ window.__warn && window.__warn('audit-catch', e); } }, 0);
+        }
+        return;
+      }
+
+      events.forEach(t => {
+        const item = document.createElement('div');
+        item.className = 'tl-item routine-fixed-event';
+        item.dataset.time = t.time;
+        item.dataset.fixedTaskId = t.id;
+        item.dataset.fixedStartMin = String(t.startMin);
+        item.dataset.fixedEndMin = String(t.endMin);
+        const emoji = catEmoji(t.cat);
+        const safe = (t.title).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+        item.innerHTML =
+          '<div class="tl-dot" style="background:#a78bfa"></div>' +
+          '<div class="tl-time" data-orig="' + t.time + '" data-orig-min="' + t.startMin + '">' +
+            t.time + ' – ' + t.endTime +
+          '</div>' +
+          '<div class="tl-name" style="display:flex;align-items:center;gap:8px;justify-content:space-between">' +
+            '<span>' + emoji + ' ' + safe + '</span>' +
+            '<button class="tl-remove-fixed" data-task-id="' + t.id + '" aria-label="Retirer cette tâche" title="Retirer de la routine" style="background:rgba(239,68,68,.15);color:#fca5a5;border:1px solid rgba(239,68,68,.3);border-radius:6px;width:26px;height:26px;font-size:14px;cursor:pointer;line-height:1;padding:0;display:flex;align-items:center;justify-content:center;flex-shrink:0;touch-action:manipulation">×</button>' +
+          '</div>' +
+          '<div class="tl-desc">⚓ Tâche fixe ajoutée depuis l\'accueil</div>';
+
+        // Insertion chronologique
+        const all = Array.from(timeline.querySelectorAll('.tl-item'));
+        let inserted = false;
+        for (const existing of all){
+          const existingTime = existing.querySelector('.tl-time');
+          if (!existingTime) continue;
+          const existingMin = parseInt(existingTime.dataset.origMin || '', 10);
+          const fallbackText = existingTime.dataset.orig || existingTime.textContent || '';
+          const existingMinFromText = isNaN(existingMin) ? parseHM(fallbackText.split(/[–\-]/)[0].trim()) : existingMin;
+          if (existingMinFromText != null && existingMinFromText > t.startMin){
+            timeline.insertBefore(item, existing);
+            inserted = true;
+            break;
+          }
+        }
+        if (!inserted) timeline.appendChild(item);
+      });
+
+      // Trigger V35 pour recalculer décalages
+      if (!skipApply && typeof window.applyRoutineStateV35 === 'function'){
+        setTimeout(() => { try { window.applyRoutineStateV35(); } catch(e){ window.__warn && window.__warn('audit-catch', e); } }, 0);
+      }
+    } catch(e){
+      console.error('[renderRoutineFixedEvents]', e);
+    }
+  };
+
+  // Click handler pour le bouton "×" de suppression
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('.tl-remove-fixed');
+    if (!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const taskId = btn.dataset.taskId;
+    if (taskId) removeFixedTask(taskId);
+  }, true);
+
+  // Initial render
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', () => setTimeout(() => window.renderRoutineFixedEvents(), 200));
+  } else {
+    setTimeout(() => window.renderRoutineFixedEvents(), 200);
+  }
+})();
+</script>
+
 <script id="final-v35-js">
 (function(){
 'use strict';
@@ -8262,8 +8342,8 @@ window.__finalV35 = true;
 const NS = 'dashv2_';
 const safeJson = (v,d) => { try { return v == null ? d : JSON.parse(v); } catch(_){ return d; } };
 const get = (k,d) => safeJson(localStorage.getItem(NS+k), d);
-const set = (k,v) => { try { localStorage.setItem(NS+k, JSON.stringify(v)); } catch(_){} };
-const del = k => { try { localStorage.removeItem(NS+k); } catch(_){} };
+const set = (k,v) => { try { localStorage.setItem(NS+k, JSON.stringify(v)); } catch(e){ window.__warn && window.__warn('audit-catch', e); } };
+const del = k => { try { localStorage.removeItem(NS+k); } catch(e){ window.__warn && window.__warn('audit-catch', e); } };
 const dkey = (d=new Date()) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 const pageName = p => (p?.dataset?.page || (p?.id || '').replace(/^p-/,'')).toLowerCase();
 const canon = name => {
@@ -8276,7 +8356,7 @@ const canon = name => {
 function removeDuplicateHomeAndTocs(){
   document.querySelectorAll('.tab[data-tab="today"], #p-today, nav.toc, .toc').forEach(el => el.remove());
   if (canon(get('tab','home')) === 'home' && get('tab','home') === 'today') set('tab','home');
-  try { window.buildTocs = function(){ return false; }; } catch(_){}
+  try { window.buildTocs = function(){ return false; }; } catch(e){ window.__warn && window.__warn('audit-catch', e); }
 }
 
 function ensureCriticalTabs(){
@@ -8319,13 +8399,13 @@ function activateTabV35(raw, opts={}){
   set('tab', target);
   window.__activeTab = target;
   const at = document.querySelector(`.tab[data-tab="${target}"]`);
-  if (at && at.scrollIntoView) { try { at.scrollIntoView({behavior:'smooth', inline:'center', block:'nearest'}); } catch(_){} }
+  if (at && at.scrollIntoView) { try { at.scrollIntoView({behavior:'smooth', inline:'center', block:'nearest'}); } catch(e){ window.__warn && window.__warn('audit-catch', e); } }
   if (!opts.noScroll) { try { window.scrollTo({top:0, behavior:'smooth'}); } catch(_){ window.scrollTo(0,0); } }
   setTimeout(() => {
-    try { if (target === 'stats' && typeof window.renderStats === 'function') window.renderStats(); } catch(_){}
-    try { if (target === 'sport' && typeof window.renderTrainingSport === 'function') window.renderTrainingSport(); } catch(_){}
-    try { if (target === 'routine' && typeof window.applyWakeOffset === 'function') window.applyWakeOffset(); } catch(_){}
-    try { if (target === 'routine') decorateRoutineV35(); } catch(_){}
+    try { if (target === 'stats' && typeof window.renderStats === 'function') window.renderStats(); } catch(e){ window.__warn && window.__warn('audit-catch', e); }
+    try { if (target === 'sport' && typeof window.renderTrainingSport === 'function') window.renderTrainingSport(); } catch(e){ window.__warn && window.__warn('audit-catch', e); }
+    try { if (target === 'routine' && typeof window.applyWakeOffset === 'function') window.applyWakeOffset(); } catch(e){ window.__warn && window.__warn('audit-catch', e); }
+    try { if (target === 'routine') decorateRoutineV35(); } catch(e){ window.__warn && window.__warn('audit-catch', e); }
     try { decoratePrioritiesV35(); } catch(_){}
     try { fixOverflowReport(); } catch(_){}
   }, 80);
@@ -8421,7 +8501,7 @@ function activeShift(){ return (document.querySelector('.shift-view:not(.hidden)
 function routineKey(){ return 'routine_v35_' + dkey() + '_' + activeShift(); }
 function getVisibleRoutineItems(){ return Array.from(document.querySelectorAll('.shift-view:not(.hidden) .tl-item[data-time]')); }
 function offsetForShift(shift){
-  try { if (typeof window.currentOffsetForShift === 'function') return window.currentOffsetForShift(shift) || 0; } catch(_){}
+  try { if (typeof window.currentOffsetForShift === 'function') return window.currentOffsetForShift(shift) || 0; } catch(e){ window.__warn && window.__warn('audit-catch', e); }
   const w = get('wake_'+dkey(), null);
   return w && (!w.shift || w.shift === shift) ? (w.offset || 0) : 0;
 }
@@ -8480,8 +8560,8 @@ function applyRoutineStateV35(){
     const chk = item.querySelector('.tl-check-v35');
     if (chk){ chk.classList.toggle('checked', !!done); chk.textContent = done ? '✓' : ''; }
   });
-  try { if (typeof window.highlightNow === 'function') window.highlightNow(); } catch(_){}
-  try { if (typeof window.renderNextAction === 'function') window.renderNextAction(); } catch(_){}
+  try { if (typeof window.highlightNow === 'function') window.highlightNow(); } catch(e){ window.__warn && window.__warn('audit-catch', e); }
+  try { if (typeof window.renderNextAction === 'function') window.renderNextAction(); } catch(e){ window.__warn && window.__warn('audit-catch', e); }
 }
 function decorateRoutineV35(){
   document.querySelectorAll('.shift-view.hidden .tl-check-v35').forEach(b => b.remove());
@@ -8532,9 +8612,9 @@ function decorateRoutineV35(){
     tl.insertAdjacentElement('afterend', reset);
   }
   // Inject fixed-time task events and recalculate schedule (pass true → skip its internal applyRoutineStateV35)
-  try { if (window.renderRoutineFixedEvents) window.renderRoutineFixedEvents(true); } catch(_){}
+  try { if (window.renderRoutineFixedEvents) window.renderRoutineFixedEvents(true); } catch(e){ window.__warn && window.__warn('audit-catch', e); }
   // Sync global task completion state into routine before rendering
-  try { if (window.__globalTaskSync) window.__globalTaskSync._updateStateFromGlobal(); } catch(_){}
+  try { if (window.__globalTaskSync) window.__globalTaskSync._updateStateFromGlobal(); } catch(e){ window.__warn && window.__warn('audit-catch', e); }
   (window.applyRoutineStateV35 || applyRoutineStateV35)();
 }
 
@@ -8603,10 +8683,7 @@ window.decorateRoutineV35   = decorateRoutineV35;
 </script>
 
 
-<!-- ═══════════════════════════════════════════════════════════
-     FIX v3.7 — swipe conflict, overflow, sommaire, duplicate home,
-     priority colors, routine task completion
-     ═══════════════════════════════════════════════════════════ -->
+
 <style id="fix-v37-css">
 
 /* ── 1. Trading / all tabs: no horizontal overflow ── */
@@ -8845,12 +8922,7 @@ if (document.readyState === 'loading'){
 })();
 </script>
 
-<!-- ═══════════════════════════════════════════════════════════
-     GLOBAL TASK SYNC — v1.0
-     Central completion store.  Any check/uncheck anywhere in the
-     app is mirrored to `dashv2_global_done` and immediately
-     reflected in the Routine timeline.
-     ═══════════════════════════════════════════════════════════ -->
+
 <script id="global-task-sync">
 (function(){
 'use strict';
@@ -8861,7 +8933,7 @@ const NS        = 'dashv2_';
 const STORE_KEY = NS + 'global_done';
 
 function readStore(){ try { return JSON.parse(localStorage.getItem(STORE_KEY) || '{}'); } catch(_){ return {}; } }
-function writeStore(d){ try { localStorage.setItem(STORE_KEY, JSON.stringify(d)); } catch(_){} }
+function writeStore(d){ try { localStorage.setItem(STORE_KEY, JSON.stringify(d)); } catch(e){ window.__warn && window.__warn('audit-catch', e); } }
 
 // ── Keyword extractor ────────────────────────────────────────────────────
 // Returns unique lowercase keywords of ≥4 chars from a task title.
@@ -8990,7 +9062,7 @@ const sync = window.__globalTaskSync = {
     });
 
     if (changed) {
-      try { localStorage.setItem(NS + rk, JSON.stringify(state)); } catch(_){}
+      try { localStorage.setItem(NS + rk, JSON.stringify(state)); } catch(e){ window.__warn && window.__warn('audit-catch', e); }
     }
     return changed;
   },
@@ -9035,7 +9107,7 @@ const sync = window.__globalTaskSync = {
         }
       });
       if (dirty) writeStore(store);
-    } catch(_){}
+    } catch(e){ window.__warn && window.__warn('audit-catch', e); }
 
     // Task list done state
     try {
@@ -9133,6 +9205,18 @@ if (document.readyState === 'loading') {
 
 })();
 </script>
+<script id="audit-disable-routine-os-v1">
+/* Audit Apr 2026 — Le panel Routine OS V1 est caché par CSS (#ud-routine-checkin-engine-v1-panel{display:none!important}).
+   Mais son JavaScript (37 KB) tourne quand même : crée le panel, attache des observers,
+   met en route des renders périodiques. Ça gaspille 5-10% de RAM/CPU sur mobile.
+   
+   Fix : on set le flag d'init à `true` AVANT que le composant ne se charge,
+   ce qui le fait early-return immédiatement (sans rien créer ni observer).
+   
+   Pour le réactiver un jour : commenter ce script, le composant repartira.
+*/
+window.__UD_ROUTINE_CHECKIN_ENGINE_V1__ = true;
+</script>
 <script id="ud-routine-checkin-engine-v1">
 (() => {
   'use strict';
@@ -9155,7 +9239,7 @@ if (document.readyState === 'loading') {
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   }
   function read(key, fallback) { try { const raw = localStorage.getItem(NS + key); return raw ? JSON.parse(raw) : fallback; } catch (_) { return fallback; } }
-  function write(key, value) { try { localStorage.setItem(NS + key, JSON.stringify(value)); } catch (_) {} }
+  function write(key, value) { try { localStorage.setItem(NS + key, JSON.stringify(value)); } catch(e){ window.__warn && window.__warn('audit-catch', e); } }
   function toMin(value) { if (!value) return null; const s = String(value).trim().toLowerCase().replace('h', ':'); const m = s.match(/^(\d{1,2})(?::(\d{2}))?$/); if (!m) return null; const h = Number(m[1]); const mn = Number(m[2] || 0); if (h < 0 || h > 23 || mn < 0 || mn > 59) return null; return h * 60 + mn; }
   function fromMin(minutes) { const v = Math.max(0, Math.min(1439, Math.round(minutes))); return `${pad(Math.floor(v / 60))}:${pad(v % 60)}`; }
   function overlaps(aStart, aEnd, bStart, bEnd) { return aStart < bEnd && bStart < aEnd; }
@@ -9284,7 +9368,7 @@ if (document.readyState === 'loading') {
     const p = progress(); const prev = p[module] || {}; const resume = data.nextAction || data.endPoint || data.resume || data.lastPage || data.nextFocus || data.nextProgression || data.notes || '';
     p[module] = { ...prev, ...data, module, resume, updatedAt: nowIso(), totalMinutes: Number(prev.totalMinutes || 0) + Number(data.minutes || data.duration || 0) };
     saveProgress(p);
-    try { if (window.Bookmarks && ['epfc','coding','nl','lecture','ia'].includes(module)) { const map = { coding:'code', lecture:'read' }; const key = map[module] || module; window.Bookmarks.set(key, resume || data.endPoint || data.nextAction || 'À reprendre', module.toUpperCase()); } } catch (_) {}
+    try { if (window.Bookmarks && ['epfc','coding','nl','lecture','ia'].includes(module)) { const map = { coding:'code', lecture:'read' }; const key = map[module] || module; window.Bookmarks.set(key, resume || data.endPoint || data.nextAction || 'À reprendre', module.toUpperCase()); } } catch(e){ window.__warn && window.__warn('audit-catch', e); }
   }
 
   function findConflict(start, end, placed) { return placed.slice().sort((a,b) => a.startMin - b.startMin).find(b => overlaps(start, end, b.startMin, b.endMin)); }
@@ -9340,7 +9424,7 @@ if (document.readyState === 'loading') {
   function ensureModal() { if (document.getElementById(MODAL_ID)) return; const m = document.createElement('div'); m.id = MODAL_ID; document.body.appendChild(m); m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); }); }
   function ensureStyles() {
     if (document.getElementById(STYLE_ID)) return; const st = document.createElement('style'); st.id = STYLE_ID;
-    st.textContent = `#ud-adapted-routine-panel,#ud-master-routine-panel-v2,#ud-routine-command-engine-v3,#ud-routine-command-engine-v4{display:none!important}#${PANEL_ID}{margin:16px 0;padding:14px;border-radius:20px;border:1px solid rgba(148,163,184,.28);background:linear-gradient(180deg,rgba(15,23,42,.98),rgba(2,6,23,.96));color:#e5e7eb;box-shadow:0 16px 45px rgba(0,0,0,.38)}#${PANEL_ID} *{box-sizing:border-box}.udrci-title{font:900 17px system-ui;margin-bottom:6px}.udrci-sub{font:700 12px system-ui;color:#94a3b8;line-height:1.4;margin-bottom:10px}.udrci-grid{display:grid;grid-template-columns:1fr 108px 108px;gap:8px;margin:8px 0}.udrci-grid2{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:8px 0}#${PANEL_ID} input,#${PANEL_ID} select,#${PANEL_ID} button,#${PANEL_ID} textarea{min-height:42px;border-radius:12px;border:1px solid rgba(148,163,184,.35);background:#020617;color:#e5e7eb;padding:8px 10px;font:800 13px system-ui}#${PANEL_ID} button{background:#2563eb;border-color:#3b82f6}#${PANEL_ID} button.secondary{background:#111827}.udrci-status{padding:10px;border-radius:12px;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.30);color:#bbf7d0;font:800 12px system-ui;margin:8px 0}.udrci-warn{padding:10px;border-radius:12px;background:rgba(239,68,68,.16);border:1px solid rgba(239,68,68,.40);color:#fecaca;font:800 12px system-ui;margin:8px 0}.udrci-block{display:grid;grid-template-columns:102px 1fr auto;gap:8px;align-items:start;padding:10px;margin:8px 0;border-radius:14px;border:1px solid rgba(148,163,184,.25);background:rgba(15,23,42,.78)}.udrci-time{font:900 12px ui-monospace,monospace;color:#dbeafe}.udrci-name{font:900 13px system-ui;word-break:break-word}.udrci-meta{grid-column:2/4;font:700 11px system-ui;color:#94a3b8;line-height:1.4}.udrci-validate{min-width:82px!important;padding:7px 10px!important;background:#16a34a!important;border-color:#22c55e!important}.udrci-done .udrci-validate{background:#334155!important;border-color:#475569!important;color:#bbf7d0!important}.udrci-done{opacity:.72}.udrci-moved .udrci-meta{color:#bfdbfe}.udrci-epfc{border-color:rgba(59,130,246,.65);background:rgba(30,64,175,.26)}.udrci-coding{border-color:rgba(34,197,94,.60);background:rgba(20,83,45,.24)}.udrci-nl{border-color:rgba(14,165,233,.60);background:rgba(12,74,110,.24)}.udrci-ia{border-color:rgba(168,85,247,.60);background:rgba(88,28,135,.24)}.udrci-trading{border-color:rgba(245,158,11,.75);background:rgba(120,53,15,.35)}.udrci-vinted{border-color:rgba(236,72,153,.60);background:rgba(131,24,67,.24)}.udrci-muscu,.udrci-sport{border-color:rgba(22,163,74,.60);background:rgba(20,83,45,.22)}.udrci-souplesse{border-color:rgba(45,212,191,.60);background:rgba(19,78,74,.24)}.udrci-lecture{border-color:rgba(99,102,241,.60);background:rgba(49,46,129,.24)}.udrci-fixed-task{border-color:rgba(239,68,68,.75);background:rgba(127,29,29,.36)}.udrci-fixed{opacity:.84}#${MODAL_ID}{position:fixed;inset:0;display:none;z-index:999999;background:rgba(2,6,23,.76);backdrop-filter:blur(8px);padding:18px;overflow:auto}#${MODAL_ID}.open{display:block}.udrci-modal-card{position:relative;max-width:620px;margin:20px auto;padding:16px;border-radius:18px;border:1px solid rgba(148,163,184,.32);background:#0f172a;color:#e5e7eb;box-shadow:0 20px 60px rgba(0,0,0,.55)}.udrci-close{position:absolute;right:12px;top:10px;width:38px;height:38px;border-radius:999px;background:#111827;color:#e5e7eb;border:1px solid #334155}.udrci-modal-kicker{font:900 11px system-ui;color:#fb923c;text-transform:uppercase;letter-spacing:.12em}.udrci-modal-card h2{font:900 20px system-ui;margin:4px 44px 4px 0}.udrci-modal-sub{font:700 12px system-ui;color:#94a3b8;margin-bottom:12px}.udrci-modal-card label{display:block;font:800 12px system-ui;color:#cbd5e1;margin:9px 0 5px}.udrci-modal-card input,.udrci-modal-card select,.udrci-modal-card textarea{width:100%;min-height:42px;margin-top:5px;border-radius:12px;border:1px solid #334155;background:#020617;color:#e5e7eb;padding:9px 10px;font:700 13px system-ui}.udrci-modal-card textarea{min-height:82px}.udrci-check{display:flex!important;gap:10px;align-items:center}.udrci-check input{width:auto!important}.udrci-modal-actions{display:flex;gap:8px;margin-top:14px}.udrci-modal-actions button{flex:1;min-height:44px;border-radius:12px;border:1px solid #334155;background:#2563eb;color:#fff;font:900 13px system-ui}.udrci-modal-actions .secondary{background:#111827}.udrci-toast{position:fixed;left:14px;right:14px;bottom:18px;z-index:1000000;background:#020617;color:#fff;border:1px solid #334155;padding:12px 14px;border-radius:14px;font:800 13px system-ui;box-shadow:0 12px 40px rgba(0,0,0,.45)}.udrci-progress-box{margin:10px 0 16px;padding:12px;border:1px solid rgba(148,163,184,.25);border-radius:14px;background:rgba(15,23,42,.72);color:#e5e7eb}.udrci-progress-box b{color:#fb923c}.udrci-progress-box small{display:block;color:#94a3b8;margin-top:4px;line-height:1.4}@media(max-width:560px){.udrci-grid,.udrci-grid2{grid-template-columns:1fr}.udrci-block{grid-template-columns:1fr}.udrci-meta{grid-column:1}.udrci-validate{width:100%}.udrci-modal-actions{flex-direction:column}}`;
+    st.textContent = `#ud-adapted-routine-panel,#ud-master-routine-panel-v2,#ud-routine-command-engine-v3,#ud-routine-command-engine-v4,#ud-routine-checkin-engine-v1-panel{display:none!important}#${PANEL_ID}{margin:16px 0;padding:14px;border-radius:20px;border:1px solid rgba(148,163,184,.28);background:linear-gradient(180deg,rgba(15,23,42,.98),rgba(2,6,23,.96));color:#e5e7eb;box-shadow:0 16px 45px rgba(0,0,0,.38)}#${PANEL_ID} *{box-sizing:border-box}.udrci-title{font:900 17px system-ui;margin-bottom:6px}.udrci-sub{font:700 12px system-ui;color:#94a3b8;line-height:1.4;margin-bottom:10px}.udrci-grid{display:grid;grid-template-columns:1fr 108px 108px;gap:8px;margin:8px 0}.udrci-grid2{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:8px 0}#${PANEL_ID} input,#${PANEL_ID} select,#${PANEL_ID} button,#${PANEL_ID} textarea{min-height:42px;border-radius:12px;border:1px solid rgba(148,163,184,.35);background:#020617;color:#e5e7eb;padding:8px 10px;font:800 13px system-ui}#${PANEL_ID} button{background:#2563eb;border-color:#3b82f6}#${PANEL_ID} button.secondary{background:#111827}.udrci-status{padding:10px;border-radius:12px;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.30);color:#bbf7d0;font:800 12px system-ui;margin:8px 0}.udrci-warn{padding:10px;border-radius:12px;background:rgba(239,68,68,.16);border:1px solid rgba(239,68,68,.40);color:#fecaca;font:800 12px system-ui;margin:8px 0}.udrci-block{display:grid;grid-template-columns:102px 1fr auto;gap:8px;align-items:start;padding:10px;margin:8px 0;border-radius:14px;border:1px solid rgba(148,163,184,.25);background:rgba(15,23,42,.78)}.udrci-time{font:900 12px ui-monospace,monospace;color:#dbeafe}.udrci-name{font:900 13px system-ui;word-break:break-word}.udrci-meta{grid-column:2/4;font:700 11px system-ui;color:#94a3b8;line-height:1.4}.udrci-validate{min-width:82px!important;padding:7px 10px!important;background:#16a34a!important;border-color:#22c55e!important}.udrci-done .udrci-validate{background:#334155!important;border-color:#475569!important;color:#bbf7d0!important}.udrci-done{opacity:.72}.udrci-moved .udrci-meta{color:#bfdbfe}.udrci-epfc{border-color:rgba(59,130,246,.65);background:rgba(30,64,175,.26)}.udrci-coding{border-color:rgba(34,197,94,.60);background:rgba(20,83,45,.24)}.udrci-nl{border-color:rgba(14,165,233,.60);background:rgba(12,74,110,.24)}.udrci-ia{border-color:rgba(168,85,247,.60);background:rgba(88,28,135,.24)}.udrci-trading{border-color:rgba(245,158,11,.75);background:rgba(120,53,15,.35)}.udrci-vinted{border-color:rgba(236,72,153,.60);background:rgba(131,24,67,.24)}.udrci-muscu,.udrci-sport{border-color:rgba(22,163,74,.60);background:rgba(20,83,45,.22)}.udrci-souplesse{border-color:rgba(45,212,191,.60);background:rgba(19,78,74,.24)}.udrci-lecture{border-color:rgba(99,102,241,.60);background:rgba(49,46,129,.24)}.udrci-fixed-task{border-color:rgba(239,68,68,.75);background:rgba(127,29,29,.36)}.udrci-fixed{opacity:.84}#${MODAL_ID}{position:fixed;inset:0;display:none;z-index:999999;background:rgba(2,6,23,.76);backdrop-filter:blur(8px);padding:18px;overflow:auto}#${MODAL_ID}.open{display:block}.udrci-modal-card{position:relative;max-width:620px;margin:20px auto;padding:16px;border-radius:18px;border:1px solid rgba(148,163,184,.32);background:#0f172a;color:#e5e7eb;box-shadow:0 20px 60px rgba(0,0,0,.55)}.udrci-close{position:absolute;right:12px;top:10px;width:38px;height:38px;border-radius:999px;background:#111827;color:#e5e7eb;border:1px solid #334155}.udrci-modal-kicker{font:900 11px system-ui;color:#fb923c;text-transform:uppercase;letter-spacing:.12em}.udrci-modal-card h2{font:900 20px system-ui;margin:4px 44px 4px 0}.udrci-modal-sub{font:700 12px system-ui;color:#94a3b8;margin-bottom:12px}.udrci-modal-card label{display:block;font:800 12px system-ui;color:#cbd5e1;margin:9px 0 5px}.udrci-modal-card input,.udrci-modal-card select,.udrci-modal-card textarea{width:100%;min-height:42px;margin-top:5px;border-radius:12px;border:1px solid #334155;background:#020617;color:#e5e7eb;padding:9px 10px;font:700 13px system-ui}.udrci-modal-card textarea{min-height:82px}.udrci-check{display:flex!important;gap:10px;align-items:center}.udrci-check input{width:auto!important}.udrci-modal-actions{display:flex;gap:8px;margin-top:14px}.udrci-modal-actions button{flex:1;min-height:44px;border-radius:12px;border:1px solid #334155;background:#2563eb;color:#fff;font:900 13px system-ui}.udrci-modal-actions .secondary{background:#111827}.udrci-toast{position:fixed;left:14px;right:14px;bottom:18px;z-index:1000000;background:#020617;color:#fff;border:1px solid #334155;padding:12px 14px;border-radius:14px;font:800 13px system-ui;box-shadow:0 12px 40px rgba(0,0,0,.45)}.udrci-progress-box{margin:10px 0 16px;padding:12px;border:1px solid rgba(148,163,184,.25);border-radius:14px;background:rgba(15,23,42,.72);color:#e5e7eb}.udrci-progress-box b{color:#fb923c}.udrci-progress-box small{display:block;color:#94a3b8;margin-top:4px;line-height:1.4}@media(max-width:560px){.udrci-grid,.udrci-grid2{grid-template-columns:1fr}.udrci-block{grid-template-columns:1fr}.udrci-meta{grid-column:1}.udrci-validate{width:100%}.udrci-modal-actions{flex-direction:column}}`;
     document.head.appendChild(st);
   }
   function routinePage() { return document.getElementById('p-routine') || document.querySelector('[data-page="routine"]'); }
@@ -10300,162 +10384,6 @@ if (document.readyState === 'loading') {
 
 
 
-<!-- HOTFIX MOBILE OS+ v2.0 — pas de MutationObserver infini, bouton compact fiable -->
-<style id="ud-osplus-mobile-hotfix-v2">
-  /* Neutralise définitivement l’ancien dock bleu qui bloque les clics. */
-  #ud-mobile-command-dock,
-  #ud-mobile-command-dock *{
-    display:none !important;
-    visibility:hidden !important;
-    pointer-events:none !important;
-  }
-  #ud-mobile-command-dock{
-    width:0 !important;
-    height:0 !important;
-    min-width:0 !important;
-    min-height:0 !important;
-    overflow:hidden !important;
-    opacity:0 !important;
-    transform:none !important;
-  }
-
-  /* Bouton OS+ compact : petit éclair à gauche, ne bloque pas les boutons Claude à droite. */
-  #u20-fab,
-  #ud-osplus-mini-fab{
-    position:fixed !important;
-    left:12px !important;
-    right:auto !important;
-    bottom:calc(92px + env(safe-area-inset-bottom,0px)) !important;
-    z-index:99960 !important;
-    width:52px !important;
-    height:52px !important;
-    min-width:52px !important;
-    min-height:52px !important;
-    max-width:52px !important;
-    max-height:52px !important;
-    padding:0 !important;
-    margin:0 !important;
-    border-radius:50% !important;
-    border:1px solid rgba(249,115,22,.75) !important;
-    background:linear-gradient(135deg,#f97316,#f59e0b) !important;
-    color:#0a0a10 !important;
-    font:900 24px/1 system-ui !important;
-    display:flex !important;
-    align-items:center !important;
-    justify-content:center !important;
-    box-shadow:0 10px 28px rgba(0,0,0,.45),0 0 0 2px rgba(249,115,22,.22) !important;
-    pointer-events:auto !important;
-    touch-action:manipulation !important;
-  }
-  #u20-fab{
-    font-size:0 !important;
-    overflow:hidden !important;
-  }
-  #u20-fab::before{
-    content:"⚡";
-    font-size:24px !important;
-    line-height:1 !important;
-  }
-  #ud-osplus-mini-fab{ display:none; }
-  body.ud-osplus-no-u20 #ud-osplus-mini-fab{ display:flex !important; }
-
-  #u20-cockpit{ margin-bottom:16px !important; }
-  #u20-drawer{ z-index:999990 !important; }
-  #u20-modal{ z-index:999995 !important; }
-
-  @media(max-width:700px){
-    body{ padding-bottom:calc(104px + env(safe-area-inset-bottom,0px)) !important; }
-    .app{ padding-bottom:calc(104px + env(safe-area-inset-bottom,0px)) !important; }
-  }
-</style>
-<script id="ud-osplus-mobile-hotfix-v2-script">
-(() => {
-  if (window.__UD_OSPLUS_MOBILE_HOTFIX_V2__) return;
-  window.__UD_OSPLUS_MOBILE_HOTFIX_V2__ = true;
-
-  function openOSPlus(){
-    if (typeof window.UD_U20?.renderDrawer === 'function') {
-      window.UD_U20.renderDrawer();
-    }
-    const drawer = document.getElementById('u20-drawer');
-    if (drawer) {
-      drawer.classList.add('open');
-      document.body.classList.remove('ud-osplus-no-u20');
-      return;
-    }
-    if (typeof window.UD_ASSISTANT_OS?.openCommandCenter === 'function') {
-      window.UD_ASSISTANT_OS.openCommandCenter();
-      return;
-    }
-    showToast('OS+ pas encore chargé. Attends 1 seconde puis réessaie.');
-  }
-
-  function disableOldDock(){
-    const dock = document.getElementById('ud-mobile-command-dock');
-    if (!dock) return;
-    dock.setAttribute('aria-hidden', 'true');
-    dock.style.display = 'none';
-    dock.style.visibility = 'hidden';
-    dock.style.pointerEvents = 'none';
-  }
-
-  function ensureMiniButton(){
-    let mini = document.getElementById('ud-osplus-mini-fab');
-    if (!mini) {
-      mini = document.createElement('button');
-      mini.id = 'ud-osplus-mini-fab';
-      mini.type = 'button';
-      mini.textContent = '⚡';
-      mini.setAttribute('aria-label', 'Ouvrir OS+');
-      mini.setAttribute('title', 'OS+');
-      mini.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        openOSPlus();
-      });
-      document.body.appendChild(mini);
-    }
-  }
-
-  function compactRealButton(){
-    const btn = document.getElementById('u20-fab');
-    if (!btn) {
-      document.body.classList.add('ud-osplus-no-u20');
-      return false;
-    }
-    document.body.classList.remove('ud-osplus-no-u20');
-    btn.setAttribute('aria-label', 'Ouvrir OS+');
-    btn.setAttribute('title', 'OS+');
-    if (!btn.dataset.udOsplusBound) {
-      btn.dataset.udOsplusBound = '1';
-      btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        openOSPlus();
-      }, false);
-    }
-    return true;
-  }
-
-  function setup(){
-    disableOldDock();
-    ensureMiniButton();
-    compactRealButton();
-  }
-
-  setup();
-  document.addEventListener('DOMContentLoaded', setup, { once:true });
-  window.addEventListener('hashchange', () => setTimeout(setup, 120));
-
-  /* Essais courts seulement. Pas de MutationObserver permanent : évite le freeze après clic/onglet. */
-  let tries = 0;
-  const timer = setInterval(() => {
-    tries += 1;
-    setup();
-    if (document.getElementById('u20-fab') || tries >= 16) clearInterval(timer);
-  }, 250);
-})();
-</script>
 
 <script id="audit-visibility-handler">
 /* Pause les rafraîchissements lourds quand le tab est en background.
@@ -10494,7 +10422,7 @@ if (document.readyState === 'loading') {
     for (const e of registry){
       if (e.id === null){
         // Refresh immédiat au retour pour ne pas attendre le prochain tick
-        try { if (typeof e.onResume === 'function') e.onResume(); else e.fn(); } catch(_){}
+        try { if (typeof e.onResume === 'function') e.onResume(); else e.fn(); } catch(e){ window.__warn && window.__warn('audit-catch', e); }
         e.id = setInterval(e.fn, e.ms);
       }
     }
