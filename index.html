@@ -53,7 +53,7 @@ if (typeof window.Notification === 'undefined'){
     size-adjust:96%;
   }
 </style>
-<link rel="stylesheet" href="/assets/main.2924e991.css">
+<link rel="stylesheet" href="/assets/main.bb7b8c4f.css">
 
 <style id="ud-performance-step1-style">
 @media (max-width: 640px){
@@ -8146,7 +8146,10 @@ html, body, #root, .app, .shell, .main, main, section.page, .page, .card, .panel
 html, body{ width:100% !important; overflow-x:hidden !important; }
 body{ overscroll-behavior-x:none; }
 *, *::before, *::after{ min-width:0; box-sizing:border-box; }
-h1,h2,h3,h4,p,span,em,strong,li,a,button,label,div{ overflow-wrap:anywhere; }
+/* Audit Apr 2026 : 'anywhere' coupait les mots normaux lettre par lettre dans
+   les containers étroits (rendu vertical). 'break-word' ne casse que les mots
+   trop longs pour leur container (URLs, codes), comportement attendu. */
+h1,h2,h3,h4,p,span,em,strong,li,a,button,label,div{ overflow-wrap:break-word; word-break:normal; }
 img,svg,canvas,video,iframe,table,pre,code{ max-width:100% !important; }
 pre,code{ white-space:pre-wrap; }
 table{ display:block; overflow-x:auto; -webkit-overflow-scrolling:touch; }
