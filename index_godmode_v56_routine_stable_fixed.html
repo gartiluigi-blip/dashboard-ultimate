@@ -1,0 +1,1809 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<script id="early-stub">
+/* CRITICAL: stub Notification AVANT tout autre script.
+   Sans ça, Brave/Firefox privé crash à la ligne 6301
+   et l'app entière ne se charge pas. */
+window.__earlyStub = true;
+if (typeof window.Notification === 'undefined'){
+  window.Notification = function(){};
+  window.Notification.permission = 'default';
+  window.Notification.requestPermission = function(){ return Promise.resolve('denied'); };
+}
+</script>
+<script id="audit-private-mode-check">
+(function(){
+  var ok = false;
+  try { var k = '__t_'+Date.now(); localStorage.setItem(k,'1'); localStorage.removeItem(k); ok = true; }
+  catch(e){ ok = false; }
+  if (!ok){
+    document.addEventListener('DOMContentLoaded', function(){
+      var bar = document.createElement('div');
+      bar.id = 'audit-storage-warning';
+      bar.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#dc2626;color:#fff;padding:12px 16px;font:600 13px system-ui,sans-serif;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.4)';
+      bar.innerHTML = '⚠️ Mode privé ou stockage indisponible — Tes données ne seront PAS sauvegardées. <button aria-label="Fermer" style="margin-left:12px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;padding:4px 10px;border-radius:6px;cursor:pointer">Compris</button>';
+      bar.querySelector('button').addEventListener('click', function(){ bar.remove(); document.body.style.paddingTop=''; });
+      document.body.appendChild(bar);
+      document.body.style.paddingTop = (bar.offsetHeight + 8) + 'px';
+    });
+  }
+})();
+</script>
+<script id="audit-localstorage-safe">
+(function(){
+  var stats = { ok:0, errors:0, lastError:null };
+  var oG = Storage.prototype.getItem;
+  var oS = Storage.prototype.setItem;
+  var oR = Storage.prototype.removeItem;
+  Storage.prototype.getItem = function(k){
+    try { var v = oG.call(this,k); stats.ok++; return v; }
+    catch(e){ stats.errors++; stats.lastError = String(e); return null; }
+  };
+  Storage.prototype.setItem = function(k,v){
+    try { oS.call(this,k,v); stats.ok++; }
+    catch(e){
+      stats.errors++; stats.lastError = String(e);
+      if (e && /quota/i.test(String(e))){
+        try {
+          var keys = [];
+          for (var i = 0; i < this.length; i++){
+            var key = this.key(i);
+            if (key && /\d{4}-\d{2}-\d{2}/.test(key)) keys.push(key);
+          }
+          keys.sort();
+          for (var j = 0; j < Math.min(10, keys.length-5); j++){
+            try { oR.call(this, keys[j]); } catch(_){}
+          }
+          try { oS.call(this,k,v); stats.ok++; stats.errors--; } catch(e){ window.__warn && window.__warn('audit-catch', e); }
+        } catch(_){}
+      }
+    }
+  };
+  Storage.prototype.removeItem = function(k){
+    try { oR.call(this,k); stats.ok++; }
+    catch(e){ stats.errors++; stats.lastError = String(e); }
+  };
+  window.__storageStats = stats;
+})();
+</script>
+<script id="audit-helpers">
+(function(){
+  if (!window.escapeHTML){
+    var m = { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' };
+    window.escapeHTML = function(s){ return s == null ? '' : String(s).replace(/[&<>"']/g, function(c){ return m[c]; }); };
+  }
+  if (!window.bindOnce){
+    window.bindOnce = function(el, ev, h, k){
+      if (!el) return false;
+      var dk = '_bound_' + (k || ev);
+      if (el.dataset && el.dataset[dk]) return false;
+      el.addEventListener(ev, h);
+      if (el.dataset) el.dataset[dk] = '1';
+      return true;
+    };
+    window.delegate = function(p, sel, ev, h){
+      if (!p) return false;
+      var dk = '_delegate_' + sel + '_' + ev;
+      if (p.dataset && p.dataset[dk]) return false;
+      p.addEventListener(ev, function(e){
+        var match = e.target.closest(sel);
+        if (match && p.contains(match)) h.call(match, e);
+      });
+      if (p.dataset) p.dataset[dk] = '1';
+      return true;
+    };
+  }
+  window.__warn = function(ctx, err){ if (window.__debugMode) console.warn('['+ctx+']', err); };
+  window.__debugMode = false;
+  window.__memoryStatus = function(){
+    if (!performance || !performance.memory) return 'unavailable';
+    return {
+      usedMB: (performance.memory.usedJSHeapSize/1048576).toFixed(1),
+      limitMB: (performance.memory.jsHeapSizeLimit/1048576).toFixed(0),
+      percentUsed: (performance.memory.usedJSHeapSize/performance.memory.jsHeapSizeLimit*100).toFixed(1)+'%'
+    };
+  };
+})();
+</script>
+<script id="audit-storage-cleanup">
+/* Audit Apr 2026 — Cleanup PRÉVENTIF du localStorage.
+   Tu as ~43 clés dans dashv2_*. Plusieurs sont datées (logs_2025-12-15, freeze_2026-01-03, etc.).
+   Sans rétention, elles s'accumulent jusqu'au quota (5 MB). 
+   Ce script supprime les clés date-based > 90 jours, 1× au boot, max 1×/24h.
+
+   Préserve : tous les noms de clés non-datées, les snapshots datés volontaires
+   (snapshot_*, qui sont gérés par autoBackupCheck avec rotation 30).
+*/
+(function(){
+  if (window.__auditStorageCleanupDone) return;
+  window.__auditStorageCleanupDone = true;
+  
+  var LAST_CLEANUP_KEY = 'dashv2___last_cleanup';
+  var ONE_DAY_MS = 24 * 60 * 60 * 1000;
+  var RETENTION_DAYS = 90;
+  
+  try {
+    var lastCleanup = parseInt(localStorage.getItem(LAST_CLEANUP_KEY) || '0', 10);
+    var now = Date.now();
+    if (now - lastCleanup < ONE_DAY_MS) return; // Pas plus d'1 cleanup par jour
+    
+    var threshold = new Date(now - RETENTION_DAYS * ONE_DAY_MS);
+    var thresholdYear = threshold.getFullYear();
+    var thresholdMonth = threshold.getMonth() + 1;
+    var thresholdDay = threshold.getDate();
+    
+    // Format ISO YYYY-MM-DD comparable lexicographiquement
+    var thresholdISO = thresholdYear + '-' + 
+                       String(thresholdMonth).padStart(2, '0') + '-' +
+                       String(thresholdDay).padStart(2, '0');
+    
+    var deleted = 0;
+    var keysToDelete = [];
+    
+    for (var i = 0; i < localStorage.length; i++){
+      var key = localStorage.key(i);
+      if (!key) continue;
+      
+      // PRÉSERVATIONS — ne JAMAIS toucher :
+      if (key.indexOf('snapshot_') !== -1) continue;       // snapshots gérés par rotation
+      if (key.indexOf('__last_cleanup') !== -1) continue;  // notre propre clé
+      if (key.indexOf('schema_version') !== -1) continue;  // versioning
+      if (key.indexOf('gh_token') !== -1) continue;        // backup token
+      if (key.indexOf('gist_id') !== -1) continue;
+      
+      // Match clé avec date YYYY-MM-DD à la fin
+      var dateMatch = key.match(/(\d{4}-\d{2}-\d{2})(?:_|$)/);
+      if (!dateMatch) continue; // Pas une clé datée
+      
+      var keyDate = dateMatch[1];
+      // Comparison lexicographique (ISO date)
+      if (keyDate < thresholdISO){
+        keysToDelete.push(key);
+      }
+    }
+    
+    // Supprimer
+    keysToDelete.forEach(function(k){
+      try { localStorage.removeItem(k); deleted++; } catch(e){ window.__warn && window.__warn('storage-cleanup', e); }
+    });
+    
+    localStorage.setItem(LAST_CLEANUP_KEY, String(now));
+    
+    if (deleted > 0 && window.__debugMode){
+      console.log('[storage-cleanup] Removed ' + deleted + ' keys older than ' + RETENTION_DAYS + ' days');
+    }
+    
+    window.__lastCleanupStats = { deleted: deleted, ranAt: new Date().toISOString(), thresholdISO: thresholdISO };
+  } catch(e){
+    window.__warn && window.__warn('storage-cleanup', e);
+  }
+})();
+</script>
+
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+<meta name="theme-color" content="#0a0a10">
+<title>Dashboard · V54 Clean</title>
+<!-- PWA manifest (inline data-URI so single-file still works) -->
+<link rel="manifest" href='data:application/manifest+json,{"name":"Dashboard Ultimate","short_name":"Dashboard","description":"Ton dashboard personnel · routine · priorités · stats","start_url":".","display":"standalone","orientation":"portrait","theme_color":"%230a0a10","background_color":"%2308080d","icons":[{"src":"data:image/svg%2Bxml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 192 192%22%3E%3Crect width=%22192%22 height=%22192%22 rx=%2236%22 fill=%22%23ff6b35%22/%3E%3Ctext x=%2296%22 y=%22130%22 font-size=%22110%22 text-anchor=%22middle%22 fill=%22%230a0a10%22 font-family=%22sans-serif%22 font-weight=%22900%22%3E%E2%9A%A1%3C/text%3E%3C/svg%3E","sizes":"192x192","type":"image/svg+xml"},{"src":"data:image/svg%2Bxml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 512 512%22%3E%3Crect width=%22512%22 height=%22512%22 rx=%2296%22 fill=%22%23ff6b35%22/%3E%3Ctext x=%22256%22 y=%22346%22 font-size=%22292%22 text-anchor=%22middle%22 fill=%22%230a0a10%22 font-family=%22sans-serif%22 font-weight=%22900%22%3E%E2%9A%A1%3C/text%3E%3C/svg%3E","sizes":"512x512","type":"image/svg+xml"}]}'>
+<link rel="apple-touch-icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180"><rect width="180" height="180" rx="34" fill="%23ff6b35"/><text x="90" y="122" font-size="102" text-anchor="middle" fill="%230a0a10" font-family="sans-serif" font-weight="900">%E2%9A%A1</text></svg>'>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Dashboard">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500..700;1,500..700&family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500..700;1,500..700&family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" media="print" onload="this.media='all';this.onload=null">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500..700;1,500..700&family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet"></noscript>
+<style>
+  /* Fallback fonts with size-adjust — eliminates FOIT/FOUT layout shift while web fonts load.
+     Numbers tuned by visually matching Outfit/Fraunces against system equivalents. */
+  @font-face{
+    font-family:'Outfit Fallback';
+    src:local('Arial');
+    size-adjust:97%;
+    ascent-override:96%;
+    descent-override:24%;
+    line-gap-override:0%;
+  }
+  @font-face{
+    font-family:'Fraunces Fallback';
+    src:local('Georgia');
+    size-adjust:103%;
+    ascent-override:88%;
+    descent-override:22%;
+    line-gap-override:0%;
+  }
+  @font-face{
+    font-family:'JetBrains Fallback';
+    src:local('Menlo'), local('Consolas');
+    size-adjust:96%;
+  }
+</style>
+<link rel="stylesheet" href="/assets/main.b19fca0a.css">
+
+<style id="ud-performance-step1-style">
+@media (max-width: 640px){
+  body.ud-performance-mobile *{
+    animation-duration:.01ms!important;
+    animation-iteration-count:1!important;
+    transition-duration:.01ms!important;
+    scroll-behavior:auto!important;
+  }
+  body.ud-performance-mobile .masthead,
+  body.ud-performance-mobile .now-card,
+  body.ud-performance-mobile .hero,
+  body.ud-performance-mobile .card,
+  body.ud-performance-mobile .u20-panel,
+  body.ud-performance-mobile .u20-drawer-card{
+    backdrop-filter:none!important;
+    -webkit-backdrop-filter:none!important;
+    box-shadow:none!important;
+  }
+}
+</style>
+<script id="ud-performance-step1-boot">
+(() => {
+  try {
+    const isMobile = matchMedia('(max-width: 640px)').matches || matchMedia('(pointer: coarse)').matches;
+    const pref = localStorage.getItem('dashv2_perf_mobile');
+    if (pref === '1' || (pref === null && isMobile)) document.body?.classList?.add('ud-performance-mobile');
+    window.UDPerformanceMode = {
+      on(){ localStorage.setItem('dashv2_perf_mobile','1'); document.body.classList.add('ud-performance-mobile'); },
+      off(){ localStorage.setItem('dashv2_perf_mobile','0'); document.body.classList.remove('ud-performance-mobile'); }
+    };
+  } catch(_){}
+})();
+</script>
+<style id="ud-v54-cleanup-style">
+/* V54 CLEAN · réduction visible + consolidation mobile */
+body.ud-v54-clean .ud-v54-hidden-home{display:none!important;}
+body.ud-v54-clean #p-home .ud-v54-ops-panel{margin:16px 0;padding:14px;border:1px solid rgba(148,163,184,.24);border-radius:18px;background:linear-gradient(180deg,rgba(15,23,42,.86),rgba(2,6,23,.72));}
+body.ud-v54-clean #p-home .ud-v54-ops-title{font:900 12px var(--f-sans,system-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--amber,#f59e0b);margin-bottom:8px;}
+body.ud-v54-clean #p-home .ud-v54-ops-sub{font:700 12px/1.5 var(--f-sans,system-ui);color:var(--text-faint,#9ca3af);margin-bottom:10px;}
+body.ud-v54-clean #p-home .ud-v54-ops-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
+body.ud-v54-clean #p-home .ud-v54-ops-btn{min-height:44px;border:1px solid rgba(148,163,184,.28);border-radius:12px;background:rgba(15,23,42,.82);color:var(--text,#f8fafc);font:900 12px var(--f-sans,system-ui);cursor:pointer;}
+body.ud-v54-clean #p-home .ud-v54-ops-btn:active{transform:translateY(1px);}
+body.ud-v54-clean .pomo-fab,
+body.ud-v54-clean .focus-fab,
+body.ud-v54-clean .qa-fab,
+body.ud-v54-clean .floating-actions:not(.u20-fab),
+body.ud-v54-clean .floating-buttons:not(.u20-fab){display:none!important;}
+body.ud-v54-clean #p-trading .ud-v54-duplicate-note{display:none!important;}
+body.ud-v54-clean .tl-item{min-width:0;}
+body.ud-v54-clean .tl-name,
+body.ud-v54-clean .tl-desc{overflow-wrap:anywhere;word-break:normal;}
+@media(max-width:640px){
+  body.ud-v54-clean #p-home .ud-v54-ops-grid{grid-template-columns:1fr;}
+  body.ud-v54-clean .routine-progress{white-space:normal!important;line-height:1.35!important;}
+  body.ud-v54-clean .tl-item{grid-template-columns:78px 1fr!important;gap:8px!important;align-items:start!important;}
+  body.ud-v54-clean .tl-time{grid-column:1!important;white-space:normal!important;line-height:1.25!important;font-size:11px!important;}
+  body.ud-v54-clean .tl-name{grid-column:2!important;min-width:0!important;line-height:1.25!important;}
+  body.ud-v54-clean .tl-desc{grid-column:2!important;min-width:0!important;line-height:1.35!important;}
+  body.ud-v54-clean .tl-dot{grid-column:1!important;}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+
+<header class="masthead">
+<div class="masthead-inner">
+<div class="brand">
+<div class="brand-mark">⚡</div>
+<div class="brand-text">
+<div class="brand-title">Protocole <em class="serif">Ultimate</em></div>
+<div class="brand-sub" id="brand-sub">Chargement…</div>
+</div>
+</div>
+<div class="masthead-meta" id="meta">
+<b id="meta-time">00:00</b>
+<span id="meta-date">—</span>
+</div>
+</div>
+<div class="tabs-wrap" data-scrolled="start">
+<nav class="tabs" id="tabs">
+<div class="tab active" data-tab="home">🏠 Aujourd'hui</div>
+<div class="tab" data-tab="stats">📊 Stats</div>
+<div class="tab" data-tab="routine">📅 Routine</div>
+<div class="tab" data-tab="sport">💪 Sport</div>
+<div class="tab" data-tab="flex">🧘 Souplesse</div>
+<div class="tab" data-tab="nutrition">🥩 Nutrition</div>
+<div class="tab" data-tab="epfc">🎓 EPFC</div>
+<div class="tab" data-tab="code">💻 Code</div>
+<div class="tab" data-tab="ia">🤖 IA</div>
+<div class="tab" data-tab="vinted">🛍️ Vinted</div>
+<div class="tab" data-tab="nl">🇳🇱 NL</div>
+<div class="tab" data-tab="chess">♟️ Échecs</div>
+<div class="tab" data-tab="finance">💰 Finance</div>
+<div class="tab" data-tab="plan">📋 Plan</div>
+<div class="tab" data-tab="trading">📈 Trading</div>
+<div class="tab" data-tab="settings">⚙️</div>
+</nav>
+</div>
+</header>
+
+<main class="main">
+
+
+
+<section class="page active" id="p-home">
+
+<div class="home-search">
+<button class="search-trigger" id="search-trigger" aria-label="Rechercher dans le dashboard">
+<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+<span>Chercher une ressource, un exo, une règle…</span>
+<kbd>⌘K</kbd>
+</button>
+</div>
+
+
+<div class="next-action" id="next-action" aria-live="polite">
+  <div class="na-head">
+    <span class="na-label" id="na-label">Prochaine action</span>
+    <span class="na-countdown" id="na-countdown">—</span>
+  </div>
+  <div class="na-title" id="na-title">Chargement…</div>
+  <div class="na-sub" id="na-sub">—</div>
+  <div class="na-actions">
+    <button class="na-btn primary" id="na-start" data-action="na-start">Démarrer focus</button>
+    <button class="na-btn" id="na-snooze" data-action="na-snooze">+15 min</button>
+    <button class="na-btn ghost" id="na-skip" data-action="na-skip">Skipper</button>
+  </div>
+</div>
+
+<div class="callout callout-info hidden" id="onboarding" style="display:none">
+<strong>👋 Bienvenue.</strong> Ce dashboard centralise ta vie : routine shift, priorités, études, sport, finance, langue, échecs. Commence par :
+<ol style="margin:8px 0 0 22px;padding:0">
+<li>Choisir ton shift du jour dans l'onglet <b>📅 Routine</b></li>
+<li>Cocher tes priorités quand elles sont faites ci-dessous</li>
+<li>Enregistrer un petit log (même 1 ligne) chaque soir — tes stats, ton streak et ta heatmap partent de là</li>
+<li>Tester <b>⌘K</b> pour chercher n'importe quoi en 2 secondes</li>
+</ol>
+<button type="button" id="onboarding-dismiss" style="margin-top:10px;padding:6px 12px;background:transparent;border:1px solid var(--sapphire);color:var(--sapphire-2);border-radius:8px;cursor:pointer;font:600 11px var(--f-sans);letter-spacing:.04em">Compris, ne plus montrer</button>
+</div>
+
+<div class="hero">
+<div class="hero-greeting" id="greeting">—</div>
+<div class="hero-date"><span id="hero-day">—</span> <em id="hero-dnum">—</em> <span id="hero-month">—</span></div>
+<div class="hero-shift" id="hero-shift">Shift actif : <b id="hero-shift-v">—</b></div>
+
+<div class="now-card">
+<div class="now-label">En ce moment — <span id="now-clock" class="mono">—</span></div>
+<div class="now-title" id="now-title">Analyse de ton planning…</div>
+<div class="now-sub" id="now-sub">—</div>
+<div class="now-resume hidden" id="now-resume">
+  <span class="nr-icon">📍</span>
+  <div class="nr-text"><b id="now-resume-domain">—</b><span id="now-resume-text">—</span></div>
+</div>
+</div>
+</div>
+
+<div class="stats stats-3">
+<div class="stat"><div class="stat-v flame mono" id="st-streak">0</div><div class="stat-l">Jours streak</div></div>
+<div class="stat"><div class="stat-v jade mono" id="st-done">0</div><div class="stat-l">Faits aujourd'hui</div></div>
+<div class="stat"><div class="stat-v gold mono" id="st-total">12</div><div class="stat-l">Priorités</div></div>
+</div>
+
+<div class="xp-widget" id="xp-widget" aria-label="Niveau & XP">
+  <div class="xp-head">
+    <div class="xp-badge" id="xp-level-badge">1</div>
+    <div class="xp-info">
+      <div class="xp-rank"><span id="xp-rank-name">Éveillé</span> <em id="xp-level-label">· Niv. 1</em></div>
+      <div class="xp-sub"><b id="xp-current">0</b> XP · <span id="xp-next">100</span> pour niveau suivant</div>
+      <div class="xp-bar-wrap">
+        <div class="xp-bar" id="xp-bar" style="width:0%"></div>
+        <div class="xp-bar-text" id="xp-bar-text">0 / 100 XP</div>
+      </div>
+    </div>
+  </div>
+  <div class="xp-breakdown" id="xp-breakdown"></div>
+</div>
+
+<h2 class="section-title">Priorités du <em>jour</em></h2>
+<p class="page-lead" style="margin-top:-4px">Les choses à ne pas rater. Coche dès que c'est fait. Tu peux <em>éditer</em> (clic sur le texte), <em>supprimer</em> (✕), ou <em>ajouter</em> en bas.</p>
+
+<div id="prio-list" data-hydrate></div>
+<div class="prio-add">
+<input type="text" id="prio-new-input" placeholder="Nouvelle priorité…" maxlength="120" autocomplete="off">
+<button id="prio-new-btn" type="button">+ Ajouter</button>
+</div>
+
+<h2 class="section-title blue">Pourquoi <em>tu fais ça</em></h2>
+<div class="card card-elevated">
+<div class="card-body" style="font-size:13px;line-height:1.7">
+Bachelor dev en septembre. Bilingue NL+FR d'ici 2 ans. Corps robuste malgré la C7. Crédit mort en 15-19 mois. €260 000 à 40 ans en ETF. Appart à toi d'ici 5-7 ans. <em>Une vie où tu n'as à prouver ta valeur à personne.</em><br><br>
+<strong class="faint">Tu ne bâtis pas un mois. Tu bâtis une décennie.</strong>
+</div>
+</div>
+
+<h2 class="section-title flame">Entraînement · <em>aujourd'hui</em></h2>
+<div class="training-status" id="training-status">
+<div class="training-status-inner">
+<span class="training-label" id="training-label">—</span>
+<div class="training-title" id="training-title">—</div>
+<div class="training-desc" id="training-desc">—</div>
+<button class="training-cta" id="training-cta" data-go="sport">Voir la séance →</button>
+</div>
+</div>
+
+<div class="training-week" id="training-week" aria-label="Cycle d'entraînement sur 7 jours"></div>
+
+<p class="page-lead" style="margin-top:8px;font-size:11.5px;color:var(--text-faint)">Cycle <b>2 jours sport + 1 jour repos</b>. Alternance Push → Pull → Legs automatique. Touche "Voir la séance" pour avoir les détails.</p>
+
+
+<h2 class="section-title cyan">Tâches · <em>imprévues</em></h2>
+<p class="page-lead" style="margin-top:-4px">Pour tout ce qui sort de la routine. Ajoute un appel, un rappel, un truc à faire.</p>
+
+<div class="task-tabs" role="tablist" aria-label="Jour des tâches">
+<button type="button" data-tasks-day="today" class="active" role="tab">Aujourd'hui <span class="task-tabs-count" id="task-count-today">0</span></button>
+<button type="button" data-tasks-day="tomorrow" role="tab">Demain <span class="task-tabs-count" id="task-count-tomorrow">0</span></button>
+</div>
+
+<div class="task-wrap">
+<div class="task-form">
+<input type="text" id="task-title" class="task-title-input" placeholder="Ex. Appeler kiné, payer loyer…" autocomplete="off">
+<input type="time" id="task-time" title="Heure de début (optionnel)">
+<input type="time" id="task-end-time" title="Heure de fin — crée un bloc fixe dans la Routine">
+<select id="task-prio" title="Priorité">
+<option value="med">Normal</option>
+<option value="hi">Urgent</option>
+<option value="low">Plus tard</option>
+</select>
+<select id="task-cat" title="Catégorie">
+<option value="">—</option>
+<option value="work">Boulot</option>
+<option value="study">Études</option>
+<option value="home">Maison</option>
+<option value="health">Santé</option>
+<option value="admin">Admin</option>
+</select>
+<button class="task-add-btn" id="task-add">+ Ajouter</button>
+</div>
+<div class="task-list" id="task-list"></div>
+</div>
+
+
+<h2 class="section-title sapphire">Reprendre · <em>où t'as arrêté</em></h2>
+<p class="page-lead" style="margin-top:-4px">Dès que tu arrêtes un bloc d'étude, note ici exactement où tu en es. La prochaine session, un clic et tu reprends sans perdre 15 min à chercher.</p>
+
+<div class="bookmark-wrap">
+<div class="bookmark-list" id="bookmark-list"></div>
+</div>
+
+
+<h2 class="section-title sapphire">Objectifs du <em>mois</em></h2>
+<div class="goal-box">
+<div style="font:600 10px var(--f-sans);letter-spacing:.12em;text-transform:uppercase;color:var(--sapphire)" id="goal-month-lbl">— —</div>
+<div class="goal-progress" id="goal-progress">—</div>
+<div class="goal-list" id="goal-list"></div>
+<div class="goal-add-row">
+<input type="text" id="goal-new-input" placeholder="Nouvel objectif (ex. Finir Think Python ch.1-5)" maxlength="200" autocomplete="off">
+<button type="button" id="goal-new-btn">+ Ajouter</button>
+</div>
+<div class="goal-meta">Définis 3-6 objectifs concrets et cochables. Relis-les chaque dimanche, mets à jour le 1er du mois.</div>
+</div>
+<p class="page-lead" style="margin-top:-4px">Note ce que t'as vraiment fait. Les rings en-dessous se remplissent automatiquement sur base de ta <em>semaine glissante</em>.</p>
+
+<div class="log-widget">
+
+<div class="log-nav">
+<button class="log-nav-btn" data-log-nav="prev" aria-label="Jour précédent">‹</button>
+<div class="log-date-main">
+<span class="log-dow" id="log-dow">—</span>
+<span class="log-day" id="log-day">—</span>
+<span class="log-today-badge" id="log-today-badge">AUJOURD'HUI</span>
+</div>
+<button class="log-nav-btn" data-log-nav="next" aria-label="Jour suivant">›</button>
+</div>
+
+<div class="log-grid">
+
+<div class="log-row" data-log="epfc">
+<span class="log-row-icon">🎓</span>
+<div class="log-row-label"><b>EPFC</b><em>étude + cours</em></div>
+<input type="number" class="log-input" data-log-input="epfc" min="0" max="600" step="5" placeholder="0" inputmode="numeric" pattern="[0-9.]*">
+<span class="log-unit">min</span>
+</div>
+
+<div class="log-row" data-log="code">
+<span class="log-row-icon">💻</span>
+<div class="log-row-label"><b>Code</b><em>CodingBat, Edabit…</em></div>
+<input type="number" class="log-input" data-log-input="code" min="0" max="600" step="5" placeholder="0" inputmode="numeric" pattern="[0-9.]*">
+<span class="log-unit">min</span>
+</div>
+
+<div class="log-row" data-log="nl">
+<span class="log-row-icon">🇳🇱</span>
+<div class="log-row-label"><b>Néerlandais</b><em>Anki + Taalgarage</em></div>
+<input type="number" class="log-input" data-log-input="nl" min="0" max="300" step="5" placeholder="0" inputmode="numeric" pattern="[0-9.]*">
+<span class="log-unit">min</span>
+</div>
+
+<div class="log-row" data-log="anki">
+<span class="log-row-icon">🎴</span>
+<div class="log-row-label"><b>Anki NL</b><em>cartes revues</em></div>
+<input type="number" class="log-input" data-log-input="anki" min="0" max="500" step="10" placeholder="0" inputmode="numeric" pattern="[0-9.]*">
+<span class="log-unit">cartes</span>
+</div>
+
+<div class="log-row" data-log="read">
+<span class="log-row-icon">📚</span>
+<div class="log-row-label"><b>Lecture</b><em>pages · livre actuel</em></div>
+<input type="number" class="log-input" data-log-input="read" min="0" max="500" step="1" placeholder="0" inputmode="numeric" pattern="[0-9.]*">
+<span class="log-unit">pages</span>
+</div>
+
+<div class="log-row log-check-row" data-log="sport" data-log-toggle="sport">
+<span class="log-checkbox">✓</span>
+<span class="log-row-icon">💪</span>
+<div class="log-row-label"><b>Sport</b><em>machine · pas de C7</em></div>
+</div>
+
+<div class="log-row log-check-row" data-log="flex" data-log-toggle="flex">
+<span class="log-checkbox">✓</span>
+<span class="log-row-icon">🧘</span>
+<div class="log-row-label"><b>Souplesse</b><em>routine du soir</em></div>
+</div>
+
+<div class="log-row" data-log="chess">
+<span class="log-row-icon">♟️</span>
+<div class="log-row-label"><b>Échecs</b><em>puzzles + parties</em></div>
+<input type="number" class="log-input" data-log-input="chess" min="0" max="99" step="1" placeholder="0" inputmode="numeric" pattern="[0-9.]*">
+<span class="log-unit">parties</span>
+</div>
+
+<div class="log-row" data-log="vinted">
+<span class="log-row-icon">🛍️</span>
+<div class="log-row-label"><b>Vinted</b><em>listings + ventes</em></div>
+<input type="number" class="log-input" data-log-input="vinted" min="0" max="99" step="1" placeholder="0" inputmode="numeric" pattern="[0-9.]*">
+<span class="log-unit">actions</span>
+</div>
+
+</div><!-- /.log-grid -->
+
+<div class="log-meals">
+<div class="log-meals-title">🥩 Repas & compléments du jour</div>
+<div class="meal-row" id="meal-row-meals" role="group" aria-label="Repas">
+<button type="button" class="meal-chip" data-meal="r1">R1</button>
+<button type="button" class="meal-chip" data-meal="r2">R2</button>
+<button type="button" class="meal-chip" data-meal="r3">R3</button>
+<button type="button" class="meal-chip" data-meal="r4">R4</button>
+<button type="button" class="meal-chip" data-meal="r5">R5</button>
+<button type="button" class="meal-chip" data-meal="r6">R6</button>
+</div>
+<div class="meal-row" id="meal-row-supp" role="group" aria-label="Compléments" style="margin-top:6px">
+<button type="button" class="meal-chip supp" data-meal="water3l">3L eau</button>
+<button type="button" class="meal-chip supp" data-meal="shotm">🔥 Shot matin</button>
+<button type="button" class="meal-chip supp" data-meal="supp">Stack compléments</button>
+</div>
+</div>
+
+<div class="log-mood" role="group" aria-label="Humeur du jour">
+<button class="log-mood-btn" data-mood="1">😵<span class="log-mood-lbl">Cramé</span></button>
+<button class="log-mood-btn" data-mood="2">😕<span class="log-mood-lbl">Mou</span></button>
+<button class="log-mood-btn" data-mood="3">😐<span class="log-mood-lbl">Ok</span></button>
+<button class="log-mood-btn" data-mood="4">🙂<span class="log-mood-lbl">Bien</span></button>
+<button class="log-mood-btn" data-mood="5">🔥<span class="log-mood-lbl">Feu</span></button>
+</div>
+
+<textarea class="log-notes" id="log-topic" placeholder="📌 Sujet de session (ex. Think Python ch.3 · fonctions — compris, un peu galéré sur les retours)" style="min-height:36px;margin-top:10px"></textarea>
+<textarea class="log-notes" id="log-notes" placeholder="1 ligne — ce qui s'est passé de notable aujourd'hui…"></textarea>
+
+<div class="grat-box" style="margin-top:10px">
+<div class="grat-head">3 victoires du jour <span style="color:var(--text-faint);font-size:11px;font-style:normal">— même minuscules</span></div>
+<div class="grat-row"><div class="grat-row-num">1</div><input type="text" id="grat-1" placeholder="Ex. Levé à l'heure malgré la fatigue" maxlength="140"></div>
+<div class="grat-row"><div class="grat-row-num">2</div><input type="text" id="grat-2" placeholder="Ex. Terminé les 3 exos Python" maxlength="140"></div>
+<div class="grat-row"><div class="grat-row-num">3</div><input type="text" id="grat-3" placeholder="Ex. Appelé mon fils" maxlength="140"></div>
+</div>
+
+<div class="log-save-row">
+<button class="log-save-btn" id="log-save">Enregistrer</button>
+<button class="log-voice-btn" id="log-voice" title="Dicter ton log à la voix — « J'ai fait 45 min d'EPFC et 30 min de NL »" aria-label="Entrée vocale">
+  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+</button>
+<button class="log-reset-btn" id="log-reset" title="Tout effacer pour ce jour">Reset</button>
+</div>
+
+<div class="log-voice-feedback hidden" id="log-voice-fb" aria-live="polite">
+  <div class="lvf-head"><span class="lvf-dot"></span><span id="lvf-status">Écoute…</span><button class="lvf-stop" id="lvf-stop" aria-label="Arrêter">✕</button></div>
+  <div class="lvf-transcript" id="lvf-transcript">—</div>
+  <div class="lvf-hint">Essaie : « 45 minutes d'EPFC, 30 minutes de code, sport fait, 20 pages lues, humeur 4 »</div>
+</div><div class="log-status" id="log-status">—</div>
+
+</div><!-- /.log-widget -->
+
+
+<h2 class="section-title jade">Progression · <em>semaine glissante</em></h2>
+<p class="page-lead" style="margin-top:-4px">Les cercles reflètent ce que tu <em>loggues</em>. Tout à zéro = logique tant que t'as rien noté. Ils montent dès le premier jour.</p>
+
+<div class="quick-row">
+<div class="ring"><svg viewBox="0 0 36 36"><circle class="ring-bg" cx="18" cy="18" r="15.5"/><circle class="ring-fill" cx="18" cy="18" r="15.5" stroke-dasharray="97.4" stroke-dashoffset="97.4" data-ring="epfc" style="stroke:var(--jade)"/></svg><div class="ring-val" data-ring-val="epfc">0%</div></div>
+<div class="quick-row-text">
+<div class="quick-row-label">EPFC · Pré-rentrée</div>
+<div class="quick-row-big">Think Python <em>en cours</em></div>
+<div class="quick-row-desc">Cible : <b>14h / semaine</b> d'étude technique (EPFC + code).</div>
+<span class="quick-row-meta"><b data-week-val="epfc">0 min</b> cette semaine · cible <b>840 min</b></span>
+</div>
+</div>
+
+<div class="quick-row">
+<div class="ring"><svg viewBox="0 0 36 36"><circle class="ring-bg" cx="18" cy="18" r="15.5"/><circle class="ring-fill" cx="18" cy="18" r="15.5" stroke-dasharray="97.4" stroke-dashoffset="97.4" data-ring="nl" style="stroke:var(--sapphire)"/></svg><div class="ring-val" data-ring-val="nl">0%</div></div>
+<div class="quick-row-text">
+<div class="quick-row-label">Néerlandais · vers B2</div>
+<div class="quick-row-big">Phase A1 · <em>mois 1-4</em></div>
+<div class="quick-row-desc">Cible : <b>180 min / semaine</b>. Anki 15min × 5 + Taalgarage 30min × 3.</div>
+<span class="quick-row-meta"><b data-week-val="nl">0 min</b> cette semaine · cible <b>180 min</b></span>
+</div>
+</div>
+
+<div class="quick-row">
+<div class="ring"><svg viewBox="0 0 36 36"><circle class="ring-bg" cx="18" cy="18" r="15.5"/><circle class="ring-fill" cx="18" cy="18" r="15.5" stroke-dasharray="97.4" stroke-dashoffset="97.4" data-ring="flex" style="stroke:var(--violet)"/></svg><div class="ring-val" data-ring-val="flex">0%</div></div>
+<div class="quick-row-text">
+<div class="quick-row-label">Souplesse · Niveau 0</div>
+<div class="quick-row-big">Déverrouiller <em>le corps</em></div>
+<div class="quick-row-desc">Cible : <b>5 séances / semaine</b> · routine courte du soir suffit.</div>
+<span class="quick-row-meta"><b data-week-val="flex">0 / 5</b> cette semaine</span>
+</div>
+</div>
+
+<div class="quick-row">
+<div class="ring"><svg viewBox="0 0 36 36"><circle class="ring-bg" cx="18" cy="18" r="15.5"/><circle class="ring-fill" cx="18" cy="18" r="15.5" stroke-dasharray="97.4" stroke-dashoffset="97.4" data-ring="sport" style="stroke:var(--gold)"/></svg><div class="ring-val" data-ring-val="sport">0%</div></div>
+<div class="quick-row-text">
+<div class="quick-row-label">Sport · PPL allégé</div>
+<div class="quick-row-big">Machine, <em>pas de C7</em></div>
+<div class="quick-row-desc">Cible : <b>3 séances / semaine</b>. Pas plus tant que le nerf se stabilise.</div>
+<span class="quick-row-meta"><b data-week-val="sport">0 / 3</b> cette semaine</span>
+</div>
+</div>
+
+
+<h2 class="section-title violet">30 jours · <em>heatmap</em></h2>
+<p class="page-lead" style="margin-top:-4px">Ta constance visualisée. Chaque case = un jour. Plus c'est vert, plus tu as tout fait. Clique une case passée pour revoir / corriger.</p>
+
+<div class="heatmap-wrap">
+<div class="heatmap-head">
+<span class="heatmap-title" id="heatmap-title">—</span>
+<span class="heatmap-meta" id="heatmap-meta">0 jours actifs / 30</span>
+</div>
+<div class="heatmap-grid" id="heatmap-grid"></div>
+<div class="heatmap-legend">
+<span>moins</span>
+<div class="leg-box heat-0"></div>
+<div class="leg-box heat-1"></div>
+<div class="leg-box heat-2"></div>
+<div class="leg-box heat-3"></div>
+<div class="leg-box heat-4"></div>
+<div class="leg-box heat-5"></div>
+<span>plus</span>
+</div>
+</div>
+
+<div class="domain-streaks" id="domain-streaks" aria-label="Streaks par domaine"></div>
+
+<h2 class="section-title gold">Succès · <em>débloqués</em></h2>
+<p class="page-lead" style="margin-top:-4px">Chaque palier atteint devient permanent. Le gris = pas encore obtenu.</p>
+<div class="achievements" id="achievements"></div>
+
+
+<h2 class="section-title coral">Mini-trackers</h2>
+<p class="page-lead" style="margin-top:-4px">Mets-les à jour quand tu veux. Les chiffres sont gardés ici.</p>
+
+<div class="mini-tracker">
+<div class="mini-card">
+<div class="mini-card-lbl">Poids corporel</div>
+<div class="mini-card-val"><input type="number" step="0.1" min="40" max="150" data-mini="weight" placeholder="—" inputmode="decimal" pattern="[0-9.]*"> <span style="font-size:12px;color:var(--text-faint)">kg</span></div>
+<div class="mini-card-trend" id="weight-trend">—</div>
+</div>
+<div class="mini-card">
+<div class="mini-card-lbl">Elo Chess.com</div>
+<div class="mini-card-val"><input type="number" step="1" min="100" max="3000" data-mini="elo" placeholder="—" inputmode="numeric" pattern="[0-9.]*"></div>
+<div class="mini-card-trend" id="elo-trend">—</div>
+</div>
+<div class="mini-card">
+<div class="mini-card-lbl">Livre en cours</div>
+<div class="mini-card-val"><input type="text" data-mini="book" placeholder="—" style="font-size:15px"></div>
+<div class="mini-card-trend">🔖 page <input type="number" step="1" min="0" max="2000" data-mini="bookpg" placeholder="—" style="width:58px;background:transparent;border:none;color:var(--text);font:500 10px var(--f-mono);padding:0;outline:none" inputmode="numeric" pattern="[0-9.]*"></div>
+</div>
+<div class="mini-card">
+<div class="mini-card-lbl">Crédit restant</div>
+<div class="mini-card-val"><input type="number" step="50" min="0" max="20000" data-mini="debt" placeholder="10000" inputmode="numeric" pattern="[0-9.]*"> <span style="font-size:12px;color:var(--text-faint)">€</span></div>
+<div class="mini-card-trend">objectif : <b style="color:var(--jade)">0 € à M12</b></div>
+</div>
+</div>
+
+
+<h2 class="section-title violet">Revue <em>hebdo</em> · dimanche</h2>
+<div class="review-card">
+<h3 id="review-title">Ta semaine en chiffres</h3>
+<p style="color:var(--text-dim);font-size:12.5px;margin-bottom:10px">Les 7 derniers jours, agrégés. Le dimanche, tu relis ça 15 min et tu ajustes la semaine suivante.</p>
+<div id="review-stats">
+<div class="review-stat"><span>Temps d'étude total</span><b data-rev="study">0 min</b></div>
+<div class="review-stat"><span>Séances sport</span><b data-rev="sport">0 / 3</b></div>
+<div class="review-stat"><span>Séances souplesse</span><b data-rev="flex">0 / 5</b></div>
+<div class="review-stat"><span>Pages lues</span><b data-rev="pages">0</b></div>
+<div class="review-stat"><span>Parties échecs</span><b data-rev="chess">0</b></div>
+<div class="review-stat"><span>Actions Vinted</span><b data-rev="vinted">0</b></div>
+<div class="review-stat"><span>Humeur moyenne</span><b data-rev="mood">—</b></div>
+<div class="review-stat"><span>Jours actifs (≥4 domaines)</span><b data-rev="active">0 / 7</b></div>
+</div>
+<div class="wr-prompts">
+<div class="wr-prompt">
+<div class="wr-prompt-label">🏆 Ce qui a cartonné cette semaine</div>
+<textarea data-wr="win" placeholder="Une victoire concrète, même petite…"></textarea>
+</div>
+<div class="wr-prompt">
+<div class="wr-prompt-label">💥 Ce qui a merdé</div>
+<textarea data-wr="fail" placeholder="Sans t'en vouloir. Juste nommer pour traiter."></textarea>
+</div>
+<div class="wr-prompt">
+<div class="wr-prompt-label">🎯 Ce que tu changes la semaine prochaine</div>
+<textarea data-wr="change" placeholder="1-2 choses précises, actionnables."></textarea>
+</div>
+<div class="wr-saved" id="wr-saved">Revue enregistrée ✓</div>
+</div>
+</div>
+
+
+<h2 class="section-title jade">Revue <em>mensuelle</em></h2>
+<div class="m-review">
+<h3 id="m-review-title">Ce mois en chiffres</h3>
+<p style="color:var(--text-dim);font-size:12.5px;margin-bottom:6px">Les 30 derniers jours, agrégés. Relis-le le 1er du mois et ajuste l'objectif suivant.</p>
+<div class="m-review-grid">
+<div class="m-stat"><div class="m-stat-lbl">Étude totale</div><div class="m-stat-val" data-mrev="study">0h</div></div>
+<div class="m-stat"><div class="m-stat-lbl">Séances sport</div><div class="m-stat-val" data-mrev="sport">0 / 12</div></div>
+<div class="m-stat"><div class="m-stat-lbl">Séances flex</div><div class="m-stat-val" data-mrev="flex">0 / 20</div></div>
+<div class="m-stat"><div class="m-stat-lbl">Pages lues</div><div class="m-stat-val" data-mrev="pages">0</div></div>
+<div class="m-stat"><div class="m-stat-lbl">Cartes Anki</div><div class="m-stat-val" data-mrev="anki">0</div></div>
+<div class="m-stat"><div class="m-stat-lbl">Jours actifs</div><div class="m-stat-val" data-mrev="active">0 / 30</div></div>
+<div class="m-stat"><div class="m-stat-lbl">Humeur moy.</div><div class="m-stat-val" data-mrev="mood">—</div></div>
+<div class="m-stat"><div class="m-stat-lbl">Pomodoros</div><div class="m-stat-val" data-mrev="pomo">0</div></div>
+<div class="m-stat"><div class="m-stat-lbl">Parties échecs</div><div class="m-stat-val" data-mrev="chess">0</div></div>
+</div>
+</div>
+
+<h2 class="section-title coral">Règles <em>non-négociables</em></h2>
+
+<div class="callout callout-rule">
+<span class="ruletag">Règle n°1</span><strong>Jamais 2 jours ratés d'affilée.</strong> Un jour à 30 %, OK. Deux jours consécutifs à 30 %, <em>non</em>. Le troisième jour, tu rattrapes au minimum vital même si t'es crevé.
+</div>
+<div class="callout callout-rule">
+<span class="ruletag">Règle n°2</span><strong>Téléphone hors de vue pendant les blocs d'étude.</strong> Mode avion. App One Sec. Le scroll, c'est ton ennemi numéro 1 cette année.
+</div>
+<div class="callout callout-rule">
+<span class="ruletag">Règle n°3</span><strong>Le dimanche 15 min de review</strong>. Qu'est-ce que j'ai fait cette semaine ? Qu'est-ce que je change la semaine prochaine ? Ça tient la trajectoire.
+</div>
+<div class="callout callout-rule">
+<span class="ruletag">Règle n°4</span><strong>Une soirée libre par semaine, garantie.</strong> Vendredi ou samedi. Amis, sortie, zéro culpabilité. L'isolement tue la discipline plus vite que l'excès.
+</div>
+
+<h2 class="section-title amber">Raccourcis <em>utiles</em></h2>
+
+<div class="stats stats-3">
+<button aria-label="Action" class="stat" data-go="sport" style="cursor:pointer"><div class="stat-v flame" style="font-size:22px">💪</div><div class="stat-l">Séance du jour</div></button>
+<button aria-label="Action" class="stat" data-go="nutrition" style="cursor:pointer"><div class="stat-v amber" style="font-size:22px">🍳</div><div class="stat-l">Mes 6 repas</div></button>
+<button aria-label="Action" class="stat" data-go="stats" style="cursor:pointer"><div class="stat-v jade" style="font-size:22px">📊</div><div class="stat-l">Mes stats</div></button>
+</div>
+
+<div class="stats stats-3" style="margin-top:10px">
+<button aria-label="Action" class="stat" data-action="pomo-open" style="cursor:pointer"><div class="stat-v coral" style="font-size:22px">⏱️</div><div class="stat-l">Pomodoro 25/5</div></button>
+<button aria-label="Action" class="stat" data-go="code" style="cursor:pointer"><div class="stat-v violet" style="font-size:22px">💻</div><div class="stat-l">Où coder</div></button>
+<button aria-label="Action" class="stat" data-go="plan" style="cursor:pointer"><div class="stat-v blue" style="font-size:22px">📋</div><div class="stat-l">Mon plan</div></button>
+</div>
+
+<h2 class="section-title coral">Mes données</h2>
+<p class="page-lead" style="margin-top:-4px">Tout est stocké <em>localement</em> dans ton navigateur. Si tu vides le cache, tu perds tout. <b>Exporte régulièrement.</b></p>
+<div class="callout callout-tip" style="margin-bottom:8px">🔒 <strong>Clé API Claude et token GitHub exclus automatiquement</strong> de tous les exports. Ces secrets ne quittent jamais ton navigateur local.</div>
+<div class="data-bar">
+<button class="data-btn" id="data-export">💾 Exporter mes données</button>
+<button class="data-btn" id="data-import">📂 Importer</button>
+<button class="data-btn" id="data-notif">🔔 Activer les rappels</button>
+<button class="data-btn" id="data-wrapped">🎁 Récap annuel</button>
+<button class="data-btn danger" id="data-wipe">🧨 Tout effacer</button>
+<input type="file" id="data-file" accept="application/json" style="display:none">
+</div>
+
+</section>
+
+
+
+<section class="page" id="p-stats">
+<div class="page-header">
+<h1 class="page-title">Stats · <em>ta progression</em></h1>
+<p class="page-sub">Tout ce que tu as loggé, transformé en chiffres et courbes. <em>Mise à jour en direct.</em></p>
+</div>
+
+<div class="insights" id="insights" aria-label="Insights auto"></div>
+
+<div class="period-filter" role="radiogroup" aria-label="Période">
+<button type="button" data-period="7" class="active">7 jours</button>
+<button type="button" data-period="30">30 jours</button>
+<button type="button" data-period="90">90 jours</button>
+<button type="button" data-period="365">1 an</button>
+</div>
+
+<div class="stats-cards">
+<div class="stats-card accent"><div class="stats-card-lbl">Streak actuel</div><div class="stats-card-val" id="sv-streak">0</div><div class="stats-card-sub">jours consécutifs</div></div>
+<div class="stats-card jade"><div class="stats-card-lbl">Meilleur streak</div><div class="stats-card-val" id="sv-best">0</div><div class="stats-card-sub">record all-time</div></div>
+<div class="stats-card"><div class="stats-card-lbl">Étude · 30j</div><div class="stats-card-val" id="sv-study30">0h</div><div class="stats-card-sub">EPFC + code + NL</div></div>
+<div class="stats-card"><div class="stats-card-lbl">Jours actifs · 30j</div><div class="stats-card-val" id="sv-active30">0</div><div class="stats-card-sub">sur 30 possibles</div></div>
+</div>
+
+<div class="stats-cards">
+<div class="stats-card"><div class="stats-card-lbl">Pages lues · total</div><div class="stats-card-val" id="sv-pages">0</div><div class="stats-card-sub">livres · cumul</div></div>
+<div class="stats-card"><div class="stats-card-lbl">Parties échecs</div><div class="stats-card-val" id="sv-chess">0</div><div class="stats-card-sub">toutes-périodes</div></div>
+<div class="stats-card"><div class="stats-card-lbl">Séances sport · 30j</div><div class="stats-card-val" id="sv-sport30">0</div><div class="stats-card-sub">cible 12 (3 ×/sem)</div></div>
+<div class="stats-card"><div class="stats-card-lbl">Séances souplesse · 30j</div><div class="stats-card-val" id="sv-flex30">0</div><div class="stats-card-sub">cible 20 (5 ×/sem)</div></div>
+</div>
+
+<div class="chart-card">
+<div class="chart-head">
+<span class="chart-title">Temps d'étude · <em>30 derniers jours</em></span>
+<span class="chart-legend">EPFC + Code + NL, minutes/jour</span>
+</div>
+<svg class="chart-svg" id="chart-study" viewBox="0 0 400 180" preserveAspectRatio="none"></svg>
+</div>
+
+<div class="chart-card">
+<div class="chart-head">
+<span class="chart-title">Répartition cette semaine</span>
+<span class="chart-legend">minutes par domaine</span>
+</div>
+<svg class="chart-svg" id="chart-domains" viewBox="0 0 400 180" preserveAspectRatio="none"></svg>
+</div>
+
+<div class="chart-card">
+<div class="chart-head">
+<span class="chart-title">Poids corporel</span>
+<span class="chart-legend">kg · 30 derniers jours</span>
+</div>
+<svg class="chart-svg" id="chart-weight" viewBox="0 0 400 180" preserveAspectRatio="none"></svg>
+</div>
+
+<div class="chart-card">
+<div class="chart-head">
+<span class="chart-title">Elo Chess.com</span>
+<span class="chart-legend">progression · 30 derniers jours</span>
+</div>
+<svg class="chart-svg" id="chart-elo" viewBox="0 0 400 180" preserveAspectRatio="none"></svg>
+</div>
+
+<div class="chart-card">
+<div class="chart-head">
+<span class="chart-title">Humeur · 14 derniers jours</span>
+<span class="chart-legend">1 = cramé · 5 = feu</span>
+</div>
+<svg class="chart-svg" id="chart-mood" viewBox="0 0 400 180" preserveAspectRatio="none"></svg>
+</div>
+
+<div class="callout callout-tip"><strong>Comment lire ces stats :</strong> les jours sans log apparaissent vides. Un trou = pas un drame, c'est juste un signal. La constance bat l'intensité chaque fois.</div>
+</section>
+
+
+
+<section class="page" id="p-routine">
+<div class="page-kicker">Routine</div>
+<h1 class="page-title">Ton <em>rythme</em> quotidien</h1>
+<p class="page-lead">Quatre shifts rotatifs + mode weekend + mode maladie. Chaque emploi du temps est calibré pour tes 180g de protéines, tes 6 repas, et tes <em>5 blocs d'étude</em>. Le bloc <span class="flame">rouge pulsé</span> = ce que tu es censé faire <em>maintenant</em>. Les blocs <span class="jade">verts ✓</span> = auto-validés d'après ton log.</p>
+
+<div class="routine-progress" id="routine-progress">—</div>
+
+<div class="wake-bar">
+<span class="wake-bar-lbl">Réveil réel aujourd'hui</span>
+<input type="time" id="wake-input" value="">
+<button class="wake-btn primary" id="wake-apply">Appliquer</button>
+<button class="wake-btn" id="wake-reset">Reset</button>
+<span class="wake-info" id="wake-info">Entre ton heure de réveil et toute la routine se décale.</span>
+</div>
+
+<h2 class="section-title">Planning <em>de la semaine</em></h2>
+<p class="page-lead" style="margin-top:-4px;font-size:12px">Configure ton shift pour chaque jour. Le shift actif du jour pilote la routine affichée.</p>
+<div class="shift-planner" id="shift-planner"></div>
+
+<div class="callout callout-warn">
+<strong>🛑 Protocole Jour de Merde</strong> — Quand t'es malade, crevé, jour horrible : <strong>minimum vital</strong> seulement. Shot + 3L eau + 6 repas simplifiés · 20 min de marche · 10 min Anki NL · hygiène soir · 8h sommeil. <strong>Pas de EPFC/IA/Vinted/lecture ce jour-là.</strong> Le weekend rattrape. Un jour à 30 % bat l'abandon total.
+</div>
+
+<h2 class="section-title">Choix du <em>shift</em></h2>
+<div class="shift-chips" id="shift-chips">
+<button class="shift-chip" data-shift="sm">🏥 Maladie</button>
+<button class="shift-chip" data-shift="s1">Shift 5h30</button>
+<button class="shift-chip" data-shift="s2">Shift 7h</button>
+<button class="shift-chip" data-shift="s3">Shift 11h</button>
+<button class="shift-chip" data-shift="s4">Shift 13h30</button>
+<button class="shift-chip" data-shift="sw">Weekend</button>
+</div>
+
+<!-- SHIFT MALADIE (défaut actuel) -->
+<div class="shift-view" id="view-sm">
+<div class="callout callout-warn">
+<strong>🏥 Mode Maladie — jusqu'au 3 mai minimum.</strong> Pas de travail = opportunité en or. Mais t'es en maladie, donc <strong>écoute ton corps</strong>. Pas de sport intense si le médecin dit non. Objectif : <em>5-6h de travail intellectuel/jour avec pauses</em> — pas 10h comme un robot. Tu vas recharger <strong>ET</strong> progresser.
+</div>
+<div class="callout callout-note">
+Si t'as de la fièvre, douleurs fortes, ou t'es vraiment KO : <strong>protocole Jour de Merde</strong>, pas cet horaire. Cet horaire = congé maladie mais fonctionnel mentalement.
+</div>
+
+<div class="timeline">
+<div class="tl-item" data-time="8:00"><div class="tl-dot sleep"></div><div class="tl-time">8:00</div><div class="tl-name">Réveil naturel + eau + stretch 5 min</div><div class="tl-desc">Pas d'alarme brutale. Laisser le corps récupérer. 8-9h de sommeil.</div></div>
+<div class="tl-item" data-time="8:10"><div class="tl-dot hygiene"></div><div class="tl-time">8:10</div><div class="tl-name">🔥 Shot + ✨ hygiène matin (10 min)</div><div class="tl-desc">Shot à jeun. Routine visage. Douche froide seulement si tu te sens bien.</div></div>
+<div class="tl-item" data-time="8:25"><div class="tl-dot food"></div><div class="tl-time">8:25</div><div class="tl-name">R1 · petit-déj — 42g P</div><div class="tl-desc">Omelette + avoine + banane. Café/thé. Gourde Élixir prête.</div></div>
+<div class="tl-item" data-time="9:00"><div class="tl-dot study"></div><div class="tl-time">9:00 – 10:15</div><div class="tl-name">🎓 EPFC deep (75 min)</div><div class="tl-desc">Session longue matin. Pomodoro 25/5 ×3. <strong>Ta fenêtre la plus productive.</strong> Think Python / Java / SQL selon le planning.</div></div>
+<div class="tl-item" data-time="10:20"><div class="tl-dot code"></div><div class="tl-time">10:20 – 11:05</div><div class="tl-name">💻 Coding practice (45 min)</div><div class="tl-desc">Session longue ! M1-3 : CodingBat + Edabit. M3+ : Exercism + Codewars. Appliquer ce que tu viens d'apprendre.</div></div>
+<div class="tl-item" data-time="11:10"><div class="tl-dot food"></div><div class="tl-time">11:10</div><div class="tl-name">R2 · snack + vraie pause (20 min)</div><div class="tl-desc">Fromage blanc + amandes. Marche dehors 10 min si possible. <strong>Pas d'écran.</strong></div></div>
+<div class="tl-item" data-time="11:30"><div class="tl-dot nl"></div><div class="tl-time">11:30 – 12:30</div><div class="tl-name">🇳🇱 NL deep (60 min)</div><div class="tl-desc">Brulingua 15 + Vanzelfsprekend 30 + Anki 15. Pousse la grammaire vu que t'as le temps.</div></div>
+<div class="tl-item" data-time="12:35"><div class="tl-dot food"></div><div class="tl-time">12:35</div><div class="tl-name">R3 · déjeuner — 45g P</div><div class="tl-desc">Repas complet. Meal prep ou cuisine fraîche.</div></div>
+<div class="tl-item" data-time="13:15"><div class="tl-dot rest"></div><div class="tl-time">13:15 – 13:45</div><div class="tl-name">🚶 Marche + air frais (30 min)</div><div class="tl-desc"><strong>Non-négociable.</strong> Pas de sport intense mais bouger = récup + énergie mentale. Podcast NL ou musique.</div></div>
+<div class="tl-item" data-time="13:50"><div class="tl-dot sport"></div><div class="tl-time">13:50 – 14:30</div><div class="tl-name">💪 Sport léger / Stretch (40 min)</div><div class="tl-desc">Si médecin OK : PPL léger (50% poids, 50% séries) + stretch complet. Sinon : stretch long + foam roll + yoga.</div></div>
+<div class="tl-item" data-time="14:35"><div class="tl-dot food"></div><div class="tl-time">14:35</div><div class="tl-name">Douche + R4 · whey + banane</div><div class="tl-desc"></div></div>
+<div class="tl-item" data-time="15:00"><div class="tl-dot ai"></div><div class="tl-time">15:00 – 15:45</div><div class="tl-name">🤖 IA / EPFC bonus (45 min)</div><div class="tl-desc">M5+ : IA. Avant M5 : EPFC bonus (projets, exercices, chapitres en avance). Ou HackerRank certif prep.</div></div>
+<div class="tl-item" data-time="15:50"><div class="tl-dot vinted"></div><div class="tl-time">15:50 – 16:50</div><div class="tl-name">🛍️ Vinted (60 min)</div><div class="tl-desc">Recherche 1688, photos, listings, réponses. <strong>Lance le business.</strong></div></div>
+<div class="tl-item" data-time="17:00"><div class="tl-dot read"></div><div class="tl-time">17:00 – 17:45</div><div class="tl-name">📚 Lecture (45 min)</div><div class="tl-desc">Livre en cours. Thé. Mode détente.</div></div>
+<div class="tl-item" data-time="17:45"><div class="tl-dot rest"></div><div class="tl-time">17:45 – 18:30</div><div class="tl-name">⏸️ Temps libre</div><div class="tl-desc">♟️ Chess.com, Netflix, YouTube, appeler un pote. Pas de culpabilité. <strong>Tu as fait 6h de taf.</strong></div></div>
+<div class="tl-item" data-time="18:30"><div class="tl-dot food"></div><div class="tl-time">18:30</div><div class="tl-name">R5 · dîner — 42g P</div><div class="tl-desc">Cuisine si envie (c'est thérapeutique).</div></div>
+<div class="tl-item" data-time="19:15"><div class="tl-dot hygiene"></div><div class="tl-time">19:15</div><div class="tl-name">✨ Hygiène soir (15 min)</div><div class="tl-desc"></div></div>
+<div class="tl-item" data-time="19:30"><div class="tl-dot nl"></div><div class="tl-time">19:30 – 20:00</div><div class="tl-name">🇳🇱 NL bonus · passif (30 min)</div><div class="tl-desc">NedBox, série NL sous-titrée, ou Tandem chat. Du NL « facile » détente.</div></div>
+<div class="tl-item" data-time="20:05"><div class="tl-dot food"></div><div class="tl-time">20:05</div><div class="tl-name">R6 · caséine + lecture légère 20 min</div><div class="tl-desc">Fromage blanc. Livre ou articles. <strong>Pas d'écran après 21 h.</strong></div></div>
+<div class="tl-item" data-time="21:30"><div class="tl-dot sleep"></div><div class="tl-time">21:30</div><div class="tl-name">Journal 2 min + coucher</div><div class="tl-desc"><strong>10h30 de sommeil dispo.</strong> Profite-en. La récupération, c'est <em>maintenant</em>.</div></div>
+</div>
+
+<div class="card card-elevated">
+<div class="card-title"><h3 class="coral">📊 Total journée maladie</h3></div>
+<ul class="dlist">
+<li><span class="k">🎓 EPFC théorie</span><span class="v info">75 min</span></li>
+<li><span class="k">💻 Coding practice</span><span class="v info">45 min</span></li>
+<li><span class="k">🤖 IA / EPFC bonus</span><span class="v info">45 min</span></li>
+<li><span class="k">🇳🇱 NL actif + passif</span><span class="v info">90 min</span></li>
+<li><span class="k">🛍️ Vinted</span><span class="v info">60 min</span></li>
+<li><span class="k">📚 Lecture</span><span class="v info">65 min</span></li>
+<li><span class="k">💪 Sport + stretch</span><span class="v info">40 + 30 min</span></li>
+<li><span class="k"><strong>Total productif</strong></span><span class="v pos"><strong>~7h30</strong></span></li>
+</ul>
+</div>
+
+<div class="callout callout-tip">
+<strong>🎯 Objectif fin maladie (3 mai)</strong> — Si tu tiens cet horaire ~3 semaines : <strong>~35h EPFC + coding</strong> (Think Python bien avancé + 80+ exos CodingBat/Edabit) · <strong>~30h NL</strong> (Vanzelfsprekend 4-5 chapitres + Anki solide) · <strong>~20h Vinted</strong> (business lancé, 1ers listings) · <strong>~20h lecture</strong> (2 livres terminés). <em>Tu reprends le taf avec une avance monstre.</em>
+</div>
+</div>
+
+<!-- SHIFT 5h30 -->
+<div class="shift-view hidden" id="view-s1">
+<div class="callout callout-note">Le shift dur. Tu te lèves avant l'aube. Lecture du soir courte pour dormir tôt.</div>
+<div class="timeline">
+<div class="tl-item" data-time="5:30"><div class="tl-dot sleep"></div><div class="tl-time">5:30</div><div class="tl-name">Réveil + shot + hygiène</div><div class="tl-desc">Pieds au sol immédiatement. Pas de snooze.</div></div>
+<div class="tl-item" data-time="5:45"><div class="tl-dot sport"></div><div class="tl-time">5:45 – 7:10</div><div class="tl-name">💪 Sport à jeun + stretch post</div><div class="tl-desc">85 min. Le stretch 15 min fait partie intégrante.</div></div>
+<div class="tl-item" data-time="7:15"><div class="tl-dot hygiene"></div><div class="tl-time">7:15</div><div class="tl-name">Douche froide + R1 — 50g P</div><div class="tl-desc">Finir douche à l'eau froide 30s-2min selon semaine.</div></div>
+<div class="tl-item" data-time="7:40"><div class="tl-dot study"></div><div class="tl-time">7:40 – 8:15</div><div class="tl-name">🎓 EPFC théorie (35 min)</div><div class="tl-desc">Bloc court mais intense.</div></div>
+<div class="tl-item" data-time="8:15"><div class="tl-dot code"></div><div class="tl-time">8:15 – 8:35</div><div class="tl-name">💻 Coding practice (20 min)</div><div class="tl-desc">Voir onglet Code pour la plateforme du moment.</div></div>
+<div class="tl-item" data-time="8:40"><div class="tl-dot nl"></div><div class="tl-time">8:40 – 9:10</div><div class="tl-name">🇳🇱 NL (30 min)</div><div class="tl-desc">Anki + Brulingua ou Vanzelfsprekend.</div></div>
+<div class="tl-item" data-time="9:30"><div class="tl-dot work"></div><div class="tl-time">9:30 – 18:00</div><div class="tl-name">Travail</div><div class="tl-desc">R2 vers 10h30 · R3 vers 13h · R4 vers 16h.</div></div>
+<div class="tl-item" data-time="19:05"><div class="tl-dot ai"></div><div class="tl-time">19:05 – 19:35</div><div class="tl-name">🤖 IA (30 min)</div><div class="tl-desc">À partir du mois 5 seulement. Avant : EPFC bonus.</div></div>
+<div class="tl-item" data-time="19:40"><div class="tl-dot food"></div><div class="tl-time">19:40</div><div class="tl-name">R5 dîner + hygiène soir</div><div class="tl-desc"></div></div>
+<div class="tl-item" data-time="20:30"><div class="tl-dot read"></div><div class="tl-time">20:30 – 20:55</div><div class="tl-name">📚 Lecture 25 min</div><div class="tl-desc"></div></div>
+<div class="tl-item" data-time="21:15"><div class="tl-dot sleep"></div><div class="tl-time">21:15</div><div class="tl-name">R6 + journal + coucher</div><div class="tl-desc"><strong>5:30 → 21:15 ≈ 7h45</strong>. Acceptable pour ce shift.</div></div>
+</div>
+</div>
+
+<!-- SHIFT 7h -->
+<div class="shift-view hidden" id="view-s2">
+<div class="timeline">
+<div class="tl-item" data-time="6:15"><div class="tl-dot sleep"></div><div class="tl-time">6:15</div><div class="tl-name">Réveil + shot + hygiène</div><div class="tl-desc"></div></div>
+<div class="tl-item" data-time="6:30"><div class="tl-dot sport"></div><div class="tl-time">6:30 – 8:00</div><div class="tl-name">💪 Sport à jeun + stretch</div><div class="tl-desc"></div></div>
+<div class="tl-item" data-time="8:05"><div class="tl-dot hygiene"></div><div class="tl-time">8:05</div><div class="tl-name">Douche froide + R1 — 50g P</div><div class="tl-desc"></div></div>
+<div class="tl-item" data-time="8:30"><div class="tl-dot study"></div><div class="tl-time">8:30 – 9:10</div><div class="tl-name">🎓 EPFC théorie (40 min)</div><div class="tl-desc"></div></div>
+<div class="tl-item" data-time="9:10"><div class="tl-dot code"></div><div class="tl-time">9:10 – 9:30</div><div class="tl-name">💻 Coding practice (20 min)</div><div class="tl-desc"></div></div>
+<div class="tl-item" data-time="9:35"><div class="tl-dot ai"></div><div class="tl-time">9:35 – 10:05</div><div class="tl-name">🤖 IA (30 min)</div><div class="tl-desc">Mois 5+. Avant : EPFC bonus ou NL bonus.</div></div>
+<div class="tl-item" data-time="10:10"><div class="tl-dot nl"></div><div class="tl-time">10:10 – 10:50</div><div class="tl-name">🇳🇱 NL (40 min)</div><div class="tl-desc"></div></div>
+<div class="tl-item" data-time="11:00"><div class="tl-dot work"></div><div class="tl-time">11:00 – 19:30</div><div class="tl-name">Travail</div><div class="tl-desc">R2 avant · R3 ~14h · R4 ~17h.</div></div>
+<div class="tl-item" data-time="19:45"><div class="tl-dot food"></div><div class="tl-time">19:45</div><div class="tl-name">R5 + hygiène soir</div><div class="tl-desc"></div></div>
+<div class="tl-item" data-time="20:45"><div class="tl-dot read"></div><div class="tl-time">20:45 – 21:15</div><div class="tl-name">📚 Lecture 30 min + R6 + journal</div><div class="tl-desc"></div></div>
+<div class="tl-item" data-time="21:30"><div class="tl-dot sleep"></div><div class="tl-time">21:30</div><div class="tl-name">Coucher</div><div class="tl-desc"><strong>6:15 → 21:30 ≈ 8h45 ✓</strong>. Meilleur ratio.</div></div>
+</div>
+</div>
+
+<!-- SHIFT 11h -->
+<div class="shift-view hidden" id="view-s3">
+<div class="timeline">
+<div class="tl-item" data-time="6:15"><div class="tl-dot sleep"></div><div class="tl-time">6:15</div><div class="tl-name">Réveil + shot + hygiène</div><div class="tl-desc"></div></div>
+<div class="tl-item" data-time="6:30"><div class="tl-dot sport"></div><div class="tl-time">6:30 – 8:00</div><div class="tl-name">💪 Sport à jeun + stretch</div><div class="tl-desc"></div></div>
+<div class="tl-item" data-time="8:05"><div class="tl-dot hygiene"></div><div class="tl-time">8:05</div><div class="tl-name">Douche froide + R1 — 50g P</div><div class="tl-desc"></div></div>
+<div class="tl-item" data-time="8:30"><div class="tl-dot study"></div><div class="tl-time">8:30 – 9:10</div><div class="tl-name">🎓 EPFC théorie (40 min)</div><div class="tl-desc"></div></div>
+<div class="tl-item" data-time="9:10"><div class="tl-dot code"></div><div class="tl-time">9:10 – 9:30</div><div class="tl-name">💻 Coding practice (20 min)</div><div class="tl-desc"></div></div>
+<div class="tl-item" data-time="9:35"><div class="tl-dot ai"></div><div class="tl-time">9:35 – 10:05</div><div class="tl-name">🤖 IA (30 min)</div><div class="tl-desc">Mois 5+. Avant : EPFC bonus ou NL bonus.</div></div>
+<div class="tl-item" data-time="10:10"><div class="tl-dot nl"></div><div class="tl-time">10:10 – 10:50</div><div class="tl-name">🇳🇱 NL (40 min)</div><div class="tl-desc"></div></div>
+<div class="tl-item" data-time="11:00"><div class="tl-dot work"></div><div class="tl-time">11:00 – 19:30</div><div class="tl-name">Travail</div><div class="tl-desc">R2 avant · R3 ~14h · R4 ~17h.</div></div>
+<div class="tl-item" data-time="19:45"><div class="tl-dot food"></div><div class="tl-time">19:45</div><div class="tl-name">R5 + hygiène soir</div><div class="tl-desc"></div></div>
+<div class="tl-item" data-time="20:45"><div class="tl-dot read"></div><div class="tl-time">20:45 – 21:15</div><div class="tl-name">📚 Lecture 30 min + R6 + journal</div><div class="tl-desc"></div></div>
+<div class="tl-item" data-time="21:30"><div class="tl-dot sleep"></div><div class="tl-time">21:30</div><div class="tl-name">Coucher</div><div class="tl-desc"><strong>6:15 → 21:30 ≈ 8h45 ✓</strong></div></div>
+</div>
+</div>
+
+<!-- SHIFT 13h30 -->
+<div class="shift-view hidden" id="view-s4">
+<div class="callout callout-tip"><strong>Meilleur shift.</strong> Toute la matinée pour étudier à tête reposée.</div>
+<div class="timeline">
+<div class="tl-item" data-time="6:30"><div class="tl-dot sleep"></div><div class="tl-time">6:30</div><div class="tl-name">Réveil + shot + hygiène</div><div class="tl-desc"></div></div>
+<div class="tl-item" data-time="6:45"><div class="tl-dot sport"></div><div class="tl-time">6:45 – 8:15</div><div class="tl-name">💪 Sport à jeun + stretch</div><div class="tl-desc"></div></div>
+<div class="tl-item" data-time="8:20"><div class="tl-dot hygiene"></div><div class="tl-time">8:20</div><div class="tl-name">Douche froide + R1+R2 — 55g P</div><div class="tl-desc"></div></div>
+<div class="tl-item" data-time="9:00"><div class="tl-dot study"></div><div class="tl-time">9:00 – 9:35</div><div class="tl-name">🎓 EPFC théorie (35 min)</div><div class="tl-desc"></div></div>
+<div class="tl-item" data-time="9:35"><div class="tl-dot code"></div><div class="tl-time">9:35 – 10:00</div><div class="tl-name">💻 Coding practice (25 min)</div><div class="tl-desc">Bonus +5 min ce shift.</div></div>
+<div class="tl-item" data-time="10:05"><div class="tl-dot ai"></div><div class="tl-time">10:05 – 10:45</div><div class="tl-name">🤖 IA (40 min)</div><div class="tl-desc">Bonus +10 min ce shift.</div></div>
+<div class="tl-item" data-time="10:50"><div class="tl-dot nl"></div><div class="tl-time">10:50 – 11:35</div><div class="tl-name">🇳🇱 NL (45 min)</div><div class="tl-desc"></div></div>
+<div class="tl-item" data-time="11:40"><div class="tl-dot read"></div><div class="tl-time">11:40 – 12:00</div><div class="tl-name">📚 Lecture 20 min</div><div class="tl-desc"></div></div>
+<div class="tl-item" data-time="12:10"><div class="tl-dot food"></div><div class="tl-time">12:10</div><div class="tl-name">R3 déjeuner</div><div class="tl-desc"></div></div>
+<div class="tl-item" data-time="13:30"><div class="tl-dot work"></div><div class="tl-time">13:30 – 22:00</div><div class="tl-name">Travail</div><div class="tl-desc">R4 ~16h30 · R5 ~19h30.</div></div>
+<div class="tl-item" data-time="22:10"><div class="tl-dot hygiene"></div><div class="tl-time">22:10</div><div class="tl-name">Hygiène soir + R6 + journal</div><div class="tl-desc"></div></div>
+<div class="tl-item" data-time="22:30"><div class="tl-dot sleep"></div><div class="tl-time">22:30</div><div class="tl-name">Coucher</div><div class="tl-desc"><strong>6:30 → 22:30 = 8h ✓</strong></div></div>
+</div>
+</div>
+
+<!-- WEEKEND -->
+<div class="shift-view hidden" id="view-sw">
+<div class="callout callout-tip"><strong>Weekend = deep dive</strong> IA + Vinted + NL profond. Rattrapage IA des jours shift 7h-15h30. <strong>Une soirée (ven OU sam) = vie sociale.</strong> Non-négociable.</div>
+<div class="timeline">
+<div class="tl-item" data-time="7:00"><div class="tl-dot sleep"></div><div class="tl-time">7:00</div><div class="tl-name">Réveil + shot + hygiène</div><div class="tl-desc"></div></div>
+<div class="tl-item" data-time="7:15"><div class="tl-dot sport"></div><div class="tl-time">7:15 – 8:45</div><div class="tl-name">💪 Sport (sam) + stretch long 25 min</div><div class="tl-desc">Dim : repos actif + stretch long.</div></div>
+<div class="tl-item" data-time="9:00"><div class="tl-dot food"></div><div class="tl-time">9:00</div><div class="tl-name">Brunch — 50g P</div><div class="tl-desc"></div></div>
+<div class="tl-item" data-time="9:30"><div class="tl-dot study"></div><div class="tl-time">9:30 – 10:25</div><div class="tl-name">🎓 EPFC théorie (55 min)</div><div class="tl-desc">Révision + projets + mock exams certif.</div></div>
+<div class="tl-item" data-time="10:25"><div class="tl-dot code"></div><div class="tl-time">10:25 – 11:00</div><div class="tl-name">💻 Coding deep (35 min)</div><div class="tl-desc">Weekend = session longue. LeetCode/Kaggle/Exercism. Problèmes plus durs.</div></div>
+<div class="tl-item" data-time="11:05"><div class="tl-dot ai"></div><div class="tl-time">11:05 – 12:05</div><div class="tl-name">🤖 IA deep (1h)</div><div class="tl-desc">Le vrai deep dive. 30-40 pages + exercices.</div></div>
+<div class="tl-item" data-time="12:15"><div class="tl-dot food"></div><div class="tl-time">12:15</div><div class="tl-name">Déjeuner</div><div class="tl-desc"></div></div>
+<div class="tl-item" data-time="13:15"><div class="tl-dot nl"></div><div class="tl-time">13:15 – 14:45</div><div class="tl-name">🇳🇱 NL deep (1h30)</div><div class="tl-desc">Sam : chapitre + grammaire. Dim : Tandem/iTalki + NedBox.</div></div>
+<div class="tl-item" data-time="15:00"><div class="tl-dot vinted"></div><div class="tl-time">15:00 – 17:00</div><div class="tl-name">🛍️ Vinted (2h)</div><div class="tl-desc">Sam : recherche 1688 + photos + listings. Dim : expéditions + gestion.</div></div>
+<div class="tl-item" data-time="17:15"><div class="tl-dot read"></div><div class="tl-time">17:15 – 18:00</div><div class="tl-name">📚 Lecture 45 min</div><div class="tl-desc"></div></div>
+<div class="tl-item" data-time="19:00"><div class="tl-dot food"></div><div class="tl-time">19:00</div><div class="tl-name">Dîner</div><div class="tl-desc"><strong>Dim 20:00-21:30 = meal prep semaine.</strong></div></div>
+<div class="tl-item" data-time="21:00"><div class="tl-dot hygiene"></div><div class="tl-time">21:00</div><div class="tl-name">Hygiène soir + journal + weekly review (dim)</div><div class="tl-desc"></div></div>
+<div class="tl-item" data-time="22:00"><div class="tl-dot sleep"></div><div class="tl-time">22:00</div><div class="tl-name">Coucher</div><div class="tl-desc"><strong>Ven ou sam soir : soirée libre / amis. Non-négociable.</strong></div></div>
+</div>
+</div>
+
+<h2 class="section-title coral">Règles <em>discipline</em> (intégrées, pas d'onglet séparé)</h2>
+<div class="callout callout-rule"><span class="ruletag">Téléphone</span>Pas de tel 30 min au réveil. Mode avion pendant les études. App <strong>One Sec</strong>. Max 30 min réseaux/jour. <strong>Remplacer le scroll par Chess.com</strong> — puzzles pendant les pauses/transports.</div>
+<div class="callout callout-rule"><span class="ruletag">Douche froide</span>2 min fin de chaque douche. Progression : S1 30 sec → S3 60 sec → M2+ 2 min.</div>
+<div class="callout callout-rule"><span class="ruletag">Réveil</span>Pas de snooze. Alarme → pieds au sol. Tâche la plus dure en premier. <strong>Jamais 2 jours ratés d'affilée.</strong></div>
+<div class="callout callout-rule"><span class="ruletag">Journal</span>Soir 2 min : 3 wins + 1 amélioration. <strong>Weekly review dim 15 min.</strong> Zéro alcool en semaine.</div>
+
+</section>
+
+
+
+<section class="page" id="p-sport">
+<div class="page-kicker">Force & Mouvement</div>
+<h1 class="page-title">Push <em>Pull</em> Legs</h1>
+<p class="page-lead">À jeun. Échauffement <em>obligatoire</em> 5 min avant chaque séance. Repos 60-90s. Progression RPE 7-8 (il te reste 2-3 reps dans le réservoir). +1 rep ou +1-2kg/sem. Hevy app pour tracker. <strong>Deload semaine 7</strong> : même exos, 50% poids, 50% séries. Stretch 15 min après chaque séance (25 min le dimanche).</p>
+
+<div class="callout callout-warn">
+<strong>⚠️ Contrainte C7</strong> — Chronique bilatéral C7 confirmé. 3 séances/sem max. Machines en priorité. <strong>Zéro compression cervicale</strong> : pas de shrugs lourds, pas de squat nuque, pas de développé militaire barre. Préférer haltères, poulie, développé assis. Si tension cervicale → arrêt.
+</div>
+
+<div class="training-status" id="training-status-sport">
+<div class="training-status-inner">
+<span class="training-label" id="training-label-sport">—</span>
+<div class="training-title" id="training-title-sport">—</div>
+<div class="training-desc" id="training-desc-sport">—</div>
+</div>
+</div>
+<div class="training-week" id="training-week-sport" style="margin-top:10px" aria-label="Cycle d'entraînement 7 jours"></div>
+
+<div id="training-cycle-full" style="margin-top:14px"></div>
+
+<details style="margin-top:10px;background:var(--surface);border:1px solid var(--border-soft);border-radius:10px;padding:10px 12px;font-size:12.5px">
+<summary style="cursor:pointer;color:var(--text-dim);font-weight:600;letter-spacing:.02em">🔄 Désynchronisé ? Resetter le cycle sur aujourd'hui</summary>
+<p style="color:var(--text-faint);margin-top:8px;line-height:1.5">Clique sur ce que tu <strong>fais aujourd'hui</strong>. Le cycle se recalera à partir de là et les 8 jours suivants se réorganiseront automatiquement.</p>
+<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px" id="cycle-reset-row">
+<button type="button" class="wake-btn" data-reset-type="push1">Push 1</button>
+<button type="button" class="wake-btn" data-reset-type="pull1">Pull 1</button>
+<button type="button" class="wake-btn" data-reset-type="legs1">Legs 1</button>
+<button type="button" class="wake-btn" data-reset-type="push2">Push 2</button>
+<button type="button" class="wake-btn" data-reset-type="pull2">Pull 2</button>
+<button type="button" class="wake-btn" data-reset-type="legs2">Legs 2</button>
+<button type="button" class="wake-btn" data-reset-type="rest">Repos</button>
+</div>
+</details>
+
+<p class="page-lead" style="margin-top:8px;font-size:11.5px;color:var(--text-faint)">Cycle <b>2 sport + 1 repos</b> sur 9 jours : Push 1 → Pull 1 → Repos → Legs 1 → Push 2 → Repos → Pull 2 → Legs 2 → Repos. Le jour actif est mis en surbrillance.</p>
+
+<h2 class="section-title">Échauffement · <em>5 min avant chaque séance</em></h2>
+<div class="card">
+<ul class="dlist">
+<li><span class="k">Rotations articulaires : cou → épaules → coudes → poignets → hanches → chevilles</span><span class="v">10 reps chaque</span></li>
+<li><span class="k">Jumping jacks ou corde à sauter (cardio montée)</span><span class="v">60s</span></li>
+<li><span class="k">Band pull-aparts ou rotations externes élastique (prévention épaules)</span><span class="v">2×15</span></li>
+<li><span class="k">1 série légère du premier exo (50% du poids de travail)</span><span class="v">1×12</span></li>
+</ul>
+</div>
+
+<h2 class="section-title">Semaine <em>type</em></h2>
+<div class="weekrow">
+<button aria-label="Action" class="wday active" data-d="d1"><b>L</b><em>Push</em></button>
+<button aria-label="Action" class="wday" data-d="d2"><b>M</b><em>Pull</em></button>
+<button aria-label="Action" class="wday" data-d="d3"><b>Me</b><em>Legs</em></button>
+<button aria-label="Action" class="wday" data-d="d4"><b>J</b><em>Push</em></button>
+<button aria-label="Action" class="wday" data-d="d5"><b>V</b><em>Pull</em></button>
+<button aria-label="Action" class="wday" data-d="d6"><b>S</b><em>Legs</em></button>
+<button aria-label="Action" class="wday" data-d="d7"><b>D</b><em>Repos</em></button>
+</div>
+
+<div class="day-view" id="day-d1">
+<div class="card card-elevated">
+<div class="card-title"><h3>Lundi · Push 1</h3><span class="badge badge-flame">Poitrine · Épaules · Triceps</span></div>
+<ul class="dlist">
+<li><span class="k">Pompes échauffement</span><span class="v">2×15</span></li>
+<li><span class="k">DC haltères · incliné · écarté</span><span class="v">4×10 · 3×10 · 3×12</span></li>
+<li><span class="k">DM épaules · élévations latérales</span><span class="v">4×10 · 4×15-20</span></li>
+<li><span class="k">Dips triceps · extension overhead</span><span class="v">3×max · 3×12</span></li>
+<li><span class="k">Crunchs + planche</span><span class="v">3×20 + 3×60s</span></li>
+</ul>
+</div>
+<div class="set-tracker" data-set-tracker="d1"></div>
+</div>
+
+<div class="day-view hidden" id="day-d2">
+<div class="card card-elevated">
+<div class="card-title"><h3>Mardi · Pull 1</h3><span class="badge badge-sapphire">Dos · Biceps</span></div>
+<ul class="dlist">
+<li><span class="k">Tractions large · rowing 1 bras · rowing 2 haltères</span><span class="v">4×6-10 · 4×10 · 3×10</span></li>
+<li><span class="k">Face pulls · oiseau</span><span class="v">4×15 · 3×15</span></li>
+<li><span class="k">Curl biceps · curl marteau</span><span class="v">3×12 · 3×12</span></li>
+<li><span class="k">Relevé jambes</span><span class="v">3×15</span></li>
+</ul>
+</div>
+<div class="set-tracker" data-set-tracker="d2"></div>
+</div>
+
+<div class="day-view hidden" id="day-d3">
+<div class="card card-elevated">
+<div class="card-title"><h3>Mercredi · Legs 1</h3><span class="badge badge-jade">Quads · Fessiers</span></div>
+<ul class="dlist">
+<li><span class="k">Squat goblet · fentes · squat bulgare</span><span class="v">4×12 · 3×12/j · 3×10/j</span></li>
+<li><span class="k">SDT roumain · mollets</span><span class="v">3×12 · 4×20</span></li>
+<li><span class="k">Obliques + ab wheel</span><span class="v">3×20 + 3×12</span></li>
+</ul>
+</div>
+<div class="set-tracker" data-set-tracker="d3"></div>
+</div>
+
+<div class="day-view hidden" id="day-d4">
+<div class="card card-elevated">
+<div class="card-title"><h3>Jeudi · Push 2</h3><span class="badge badge-flame">Épaules · Pecs · Triceps</span></div>
+<ul class="dlist">
+<li><span class="k">Pike push-ups · Arnold press</span><span class="v">3×10 · 4×10-12</span></li>
+<li><span class="k">Élévations latérales · élévations frontales</span><span class="v">4×15 · 3×12</span></li>
+<li><span class="k">Pompes diamant · pompes déclinées</span><span class="v">3×max · 3×12</span></li>
+<li><span class="k">Skull crushers · kickback · planche latérale</span><span class="v">3×12 · 3×12 · 3×30s</span></li>
+</ul>
+</div>
+<div class="set-tracker" data-set-tracker="d4"></div>
+</div>
+
+<div class="day-view hidden" id="day-d5">
+<div class="card card-elevated">
+<div class="card-title"><h3>Vendredi · Pull 2</h3><span class="badge badge-sapphire">Dos · Biceps · Trapèzes</span></div>
+<ul class="dlist">
+<li><span class="k">Chin-ups · rowing · pullover · shrugs</span><span class="v">4×6-10 · 4×10 · 3×12 · 4×15</span></li>
+<li><span class="k">Face pulls · curl concentré · curl inversé</span><span class="v">3×15 · 3×12 · 3×15</span></li>
+<li><span class="k">Relevé + twist</span><span class="v">3×15</span></li>
+</ul>
+</div>
+<div class="set-tracker" data-set-tracker="d5"></div>
+</div>
+
+<div class="day-view hidden" id="day-d6">
+<div class="card card-elevated">
+<div class="card-title"><h3>Samedi · Legs 2</h3><span class="badge badge-jade">Posterior chain</span></div>
+<ul class="dlist">
+<li><span class="k">Hip thrust · SDT roumain · squat sumo</span><span class="v">4×12 · 4×10 · 3×12</span></li>
+<li><span class="k">Nordic curl · step-ups · mollets assis</span><span class="v">3×8 · 3×12/j · 4×20</span></li>
+<li><span class="k">Planche + crunchs inversés</span><span class="v">3×60s + 3×20</span></li>
+</ul>
+</div>
+<div class="set-tracker" data-set-tracker="d6"></div>
+</div>
+
+<div class="day-view hidden" id="day-d7">
+<div class="card card-elevated">
+<div class="card-title"><h3>Dimanche · Repos actif</h3><span class="badge badge-ghost">70 min</span></div>
+<ul class="dlist">
+<li><span class="k">Marche ou vélo doux</span><span class="v">30 min</span></li>
+<li><span class="k">Stretch LONG full body (voir onglet Souplesse)</span><span class="v">25 min</span></li>
+<li><span class="k">Foam roll + auto-massage</span><span class="v">15 min</span></li>
+</ul>
+</div>
+</div>
+
+<div class="callout callout-tip">
+<strong>Tracker intégré</strong> · chaque jour d'entraînement a désormais son propre tracker de sets/reps/poids. Les sessions précédentes sont rappelées en regard (↗ tu montes, ↘ tu baisses). La règle : <em>charge ou reps augmente d'une semaine à l'autre</em>. Si 3 semaines tu stagnes sur un exo = deload (50% poids, même séries). Puis relance. Hevy reste une alternative si tu veux pousser les analyses au-delà.
+</div>
+
+</section>
+
+
+<section class="page" id="p-flex">
+<div class="page-kicker">Souplesse · Mobilité</div>
+<h1 class="page-title">Du sol <em>au grand écart</em></h1>
+<p class="page-lead">Tu ne touches pas tes orteils. C'est OK — 90 % des hommes sédentaires sont là. La souplesse n'est <em>pas génétique</em>. En 12-18 mois de travail quotidien, tu peux atteindre le grand écart. En 24 mois, une souplesse que 99 % des gens n'auront jamais.</p>
+
+<div class="callout callout-note">
+<strong>🧬 La science</strong> — Le stretch ne « rallonge » pas tes muscles. Il augmente ta <strong>tolérance à l'étirement</strong> — ton système nerveux accepte d'aller plus loin. C'est pour ça que la régularité bat l'intensité : <em>15 min/jour &gt; 1h le dimanche</em>. Ne force JAMAIS dans la douleur. Inconfort 5-6/10 = bien. 7+/10 = blessure.
+</div>
+
+<h2 class="section-title violet">Ton <em>tracker</em> · mesures du mois</h2>
+<div class="flex-tracker">
+<h4>Entre tes mesures chaque 1er du mois. Prends aussi une photo.</h4>
+<div class="ft-row"><div class="ft-lbl">Forward fold · distance doigts-sol (cm, - si au-dessus)</div><input type="number" class="ft-input" data-m="fold" placeholder="—" inputmode="numeric" pattern="[0-9.]*"></div>
+<div class="ft-row"><div class="ft-lbl">Pike assis · distance poitrine-cuisses (cm)</div><input type="number" class="ft-input" data-m="pike" placeholder="—" inputmode="numeric" pattern="[0-9.]*"></div>
+<div class="ft-row"><div class="ft-lbl">Straddle · angle ouverture (°)</div><input type="number" class="ft-input" data-m="straddle" placeholder="—" inputmode="numeric" pattern="[0-9.]*"></div>
+<div class="ft-row"><div class="ft-lbl">Front split jambe D · bassin-sol (cm)</div><input type="number" class="ft-input" data-m="splitD" placeholder="—" inputmode="numeric" pattern="[0-9.]*"></div>
+<div class="ft-row"><div class="ft-lbl">Front split jambe G · bassin-sol (cm)</div><input type="number" class="ft-input" data-m="splitG" placeholder="—" inputmode="numeric" pattern="[0-9.]*"></div>
+<div class="ft-row"><div class="ft-lbl">Middle split · bassin-sol (cm)</div><input type="number" class="ft-input" data-m="middle" placeholder="—" inputmode="numeric" pattern="[0-9.]*"></div>
+<div class="ft-row"><div class="ft-lbl">Deep squat · temps tenu (sec, talons au sol)</div><input type="number" class="ft-input" data-m="squat" placeholder="—" inputmode="numeric" pattern="[0-9.]*"></div>
+<div class="ft-row"><div class="ft-lbl">Pont bras tendus ? (1=oui, 0=bras pliés, -1=non)</div><input type="number" class="ft-input" data-m="bridge" placeholder="—" inputmode="numeric" pattern="[0-9.]*"></div>
+</div>
+
+<h2 class="section-title jade">Niveau 0 · <em>Déverrouiller le corps</em></h2>
+<div class="level-card l0">
+<div class="level-head"><span class="level-title">Où tu es</span><span class="level-dur">6 SEMAINES</span></div>
+<div class="level-desc">Forward fold = doigts à +15-25cm du sol. Squat complet impossible (talons décollent). Hanches verrouillées. <strong>C'est normal.</strong></div>
+
+<div class="subsection-title jade" style="margin-top:10px">🎯 Milestones niveau 0</div>
+<ul class="dlist">
+<li><span class="k">Forward fold : doigts touchent les chevilles</span><span class="v pos">~5cm du sol</span></li>
+<li><span class="k">Deep squat tenu 60s (livre sous talons OK)</span><span class="v pos">Stable</span></li>
+<li><span class="k">Papillon : genoux à 25-30cm du sol</span><span class="v pos">Ouverture</span></li>
+<li><span class="k">Fente basse 45s sans douleur (chaque jambe)</span><span class="v pos">Hip flexors</span></li>
+<li><span class="k">Child's pose confortable + pigeon basique 30s</span><span class="v pos">Hanches</span></li>
+<li><span class="k">Neck + shoulder ROM complète, pas de craquements</span><span class="v pos">Haut corps</span></li>
+</ul>
+</div>
+
+<div class="card">
+<div class="card-title"><h3>📋 Routine niveau 0 · 15 min/jour</h3></div>
+<div class="subsection-title" style="margin-top:6px;color:var(--text-dim);font-size:11.5px"><strong>Bas du corps</strong> (10 min) — chaque posture 30-45s, respirer profondément</div>
+<ul class="dlist">
+<li><span class="k">Forward fold debout (jambes tendues, relâcher la tête, genoux pliés si besoin)</span><span class="v">45s</span></li>
+<li><span class="k">Fente basse droite (genou arrière au sol, pousser hanches en avant)</span><span class="v">45s</span></li>
+<li><span class="k">Fente basse gauche</span><span class="v">45s</span></li>
+<li><span class="k">Pigeon droit (si impossible : figure-4 sur le dos)</span><span class="v">45s</span></li>
+<li><span class="k">Pigeon gauche</span><span class="v">45s</span></li>
+<li><span class="k">Papillon assis (presser doucement les genoux vers le sol)</span><span class="v">60s</span></li>
+<li><span class="k">Deep squat hold (livre sous talons si besoin)</span><span class="v">60s</span></li>
+<li><span class="k">Calf stretch mur — chaque jambe</span><span class="v">30s ×2</span></li>
+</ul>
+<div class="subsection-title" style="margin-top:10px;color:var(--text-dim);font-size:11.5px"><strong>Haut du corps</strong> (3 min)</div>
+<ul class="dlist">
+<li><span class="k">Doorway chest stretch (encadrement, bras à 90°)</span><span class="v">30s ×2</span></li>
+<li><span class="k">Cross-body shoulder stretch — chaque bras</span><span class="v">20s ×2</span></li>
+<li><span class="k">Cat-Cow (4 pattes, alterner dos rond / creux)</span><span class="v">10 reps</span></li>
+<li><span class="k">Seated spinal twist — chaque côté</span><span class="v">30s ×2</span></li>
+</ul>
+<div class="subsection-title" style="margin-top:10px;color:var(--text-dim);font-size:11.5px"><strong>Mobilité</strong> (2 min)</div>
+<ul class="dlist">
+<li><span class="k">Ankle circles — chaque pied</span><span class="v">10 ×2</span></li>
+<li><span class="k">Hip circles (debout, grands cercles) — chaque sens</span><span class="v">10 ×2</span></li>
+<li><span class="k">Wrist circles + extensions (prévention si tu codes)</span><span class="v">10 ×2</span></li>
+</ul>
+</div>
+
+<h2 class="section-title blue">Niveau 1 · <em>Les fondations</em></h2>
+<div class="level-card l1">
+<div class="level-head"><span class="level-title">Prérequis · milestones N0 atteints</span><span class="level-dur">MOIS 2-3 · 20 MIN/J</span></div>
+<div class="level-desc">On passe à 20 min/jour + 30 min le dimanche. Le travail devient structuré.</div>
+<ul class="dlist">
+<li><span class="k">Forward fold : doigts touchent le SOL</span><span class="v pos">0 cm</span></li>
+<li><span class="k">Pike assis : mains attrapent les pieds (genoux tendus)</span><span class="v pos">Contact</span></li>
+<li><span class="k">Deep squat 3 min (talons au sol, sans support)</span><span class="v pos">Stable</span></li>
+<li><span class="k">Straddle assis : 110°+ d'ouverture</span><span class="v pos">Ouverture</span></li>
+<li><span class="k">Pigeon : poitrine touche presque le sol</span><span class="v pos">Profond</span></li>
+<li><span class="k">Lézard (lizard lunge) : stable sur les avant-bras</span><span class="v pos">Hanches</span></li>
+<li><span class="k">Half split 60s chaque jambe</span><span class="v pos">Ischio</span></li>
+<li><span class="k">Papillon : genoux à 15 cm du sol</span><span class="v pos">Adducteurs</span></li>
+</ul>
+</div>
+
+<div class="card">
+<div class="card-title"><h3>📋 Ajouts N1 · 20 min/j</h3></div>
+<ul class="dlist">
+<li><span class="k">Half split D (jambe avant tendue, genou arrière au sol, pencher)</span><span class="v">60s</span></li>
+<li><span class="k">Half split G</span><span class="v">60s</span></li>
+<li><span class="k">Lizard lunge D (fente profonde, mains puis avant-bras au sol)</span><span class="v">45s</span></li>
+<li><span class="k">Lizard lunge G</span><span class="v">45s</span></li>
+<li><span class="k">Straddle assis (pancake) — pencher en avant, mains loin</span><span class="v">60s</span></li>
+<li><span class="k">Pike assis — jambes devant, dos droit, attraper les pieds</span><span class="v">60s</span></li>
+<li><span class="k">Frog stretch (4 pattes, genoux écartés, hanches en arrière)</span><span class="v">60s</span></li>
+<li><span class="k">Chest opener (mains jointes derrière le dos, lever les bras)</span><span class="v">30s</span></li>
+<li><span class="k">Thread the needle — chaque côté</span><span class="v">30s ×2</span></li>
+</ul>
+</div>
+
+<h2 class="section-title violet">Niveau 2 · <em>Territoire intermédiaire</em></h2>
+<div class="level-card l2">
+<div class="level-head"><span class="level-title">Mois 4-6 · 25 min/j + 40 min dim</span><span class="level-dur">PNF ACTIF</span></div>
+<div class="level-desc">Paumes au sol en forward fold. On introduit le travail <strong>actif</strong> : PNF, contractions isométriques.</div>
+<ul class="dlist">
+<li><span class="k">Forward fold : paumes à PLAT au sol</span><span class="v pos">Complet</span></li>
+<li><span class="k">Pike assis : poitrine touche les cuisses</span><span class="v pos">Full pike</span></li>
+<li><span class="k">Straddle : 130°+ / pancake torse penché 45°</span><span class="v pos">Profond</span></li>
+<li><span class="k">Front split : bassin à 20-25 cm du sol (chaque jambe)</span><span class="v pos">En route</span></li>
+<li><span class="k">Middle split : bassin à 30 cm du sol</span><span class="v pos">En route</span></li>
+<li><span class="k">Pigeon complet : poitrine au sol</span><span class="v pos">Full pigeon</span></li>
+<li><span class="k">Deep squat 5 min</span><span class="v pos">Ancré</span></li>
+</ul>
+</div>
+
+<h2 class="section-title coral">Niveau 4 · <em>Élite</em></h2>
+<div class="level-card l4">
+<div class="level-head"><span class="level-title">Mois 12-18 · top 0.1%</span><span class="level-dur">GYMNASTE</span></div>
+<div class="level-desc">Front split complet les 2 côtés. Bridge bras tendus. Le niveau des danseurs, gymnastes, arts martiaux.</div>
+<ul class="dlist">
+<li><span class="k">Middle split COMPLET — bassin au sol</span><span class="v neg">LATÉRAL</span></li>
+<li><span class="k">Oversplit — pied surélevé sur bloc (au-delà de 180°)</span><span class="v neg">OVER</span></li>
+<li><span class="k">Standing split 180° (sans mur)</span><span class="v neg">Debout libre</span></li>
+<li><span class="k">Pont avec pieds proches des mains (scorpion bridge)</span><span class="v neg">Pont profond</span></li>
+<li><span class="k">Chest-to-floor pancake COMPLET</span><span class="v neg">Full pancake</span></li>
+<li><span class="k">Needle scale · attraper le pied au-dessus de la tête</span><span class="v neg">Extrême</span></li>
+<li><span class="k">Back ou front walkover (pont → debout)</span><span class="v neg">Gym</span></li>
+<li><span class="k">Deep squat 10 min continu</span><span class="v neg">Ancêtres</span></li>
+</ul>
+</div>
+
+<h2 class="section-title">Planning <em>hebdo</em></h2>
+<div class="card">
+<ul class="dlist">
+<li><span class="k"><strong>Lundi</strong> — hanches + ischios (front split focus)</span><span class="v">15-30 min</span></li>
+<li><span class="k"><strong>Mardi</strong> — haut du corps + colonne (pont, épaules, twist)</span><span class="v">15-30 min</span></li>
+<li><span class="k"><strong>Mercredi</strong> — adducteurs + middle split focus</span><span class="v">15-30 min</span></li>
+<li><span class="k"><strong>Jeudi</strong> — full body léger (toutes postures 30s)</span><span class="v">15-30 min</span></li>
+<li><span class="k"><strong>Vendredi</strong> — hanches + ischios (front split)</span><span class="v">15-30 min</span></li>
+<li><span class="k"><strong>Samedi</strong> — adducteurs + middle split</span><span class="v">15-30 min</span></li>
+<li><span class="k"><strong>Dimanche</strong> — SESSION LONGUE : tout le corps, PNF, loaded stretching</span><span class="v info">40-60 min</span></li>
+</ul>
+</div>
+
+<h2 class="section-title">⏰ Quand <em>dans la journée</em></h2>
+<div class="callout callout-note">
+<strong>Post-sport</strong> = le meilleur moment (muscles chauds). <strong>Le soir avant le coucher</strong> = 2ème meilleur (le corps se relâche + aide le sommeil). <strong>Le matin</strong> = le pire moment pour les gains (muscles froids + raides). Le stretch du matin dans ta routine = mobilité/réveil, <em>pas</em> progression.
+</div>
+
+<h2 class="section-title">🔧 Équipement</h2>
+<div class="card"><ul class="dlist">
+<li><span class="k">Blocs yoga ×2 (split assisté, bridge, support)</span><span class="v">~€12</span></li>
+<li><span class="k">Sangle/ceinture yoga (attraper les pieds, PNF assisté)</span><span class="v">~€8</span></li>
+<li><span class="k">Foam roller (récupération + IT band + auto-massage)</span><span class="v">~€15</span></li>
+<li><span class="k">Tapis fitness épais (genoux au sol = confort)</span><span class="v">~€20</span></li>
+<li><span class="k"><strong>Total une fois</strong></span><span class="v pos"><strong>~€55 à vie</strong></span></li>
+</ul></div>
+
+<h2 class="section-title">📚 Ressources</h2>
+<div class="card"><ul class="dlist">
+<li><span class="k"><strong>Tom Merrick</strong> (YT) — follow-along 15-30min, split tutorials</span><span class="v pos">GRATUIT</span><div class="note">Le meilleur sur YouTube. Commence par "20 Minute Full Body Flexibility Routine" et "Front Split Tutorial".</div></li>
+<li><span class="k"><strong>Antranik</strong> — antranik.org/flexibility (programme complet gratuit)</span><span class="v pos">GRATUIT</span></li>
+<li><span class="k"><strong>r/flexibility</strong> — Starting Stretching + routines</span><span class="v pos">GRATUIT</span></li>
+<li><span class="k"><strong>Kit Laughlin</strong> — YT + livre Stretching & Flexibility (anatomique)</span><span class="v info">~€25</span></li>
+<li><span class="k"><strong>Emmet Louis</strong> — YT + programmes (handstand, contorsion)</span><span class="v info">€€</span></li>
+<li><span class="k"><strong>Thomas Kurz</strong> — Stretching Scientifically (référence PNF)</span><span class="v info">~€30</span></li>
+</ul></div>
+
+<h2 class="section-title coral">Règles <em>d'or</em></h2>
+<div class="card"><ul class="dlist">
+<li><span class="k">❌ Ne jamais rebondir (micro-déchirures)</span><span class="v neg">DANGER</span></li>
+<li><span class="k">❌ Ne jamais forcer au-delà de 6/10 de douleur</span><span class="v neg">DANGER</span></li>
+<li><span class="k">❌ Ne jamais étirer à froid pour progresser (matin = mobilité)</span><span class="v neg">INUTILE</span></li>
+<li><span class="k">❌ Ne jamais comparer (génétique joue sur la vitesse, pas la destination)</span><span class="v neg">PIÈGE</span></li>
+<li><span class="k">✅ Toujours respirer (expire = muscle se relâche)</span><span class="v pos">CLÉ</span></li>
+<li><span class="k">✅ Toujours étirer les 2 côtés (asymétries = blessures)</span><span class="v pos">CLÉ</span></li>
+<li><span class="k">✅ Toujours combiner souplesse + force</span><span class="v pos">CLÉ</span></li>
+<li><span class="k">✅ Constance &gt; intensité (15 min/j 6 mois &gt; 1h/sem 2 ans)</span><span class="v pos">RÈGLE #1</span></li>
+</ul></div>
+
+<div class="callout callout-tip">
+<strong>🎯 Projection réaliste depuis "je ne touche pas mes orteils"</strong><br><br>
+<strong>M 1-2</strong> · doigts aux chevilles → au sol. Deep squat tenu. Tu te sens déjà différent.<br>
+<strong>M 3-4</strong> · paumes au sol. Half split confortable. Pigeon profond. Les gens remarquent.<br>
+<strong>M 5-7</strong> · pike poitrine-cuisses. Straddle 130°. Front split à 15-20cm. Pont basique. <em>Top 5 %.</em><br>
+<strong>M 8-12</strong> · front split complet (1 côté). Middle split à 10cm. Bridge bras tendus. <em>Top 1 %.</em><br>
+<strong>M 12-18</strong> · front split 2 côtés + oversplit. Middle split complet. Pancake au sol. <em>Top 0.1 %.</em><br>
+<strong>18+ mois</strong> · contorsion. Chin stand. Standing split libre. <em>Autre personne.</em>
+</div>
+
+</section>
+
+
+
+<section class="page" id="p-nutrition">
+<div class="page-kicker">Carburant</div>
+<h1 class="page-title">Nutrition · <em>€300/mois</em></h1>
+<p class="page-lead">Six repas par jour. 180g de protéines. 3L d'eau minimum. Supplémentation calibrée. Deux boissons signature — shot matin et élixir pendant la journée — qui font la différence sur 12 mois.</p>
+
+<div class="stats stats-4">
+<div class="stat"><div class="stat-v jade mono">2800</div><div class="stat-l">kcal</div></div>
+<div class="stat"><div class="stat-v flame mono">180g</div><div class="stat-l">Protéines</div></div>
+<div class="stat"><div class="stat-v blue mono">310g</div><div class="stat-l">Glucides</div></div>
+<div class="stat"><div class="stat-v amber mono">85g</div><div class="stat-l">Lipides</div></div>
+</div>
+
+<h2 class="section-title amber">Boissons <em>signature</em></h2>
+<div class="recipe">
+<span class="recipe-tag amber">Avant sport · à jeun</span>
+<div class="recipe-name">🔥 Shot Feu Intérieur</div>
+<div class="recipe-body">Eau tiède + ½ citron + miel + 5g gingembre + ½ c.à.c. curcuma + <strong>poivre noir</strong> + cayenne.<br><br>
+<strong>Pourquoi poivre noir</strong> — La pipérine augmente la biodisponibilité de la curcumine de <strong>2000 %</strong> (Shoba 1998, Planta Medica). Sans poivre, tu n'absorbes quasi rien de la curcumine.<br>
+<strong>Pourquoi cayenne</strong> — La capsaïcine active la thermogenèse → métabolisme + circulation.<br>
+<strong>Gingembre</strong> — anti-inflammatoire, anti-nausée, digestion (Mashhadi 2013, IJPM).
+</div>
+</div>
+
+<div class="recipe blue">
+<span class="recipe-tag pink">Gourde 1L · journée</span>
+<div class="recipe-name">🫀 Élixir Grenade-Betterave</div>
+<div class="recipe-body">250ml grenade + 250ml betterave (fraîche mixée = €0.50/L) + 400ml eau + ½ citron vert + gingembre + miel.<br><br>
+<strong>Betterave</strong> — riche en nitrates → oxyde nitrique (NO) → vasodilatation → <strong>+20 % endurance</strong> (Jones 2014, Sports Medicine).<br>
+<strong>Grenade</strong> — anthocyanines → antioxydant puissant, récupération musculaire, santé cardiovasculaire.
+</div>
+</div>
+
+<div class="callout callout-tip">
+<strong>🚰 Hydratation</strong> — objectif <strong>3L d'eau/jour minimum</strong> (eau + élixir + thé). Mesure : 1 gourde 1L d'élixir + 2 gourdes d'eau. Urine jaune pâle = bien hydraté. Urine foncée = boire plus. La déshydratation de 2% réduit les performances cognitives de 10-20% (Masento 2014, Nutrients).
+</div>
+
+<h2 class="section-title">Les <em>6 repas</em></h2>
+<div class="card">
+<ul class="dlist">
+<li><span class="k"><strong>R1 post-sport</strong> · omelette 4 œufs + 2 blancs + avoine + banane + cacao</span><span class="v info">42g P · 640 kcal</span></li>
+<li><span class="k"><strong>R2</strong> · fromage blanc + amandes + pomme + graines de citrouille</span><span class="v info">22g P · 310</span></li>
+<li><span class="k"><strong>R3</strong> · 200g protéine + 200g glucide + 150g légumes (meal prep)</span><span class="v info">45g P · 550</span></li>
+<li><span class="k"><strong>R4</strong> · whey 30g + banane + 30g avoine</span><span class="v info">32g P · 380</span></li>
+<li><span class="k"><strong>R5</strong> · 200g protéine différente + 150g glucide + 200g légumes</span><span class="v info">42g P · 490</span></li>
+<li><span class="k"><strong>R6</strong> · fromage blanc 250g + beurre cacahuète + chia + baies</span><span class="v info">28g P · 280</span></li>
+</ul>
+</div>
+
+<h2 class="section-title">💊 Stack <em>compléments</em> · ~€50/mois</h2>
+
+<div class="card">
+<div class="subsection-title flame">🏋️ Performance & Muscle</div>
+<ul class="dlist">
+<li><span class="k">Whey protéine 30g</span><span class="v">Post-training</span><div class="note">Récupération musculaire. Isolate si intolérant lactose.</div></li>
+<li><span class="k">Créatine monohydrate 5g/j</span><span class="v">N'importe quand</span><div class="note">+8-14% force. Aussi prouvé pour la mémoire et la cognition (Rae 2003, Psychopharmacology).</div></li>
+<li><span class="k">Caféine 100-200mg (café OU pilule)</span><span class="v">Avant sport ou étude matin</span><div class="note">Dernière dose avant 14h. Pas de café après. Demi-vie = 5h.</div></li>
+</ul>
+
+<div class="subsection-title blue" style="margin-top:10px">🧠 Concentration & Énergie mentale</div>
+<ul class="dlist">
+<li><span class="k">L-Théanine 200mg</span><span class="v">Avec le café</span><div class="note">Acide aminé du thé vert. Élimine le jitter de la caféine → focus calme. Combo caféine + L-théanine = nootropique le plus prouvé (Einöther 2010). €10/mois.</div></li>
+<li><span class="k">Oméga 3 · DHA 1000mg + EPA 500mg</span><span class="v">Dîner</span><div class="note">DHA = 60% du cerveau. Mémoire, concentration, humeur. Prendre avec repas gras. Min 1000mg DHA/j. €15/mois.</div></li>
+<li><span class="k">Créatine (déjà listée)</span><span class="v">—</span><div class="note">Boost cognitif prouvé : +13% mémoire de travail chez les non-mangeurs de viande. Tu manges de la viande mais le boost existe sous stress/fatigue.</div></li>
+</ul>
+
+<div class="subsection-title violet" style="margin-top:10px">😴 Sommeil & Récupération</div>
+<ul class="dlist">
+<li><span class="k">Magnésium bisglycinate 400mg</span><span class="v">Soir</span><div class="note">Sommeil profond + récupération + testostérone. Bisglycinate &gt; oxide pour absorption.</div></li>
+<li><span class="k">Zinc bisglycinate 25mg</span><span class="v">Soir</span><div class="note">Immunité + testostérone. Pas en même temps que café (inhibe absorption).</div></li>
+<li><span class="k">Ashwagandha KSM-66 600mg</span><span class="v">Soir</span><div class="note">Adaptogène. Cortisol -22%, testo +14.7%, anxiété -44% (méta-analyse Bonilla 2022). 6-8 sem pour effet. Cycler 8 on / 2 off.</div></li>
+</ul>
+
+<div class="subsection-title amber" style="margin-top:10px">☀️ Santé générale</div>
+<ul class="dlist">
+<li><span class="k">Vitamine D3 4000 UI/j</span><span class="v">Repas gras</span><div class="note">Belgique = peu de soleil. 70% des Belges sont déficients. Essentiel pour immunité, humeur, testo, absorption calcium.</div></li>
+<li><span class="k">Vitamine K2 MK-7 100mcg</span><span class="v">Avec la D3</span><div class="note">Synergie avec D3 : dirige le calcium vers les os (pas les artères). <strong>Toujours combiner D3+K2.</strong></div></li>
+<li><span class="k">Rhodiola Rosea 300mg (optionnel)</span><span class="v">Matin, jours d'étude intense</span><div class="note">Adaptogène anti-fatigue. Performance cognitive sous stress (Shevtsov 2003). Ne pas combiner avec ashwagandha le même jour.</div></li>
+</ul>
+</div>
+
+<div class="callout callout-tip">
+<strong>Timing compléments · résumé</strong><br><br>
+<strong>Matin (petit-déj)</strong> · café + L-théanine 200mg + D3 4000UI + K2 100mcg + créatine 5g. Rhodiola 300mg les jours d'étude intense.<br>
+<strong>Soir (dîner ou caséine)</strong> · Oméga 3 (1000mg DHA) + magnésium 400mg + zinc 25mg + ashwagandha 600mg (pas les soirs de rhodiola).<br><br>
+<strong>Budget</strong> · whey ~€20/mois + compléments ~€30/mois = <strong>~€50/mois total</strong>. MyProtein.be ou iHerb.
+</div>
+
+</section>
+
+
+<section class="page" id="p-epfc">
+<div class="page-kicker">Bachelor · Développement d'applications</div>
+<h1 class="page-title">EPFC · <em>25 cours</em> · 11 certifs</h1>
+<p class="page-lead">Chaque cours EPFC mappé à sa ressource O'Reilly (livre + vidéo) <em>et</em> à la certif industrie qui le valide. En septembre, tu n'apprends pas en aveugle : tu sais exactement quelle certif tu vises pour chaque module.</p>
+
+<h2 class="section-title">🖥️ Programmation · <em>PRM3 + PRO3 + PAN2 + ANC4 + PRI2</em></h2>
+<div class="card"><ul class="dlist">
+<li><span class="k"><strong>PRM3</strong> — Principes algorithmiques et programmation</span><span class="v">120p · 8 ECTS</span><div class="note">📘 Think Python 3rd Ed. + Grokking Algorithms 2nd Ed. · 📹 Complete Python Course (5h, Diwan) + Python for Beginners (14h, Steele)</div></li>
+<li><span class="k"><strong>PRO3</strong> — Programmation orientée objet</span><span class="v">120p · 9 ECTS</span><div class="note">📘 Head First Java 3rd Ed. + Head First Design Patterns 2nd Ed. · 📹 Java Programming for Complete Beginners (15h38)</div></li>
+<li><span class="k"><strong>PAN2</strong> — Analyse informatique</span><span class="v">60p · 4 ECTS</span><div class="note">📘 Head First OO Analysis and Design · 📹 UML and Object-Oriented Design Foundations (O'Reilly)</div></li>
+<li><span class="k"><strong>ANC4</strong> — Projet d'analyse et de conception</span><span class="v">100p · 10 ECTS</span><div class="note">UML, use cases, diagrammes de séquence. Même livre que PAN2.</div></li>
+<li><span class="k"><strong>PRI2</strong> — Projet d'intégration de développement</span><span class="v">100p · 9 ECTS</span><div class="note">Projet intégrateur. Tout ce qui précède combiné.</div></li>
+</ul></div>
+<div class="card">
+<div class="card-title"><h3 class="flame">🏆 Certifs programmation</h3></div>
+<ul class="dlist">
+<li><span class="k"><strong>PCEP — Python Entry-Level</strong> (~€60)</span><span class="v pos">Avant sept.</span><div class="note">Valide PRM3. Think Python → mock exams pythoninstitute.org → passer en ligne.</div></li>
+<li><span class="k"><strong>Oracle Java SE 17 OCA</strong> (~€245)</span><span class="v info">Année 2</span><div class="note">Valide PRO3 + ANC4 + PRI2. Head First Java + OCA Study Guide (Boyarsky, O'Reilly).</div></li>
+</ul>
+</div>
+
+<h2 class="section-title blue">🗄️ Bases de Données · <em>BDO1 + BDG4 + PRB2</em></h2>
+<div class="card"><ul class="dlist">
+<li><span class="k"><strong>BDO1</strong> — Initiation aux bases de données</span><span class="v">60p · 5 ECTS</span><div class="note">📘 Head First SQL · 📹 SQL for Data Science (8h)</div></li>
+<li><span class="k"><strong>BDG4</strong> — Gestion et exploitation BD</span><span class="v">60p · 5 ECTS</span><div class="note">📘 Learning SQL 3rd Ed. (Beaulieu) · 📹 Advanced SQL for Data Scientists</div></li>
+<li><span class="k"><strong>PRB2</strong> — Projet de développement SGBD</span><span class="v">80p · 8 ECTS</span></li>
+</ul></div>
+<div class="card"><div class="card-title"><h3 class="blue">🏆 Certif BD</h3></div><ul class="dlist">
+<li><span class="k"><strong>Oracle Database SQL Associate</strong> (~€245)</span><span class="v info">Année 1-2</span><div class="note">Valide BDO1 + BDG4 + PRB2. SELECT, JOINs, DDL/DML, sous-requêtes, normalisation.</div></li>
+</ul></div>
+
+<h2 class="section-title jade">🌐 Réseaux + Sécurité · <em>BNE2 + SNE4</em></h2>
+<div class="card"><ul class="dlist">
+<li><span class="k"><strong>BNE2</strong> — Bases des réseaux</span><span class="v">80p · 6 ECTS</span><div class="note">📘 CompTIA Network+ Study Guide 6th Ed. · 📹 CompTIA Network+ N10-009 Total Course (Mike Meyers, 18h) — le meilleur cours vidéo réseau.</div></li>
+<li><span class="k"><strong>SNE4</strong> — Administration, gestion, sécurisation des réseaux</span><span class="v">100p · 8 ECTS</span><div class="note">📘 Network+ Study Guide · 📹 CompTIA Security+ SY0-701 + labs Packet Tracer gratuit.</div></li>
+</ul></div>
+<div class="card"><div class="card-title"><h3 class="jade">🏆 Certif réseaux</h3></div><ul class="dlist">
+<li><span class="k"><strong>CompTIA Network+ N10-009</strong> (~€370)</span><span class="v info">Fin année 1</span><div class="note">Valide BNE2 + SNE4. OSI, TCP/IP, routage, switching, Wi-Fi, sécurité, cloud.</div></li>
+</ul></div>
+
+<h2 class="section-title coral">⚙️ Hardware + OS · <em>STO4 + SYS4</em></h2>
+<div class="card"><ul class="dlist">
+<li><span class="k"><strong>STO4</strong> — Structure des ordinateurs</span><span class="v">60p · 5 ECTS</span><div class="note">📘 Practical Discrete Mathematics · 📹 CompTIA A+ Core 1 (220-1201) — Mike Meyers, 25h.</div></li>
+<li><span class="k"><strong>SYS4</strong> — Système d'exploitation</span><span class="v">100p · 8 ECTS</span><div class="note">📘 The Linux Command Line 2nd Ed. + Linux with OS Concepts · 📹 CompTIA A+ Core 2 (220-1202) + Linux Essentials (12h).</div></li>
+</ul></div>
+<div class="card"><div class="card-title"><h3 class="flame">🏆 Certifs hardware + OS</h3></div><ul class="dlist">
+<li><span class="k"><strong>CompTIA A+ Core 1 (220-1201)</strong> (~€253)</span><span class="v warn">Année 1 sem.1</span><div class="note">Valide STO4. Hardware, mobile, networking basics, virtualisation. Prof. Messer (gratuit) + Study Guide O'Reilly.</div></li>
+<li><span class="k"><strong>CompTIA A+ Core 2 (220-1202)</strong> (~€253)</span><span class="v warn">Année 1 sem.2</span><div class="note">Valide SYS4. OS (Windows, Linux, macOS), sécurité, troubleshooting.</div></li>
+</ul></div>
+
+<h2 class="section-title pink">🌐 Web · <em>WEB1 + PRW3</em></h2>
+<div class="card"><ul class="dlist">
+<li><span class="k"><strong>WEB1</strong> — Web : principes de base</span><span class="v">40p · 3 ECTS</span><div class="note">📘 Learning Web Design 5th Ed. · 📹 HTML CSS JS for Beginners (14h) + Web Dev Bootcamp (Colt Steele, 60h+)</div></li>
+<li><span class="k"><strong>PRW3</strong> — Projet de développement Web</span><span class="v">100p · 10 ECTS</span><div class="note">📘 JavaScript: The Good Parts · 📹 Hands-On Projects HTML/CSS/JS (30+ projets)</div></li>
+</ul></div>
+<div class="card"><div class="card-title"><h3 class="pink">🏆 Certif web</h3></div><ul class="dlist">
+<li><span class="k"><strong>Meta Front-End Developer Certificate</strong> (Coursera, gratuit en audit)</span><span class="v pos">Année 1-2</span><div class="note">Valide WEB1 + PRW3. HTML, CSS, JS, React, UX/UI. 9 cours. Audit gratuit.</div></li>
+</ul></div>
+
+<h2 class="section-title amber">📊 Maths + Stats · <em>MAP4 + STA1</em></h2>
+<div class="card"><ul class="dlist">
+<li><span class="k"><strong>MAP4</strong> — Mathématique appliquée à l'informatique</span><span class="v">60p · 5 ECTS</span><div class="note">📘 Practical Discrete Mathematics · 📹 Discrete Math + Essential Math for ML</div></li>
+<li><span class="k"><strong>STA1</strong> — Éléments de statistique</span><span class="v">40p · 3 ECTS</span><div class="note">📘 Head First Statistics + Think Stats 2nd Ed. · 📹 Statistics Fundamentals (StatQuest style)</div></li>
+</ul></div>
+<div class="card"><div class="card-title"><h3 class="amber">🏆 Certif data/stats</h3></div><ul class="dlist">
+<li><span class="k"><strong>Google Data Analytics Certificate</strong> (Coursera, gratuit en audit)</span><span class="v pos">Année 2</span><div class="note">Valide MAP4 + STA1. Spreadsheets, SQL, R/Python, visualisation, analyse statistique. 8 cours. Très reconnu.</div></li>
+</ul></div>
+
+<h2 class="section-title violet">📋 Gestion · <em>TGP2 + ORM1 + ASIP + ASAP</em></h2>
+<div class="card"><ul class="dlist">
+<li><span class="k"><strong>TGP2</strong> — Techniques de gestion de projets</span><span class="v">40p · 3 ECTS</span><div class="note">📘 Agile PM For Dummies 4th Ed. + Scrum Guide (gratuit, scrum.org)</div></li>
+<li><span class="k"><strong>ORM1</strong> — Organisation des entreprises et management</span><span class="v">40p · 4 ECTS</span><div class="note">Couvert par certif Scrum (rôles, organisation, leadership agile).</div></li>
+<li><span class="k"><strong>ASIP</strong> — Stage d'intégration professionnelle</span><span class="v">120p · 5 ECTS</span><div class="note">Stage pratique. PSM I sur le CV = avantage pour trouver un bon stage.</div></li>
+<li><span class="k"><strong>ASAP</strong> — Activités professionnelles de formation</span><span class="v">240p · 12 ECTS</span></li>
+</ul></div>
+<div class="card"><div class="card-title"><h3 class="violet">🏆 Certif gestion</h3></div><ul class="dlist">
+<li><span class="k"><strong>PSM I — Professional Scrum Master</strong> (~€150)</span><span class="v info">Année 2</span><div class="note">Valide TGP2 + ORM1. Scrum.org, en ligne 80min. Scrum Guide ×3 lectures + mock exams gratuits.</div></li>
+</ul></div>
+
+<h2 class="section-title gold">☁️ E-business + Cloud + ERP · <em>EBN5 + VTEC + PLG3</em></h2>
+<div class="card"><ul class="dlist">
+<li><span class="k"><strong>EBN5</strong> — Notions de e-business</span><span class="v">80p · 7 ECTS</span><div class="note">Cloud computing, SaaS, business models numériques.</div></li>
+<li><span class="k"><strong>VTEC</strong> — Veille technologique</span><span class="v">40p · 4 ECTS</span><div class="note">Tendances tech, cloud, IA, méthodologies émergentes.</div></li>
+<li><span class="k"><strong>PLG3</strong> — Produits logiciels de gestion intégrés</span><span class="v">100p · 9 ECTS</span><div class="note">📘 SAP Project Management + Manage Your SAP Projects with SAP Activate</div></li>
+</ul></div>
+<div class="card"><div class="card-title"><h3 class="gold">🏆 Certifs cloud + ERP</h3></div><ul class="dlist">
+<li><span class="k"><strong>AWS Cloud Practitioner CLF-C02</strong> (~€100)</span><span class="v pos">Année 2-3</span><div class="note">Valide EBN5 + VTEC. EC2, S3, Lambda, IAM, pricing cloud. Datacenter AWS à Bruxelles.</div></li>
+<li><span class="k"><strong>SAP TS410 — SAP S/4HANA Overview</strong> (gratuit via SAP Learning)</span><span class="v pos">Année 3</span><div class="note">Valide PLG3. Examen gratuit via SAP Learning Hub. Très valorisé en Belgique.</div></li>
+</ul></div>
+
+<h2 class="section-title cyan">🗣️ Soft Skills · <em>ICO1 + 2GB5</em></h2>
+<div class="card"><ul class="dlist">
+<li><span class="k"><strong>ICO1</strong> — Information et communication professionnelles</span><span class="v">40p · 3 ECTS</span><div class="note">Les livres Carnegie + Cialdini + Voss de ta liste couvrent ça mieux que n'importe quel cours.</div></li>
+<li><span class="k"><strong>2GB5</strong> — Langue en situation appliquée UE2</span><span class="v">80p · 7 ECTS</span><div class="note">Ton plan néerlandais couvre ça. Certif cible : CNaVT B2 (mois 24).</div></li>
+</ul></div>
+
+<h2 class="section-title">Timeline certifs · <em>11 certifs en 3 ans</em></h2>
+<div class="card"><ul class="dlist">
+<li><span class="k">1. <strong>PCEP Python</strong> (~€60)</span><span class="v pos">Avant sept.</span></li>
+<li><span class="k">2. <strong>CompTIA A+ Core 1</strong> (~€253)</span><span class="v">Oct-Déc an.1</span></li>
+<li><span class="k">3. <strong>CompTIA A+ Core 2</strong> (~€253)</span><span class="v">Jan-Mars an.1</span></li>
+<li><span class="k">4. <strong>CompTIA Network+</strong> (~€370)</span><span class="v">Avr-Juin an.1</span></li>
+<li><span class="k">5. <strong>Meta Front-End Dev</strong> (gratuit audit)</span><span class="v">Année 1-2</span></li>
+<li><span class="k">6. <strong>Oracle SQL Associate</strong> (~€245)</span><span class="v">Sept-Nov an.2</span></li>
+<li><span class="k">7. <strong>Oracle Java OCA</strong> (~€245)</span><span class="v">Jan-Mars an.2</span></li>
+<li><span class="k">8. <strong>Google Data Analytics</strong> (gratuit audit)</span><span class="v">Année 2</span></li>
+<li><span class="k">9. <strong>PSM I Scrum</strong> (~€150)</span><span class="v">Avr-Mai an.2</span></li>
+<li><span class="k">10. <strong>AWS Cloud Practitioner</strong> (~€100)</span><span class="v">Année 3</span></li>
+<li><span class="k">11. <strong>SAP TS410</strong> (gratuit)</span><span class="v">Année 3</span></li>
+</ul></div>
+<div class="callout callout-tip"><strong>Budget total · ~€1 676 sur 3 ans.</strong> 4 certifs gratuites (Meta, Google, SAP en audit). Les 7 payantes = €1 676 étalées. Avec le Vinted qui tourne, <em>~2-3 mois de profit</em>. Chaque certif passée APRÈS avoir étudié le cours → tu ne paies l'examen que quand tu es prêt.</div>
+
+<h2 class="section-title">Rotation d'étude <em>pré-septembre</em></h2>
+<div class="day-row"><div class="day-tag">LUN</div><div class="day-content"><strong>Programmation</strong> → <span class="book">Think Python</span> 1 chap/lundi → puis <span class="book">Head First Java</span></div></div>
+<div class="day-row"><div class="day-tag">MAR</div><div class="day-content"><strong>SQL</strong> → <span class="book">Head First SQL</span> 1 chap/mardi → puis <span class="book">Learning SQL</span></div></div>
+<div class="day-row"><div class="day-tag">MER</div><div class="day-content"><strong>Réseaux</strong> → <span class="vid">Network+ vidéos Meyers</span> 2-3 vidéos/mer</div></div>
+<div class="day-row"><div class="day-tag">JEU</div><div class="day-content"><strong>Web</strong> → <span class="book">Learning Web Design</span> 1 chap + coder</div></div>
+<div class="day-row"><div class="day-tag">VEN</div><div class="day-content"><strong>Algo + Maths + Hardware</strong> → alterner <span class="book">Grokking Algo</span> / <span class="book">Head First Stats</span> / <span class="vid">A+ vidéos Prof Messer</span></div></div>
+<div class="day-row"><div class="day-tag">WE</div><div class="day-content">Révision + projets + mock exams certif. Si OK : <span class="book">Linux Command Line</span></div></div>
+</section>
+
+
+
+<!-- TAB : CODE -->
+
+
+
+
+<!-- TAB : IA -->
+
+
+
+
+
+<!-- TAB : VINTED -->
+
+<section class="page" id="p-vinted" data-page="vinted">
+<div class="page-header">
+<h1 class="page-title">Vinted · <em>Business Plan</em></h1>
+<p class="page-sub">Sourcing 1688 + Hypobuy · vente EU · objectif <em>€300-800/mois net</em> à M9. Zéro contrefaçon. Discipline fiscale BE.</p>
+</div>
+
+<div class="callout callout-danger"><strong>⛔ Règle absolue · pas négociable.</strong> ZÉRO contrefaçon, ZÉRO "replica", ZÉRO dupe de marque. Tu vends des produits génériques / sans marque / marques chinoises légitimes. Une seule plainte = compte perma banned + risque judiciaire BE. Le jeu n'en vaut pas la chandelle.</div>
+
+<h2 class="section-title jade">Économie unitaire <em>(modèle)</em></h2>
+<div class="stats-grid">
+<div class="stat"><div class="stat-k">Coût unitaire</div><div class="stat-v">€3-8</div><div class="stat-note">1688 + frais Hypobuy + shipping prorata</div></div>
+<div class="stat"><div class="stat-k">Prix de vente</div><div class="stat-v flame">€15-35</div><div class="stat-note">selon niche · toujours &gt; 3× coût</div></div>
+<div class="stat"><div class="stat-k">Commission Vinted</div><div class="stat-v">0 %</div><div class="stat-note">payée par l'acheteur (frais de protection)</div></div>
+<div class="stat"><div class="stat-k">Profit net/pièce</div><div class="stat-v jade">€8-22</div><div class="stat-note">après shipping BE + emballage</div></div>
+</div>
+
+<h2 class="section-title sapphire">3 niches prioritaires</h2>
+<div class="card"><ul class="dlist">
+<li><span class="k"><strong>Streetwear générique</strong> <span class="muted">(t-shirts, hoodies, joggers)</span></span><span class="v info">Volume · marge ~€10/pièce</span><div class="note">Panier moyen bas mais rotation rapide. Bon pour tester le process. <em>Pas de logos de marques</em>.</div></li>
+<li><span class="k"><strong>Accessoires tech</strong> <span class="muted">(coques, câbles, supports, stands)</span></span><span class="v pos">Meilleure marge · ~€15/pièce</span><div class="note">Léger = shipping cheap. Forte demande. Peu de retours. <em>La niche à pousser.</em></div></li>
+<li><span class="k"><strong>Fitness/lifestyle</strong> <span class="muted">(bandes résistance, sangles yoga, foam rollers, straps)</span></span><span class="v info">Croisement personnel</span><div class="note">Tu connais la niche (ton programme souplesse + PPL). Tu peux rédiger de vraies descriptions expertes → taux de conversion ++.</div></li>
+</ul></div>
+
+<h2 class="section-title flame">Process · 6 étapes par lot</h2>
+<div class="card"><ol class="dlist">
+<li><span class="k">1. <strong>Veille 1688</strong> via Hypobuy</span><span class="v muted">1h/sem</span><div class="note">Repère 10-15 produits potentiels. Compare taux de conversion, reviews vendeur, délais.</div></li>
+<li><span class="k">2. <strong>Commande test</strong> (1-2 unités/modèle)</span><span class="v muted">€20-40</span><div class="note">Reçois, photographie, évalue qualité réelle. 50% des produits dégagent à cette étape.</div></li>
+<li><span class="k">3. <strong>Commande lot</strong> (5-10 unités du gagnant)</span><span class="v muted">€30-80</span></li>
+<li><span class="k">4. <strong>Listing Vinted</strong> — photos naturelles, descriptions honnêtes</span><span class="v muted">30min/pièce la 1ʳᵉ fois</span><div class="note">Light box + fond neutre. Mentionne <em>taille</em>, <em>matière</em>, <em>délais</em>. Pas de superlatifs creux.</div></li>
+<li><span class="k">5. <strong>Expédition J+1</strong> Mondial Relay ou bpost</span><span class="v muted">€3-5</span><div class="note">Enveloppes / cartons à l'avance. Étiquettes imprimées. Feedback 5★ ciblé.</div></li>
+<li><span class="k">6. <strong>SAV rapide</strong></span><span class="v pos">Réponse &lt;12h</span><div class="note">La vitesse SAV = la note vendeur = le classement algo Vinted = le ventes. Non-négociable.</div></li>
+</ol></div>
+
+<h2 class="section-title violet">Scaling · 4 phases</h2>
+<div class="phase">
+<div class="phase-head"><span class="phase-tag">M1-M3</span><h3>Test · 3-5 produits différents</h3></div>
+<div class="note">Budget lancement : €150-200. Objectif : valider le process + identifier 1-2 produits qui cartonnent. <em>Pas de rentabilité attendue.</em></div>
+</div>
+<div class="phase">
+<div class="phase-head"><span class="phase-tag">M4-M6</span><h3>Consolidation · €100-250/mois net</h3></div>
+<div class="note">Double les stocks des winners. Élimine les losers. Ajoute 2-3 nouveaux tests.</div>
+</div>
+<div class="phase">
+<div class="phase-head"><span class="phase-tag">M7-M9</span><h3>Scaling · €300-500/mois net</h3></div>
+<div class="note">10-15 SKU actifs. 3-5 commandes/jour. Stock rotatif €400-600 continuellement.</div>
+</div>
+<div class="phase">
+<div class="phase-head"><span class="phase-tag">M10+</span><h3>Plateau ou expansion</h3></div>
+<div class="note">Soit tu stabilises €500-800/mois (travail soutenable + EPFC) → parfait. Soit tu passes sur Amazon FBA / boutique Shopify → attention temps.</div>
+</div>
+
+<h2 class="section-title gold">Fiscalité Belgique <em>(respecte-la, toujours)</em></h2>
+<div class="card"><ul class="dlist">
+<li><span class="k"><strong>Plateformes — DAC7</strong></span><span class="v warn">Déclaration auto au fisc dès 30 ventes ou €2 000/an</span><div class="note">Vinted communique tes chiffres au SPF Finances. <em>Ignorer ça = enquête fiscale garantie.</em></div></li>
+<li><span class="k"><strong>Revenus occasionnels</strong></span><span class="v info">&lt; €1 000-1 500/an</span><div class="note">Reste "revenus divers" exonérés de cotisations sociales. Mais à déclarer si le fisc demande.</div></li>
+<li><span class="k"><strong>Indépendant complémentaire</strong></span><span class="v warn">Dès €1 500-2 000/an de profits réguliers</span><div class="note">Statut INASTI obligatoire. Cotisations trimestrielles + TVA si &gt; €25k CA. <em>Compatible avec ton salaire actuel.</em></div></li>
+<li><span class="k"><strong>Recommandation</strong></span><span class="v pos">Comptable à M6</span><div class="note">Quand tu atteins €200+/mois net régulier, consulte un comptable BE (€300-500/an). Il t'optimise les frais déductibles (stock, shipping, matos).</div></li>
+</ul></div>
+
+<div class="callout callout-focus"><strong>Mindset :</strong> Vinted est un <em>side-hustle</em>, pas le projet de vie. Il finance les certifs EPFC + le crédit. Si ça prend plus de 8-10h/semaine, c'est trop — l'école passe avant.</div>
+
+<h2 class="section-title jade">📦 Mes produits · <em>tracker</em></h2>
+<p class="page-lead" style="margin-top:-4px">Ajoute chaque pièce que tu achètes / listes / vends. La marge et les totaux se calculent tout seuls.</p>
+
+<div class="vt-summary">
+<div class="vt-sum-card invest"><div class="vt-sum-lbl">Investi total</div><div class="vt-sum-val" id="vt-invested">€0</div></div>
+<div class="vt-sum-card"><div class="vt-sum-lbl">Ventes</div><div class="vt-sum-val" id="vt-sales">€0</div></div>
+<div class="vt-sum-card profit"><div class="vt-sum-lbl">Profit net</div><div class="vt-sum-val" id="vt-profit">€0</div></div>
+</div>
+
+<div class="vt-roi" id="vt-roi" style="display:none">
+  <span>ROI réel <small style="color:var(--text-faint);font-weight:400">(ventes − tout le coût investi)</small> : <b id="vt-roi-net">€0</b> · <b id="vt-roi-pct">0%</b></span>
+  <span id="vt-stock-info" style="font-size:11px;color:var(--text-faint)">—</span>
+</div>
+
+<div class="vt-form">
+<input type="text" id="vt-name" placeholder="Nom produit (ex. Coque iPhone 15)" class="vt-form-name" autocomplete="off">
+<input type="number" id="vt-cost" placeholder="Coût €" step="0.5" min="0" inputmode="decimal" pattern="[0-9.]*">
+<input type="number" id="vt-price" placeholder="Prix vente €" step="0.5" min="0" inputmode="decimal" pattern="[0-9.]*">
+<select id="vt-status">
+<option value="listed">Listé</option>
+<option value="sold">Vendu</option>
+<option value="return">Retour</option>
+</select>
+<button class="vt-form-btn" id="vt-add">Ajouter</button>
+</div>
+
+<div class="vt-list" id="vt-list">
+<div class="vt-empty" id="vt-empty">Aucun produit pour l'instant. Ajoute ton premier test Vinted au-dessus ↑</div>
+</div>
+
+</section>
+
+
+<!-- TAB : NL -->
+
+
+
+
+
+<!-- TAB : CHESS -->
+
+
+
+
+<!-- TAB : FINANCE -->
+
+<section class="page" id="p-finance" data-page="finance">
+<div class="page-header">
+<h1 class="page-title">Finance · <em>Plan 10 ans</em></h1>
+<p class="page-sub">Crédit zéro · fonds d'urgence · ETF · pension BE · immobilier à l'année 7. Aucune spéculation.</p>
+</div>
+
+<h2 class="section-title jade">Budget mensuel · <em>€2 200 net</em></h2>
+<div class="stats-grid">
+<div class="stat"><div class="stat-k">Revenus</div><div class="stat-v jade">€2 200</div><div class="stat-note">shift pay</div></div>
+<div class="stat"><div class="stat-k">Logement + factures</div><div class="stat-v">~€900</div><div class="stat-note">loyer + charges + internet</div></div>
+<div class="stat"><div class="stat-k">Contributions fils</div><div class="stat-v">€540</div><div class="stat-note">alimentaire · non-négociable</div></div>
+<div class="stat"><div class="stat-k">Nourriture</div><div class="stat-v">~€350</div><div class="stat-note">vise €300 quand Vinted tourne</div></div>
+<div class="stat"><div class="stat-k">Transport</div><div class="stat-v">~€80</div><div class="stat-note">STIB abo</div></div>
+<div class="stat"><div class="stat-k">Compléments + gym</div><div class="stat-v">~€70</div><div class="stat-note">protéine + basiques</div></div>
+<div class="stat"><div class="stat-k">Disponible</div><div class="stat-v flame">~€260/mois</div><div class="stat-note">à allouer stratégiquement</div></div>
+</div>
+
+<div class="callout callout-warn"><strong>Priorité 1 absolue :</strong> tuer le crédit €10K. Chaque euro qui n'y va pas te coûte ~8-12% d'intérêts annuels. Aucun ETF ne rapporte ça avec certitude.</div>
+
+<h2 class="section-title sapphire">Phase 1 · <em>M1-M12 · Attaque crédit</em></h2>
+<div class="phase">
+<div class="phase-head"><span class="phase-tag">Sprint crédit</span><h3>€10 000 → €0</h3></div>
+<ul class="dlist">
+<li><span class="k"><strong>Remboursement mensuel</strong></span><span class="v">€200 fixes + tout surplus</span></li>
+<li><span class="k"><strong>+ Vinted profit</strong></span><span class="v pos">100% vers crédit M1-M6</span></li>
+<li><span class="k"><strong>+ Remboursement impôts / primes</strong></span><span class="v pos">100% vers crédit</span></li>
+<li><span class="k"><strong>Règle</strong></span><span class="v warn">Aucun investissement tant que crédit &gt; 0</span></li>
+</ul>
+<div class="note">Objectif M12 : crédit à zéro. Libère <em>€200-300/mois</em> immédiatement investissables.</div>
+</div>
+
+<h2 class="section-title flame">Phase 2 · <em>M13-M20 · Fonds d'urgence</em></h2>
+<div class="phase">
+<div class="phase-head"><span class="phase-tag">3 mois de charges</span><h3>€5 000 en livret sécurisé</h3></div>
+<ul class="dlist">
+<li><span class="k"><strong>Livret réglementé BE</strong> <span class="muted">(ING Tempo, KBC, Keytrade)</span></span><span class="v pos">~2-3% net 2026</span></li>
+<li><span class="k"><strong>Accessible en 24h</strong></span><span class="v info">Pas bloqué, pas investi</span></li>
+<li><span class="k"><strong>Règle</strong></span><span class="v warn">On n'y touche QUE pour : perte d'emploi, urgence médicale, réparation logement</span></li>
+</ul>
+</div>
+
+<h2 class="section-title violet">Phase 3 · <em>M21+ · Investissement ETF</em></h2>
+<div class="phase">
+<div class="phase-head"><span class="phase-tag">Bolero · ETF monde</span><h3>DCA mensuel · horizon 15+ ans</h3></div>
+<ul class="dlist">
+<li><span class="k"><strong>Courtier :</strong> Bolero (Belfius/KBC) ou Keytrade</span><span class="v pos">Fiable BE, frais bas</span></li>
+<li><span class="k"><strong>ETF cible :</strong> <code>SPDR MSCI ACWI IMI</code> <span class="muted">ISIN IE00B44Z5B48</span></span><span class="v pos">Diversification monde maximale · TER 0.17%</span></li>
+<li><span class="k"><strong>DCA</strong></span><span class="v info">€200-400/mois · ordre automatique le 1ᵉʳ</span></li>
+<li><span class="k"><strong>Épargne-pension 3ᵉ pilier</strong></span><span class="v pos">€1 020/an max · 30% de réduction d'impôts</span><div class="note">via Bolero ou compagnie (AG, KBC). <em>Le seul truc qui te "rapporte" 30% instant garanti.</em> Priorité à M14+.</div></li>
+</ul>
+</div>
+
+<h2 class="section-title gold">📊 Simulateur ETF interactif</h2>
+<div class="card">
+<div class="calc">
+<div class="calc-row"><label>Versement mensuel : <strong class="calc-val" data-out="amt">€300</strong></label><input type="range" min="50" max="1000" step="50" value="300" data-calc="amt"></div>
+<div class="calc-row"><label>Durée : <strong class="calc-val" data-out="yrs">20 ans</strong></label><input type="range" min="5" max="40" step="1" value="20" data-calc="yrs"></div>
+<div class="calc-row"><label>Rendement annuel moyen : <strong class="calc-val" data-out="ret">7.0%</strong></label><input type="range" min="3" max="10" step="0.5" value="7" data-calc="ret"></div>
+</div>
+<div class="sim-grid" style="margin-top:16px">
+<div class="sim"><div class="sim-k">Versé total</div><div class="sim-v" data-sim="paid">€72 000</div></div>
+<div class="sim"><div class="sim-k">Capital final</div><div class="sim-v jade" data-sim="final">€156 281</div></div>
+<div class="sim"><div class="sim-k">Plus-value</div><div class="sim-v flame" data-sim="gain">€84 281</div></div>
