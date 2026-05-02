@@ -44,3 +44,8 @@ If you fork or self-host:
 3. **Review `_headers`** before deployment; the default CSP allows `'unsafe-inline'` for backwards compat.
 4. **Audit `netlify/functions/coach.js`** for rate-limiting and origin validation before exposing publicly.
 5. **Rotate API keys** every 90 days minimum.
+
+
+## v73 note
+
+This pack keeps the site private-by-robots but not private-by-auth. For any real sensitive personal data, add Netlify password protection, Cloudflare Access, or another authentication layer before exposing the dashboard publicly.

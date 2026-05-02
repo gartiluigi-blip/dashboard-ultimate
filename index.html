@@ -185,7 +185,10 @@ if (typeof window.Notification === 'undefined'){
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
 <meta name="theme-color" content="#0a0a10">
-<title>Dashboard · V70 EPFC Lab Stable</title>
+<meta name="robots" content="noindex,nofollow,noarchive,noimageindex">
+<meta name="googlebot" content="noindex,nofollow,noarchive,noimageindex">
+<meta name="ai-robots" content="noai,noimageai">
+<title>Dashboard Ultimate · v73 Command</title>
 <!-- PWA manifest (inline data-URI so single-file still works) -->
 <link rel="manifest" href='data:application/manifest+json,{"name":"Dashboard Ultimate","short_name":"Dashboard","description":"Ton dashboard personnel · routine · priorités · stats","start_url":".","display":"standalone","orientation":"portrait","theme_color":"%230a0a10","background_color":"%2308080d","icons":[{"src":"data:image/svg%2Bxml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 192 192%22%3E%3Crect width=%22192%22 height=%22192%22 rx=%2236%22 fill=%22%23ff6b35%22/%3E%3Ctext x=%2296%22 y=%22130%22 font-size=%22110%22 text-anchor=%22middle%22 fill=%22%230a0a10%22 font-family=%22sans-serif%22 font-weight=%22900%22%3E%E2%9A%A1%3C/text%3E%3C/svg%3E","sizes":"192x192","type":"image/svg+xml"},{"src":"data:image/svg%2Bxml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 512 512%22%3E%3Crect width=%22512%22 height=%22512%22 rx=%2296%22 fill=%22%23ff6b35%22/%3E%3Ctext x=%22256%22 y=%22346%22 font-size=%22292%22 text-anchor=%22middle%22 fill=%22%230a0a10%22 font-family=%22sans-serif%22 font-weight=%22900%22%3E%E2%9A%A1%3C/text%3E%3C/svg%3E","sizes":"512x512","type":"image/svg+xml"}]}'>
 <link rel="apple-touch-icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180"><rect width="180" height="180" rx="34" fill="%23ff6b35"/><text x="90" y="122" font-size="102" text-anchor="middle" fill="%230a0a10" font-family="sans-serif" font-weight="900">%E2%9A%A1</text></svg>'>
@@ -13022,7 +13025,7 @@ body.ud-v59-routine-clean #p-routine .tl-badge-adaptive{
 })();
 </script>
 
-</body>
+
 <style id="ud-v60-card-click-shift-clean-style">
 /* V60 — routine mobile: carte entière cliquable, pas seulement le rond. */
 #p-routine .ud-routine-clean-card{
@@ -14152,7 +14155,414 @@ body.ud-v67-clean #p-routine [data-action="routine-reset"]{
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot,{once:true}); else boot();
 })();
 </script>
-   <script src="assets/ud-v72-godmode-pack.js"></script>
 
+
+<style id="ud-v73-command-style">
+/* ═══════════════════════════════════════════════════════════
+   UD v73 · COMMAND MOBILE + COCKPIT OPTIMISATION
+   Objectif : moins de bruit, meilleure exécution mobile, aucun module supprimé.
+   ═══════════════════════════════════════════════════════════ */
+:root{
+  --ud-v73-nav-h:74px;
+  --ud-v73-z-nav:9000;
+  --ud-v73-z-drawer:9010;
+}
+body.ud-v73-ready{scroll-padding-bottom:calc(var(--ud-v73-nav-h) + var(--safe-b,0px) + 12px)}
+
+.ud-v73-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(148,163,184,.24);background:rgba(15,23,42,.72);border-radius:999px;padding:5px 9px;font:800 10.5px/1 var(--f-sans,system-ui);letter-spacing:.04em;color:var(--text-dim,#cbd5e1)}
+
+#ud-v73-bottomnav{display:none}
+#ud-v73-drawer{display:none}
+
+/* Mission maintenant : transforme la carte existante en vrai ordre d'exécution */
+body.ud-v73-ready #next-action.ud-v73-mission{
+  border:1px solid rgba(255,107,53,.38)!important;
+  background:
+    radial-gradient(circle at top left,rgba(255,107,53,.20),transparent 42%),
+    linear-gradient(180deg,rgba(15,23,42,.96),rgba(2,6,23,.92))!important;
+  box-shadow:0 18px 60px rgba(0,0,0,.42),0 0 0 1px rgba(255,255,255,.03) inset!important;
+}
+body.ud-v73-ready #next-action.ud-v73-mission .na-title,
+body.ud-v73-ready #na-title{
+  font-size:clamp(20px,5vw,30px)!important;
+  line-height:1.05!important;
+  letter-spacing:-.035em!important;
+}
+body.ud-v73-ready #next-action.ud-v73-mission .na-sub,
+body.ud-v73-ready #na-sub{
+  max-width:720px;
+}
+.ud-v73-proof{
+  margin-top:10px;
+  display:grid;
+  gap:8px;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+}
+.ud-v73-proof .ud-v73-proof-item{
+  padding:9px 10px;border-radius:12px;border:1px solid rgba(148,163,184,.18);
+  background:rgba(15,23,42,.58);font:750 11px/1.35 var(--f-sans,system-ui);color:var(--text-dim,#cbd5e1);
+}
+.ud-v73-proof b{display:block;color:var(--text,#fff);font-size:10px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px}
+
+/* Mobile : on remplace le rail d'onglets par un command bar. */
+@media(max-width:760px){
+  body.ud-v73-ready .app{padding-bottom:calc(var(--ud-v73-nav-h) + var(--safe-b,0px) + 22px)!important;}
+  body.ud-v73-ready .tabs-wrap{display:none!important;}
+  body.ud-v73-ready .masthead{padding-bottom:10px!important;}
+  body.ud-v73-ready .masthead-inner{gap:10px!important;}
+  body.ud-v73-ready .brand-title{font-size:14px!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:210px;}
+  body.ud-v73-ready .brand-sub{display:none!important;}
+  body.ud-v73-ready .masthead-meta{font-size:11px!important;}
+  body.ud-v73-ready .shell,
+  body.ud-v73-ready .main{padding-left:12px!important;padding-right:12px!important;}
+
+  #ud-v73-bottomnav{
+    position:fixed;left:10px;right:10px;bottom:calc(8px + var(--safe-b,0px));
+    height:var(--ud-v73-nav-h);z-index:var(--ud-v73-z-nav);
+    display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;
+    padding:8px;border:1px solid rgba(148,163,184,.22);border-radius:24px;
+    background:linear-gradient(180deg,rgba(15,23,42,.96),rgba(2,6,23,.96));
+    box-shadow:0 18px 52px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.03) inset;
+    backdrop-filter:blur(18px) saturate(1.35);-webkit-backdrop-filter:blur(18px) saturate(1.35);
+  }
+  #ud-v73-bottomnav button{
+    min-width:0;min-height:54px;border-radius:18px;border:1px solid transparent;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+    color:var(--text-faint,#94a3b8);font:900 10px/1 var(--f-sans,system-ui);letter-spacing:.01em;
+    touch-action:manipulation;background:transparent;cursor:pointer;
+  }
+  #ud-v73-bottomnav button .ico{font-size:18px;line-height:1}
+  #ud-v73-bottomnav button.active{
+    color:var(--text,#fff);border-color:rgba(255,107,53,.34);
+    background:linear-gradient(180deg,rgba(255,107,53,.20),rgba(255,107,53,.08));
+  }
+  #ud-v73-bottomnav button:active{transform:scale(.96)}
+
+  #ud-v73-drawer{position:fixed;inset:0;z-index:var(--ud-v73-z-drawer);background:rgba(2,6,23,.60);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);align-items:flex-end;}
+  #ud-v73-drawer.open{display:flex;}
+  .ud-v73-drawer-card{width:100%;margin:0 10px calc(var(--ud-v73-nav-h) + var(--safe-b,0px) + 18px);border:1px solid rgba(148,163,184,.24);border-radius:24px;background:linear-gradient(180deg,rgba(15,23,42,.98),rgba(2,6,23,.98));box-shadow:0 24px 70px rgba(0,0,0,.65);overflow:hidden;}
+  .ud-v73-drawer-head{display:flex;justify-content:space-between;align-items:center;padding:14px 14px 10px;border-bottom:1px solid rgba(148,163,184,.14)}
+  .ud-v73-drawer-title{font:950 12px/1 var(--f-sans,system-ui);letter-spacing:.12em;text-transform:uppercase;color:var(--amber,#fbbf24)}
+  .ud-v73-drawer-close{width:38px;height:38px;border-radius:14px;border:1px solid rgba(148,163,184,.22);color:#fff;background:rgba(15,23,42,.72);font:900 18px/1 system-ui;cursor:pointer;}
+  .ud-v73-drawer-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:12px;}
+  .ud-v73-drawer-grid button{min-height:54px;text-align:left;border:1px solid rgba(148,163,184,.20);border-radius:16px;background:rgba(15,23,42,.72);padding:10px 12px;color:var(--text,#fff);font:900 12px/1.15 var(--f-sans,system-ui);cursor:pointer;}
+  .ud-v73-drawer-grid button small{display:block;margin-top:4px;color:var(--text-faint,#94a3b8);font:700 10px/1.2 var(--f-sans,system-ui)}
+
+  .ud-v73-proof{grid-template-columns:1fr!important}
+  body.ud-v73-ready #p-home .hero,
+  body.ud-v73-ready #p-home .xp-widget,
+  body.ud-v73-ready #p-home .card,
+  body.ud-v73-ready #p-home .training-status,
+  body.ud-v73-ready #p-home .goal-box,
+  body.ud-v73-ready #p-home .log-widget{
+    border-radius:18px!important;
+  }
+  body.ud-v73-ready .section-title{margin-top:22px!important;}
+}
+
+@media(max-width:420px){
+  #ud-v73-bottomnav{left:6px;right:6px;bottom:calc(6px + var(--safe-b,0px));border-radius:20px;gap:4px;padding:6px;}
+  #ud-v73-bottomnav button{min-height:52px;border-radius:16px;font-size:9.5px;}
+  .ud-v73-drawer-card{margin-left:6px;margin-right:6px;}
+}
+
+@media(prefers-reduced-motion:reduce){
+  #ud-v73-bottomnav *,#ud-v73-drawer *{transition:none!important;animation:none!important}
+}
+
+</style>
+
+<script id="ud-v72-options">
+window.UD_V72_OPTS = Object.assign({
+  idleInit:true,
+  contentVis:true,
+  timerAudit:true,
+  pwaPrompt:true,
+  cryptoBackup:true,
+  batteryMode:true,
+  weddingDate:null,
+  heatmapMulti:true,
+  wakeLock:true,
+  connectionAware:true,
+  debug:false
+}, window.UD_V72_OPTS || {});
+</script>
+<script src="/assets/ud-v72-godmode-pack.js"></script>
+
+<script id="ud-v73-command-script">
+/* ═══════════════════════════════════════════════════════════
+   UD v73 · Command cockpit
+   - Mobile bottom nav: 5 boutons, tous les modules conservés.
+   - Mission maintenant: une priorité calculée et actionnable.
+   - Additif: ne supprime pas les moteurs V60-V72.
+   ═══════════════════════════════════════════════════════════ */
+(function(){
+  'use strict';
+  if (window.__udV73Command) return;
+  window.__udV73Command = true;
+
+  const NS = 'dashv2_';
+  const $ = (s,r=document)=>r.querySelector(s);
+  const $$ = (s,r=document)=>Array.from(r.querySelectorAll(s));
+  const esc = window.escapeHTML || (s => s == null ? '' : String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])));
+  const pad = n => String(n).padStart(2,'0');
+  const todayKey = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; };
+  const nowMin = () => { const d = new Date(); return d.getHours()*60 + d.getMinutes(); };
+  const read = (k,d=null) => { try { const v = localStorage.getItem(NS+k); return v == null ? d : JSON.parse(v); } catch(_) { return d; } };
+  const write = (k,v) => { try { localStorage.setItem(NS+k, JSON.stringify(v)); } catch(_){} };
+
+  const STUDY_ITEMS = [
+    ['epfc','🎓 EPFC','matières, exercices, reprises'],
+    ['code','💻 Code','JS, Python, SQL, portfolio'],
+    ['ia','🤖 IA','prompting, data, agents'],
+    ['nl','🇳🇱 Néerlandais','vocabulaire, Anki, pratique'],
+    ['trading','🔌 Élec/IoT','Arduino, Raspberry, capteurs'],
+    ['plan','📋 Plan','roadmap et ressources']
+  ];
+  const PLUS_ITEMS = [
+    ['sport','💪 Sport','séance et cycle'],
+    ['flex','🧘 Souplesse','mobilité et C7'],
+    ['nutrition','🥩 Nutrition','repas, eau, protéines'],
+    ['vinted','🛍️ Vinted','business et ventes'],
+    ['finance','💰 Finance','ETF, budget, rappels'],
+    ['chess','♟️ Échecs','Elo et tactiques'],
+    ['settings','⚙️ Paramètres','sauvegarde et config']
+  ];
+  const DOMAIN = {
+    epfc:{tab:'epfc', icon:'🎓', title:'EPFC', minutes:60, score:100, proof:'1 exercice ou 1 synthèse + reprise notée'},
+    code:{tab:'code', icon:'💻', title:'Code', minutes:35, score:82, proof:'1 script, 1 bug corrigé ou 1 exo validé'},
+    nl:{tab:'nl', icon:'🇳🇱', title:'Néerlandais', minutes:20, score:72, proof:'Anki + 5 phrases actives'},
+    ia:{tab:'ia', icon:'🤖', title:'IA', minutes:25, score:66, proof:'1 test prompt/agent + résultat noté'},
+    lab:{tab:'trading', icon:'🔌', title:'Élec/IoT', minutes:20, score:62, proof:'1 mesure, schéma, test capteur ou blocage documenté'}
+  };
+
+  function go(tab){
+    try {
+      if (typeof window.go === 'function' && !window.go.__v73Fallback) window.go(tab);
+      else fallbackGo(tab);
+    } catch(_) { fallbackGo(tab); }
+    syncNav(tab);
+    closeDrawer();
+    setTimeout(updateMission,120);
+  }
+  function fallbackGo(tab){
+    $$('.tab[data-tab]').forEach(t=>t.classList.toggle('active', t.dataset.tab===tab));
+    $$('section.page').forEach(p=>p.classList.toggle('active', (p.dataset.page || p.id.replace(/^p-/,''))===tab));
+    write('tab',tab);
+    try { window.scrollTo({top:0,behavior:'smooth'}); } catch(_) { window.scrollTo(0,0); }
+  }
+
+  function currentTab(){
+    const a = $('.tab[data-tab].active');
+    if (a) return a.dataset.tab;
+    const p = $('section.page.active');
+    return p ? (p.dataset.page || p.id.replace(/^p-/,'')) : read('tab','home');
+  }
+  function syncNav(tab=currentTab()){
+    $$('#ud-v73-bottomnav [data-go-tab]').forEach(b=>b.classList.toggle('active', b.dataset.goTab===tab));
+    const studyTabs = new Set(STUDY_ITEMS.map(x=>x[0]));
+    const studyBtn = $('#ud-v73-bottomnav [data-v73-menu="study"]');
+    if (studyBtn) studyBtn.classList.toggle('active', studyTabs.has(tab));
+    const plusTabs = new Set(PLUS_ITEMS.map(x=>x[0]));
+    const plusBtn = $('#ud-v73-bottomnav [data-v73-menu="plus"]');
+    if (plusBtn) plusBtn.classList.toggle('active', plusTabs.has(tab));
+  }
+
+  function buildBottomNav(){
+    if ($('#ud-v73-bottomnav')) return;
+    const nav = document.createElement('nav');
+    nav.id = 'ud-v73-bottomnav';
+    nav.setAttribute('aria-label','Navigation rapide mobile');
+    nav.innerHTML = [
+      ['home','🏠','Now'],
+      ['routine','📅','Routine'],
+      ['study','🎓','Études','menu'],
+      ['stats','📊','Stats'],
+      ['plus','☰','Plus','menu']
+    ].map(x => x[3] === 'menu'
+      ? `<button type="button" data-v73-menu="${x[0]}"><span class="ico">${x[1]}</span><span>${x[2]}</span></button>`
+      : `<button type="button" data-go-tab="${x[0]}"><span class="ico">${x[1]}</span><span>${x[2]}</span></button>`
+    ).join('');
+    document.body.appendChild(nav);
+
+    const drawer = document.createElement('div');
+    drawer.id = 'ud-v73-drawer';
+    drawer.setAttribute('aria-hidden','true');
+    drawer.innerHTML = '<div class="ud-v73-drawer-card" role="dialog" aria-modal="true" aria-label="Modules"><div class="ud-v73-drawer-head"><div class="ud-v73-drawer-title" id="ud-v73-drawer-title">Modules</div><button class="ud-v73-drawer-close" type="button" aria-label="Fermer">×</button></div><div class="ud-v73-drawer-grid" id="ud-v73-drawer-grid"></div></div>';
+    document.body.appendChild(drawer);
+
+    nav.addEventListener('click', e => {
+      const goBtn = e.target.closest('[data-go-tab]');
+      if (goBtn) return go(goBtn.dataset.goTab);
+      const menu = e.target.closest('[data-v73-menu]');
+      if (menu) return openDrawer(menu.dataset.v73Menu);
+    }, true);
+    drawer.addEventListener('click', e => {
+      if (e.target.id === 'ud-v73-drawer' || e.target.closest('.ud-v73-drawer-close')) return closeDrawer();
+      const b = e.target.closest('[data-drawer-tab]');
+      if (b) return go(b.dataset.drawerTab);
+    }, true);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); }, true);
+    syncNav();
+  }
+  function openDrawer(kind){
+    const drawer = $('#ud-v73-drawer');
+    const grid = $('#ud-v73-drawer-grid');
+    const title = $('#ud-v73-drawer-title');
+    if (!drawer || !grid) return;
+    const items = kind === 'study' ? STUDY_ITEMS : PLUS_ITEMS;
+    if (title) title.textContent = kind === 'study' ? 'Modules étude' : 'Tous les autres modules';
+    grid.innerHTML = items.map(([tab,label,sub]) => `<button type="button" data-drawer-tab="${esc(tab)}">${esc(label)}<small>${esc(sub)}</small></button>`).join('');
+    drawer.classList.add('open');
+    drawer.setAttribute('aria-hidden','false');
+  }
+  function closeDrawer(){
+    const drawer = $('#ud-v73-drawer');
+    if (!drawer) return;
+    drawer.classList.remove('open');
+    drawer.setAttribute('aria-hidden','true');
+  }
+
+  function getLog(){
+    const d = todayKey();
+    const direct = read('log_'+d, null);
+    const st = read('state', null);
+    const nested = st && st.logs && st.logs[d] ? st.logs[d] : null;
+    const legacy = read('logs_'+d, null);
+    return Object.assign({}, legacy || {}, nested || {}, direct || {});
+  }
+  function minutesFrom(log, key){
+    const v = log[key];
+    if (typeof v === 'number') return v;
+    if (typeof v === 'string') return Number(v) || 0;
+    if (v && typeof v === 'object') return Number(v.minutes || v.min || v.duration || 0) || 0;
+    return 0;
+  }
+  function skipped(domain){ return !!read(`v73_skip_${todayKey()}_${domain}`, false); }
+  function snoozed(){
+    const until = Number(read('v73_snooze_until',0));
+    return until && Date.now() < until;
+  }
+  function pickMission(){
+    const log = getLog();
+    const t = nowMin();
+    const afterWork = t >= 17*60;
+    const morning = t < 11*60;
+    const weekend = [0,6].includes(new Date().getDay());
+    const items = Object.entries(DOMAIN).map(([key,d]) => {
+      const done = minutesFrom(log, key === 'lab' ? 'lab' : key);
+      let score = d.score + Math.max(0, d.minutes - done) * 1.2;
+      if (key === 'epfc' && (morning || afterWork)) score += 18;
+      if (key === 'code' && weekend) score += 12;
+      if (key === 'nl' && t > 21*60) score += 20; // facile tard le soir
+      if (key === 'lab' && !weekend) score -= 8;
+      if (done >= d.minutes) score -= 50;
+      if (skipped(key)) score -= 100;
+      return {key, ...d, done, remaining:Math.max(0,d.minutes-done), score};
+    }).sort((a,b)=>b.score-a.score);
+    let m = items[0];
+    if (!m || snoozed()){
+      m = {key:'routine', tab:'routine', icon:'📅', title:'Routine', minutes:15, done:0, remaining:15, score:0, proof:'Valide le prochain bloc ou note pourquoi il saute'};
+    }
+    const duration = m.key === 'routine' ? 15 : Math.max(20, Math.min(75, Math.round((m.remaining || m.minutes) / 5) * 5));
+    const why = m.key === 'routine'
+      ? 'Mission temporaire : action reportée. Reprends la routine et ferme une boucle.'
+      : `${m.done} min fait aujourd’hui / objectif ${m.minutes} min. Tu fermes ce déficit maintenant.`;
+    return {...m, duration, why};
+  }
+
+  function updateMission(){
+    const box = $('#next-action');
+    if (!box) return;
+    const m = pickMission();
+    box.classList.add('ud-v73-mission');
+    const label = $('#na-label',box), cd = $('#na-countdown',box), title = $('#na-title',box), sub = $('#na-sub',box);
+    if (label) label.textContent = 'MISSION MAINTENANT';
+    if (cd) cd.textContent = `${m.duration} min · ordre prioritaire`;
+    if (title) title.textContent = `${m.icon} ${m.title} · ${m.duration} min`;
+    if (sub) sub.textContent = m.why;
+    const start = $('#na-start',box), snooze = $('#na-snooze',box), skip = $('#na-skip',box);
+    if (start){ start.textContent = `Ouvrir ${m.title}`; start.dataset.v73Target = m.tab; }
+    if (snooze){ snooze.textContent = '+15 min'; snooze.dataset.v73Mission = m.key; }
+    if (skip){ skip.textContent = 'Skipper aujourd’hui'; skip.dataset.v73Mission = m.key; }
+    let proof = $('#ud-v73-proof', box);
+    if (!proof){
+      proof = document.createElement('div');
+      proof.id = 'ud-v73-proof';
+      proof.className = 'ud-v73-proof';
+      box.appendChild(proof);
+    }
+    proof.innerHTML = `<div class="ud-v73-proof-item"><b>Preuve</b>${esc(m.proof)}</div><div class="ud-v73-proof-item"><b>Règle</b>Une mission. Pas de zapping.</div><div class="ud-v73-proof-item"><b>Après</b>Log rapide + prochaine reprise.</div>`;
+  }
+
+  function bindMissionButtons(){
+    document.addEventListener('click', e => {
+      const start = e.target.closest('#na-start[data-v73-target]');
+      if (start){ e.preventDefault(); e.stopPropagation(); return go(start.dataset.v73Target || 'home'); }
+      const snooze = e.target.closest('#na-snooze[data-v73-mission]');
+      if (snooze){
+        e.preventDefault(); e.stopPropagation();
+        write('v73_snooze_until', Date.now() + 15*60*1000);
+        updateMission();
+        toast('Mission reportée de 15 min. Pas plus.');
+        return;
+      }
+      const skip = e.target.closest('#na-skip[data-v73-mission]');
+      if (skip){
+        e.preventDefault(); e.stopPropagation();
+        write(`v73_skip_${todayKey()}_${skip.dataset.v73Mission}`, true);
+        updateMission();
+        toast('Mission skippée pour aujourd’hui. Le déficit reste visible.');
+      }
+    }, true);
+  }
+  function toast(msg){
+    try { if (typeof window.showToast === 'function') return window.showToast(msg); } catch(_){}
+    const t = $('#toast'), txt = $('#toast-text');
+    if (t && txt){ txt.textContent = msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2200); }
+  }
+
+  function hardenExternalLinks(){
+    $$('a[href^="http"]').forEach(a => {
+      try {
+        if (new URL(a.href).origin !== location.origin){
+          a.target = a.target || '_blank';
+          a.rel = 'noopener noreferrer';
+        }
+      } catch(_){}
+    });
+  }
+
+  function wrapGo(){
+    if (window.go && window.go.__v73Wrapped) return;
+    const old = window.go;
+    const wrapped = function(name){
+      if (typeof old === 'function' && old !== wrapped) old(name);
+      else fallbackGo(name);
+      syncNav(name);
+      closeDrawer();
+      setTimeout(updateMission,100);
+    };
+    wrapped.__v73Wrapped = true;
+    window.go = wrapped;
+  }
+
+  function boot(){
+    document.body.classList.add('ud-v73-ready');
+    buildBottomNav();
+    wrapGo();
+    bindMissionButtons();
+    hardenExternalLinks();
+    updateMission();
+    setInterval(updateMission, 60*1000);
+    document.addEventListener('click', e => { if (e.target.closest && e.target.closest('.tab[data-tab]')) setTimeout(()=>syncNav(),80); }, true);
+    window.UD_V73 = { updateMission, pickMission, go, openDrawer };
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, {once:true}); else boot();
+})();
+
+</script>
+
+</body>
 </html>
 <!-- V51 hotfix: Vinted validation bypasses study modal. -->

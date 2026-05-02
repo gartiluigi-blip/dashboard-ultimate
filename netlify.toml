@@ -24,7 +24,7 @@
 # Production-only env vars (override in Netlify UI for secrets).
 [context.production]
   # Example placeholder. Real secret stays in Netlify UI; we just declare expected names here for clarity.
-  # CLAUDE_API_KEY is set in Netlify → Site settings → Environment variables.
+  # ANTHROPIC_API_KEY is set in Netlify → Site settings → Environment variables.
   [context.production.environment]
     NODE_ENV = "production"
 
@@ -77,3 +77,5 @@
 # ── Plugin: Submit sitemap (when site is no longer disallow-all) ─────
 # [[plugins]]
 #   package = "@netlify/plugin-sitemap"
+
+# Headers are defined in _headers. Keep CSP there to avoid duplicate rules.
