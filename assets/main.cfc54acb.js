@@ -5008,3 +5008,5 @@ refreshDerived();
 // renderStats is called by activateTab when stats tab is active, and by refreshDerived when stats is open.
 
 })();
+
+/* UD v73 note: command cockpit is injected at the end of index.html so it runs after legacy hotfixes. */
