@@ -1,7 +1,7 @@
 /* ═══════════════════════════════════════════════════════════
    UD v73 · Command cockpit
    - Mobile bottom nav: 5 boutons, tous les modules conservés.
-   - Mission maintenant: une priorité calculée et actionnable.
+   - Mission maintenant: priorité calculée sans empiler N2/N3 sur la 1re année.
    - Additif: ne supprime pas les moteurs V60-V72.
    ═══════════════════════════════════════════════════════════ */
 (function(){
@@ -20,11 +20,11 @@
   const write = (k,v) => { try { localStorage.setItem(NS+k, JSON.stringify(v)); } catch(_){} };
 
   const STUDY_ITEMS = [
-    ['epfc','🎓 EPFC','matières, exercices, reprises'],
-    ['code','💻 Code','JS, Python, SQL, portfolio'],
-    ['ia','🤖 IA','prompting, data, agents'],
-    ['nl','🇳🇱 Néerlandais','vocabulaire, Anki, pratique'],
-    ['trading','🔌 Élec/IoT','Arduino, Raspberry, capteurs'],
+    ['epfc','🎓 EPFC','niveau 1 actif, N2/N3 en parking'],
+    ['code','🧪 Exercices','preuves liées aux matières EPFC'],
+    ['nl','🇳🇱 Néerlandais','optionnel hors EPFC'],
+    ['ia','🤖 IA Lab','bonus data/ML, 1 bloc/semaine'],
+    ['trading','🔌 IoT Lab','bonus hardware/réseau, 1 bloc/semaine'],
     ['plan','📋 Plan','roadmap et ressources']
   ];
   const PLUS_ITEMS = [
@@ -37,11 +37,8 @@
     ['settings','⚙️ Paramètres','sauvegarde et config']
   ];
   const DOMAIN = {
-    epfc:{tab:'epfc', icon:'🎓', title:'EPFC', minutes:60, score:100, proof:'1 exercice ou 1 synthèse + reprise notée'},
-    code:{tab:'code', icon:'💻', title:'Code', minutes:35, score:82, proof:'1 script, 1 bug corrigé ou 1 exo validé'},
-    nl:{tab:'nl', icon:'🇳🇱', title:'Néerlandais', minutes:20, score:72, proof:'Anki + 5 phrases actives'},
-    ia:{tab:'ia', icon:'🤖', title:'IA', minutes:25, score:66, proof:'1 test prompt/agent + résultat noté'},
-    lab:{tab:'trading', icon:'🔌', title:'Élec/IoT', minutes:20, score:62, proof:'1 mesure, schéma, test capteur ou blocage documenté'}
+    epfc:{tab:'epfc', icon:'🎓', title:'EPFC N1', minutes:60, score:100, proof:'1 preuve sur une matière N1 : PRM3, BDO1/BDG4, WEB1, BNE2, STO4/SYS4, MAP4/STA1, PAN2 ou ICO1'},
+    code:{tab:'code', icon:'🧪', title:'Exercice/preuve EPFC', minutes:35, score:78, proof:'1 exercice lié à une UE N1 : Python, SQL, Web, OS, réseau ou structure ordinateur. Pas de gros projet'}
   };
 
   function go(tab){
