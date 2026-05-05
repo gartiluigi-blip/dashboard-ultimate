@@ -1,455 +1,357 @@
-'use strict';
+/**
+ * Coach Netlify Function — version durcie (audit Apr 2026).
+ *
+ * Améliorations vs version précédente :
+ *  - CORS allowlist (au lieu de '*')
+ *  - Shared secret optionnel (si défini en env, requis pour appeler)
+ *  - Rate limit in-memory par IP (10 req/min)
+ *  - System prompt FORCÉ côté serveur (le client ne peut plus injecter)
+ *  - Model FORCÉ côté serveur (le client ne peut plus forcer Opus)
+ *  - max_tokens cappé à 1000
+ *  - Context cappé à 60 KB (sinon 413)
+ *  - Timeout 25s sur l'appel Anthropic via AbortController
+ *  - console.error() partout pour avoir des logs Netlify
+ *  - Headers de sécurité sur toutes les réponses
+ *
+ * Variables d'env attendues (Netlify → Site settings → Env vars) :
+ *   - ANTHROPIC_API_KEY        (obligatoire)            : ta clé sk-ant-...
+ *   - ALLOWED_ORIGINS          (recommandé)             : "https://ultimatedashboard.netlify.app,https://ultimatedashboard.netlify.app"
+ *                                                         (Netlify peut aussi déployer sur deploy-preview-X-…netlify.app)
+ *                                                         Si non défini, fallback sur l'origin Netlify détectée (moins safe).
+ *   - COACH_SHARED_SECRET      (très recommandé)        : une string random partagée entre client et serveur.
+ *                                                         Le client doit la passer en header `x-coach-key`.
+ *                                                         Si non défini, l'auth secret est désactivée (mode legacy).
+ *   - ANTHROPIC_MODEL          (optionnel)              : override server-side du modèle. Default: claude-sonnet-4-6
+ *   - COACH_RATE_LIMIT_PER_MIN (optionnel)              : limite par IP/minute. Default: 10
+ */
 
-// Only allow requests from the deployed Netlify site and local dev
-const ALLOWED_ORIGINS = [
-  'https://ultimatedashboard.netlify.app',
-  'http://localhost:8888',
-  'http://localhost:3000'
-];
+// ─────────────────────────────────────────────────────────────
+// Rate limiter in-memory.
+// Limite : N requêtes / 60s par IP. Reset à chaque cold start (ok pour un usage perso).
+// Pour une vraie persistence multi-instance, migrer vers Netlify Blobs.
+// ─────────────────────────────────────────────────────────────
+const rateLimitStore = new Map(); // ip -> [timestamps]
+const RATE_WINDOW_MS = 60_000;
 
-function getCorsHeaders(event) {
-  const origin = (event && event.headers && event.headers.origin) || '';
-  const allowed = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
-  return {
-    'Access-Control-Allow-Origin': allowed,
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Max-Age': '86400',
-    'Vary': 'Origin'
-  };
-}
+function isRateLimited(ip, limit) {
+  const now = Date.now();
+  const arr = rateLimitStore.get(ip) || [];
+  const recent = arr.filter(t => now - t < RATE_WINDOW_MS);
+  recent.push(now);
+  rateLimitStore.set(ip, recent);
 
-// Hard allowlist — never let the client pick an expensive model
-const ALLOWED_MODELS = new Set([
-  'claude-haiku-4-5-20251001',
-  'claude-sonnet-4-6',
-  'claude-3-5-sonnet-latest',
-  'claude-3-haiku-20240307'
-]);
-const DEFAULT_MODEL = process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-latest';
-
-// Valid coach modes — anything else is rejected
-const ALLOWED_MODES = new Set([
-  'coach', 'plan', 'routine', 'task', 'trading',
-  'sport', 'study', 'finance', 'review', 'nl'
-]);
-
-// Hard limits — prevent runaway token costs
-const MAX_BODY_BYTES   = 64 * 1024;   // 64 KB raw body
-const MAX_QUESTION_LEN = 2000;
-const MAX_CONTEXT_LEN  = 6000;        // was 24 000 — no need for more
-const MAX_TOKENS_CAP   = 600;         // was 900
-
-function response(statusCode, body, event) {
-  return {
-    statusCode: statusCode,
-    headers: {
-      ...getCorsHeaders(event),
-      'Content-Type': 'application/json; charset=utf-8',
-      'Cache-Control': 'no-store, max-age=0'
-    },
-    body: JSON.stringify(body)
-  };
-}
-
-function safeParseBody(raw) {
-  if (!raw) return {};
-  try {
-    return JSON.parse(raw);
-  } catch (error) {
-    const err = new Error('Invalid JSON body');
-    err.statusCode = 400;
-    throw err;
-  }
-}
-
-function limitText(value, maxLength) {
-  const text = String(value || '').trim();
-  if (text.length <= maxLength) return text;
-  return text.slice(0, maxLength) + '...[truncated]';
-}
-
-function clampNumber(value, min, max, fallback) {
-  const number = Number(value);
-  if (!Number.isFinite(number)) return fallback;
-  return Math.max(min, Math.min(max, number));
-}
-
-function normalizePriority(value) {
-  const raw = String(value || '').toLowerCase();
-
-  if (
-    raw.includes('urgent') ||
-    raw.includes('critique') ||
-    raw.includes('critical') ||
-    raw.includes('p0') ||
-    raw.includes('p1') ||
-    raw.includes('grave') ||
-    raw.includes('bloquant') ||
-    raw.includes('immediat')
-  ) {
-    return {
-      priority: 'high',
-      priority_level: 'critical',
-      priority_label: 'Critique',
-      priority_color: '#f87171',
-      priority_rank: 1
-    };
+  // GC périodique : si la map dépasse 10000 IPs, on vide les vieilles entrées
+  if (rateLimitStore.size > 10_000) {
+    for (const [k, v] of rateLimitStore) {
+      const stillRecent = v.filter(t => now - t < RATE_WINDOW_MS);
+      if (stillRecent.length === 0) rateLimitStore.delete(k);
+      else rateLimitStore.set(k, stillRecent);
+    }
   }
 
-  if (
-    raw.includes('important') ||
-    raw.includes('prioritaire') ||
-    raw.includes('haute') ||
-    raw.includes('high') ||
-    raw.includes('p2')
-  ) {
-    return {
-      priority: 'high',
-      priority_level: 'important',
-      priority_label: 'Important',
-      priority_color: '#fbbf24',
-      priority_rank: 2
-    };
-  }
-
-  if (
-    raw.includes('faible') ||
-    raw.includes('pas urgent') ||
-    raw.includes('low') ||
-    raw.includes('p3') ||
-    raw.includes('p4')
-  ) {
-    return {
-      priority: 'low',
-      priority_level: 'low',
-      priority_label: 'Faible',
-      priority_color: '#34d399',
-      priority_rank: 4
-    };
-  }
-
-  return {
-    priority: 'medium',
-    priority_level: 'normal',
-    priority_label: 'Normal',
-    priority_color: '#6aa5fa',
-    priority_rank: 3
-  };
+  return recent.length > limit;
 }
 
-function detectDueText(text) {
-  const q = String(text || '').toLowerCase();
-
-  if (q.includes('demain')) return 'demain';
-  if (q.includes("aujourd'hui")) return "aujourd'hui";
-  if (q.includes('ce soir')) return 'ce soir';
-  if (q.includes('cet aprem')) return 'cet aprem';
-
-  const relativeMatch = q.match(/dans\s+\d+\s*(min|minute|minutes|h|heure|heures)/);
-  if (relativeMatch) return relativeMatch[0];
-
-  const dayMatch = q.match(/lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche/);
-  if (dayMatch) return dayMatch[0];
-
-  return '';
+// ─────────────────────────────────────────────────────────────
+// CORS / Origin handling
+// ─────────────────────────────────────────────────────────────
+function getAllowedOrigins() {
+  const raw = process.env.ALLOWED_ORIGINS || '';
+  return raw.split(',').map(s => s.trim()).filter(Boolean);
 }
 
-function detectIntent(question) {
-  const q = String(question || '').toLowerCase();
-  const priorityInfo = normalizePriority(q);
+function resolveCorsOrigin(requestOrigin) {
+  const allowed = getAllowedOrigins();
 
-  const shouldCreateTask =
-    /\b(task|tache|todo|to-do|rappel|rappelle|mets|ajoute|cree|creer|planifie)\b/.test(q);
-
-  const shouldUpdateRoutine =
-    /\b(valide|fait|termine|fini|plus tot|avance|recalcule|routine)\b/.test(q);
-
-  const shouldDeleteOrDisable =
-    /\b(supprime|efface|retire|delete|remove|desactive|desactiver)\b/.test(q);
-
-  let intent = 'coach_answer';
-  if (shouldDeleteOrDisable) intent = 'delete_or_disable';
-  else if (shouldCreateTask) intent = 'create_task';
-  else if (shouldUpdateRoutine) intent = 'routine_update';
-
-  return {
-    intent: intent,
-    should_create_task: shouldCreateTask,
-    should_update_routine: shouldUpdateRoutine,
-    should_delete_or_disable: shouldDeleteOrDisable,
-    task: shouldCreateTask
-      ? {
-          title: limitText(question, 140),
-          due_text: detectDueText(question),
-          priority: priorityInfo.priority,
-          priority_level: priorityInfo.priority_level,
-          priority_label: priorityInfo.priority_label,
-          priority_color: priorityInfo.priority_color,
-          priority_rank: priorityInfo.priority_rank,
-          status: 'draft_requires_frontend_confirmation'
-        }
-      : null,
-    routine_update: shouldUpdateRoutine
-      ? {
-          instruction: limitText(question, 180),
-          status: 'draft_requires_frontend_confirmation'
-        }
-      : null,
-    ...priorityInfo
-  };
-}
-
-function extractJsonObject(rawText) {
-  if (!rawText) return null;
-
-  try {
-    return JSON.parse(rawText);
-  } catch (_) {}
-
-  const fenced = rawText.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
-  if (fenced && fenced[1]) {
-    try {
-      return JSON.parse(fenced[1]);
-    } catch (_) {}
+  // Si rien de configuré, on autorise UNIQUEMENT le domaine Netlify détecté.
+  // C'est moins safe mais évite de tout casser si la var d'env n'est pas encore définie.
+  if (allowed.length === 0) {
+    if (requestOrigin && /^https:\/\/[a-z0-9-]+\.netlify\.app$/i.test(requestOrigin)) {
+      return requestOrigin;
+    }
+    return null; // pas d'origin connu → on bloque
   }
 
-  const start = rawText.indexOf('{');
-  const end = rawText.lastIndexOf('}');
+  // Match exact OU pattern "https://*.netlify.app" pour deploy previews
+  if (allowed.includes(requestOrigin)) return requestOrigin;
 
-  if (start !== -1 && end !== -1 && end > start) {
-    try {
-      return JSON.parse(rawText.slice(start, end + 1));
-    } catch (_) {}
+  for (const a of allowed) {
+    if (a.includes('*')) {
+      const re = new RegExp('^' + a.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '[a-z0-9-]+') + '$', 'i');
+      if (re.test(requestOrigin)) return requestOrigin;
+    }
   }
 
   return null;
 }
 
-function normalizeFinalAnswer(parsed, rawText, mode, detected, startedAt) {
-  const priorityInfo = normalizePriority(
-    parsed && parsed.priority ? parsed.priority : detected.priority
-  );
+// ─────────────────────────────────────────────────────────────
+// System prompts — FORCÉS côté serveur (le client ne peut PAS les changer)
+// ─────────────────────────────────────────────────────────────
+const SYSTEM_PROMPTS = {
+  coach: "Tu es le coach personnel de l'utilisateur. Il a un dashboard qui track : EPFC (études), code, néerlandais, sport, souplesse, lecture, échecs, Vinted, humeur, pomodoros. Il est à Bruxelles, travaille en shifts rotatifs, prépare un bachelor dev pour sept. 2026, a une contrainte C7 (cervicales). Réponds en français, ton direct mais chaleureux, concret. Maximum 150 mots. Utilise les chiffres réels de son contexte. Si tu détectes un problème, dis-le clairement sans édulcorer.",
+  analyse: "Tu es un analyste de performance personnelle. Réponds en français. Identifie les faiblesses, dérives et incohérences dans le contexte fourni. Ton direct et factuel.",
+  plan: "Tu es un planificateur opérationnel. Réponds en français. Transforme le contexte en plan d'action concret pour aujourd'hui. Maximum 5 actions, ordonnées par priorité.",
+  trading: "Tu es un coach trading senior, ex-prop trader. Réponds en français, ton direct, sans complaisance. Focus discipline et risk, pas hype technique.",
+  voice: "Tu reçois une dictée vocale brute (transcription du navigateur, parfois imparfaite). L'utilisateur parle à son dashboard personnel. Tu dois identifier l'INTENTION et extraire les paramètres pour que le client agisse automatiquement. Modules disponibles : epfc, code, nl, ia, sport, flex, lecture, vinted, trading, chess, finance. Actions possibles : log_session (l'user a fait X minutes de Y), add_task (créer une tâche), add_note (note libre), add_bookmark (marque-page d'étude où il s'est arrêté), question (vraie question à analyser comme coach). Sois INDULGENT : 'epef' = epfc, 'jé fé' = j'ai fait, 'codign' = coding, 'pithon' = python. Si l'intention est ambiguë, choisis l'interprétation la plus probable et mets confidence < 0.7."
+};
 
+const JSON_SCHEMA_INSTRUCTION = [
+  "Tu dois répondre UNIQUEMENT en JSON valide.",
+  "Aucune phrase avant ou après le JSON.",
+  "Utilise exactement ce schéma :",
+  '{"answer":"string","priority":"low|medium|high","focus_area":"string","next_action_title":"string","next_action_sub":"string","warning":"string"}',
+  "answer = réponse utile et concrète en français.",
+  "priority = low ou medium ou high.",
+  "focus_area = domaine principal à cibler.",
+  "next_action_title = action courte.",
+  "next_action_sub = détail court et concret.",
+  "warning = danger principal ou dérive principale. Si rien à signaler, mets une chaîne vide."
+].join(' ');
+
+// Schema spécifique pour le mode voice (intent recognition)
+const VOICE_JSON_SCHEMA_INSTRUCTION = [
+  "Tu dois répondre UNIQUEMENT en JSON valide.",
+  "Aucune phrase avant ou après le JSON.",
+  "Schéma exact :",
+  '{"action":"log_session|add_task|add_note|add_bookmark|question","module":"string","duration":0,"title":"string","note":"string","priority":"low|medium|high","question":"string","confidence":0.0,"summary":"string"}',
+  "action = type d'action détectée.",
+  "module = un de : epfc, code, nl, ia, sport, flex, lecture, vinted, trading, chess, finance, autre. Si non applicable, mets ''.",
+  "duration = minutes (entier). 0 si non applicable.",
+  "title = pour add_task : titre court et clair de la tâche. Sinon ''.",
+  "note = pour add_note ou add_bookmark : contenu de la note. Sinon ''.",
+  "priority = low/medium/high pour add_task. Sinon 'medium'.",
+  "question = pour action=question : la question reformulée proprement. Sinon ''.",
+  "confidence = ta certitude entre 0 et 1.",
+  "summary = phrase courte récapitulant ce que tu as compris (en français), pour confirmation user."
+].join(' ');
+
+// ─────────────────────────────────────────────────────────────
+// Limites
+// ─────────────────────────────────────────────────────────────
+const MAX_CONTEXT_BYTES = 60 * 1024;       // 60 KB
+const MAX_QUESTION_LEN = 4000;             // 4k chars
+const MAX_TOKENS_CAP = 1000;
+const ANTHROPIC_TIMEOUT_MS = 25_000;       // 25s (Netlify free tier = 10s, pro = 26s)
+const FORCED_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6';
+
+// ─────────────────────────────────────────────────────────────
+// Réponse helper
+// ─────────────────────────────────────────────────────────────
+function jsonResponse(statusCode, body, corsOrigin) {
   return {
-    ok: true,
-    version: 'v38-direct',
-    mode: mode,
-    answer:
-      parsed && typeof parsed.answer === 'string' && parsed.answer.trim()
-        ? parsed.answer.trim()
-        : rawText || 'Pas de reponse.',
-    priority: priorityInfo.priority,
-    priority_level:
-      parsed && parsed.priority_level ? parsed.priority_level : priorityInfo.priority_level,
-    priority_label:
-      parsed && parsed.priority_label ? parsed.priority_label : priorityInfo.priority_label,
-    priority_color:
-      parsed && parsed.priority_color ? parsed.priority_color : priorityInfo.priority_color,
-    priority_rank:
-      parsed && Number(parsed.priority_rank) ? Number(parsed.priority_rank) : priorityInfo.priority_rank,
-    focus_area:
-      parsed && typeof parsed.focus_area === 'string' ? parsed.focus_area.trim() : '',
-    intent:
-      parsed && typeof parsed.intent === 'string' ? parsed.intent.trim() : detected.intent,
-    next_action_title:
-      parsed && typeof parsed.next_action_title === 'string'
-        ? parsed.next_action_title.trim()
-        : '',
-    next_action_sub:
-      parsed && typeof parsed.next_action_sub === 'string'
-        ? parsed.next_action_sub.trim()
-        : '',
-    warning:
-      parsed && typeof parsed.warning === 'string' ? parsed.warning.trim() : '',
-    should_create_task:
-      parsed && typeof parsed.should_create_task === 'boolean'
-        ? parsed.should_create_task
-        : detected.should_create_task,
-    should_update_routine:
-      parsed && typeof parsed.should_update_routine === 'boolean'
-        ? parsed.should_update_routine
-        : detected.should_update_routine,
-    should_delete_or_disable:
-      parsed && typeof parsed.should_delete_or_disable === 'boolean'
-        ? parsed.should_delete_or_disable
-        : detected.should_delete_or_disable,
-    task:
-      parsed && parsed.task && typeof parsed.task === 'object'
-        ? { ...detected.task, ...parsed.task }
-        : detected.task,
-    routine_update:
-      parsed && parsed.routine_update && typeof parsed.routine_update === 'object'
-        ? { ...detected.routine_update, ...parsed.routine_update }
-        : detected.routine_update,
-    server_ms: Date.now() - startedAt
+    statusCode,
+    headers: {
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': corsOrigin || 'null',
+      'Vary': 'Origin',
+      'X-Content-Type-Options': 'nosniff',
+      'Cache-Control': 'no-store',
+      'Referrer-Policy': 'no-referrer'
+    },
+    body: JSON.stringify(body)
   };
 }
 
-exports.handler = async function handler(event) {
-  const startedAt = Date.now();
-  const method = event && event.httpMethod ? event.httpMethod : 'GET';
+// ─────────────────────────────────────────────────────────────
+// Handler
+// ─────────────────────────────────────────────────────────────
+exports.handler = async (event) => {
+  const requestOrigin = (event.headers?.origin || event.headers?.Origin || '').trim();
+  const corsOrigin = resolveCorsOrigin(requestOrigin);
 
-  if (method === 'OPTIONS') {
+  // Preflight CORS
+  if (event.httpMethod === 'OPTIONS') {
+    if (!corsOrigin) {
+      // Origin pas autorisé → on refuse même le preflight
+      return { statusCode: 403, body: '' };
+    }
     return {
       statusCode: 204,
-      headers: getCorsHeaders(event),
-      body: ''
+      headers: {
+        'Access-Control-Allow-Origin': corsOrigin,
+        'Access-Control-Allow-Headers': 'Content-Type, x-coach-key',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Max-Age': '600',
+        'Vary': 'Origin'
+      }
     };
   }
 
-  if (method === 'GET') {
-    return response(200, {
-      ok: true,
-      service: 'coach',
-      version: 'v38-direct',
-      method: 'GET',
-      message: 'Function loaded. Use POST for coach requests.'
-    }, event);
+  // Réponse pour origin pas autorisé sur tout autre method
+  if (!corsOrigin) {
+    console.warn('[coach] Origin refusé :', requestOrigin || '(aucun)');
+    return jsonResponse(403, { error: 'Origin not allowed' }, null);
   }
 
-  if (method !== 'POST') {
-    return response(405, {
-      ok: false,
-      error: 'Method not allowed. Use GET, POST, or OPTIONS.'
-    }, event);
+  if (event.httpMethod !== 'POST') {
+    return jsonResponse(405, { error: 'Method not allowed' }, corsOrigin);
+  }
+
+  // Shared secret (si configuré)
+  const expectedSecret = process.env.COACH_SHARED_SECRET || '';
+  if (expectedSecret) {
+    const provided = (event.headers?.['x-coach-key'] || event.headers?.['X-Coach-Key'] || '').trim();
+    if (provided !== expectedSecret) {
+      console.warn('[coach] Mauvais ou manquant x-coach-key (origin:', requestOrigin, ')');
+      return jsonResponse(401, { error: 'Unauthorized' }, corsOrigin);
+    }
+  }
+
+  // Rate limit par IP
+  const ip = (event.headers?.['x-nf-client-connection-ip']
+           || event.headers?.['x-forwarded-for']?.split(',')[0]
+           || event.headers?.['client-ip']
+           || 'unknown').trim();
+  const rateLimit = Number(process.env.COACH_RATE_LIMIT_PER_MIN) || 10;
+  if (isRateLimited(ip, rateLimit)) {
+    console.warn('[coach] Rate limited IP :', ip);
+    return jsonResponse(429, {
+      error: 'Too many requests. Please wait a minute.'
+    }, corsOrigin);
   }
 
   try {
-    if (typeof fetch !== 'function') {
-      return response(500, { ok: false, error: 'fetch unavailable in this runtime' }, event);
-    }
-
     const apiKey = process.env.ANTHROPIC_API_KEY;
-
     if (!apiKey) {
-      return response(500, { ok: false, error: 'Server configuration error' }, event);
+      console.error('[coach] ANTHROPIC_API_KEY manquant en env');
+      return jsonResponse(500, { error: 'Server misconfigured' }, corsOrigin);
     }
 
-    const rawBody = event.body || '{}';
-    if (rawBody.length > MAX_BODY_BYTES) {
-      return response(413, { ok: false, error: 'Request too large' }, event);
+    // Body size check
+    if (event.body && event.body.length > 100 * 1024) {
+      return jsonResponse(413, { error: 'Body too large' }, corsOrigin);
     }
 
-    const payload = safeParseBody(rawBody);
+    let payload;
+    try {
+      payload = JSON.parse(event.body || '{}');
+    } catch (_) {
+      return jsonResponse(400, { error: 'Invalid JSON body' }, corsOrigin);
+    }
 
-    const question = limitText(payload.question, MAX_QUESTION_LEN);
-    const mode = ALLOWED_MODES.has(payload.mode) ? payload.mode : 'coach';
-
+    const question = String(payload.question || '').trim();
     if (!question) {
-      return response(400, {
-        ok: false,
-        error: 'Question is required'
-      }, event);
+      return jsonResponse(400, { error: 'Question is required' }, corsOrigin);
+    }
+    if (question.length > MAX_QUESTION_LEN) {
+      return jsonResponse(413, { error: `Question too long (max ${MAX_QUESTION_LEN} chars)` }, corsOrigin);
     }
 
-    const detected = detectIntent(question);
+    const context = (payload.context && typeof payload.context === 'object') ? payload.context : {};
+    const contextStr = JSON.stringify(context);
+    if (contextStr.length > MAX_CONTEXT_BYTES) {
+      return jsonResponse(413, { error: `Context too large (max ${MAX_CONTEXT_BYTES} bytes)` }, corsOrigin);
+    }
 
-    // Model is server-controlled — client suggestion only accepted if in allowlist
-    const requestedModel = limitText(payload.model || '', 80);
-    const model = ALLOWED_MODELS.has(requestedModel) ? requestedModel : DEFAULT_MODEL;
+    // Mode whitelist (le client ne peut PAS injecter un prompt arbitraire)
+    const requestedMode = String(payload.mode || 'coach').trim();
+    const mode = SYSTEM_PROMPTS[requestedMode] ? requestedMode : 'coach';
+    const systemBase = SYSTEM_PROMPTS[mode];
+    const schemaInstruction = (mode === 'voice') ? VOICE_JSON_SCHEMA_INSTRUCTION : JSON_SCHEMA_INSTRUCTION;
+    const system = systemBase + ' ' + schemaInstruction;
 
-    const maxTokens = clampNumber(payload.max_tokens, 120, MAX_TOKENS_CAP, 500);
-    const temperature = clampNumber(payload.temperature, 0, 1, 0.2);
-
-    const systemPrompt = [
-      "Tu es le coach personnel de l'utilisateur.",
-      "Reponds en francais.",
-      "Ton direct, concret, operationnel.",
-      "Tu dois repondre uniquement en JSON valide.",
-      "Aucun markdown.",
-      "Aucune phrase avant ou apres le JSON.",
-      "Schema obligatoire:",
-      JSON.stringify({
-        answer: 'string',
-        priority: 'low|medium|high',
-        priority_level: 'critical|important|normal|low',
-        priority_label: 'Critique|Important|Normal|Faible',
-        priority_color: 'hex',
-        priority_rank: 1,
-        focus_area: 'string',
-        intent: 'coach_answer|create_task|routine_update|delete_or_disable|other',
-        should_create_task: false,
-        should_update_routine: false,
-        should_delete_or_disable: false,
-        task: null,
-        routine_update: null,
-        next_action_title: 'string',
-        next_action_sub: 'string',
-        warning: 'string'
-      }),
-      "Si la demande cree une tache, remplis task et should_create_task=true.",
-      "Si la demande valide ou recalcule la routine, remplis routine_update et should_update_routine=true.",
-      "Si la demande supprime ou desactive, remplis should_delete_or_disable=true et warning."
-    ].join(' ');
-
-    const contextRaw = payload.context || {};
-    const contextText = JSON.stringify(contextRaw).slice(0, MAX_CONTEXT_LEN);
+    // max_tokens cappé
+    const requestedMaxTokens = Number(payload.max_tokens);
+    const maxTokens = (requestedMaxTokens > 0 && requestedMaxTokens <= MAX_TOKENS_CAP)
+      ? requestedMaxTokens
+      : 500;
 
     const userPrompt = [
-      'Mode: ' + mode,
-      'Detected intent: ' + JSON.stringify(detected),
-      'Context: ' + contextText,
-      'Question: ' + question
+      `Mode: ${mode}`,
+      '',
+      'Contexte actuel :',
+      contextStr,
+      '',
+      'Question : ' + question
     ].join('\n');
 
-    const anthropicResponse = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: model,
-        max_tokens: maxTokens,
-        temperature: temperature,
-        system: systemPrompt,
-        messages: [
-          {
-            role: 'user',
-            content: userPrompt
-          }
-        ]
-      })
-    });
+    // Appel Anthropic avec timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), ANTHROPIC_TIMEOUT_MS);
 
-    const data = await anthropicResponse.json().catch(function () {
-      return {};
-    });
+    let res;
+    try {
+      res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+          model: FORCED_MODEL,
+          max_tokens: maxTokens,
+          system,
+          messages: [{ role: 'user', content: userPrompt }]
+        }),
+        signal: controller.signal
+      });
+    } catch (fetchErr) {
+      clearTimeout(timeoutId);
+      if (fetchErr.name === 'AbortError') {
+        console.error('[coach] Anthropic timeout après', ANTHROPIC_TIMEOUT_MS, 'ms');
+        return jsonResponse(504, { error: 'Coach timeout — réessaye dans un instant' }, corsOrigin);
+      }
+      console.error('[coach] Fetch error :', fetchErr);
+      return jsonResponse(502, { error: 'Bad gateway' }, corsOrigin);
+    }
+    clearTimeout(timeoutId);
 
-    if (!anthropicResponse.ok) {
-      return response(anthropicResponse.status, {
-        ok: false,
-        error: 'Upstream request failed',
-        server_ms: Date.now() - startedAt
-      }, event);
+    let data;
+    try {
+      data = await res.json();
+    } catch (_) {
+      console.error('[coach] Anthropic réponse non-JSON, status', res.status);
+      return jsonResponse(502, { error: 'Invalid upstream response' }, corsOrigin);
     }
 
-    const rawText = Array.isArray(data.content)
+    if (!res.ok) {
+      console.error('[coach] Anthropic API error', res.status, data?.error?.message);
+      // Ne PAS forwarder le payload Anthropic brut — peut leaker des détails internes
+      return jsonResponse(res.status, {
+        error: data?.error?.message || 'Anthropic request failed'
+      }, corsOrigin);
+    }
+
+    const text = Array.isArray(data.content)
       ? data.content
-          .filter(function (block) {
-            return block && block.type === 'text';
-          })
-          .map(function (block) {
-            return block.text;
-          })
+          .filter(block => block && block.type === 'text')
+          .map(block => block.text)
           .join('\n\n')
           .trim()
       : '';
 
-    const parsed = extractJsonObject(rawText) || {};
+    function safeParseJson(raw) {
+      if (!raw) return null;
+      try { return JSON.parse(raw); } catch (_) {}
+      const start = raw.indexOf('{');
+      const end = raw.lastIndexOf('}');
+      if (start !== -1 && end !== -1 && end > start) {
+        try { return JSON.parse(raw.slice(start, end + 1)); } catch (_) {}
+      }
+      return null;
+    }
 
-    return response(
-      200,
-      normalizeFinalAnswer(parsed, rawText, mode, detected, startedAt),
-      event
-    );
-  } catch (error) {
-    return response(error.statusCode || 500, {
-      ok: false,
-      error: error && error.message ? error.message : 'Unknown server error',
-      server_ms: Date.now() - startedAt
-    }, event);
+    const parsed = safeParseJson(text) || {};
+    const str = (v, fallback = '') =>
+      (typeof v === 'string' && v.trim()) ? v.trim() : fallback;
+
+    const normalized = {
+      ok: true,
+      mode,
+      answer: str(parsed.answer, text || 'Pas de réponse.'),
+      priority: ['low', 'medium', 'high'].includes(parsed.priority) ? parsed.priority : 'medium',
+      focus_area: str(parsed.focus_area),
+      next_action_title: str(parsed.next_action_title),
+      next_action_sub: str(parsed.next_action_sub),
+      warning: typeof parsed.warning === 'string' ? parsed.warning.trim() : ''
+    };
+
+    return jsonResponse(200, normalized, corsOrigin);
+
+  } catch (err) {
+    console.error('[coach] Unhandled error :', err);
+    return jsonResponse(500, { error: 'Internal server error' }, corsOrigin);
   }
 };

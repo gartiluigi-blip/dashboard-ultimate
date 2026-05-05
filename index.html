@@ -8606,7 +8606,6 @@ window.decorateRoutineV35   = decorateRoutineV35;
   cursor:pointer; transition:transform .2s;
 }
 #focus-mode-btn:hover { transform:scale(1.1); }
-body.focus-mode { background:#000 !important; }
 body.focus-mode > *:not(#focus-overlay) { opacity:0 !important; pointer-events:none !important; }
 #focus-overlay {
   display:none; position:fixed; inset:0; z-index:9998;
@@ -14756,8 +14755,8 @@ function decorateRoutinePrioBadges(){
 /* ── ELO chart with phase zones ── */
 function enhanceEloChart(){
   const canvas = document.getElementById('chart-elo');
-  if (!canvas) return;
-  const chart = Chart && Chart.getChart ? Chart.getChart(canvas) : null;
+  if (!canvas || typeof Chart === 'undefined') return;
+  const chart = Chart.getChart ? Chart.getChart(canvas) : null;
   if (!chart || !chart.data || !chart.data.labels || chart.data.labels.length < 2) return;
   if (chart.__eloEnhanced) return;
   chart.__eloEnhanced = true;
@@ -14783,7 +14782,7 @@ function enhanceEloChart(){
   chart.update('none');
 }
 
-/* ── Patch renderStats to trigger enhanceEloChart ── */
+/* ── Patch renderStats ── */
 (function patchRenderStats(){
   const _orig = window.renderStats;
   if (typeof _orig !== 'function') return;
@@ -14930,7 +14929,6 @@ function boot(){
     markLateBlocks();
     checkPreApptAlerts();
   }, 60000);
-  /* Re-run on tab switches */
   document.addEventListener('click', e => {
     const tab = e.target.closest('.tab[data-tab],.bottom-nav-item[data-tab],.nav-pill[data-tab]');
     if (!tab) return;
@@ -14956,7 +14954,6 @@ else boot();
 if (window.__featV39) return;
 window.__featV39 = true;
 
-/* ── helpers ── */
 function _getItem(k){ try{ return JSON.parse(localStorage.getItem(k)||'null'); }catch(e){ return null; } }
 function _today(){ return new Date().toISOString().slice(0,10); }
 function _daysAgo(n){ const d=new Date(); d.setDate(d.getDate()-n); return d.toISOString().slice(0,10); }
@@ -14993,13 +14990,10 @@ function renderDomainStreaksV39(){
   const icons = {epfc:'🏥',code:'💻',nl:'🌐',anki:'🎴',read:'📚',sport:'🏃',chess:'♟',vinted:'🛍'};
   let html = '';
   domains.forEach(d => {
-    let streak = 0;
-    let i = 0;
-    while(true){
-      const date = _daysAgo(i);
-      const v = parseFloat((logs[date]||{})[d]||'0');
+    let streak = 0, i = 0;
+    while(i <= 365){
+      const v = parseFloat((logs[_daysAgo(i)]||{})[d]||'0');
       if (v > 0){ streak++; i++; } else break;
-      if (i > 365) break;
     }
     if (streak > 0){
       html += `<span class="domain-streak-pill">${icons[d]||d} ${d} <span class="streak-fire">🔥${streak}</span></span>`;
@@ -15008,7 +15002,7 @@ function renderDomainStreaksV39(){
   wrap.innerHTML = html || '<span style="color:#64748b;font-size:12px">Aucun streak actif</span>';
 }
 
-/* ── Radar chart (Chart.js) ── */
+/* ── Radar chart ── */
 function renderRadarChart(){
   const canvas = document.getElementById('radar-chart');
   if (!canvas || typeof Chart === 'undefined') return;
@@ -15016,12 +15010,11 @@ function renderRadarChart(){
   const logs = _getItem('dashv2_logs') || {};
   const domains = ['epfc','code','nl','anki','read','sport','chess'];
   const labels = ['EPFC','Code','NL','Anki','Read','Sport','Chess'];
-  const today = _today();
   const data = domains.map(d => {
-    let total = 0, days = 0;
+    let days = 0;
     for (let i=0;i<7;i++){
       const v = parseFloat((logs[_daysAgo(i)]||{})[d]||'0');
-      if (v>0){ total+=v; days++; }
+      if (v>0) days++;
     }
     return Math.min(days/7*10, 10);
   });
@@ -15089,8 +15082,8 @@ function initFocusMode(){
   }
 
   btn.addEventListener('click', () => {
-    const visible = document.querySelector('.shift-view:not(.hidden) .tl-item.active,.shift-view:not(.hidden) .tl-item:not(.done-early-v35)');
-    const taskName = visible ? (visible.querySelector('.tl-name,.tl-title,.tl-label')?.textContent?.trim()||'Tâche en cours') : 'Session Pomodoro';
+    const firstTask = document.querySelector('.shift-view:not(.hidden) .tl-item:not(.done-early-v35)');
+    const taskName = firstTask ? (firstTask.querySelector('.tl-name,.tl-title,.tl-label')?.textContent?.trim()||'Tâche en cours') : 'Session Pomodoro';
     const el = document.getElementById('focus-task-name');
     if (el) el.textContent = taskName;
     secondsLeft = 25*60;
