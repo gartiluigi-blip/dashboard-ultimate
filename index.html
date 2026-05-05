@@ -17034,6 +17034,35 @@ window.decorateRoutineV35   = decorateRoutineV35;
   margin-bottom: 6px;
 }
 
+/* ── enhancements-v38: late blocks ── */
+.tl-item.late-v38{
+  border-left: 3px solid #f97316 !important;
+  background: linear-gradient(90deg,rgba(249,115,22,.07),transparent) !important;
+}
+.tl-badge-late{ color:#f97316; background:rgba(249,115,22,.13); }
+.routine-late-banner{
+  margin:6px 8px 2px; padding:7px 12px; border-radius:8px;
+  background:rgba(249,115,22,.08); border:1px solid rgba(249,115,22,.28);
+  font:600 11px var(--f-mono,monospace); color:#fb923c;
+}
+
+/* ── enhancements-v38: priority badges P1/P2/P3 in routine ── */
+.tl-prio-badge{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:19px; height:15px; border-radius:4px; flex-shrink:0;
+  font:800 9px var(--f-mono,monospace); letter-spacing:.02em;
+  vertical-align:middle; margin-right:5px;
+}
+.tl-prio-critical{ background:rgba(239,68,68,.18); color:#ef4444; border:1px solid rgba(239,68,68,.35); }
+.tl-prio-high    { background:rgba(245,158,11,.18); color:#f59e0b; border:1px solid rgba(245,158,11,.35); }
+.tl-prio-normal  { background:rgba(16,185,129,.18); color:#10b981; border:1px solid rgba(16,185,129,.35); }
+.tl-item[data-prio="critical"]{ border-left:3px solid #ef4444 !important; background:linear-gradient(90deg,rgba(239,68,68,.07),transparent) !important; }
+.tl-item[data-prio="high"]    { border-left:3px solid #f59e0b !important; background:linear-gradient(90deg,rgba(245,158,11,.06),transparent) !important; }
+.tl-item[data-prio="normal"]  { border-left:3px solid #10b981 !important; background:linear-gradient(90deg,rgba(16,185,129,.05),transparent) !important; }
+
+/* ── enhancements-v38: done banner % ── */
+.routine-done-banner strong{ font-weight:900; color:#34d399; }
+
 </style>
 
 <script id="fix-v37-js">
@@ -17750,6 +17779,324 @@ if (document.readyState !== 'loading'){
 } else {
   document.addEventListener('DOMContentLoaded', () => setTimeout(renderRoutineFixedEvents, 950));
 }
+
+})();
+</script>
+
+<script id="enhancements-v38">
+(function(){
+'use strict';
+if (window.__enhV38) return;
+window.__enhV38 = true;
+
+// ── 1. LATE BLOCK DETECTION ──────────────────────────────────────────────────
+function markLateBlocks(){
+  const now = new Date();
+  const curMin = now.getHours()*60 + now.getMinutes();
+  const visible = document.querySelector('.shift-view:not(.hidden)');
+  if (!visible) return;
+
+  const flexItems = Array.from(
+    visible.querySelectorAll('.tl-item[data-time]:not([data-adaptive-fixed-id])')
+  );
+  // Active block = currently carrying .now class (set by highlightNow)
+  const activeIdx = flexItems.findIndex(item => item.classList.contains('now'));
+
+  let lateCount = 0;
+  flexItems.forEach((item, idx) => {
+    item.classList.remove('late-v38');
+    item.querySelectorAll('.tl-badge-late').forEach(b => b.remove());
+
+    if (item.classList.contains('done-early-v35')) return; // already validated
+
+    const startMin = typeof parseTimeMin === 'function'
+      ? parseTimeMin(item.dataset.time || '') : null;
+    if (startMin === null) return;
+
+    // Late = comes before the active block and isn't done
+    // If no active block, late = started >15 min ago
+    const isLate = activeIdx >= 0 ? idx < activeIdx : (startMin + 15 < curMin);
+    if (!isLate) return;
+
+    item.classList.add('late-v38');
+    const b = document.createElement('span');
+    b.className = 'tl-badge-adaptive tl-badge-late';
+    b.textContent = '⚠ retard';
+    item.appendChild(b);
+    lateCount++;
+  });
+
+  const tl = visible.querySelector('.timeline');
+  const parent = tl && tl.parentElement;
+  if (!parent) return;
+  parent.querySelectorAll('.routine-late-banner').forEach(el => el.remove());
+  if (lateCount > 0){
+    const banner = document.createElement('div');
+    banner.className = 'routine-late-banner';
+    banner.textContent = `⚠ ${lateCount} bloc${lateCount>1?'s':''} en retard — valide ou adapte`;
+    parent.insertBefore(banner, tl);
+  }
+}
+
+// ── 2. PRIORITY P1/P2/P3 BADGES IN ROUTINE ───────────────────────────────────
+function decorateRoutinePrioBadges(){
+  const visible = document.querySelector('.shift-view:not(.hidden)');
+  if (!visible) return;
+
+  let prioColors = {};
+  try {
+    const raw = localStorage.getItem('dashv2_prio_colors');
+    if (raw) prioColors = JSON.parse(raw);
+  } catch(_){}
+
+  Array.from(visible.querySelectorAll('.tl-item[data-time]:not([data-adaptive-fixed-id])')).forEach(item => {
+    item.removeAttribute('data-prio');
+    item.querySelectorAll('.tl-prio-badge').forEach(b => b.remove());
+
+    const id = item.dataset.v35Id;
+    if (!id) return;
+    const p = prioColors[id];
+    if (!p || p === 'low') return;
+
+    item.dataset.prio = p;
+    const badge = document.createElement('span');
+    badge.className = 'tl-prio-badge tl-prio-' + p;
+    badge.textContent = p === 'critical' ? 'P1' : p === 'high' ? 'P2' : 'P3';
+    // Place before .tl-name so it reads "P1 · NomBloc"
+    const nameEl = item.querySelector('.tl-name');
+    if (nameEl) nameEl.insertBefore(badge, nameEl.firstChild);
+    else item.appendChild(badge);
+  });
+}
+
+// ── 3. ELO ADVANCEMENT CHART WITH PHASE ZONES ────────────────────────────────
+const ELO_ZONES = [
+  { min:    0, max:  800, label:'Débutant',      fill:'rgba(75,85,99,.3)',     tc:'#6b7280' },
+  { min:  800, max: 1000, label:'Intermédiaire', fill:'rgba(34,211,238,.09)', tc:'#22d3ee' },
+  { min: 1000, max: 1200, label:'Avancé',        fill:'rgba(52,211,153,.09)', tc:'#34d399' },
+  { min: 1200, max: 1500, label:'Expert',        fill:'rgba(245,158,11,.10)', tc:'#f59e0b' },
+  { min: 1500, max: 2400, label:'Maître',        fill:'rgba(239,68,68,.09)', tc:'#ef4444' },
+];
+
+function renderEloChart(svgId, hist){
+  const svg = document.getElementById(svgId);
+  if (!svg) return;
+  const W=400, H=180, pL=38, pR=10, pT=14, pB=22;
+  svg.innerHTML = '';
+  svg.setAttribute('viewBox','0 0 400 180');
+
+  if (!hist || hist.length < 1){
+    const t = document.createElementNS('http://www.w3.org/2000/svg','text');
+    t.setAttribute('x',200); t.setAttribute('y',90); t.setAttribute('text-anchor','middle');
+    t.setAttribute('fill','#6b6b85'); t.setAttribute('font-size','13');
+    t.setAttribute('font-family','Outfit,sans-serif'); t.setAttribute('font-style','italic');
+    t.textContent = 'Remplis l\'ELO dans les mini-trackers';
+    svg.appendChild(t); return;
+  }
+
+  // Fill 30-day span with forward-fill for visual continuity
+  const t0 = new Date(); t0.setHours(0,0,0,0);
+  const start30 = new Date(t0); start30.setDate(t0.getDate()-29);
+  const dayVals = new Array(30).fill(null);
+  hist.forEach(h => {
+    const diff = Math.round((new Date(h.d) - start30) / 86400000);
+    if (diff >= 0 && diff < 30) dayVals[diff] = h.v;
+  });
+  let last = null;
+  for (let i=0; i<30; i++){
+    if (dayVals[i]!=null) last = dayVals[i];
+    else if (last!=null) dayVals[i] = last;
+  }
+
+  const vals = dayVals.filter(v => v!=null);
+  if (!vals.length) return;
+  const dataMin = Math.min(...vals);
+  const dataMax = Math.max(...vals);
+  const yMin = Math.max(0, dataMin - 80);
+  const yMax = dataMax + 120;
+  const yR = yMax - yMin || 1;
+  const fy = v => pT + (H-pT-pB) * (1-(v-yMin)/yR);
+  const xStep = (W-pL-pR) / 29;
+
+  // ① Phase zone backgrounds
+  ELO_ZONES.forEach(zone => {
+    const top = Math.max(pT,   fy(Math.min(zone.max, yMax)));
+    const bot = Math.min(H-pB, fy(Math.max(zone.min, yMin)));
+    if (bot <= top) return;
+    const rect = document.createElementNS('http://www.w3.org/2000/svg','rect');
+    rect.setAttribute('x', pL); rect.setAttribute('y', top);
+    rect.setAttribute('width', W-pL-pR); rect.setAttribute('height', bot-top);
+    rect.setAttribute('fill', zone.fill);
+    svg.appendChild(rect);
+    if (bot - top > 13){
+      const lbl = document.createElementNS('http://www.w3.org/2000/svg','text');
+      lbl.setAttribute('x', W-pR-3); lbl.setAttribute('y', (top+bot)/2+3);
+      lbl.setAttribute('text-anchor','end'); lbl.setAttribute('fill', zone.tc);
+      lbl.setAttribute('font-size','8'); lbl.setAttribute('opacity','.8');
+      lbl.setAttribute('font-family','JetBrains Mono,monospace');
+      lbl.textContent = zone.label;
+      svg.appendChild(lbl);
+    }
+  });
+
+  // ② Milestone lines at 800/1000/1200/1500
+  [800,1000,1200,1500].forEach(m => {
+    if (m < yMin || m > yMax) return;
+    const my = fy(m);
+    const ln = document.createElementNS('http://www.w3.org/2000/svg','line');
+    ln.setAttribute('x1',pL); ln.setAttribute('y1',my);
+    ln.setAttribute('x2',W-pR); ln.setAttribute('y2',my);
+    ln.setAttribute('stroke','#3a3a58'); ln.setAttribute('stroke-width','1');
+    ln.setAttribute('stroke-dasharray','3,3');
+    svg.appendChild(ln);
+    const lbl = document.createElementNS('http://www.w3.org/2000/svg','text');
+    lbl.setAttribute('x',pL-4); lbl.setAttribute('y',my+3);
+    lbl.setAttribute('text-anchor','end'); lbl.setAttribute('fill','#555570');
+    lbl.setAttribute('font-size','8'); lbl.setAttribute('font-family','JetBrains Mono,monospace');
+    lbl.textContent = m;
+    svg.appendChild(lbl);
+  });
+
+  // ③ X axis
+  const xAx = document.createElementNS('http://www.w3.org/2000/svg','line');
+  xAx.setAttribute('x1',pL); xAx.setAttribute('y1',H-pB);
+  xAx.setAttribute('x2',W-pR); xAx.setAttribute('y2',H-pB);
+  xAx.setAttribute('stroke','#242438'); xAx.setAttribute('stroke-width','1');
+  svg.appendChild(xAx);
+
+  // ④ Area fill + progression line
+  let d='', fi=-1, li=-1, ok=false;
+  for (let i=0; i<30; i++){
+    const v=dayVals[i]; if(v==null){ok=false;continue;}
+    const cx=(pL+i*xStep).toFixed(1), cy=fy(v).toFixed(1);
+    d += (ok?` L ${cx} ${cy}`:`M ${cx} ${cy}`);
+    ok=true; if(fi<0)fi=i; li=i;
+  }
+  if (d){
+    const area = document.createElementNS('http://www.w3.org/2000/svg','path');
+    area.setAttribute('d', d+` L ${(pL+li*xStep).toFixed(1)} ${H-pB} L ${(pL+fi*xStep).toFixed(1)} ${H-pB} Z`);
+    area.setAttribute('fill','rgba(34,211,238,.10)'); area.setAttribute('stroke','none');
+    svg.appendChild(area);
+    const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+    path.setAttribute('d',d); path.setAttribute('fill','none');
+    path.setAttribute('stroke','#22d3ee'); path.setAttribute('stroke-width','2');
+    path.setAttribute('stroke-linejoin','round'); path.setAttribute('stroke-linecap','round');
+    svg.appendChild(path);
+    // Dots
+    for (let i=0; i<30; i++){
+      const v=dayVals[i]; if(v==null) continue;
+      const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      c.setAttribute('cx',(pL+i*xStep).toFixed(1)); c.setAttribute('cy',fy(v).toFixed(1));
+      c.setAttribute('r', i===li?'4':'2');
+      c.setAttribute('fill', i===li?'#22d3ee':'rgba(34,211,238,.45)');
+      svg.appendChild(c);
+    }
+    // Current ELO value label
+    if (li >= 0){
+      const v=dayVals[li], cx=pL+li*xStep, cy=fy(v);
+      const lbl = document.createElementNS('http://www.w3.org/2000/svg','text');
+      lbl.setAttribute('x', li>24 ? cx-7 : cx+7);
+      lbl.setAttribute('y', cy-8);
+      lbl.setAttribute('text-anchor', li>24?'end':'start');
+      lbl.setAttribute('fill','#22d3ee'); lbl.setAttribute('font-size','12');
+      lbl.setAttribute('font-weight','700');
+      lbl.setAttribute('font-family','JetBrains Mono,monospace');
+      lbl.textContent = Math.round(v);
+      svg.appendChild(lbl);
+    }
+  }
+
+  // ⑤ X labels
+  ['J-29','J-14','Auj.'].forEach((label,i) => {
+    const xi = [0,14,29][i];
+    const lbl = document.createElementNS('http://www.w3.org/2000/svg','text');
+    lbl.setAttribute('x', pL+xi*xStep);
+    lbl.setAttribute('y', H-pB+13);
+    lbl.setAttribute('text-anchor','middle'); lbl.setAttribute('fill','#6b6b85');
+    lbl.setAttribute('font-size','9'); lbl.setAttribute('font-family','JetBrains Mono,monospace');
+    lbl.textContent = label;
+    svg.appendChild(lbl);
+  });
+}
+
+function refreshEloChart(){
+  try {
+    const raw = localStorage.getItem('dashv2_hist_elo');
+    const hist = raw ? JSON.parse(raw) : [];
+    renderEloChart('chart-elo', hist);
+  } catch(_){}
+}
+
+// ── 4. PATCH window.applyRoutineStateV35 ─────────────────────────────────────
+// Wrap the already-patched v37 version to run late-detection + prio badges after
+setTimeout(() => {
+  const origApply = window.applyRoutineStateV35;
+  if (typeof origApply !== 'function' || window.__enhV38Patched) return;
+  window.__enhV38Patched = true;
+  window.applyRoutineStateV35 = function(){
+    origApply.apply(this, arguments);
+    // Update done banner with percentage
+    try {
+      const tl = document.querySelector('.shift-view:not(.hidden) .timeline');
+      if (tl){
+        const banner = tl.parentElement.querySelector('.routine-done-banner');
+        if (banner){
+          const all = tl.parentElement.querySelectorAll('.tl-item[data-time]:not([data-adaptive-fixed-id])');
+          const total = all.length;
+          const done = Array.from(all).filter(i => i.classList.contains('done-early-v35')).length;
+          if (total > 0 && done > 0){
+            const pct = Math.round(done/total*100);
+            banner.innerHTML = `✓ ${done}/${total} blocs · <strong>${pct}%</strong> du jour`;
+          }
+        }
+      }
+    } catch(_){}
+    setTimeout(() => {
+      try { markLateBlocks(); } catch(_){}
+      try { decorateRoutinePrioBadges(); } catch(_){}
+    }, 40);
+  };
+}, 500); // after v37 has patched (200ms) and adaptive-routine (950ms)
+
+// ── 5. PATCH window.renderStats FOR ELO CHART ───────────────────────────────
+if (typeof window.renderStats === 'function'){
+  const origRS = window.renderStats;
+  window.renderStats = function(){
+    origRS.apply(this, arguments);
+    setTimeout(refreshEloChart, 20);
+  };
+}
+
+// ── BOOT ─────────────────────────────────────────────────────────────────────
+setTimeout(() => {
+  try { markLateBlocks(); } catch(_){}
+  try { decorateRoutinePrioBadges(); } catch(_){}
+  // Render ELO chart if stats tab is already visible
+  try {
+    if (document.querySelector('[data-page="stats"]:not(.hidden), #p-stats:not(.hidden)'))
+      refreshEloChart();
+  } catch(_){}
+}, 1400);
+
+// Update late detection every minute
+setInterval(() => {
+  try {
+    if (document.querySelector('.shift-view:not(.hidden)')) markLateBlocks();
+  } catch(_){}
+}, 60000);
+
+// Re-run on routine tab or shift change
+document.addEventListener('click', e => {
+  if (e.target.closest('.tab[data-tab="routine"],.shift-chip,[data-shift]')){
+    setTimeout(() => {
+      try { markLateBlocks(); } catch(_){}
+      try { decorateRoutinePrioBadges(); } catch(_){}
+    }, 350);
+  }
+  if (e.target.closest('.tab[data-tab="stats"]')){
+    setTimeout(refreshEloChart, 350);
+  }
+}, true);
 
 })();
 </script>
