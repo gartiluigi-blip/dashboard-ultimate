@@ -17039,7 +17039,13 @@ window.decorateRoutineV35   = decorateRoutineV35;
   border-left: 3px solid #f97316 !important;
   background: linear-gradient(90deg,rgba(249,115,22,.07),transparent) !important;
 }
-.tl-badge-late{ color:#f97316; background:rgba(249,115,22,.13); }
+/* enh-late-badge: unique class, NOT cleaned by adaptive-routine */
+.enh-late-badge{
+  display:inline-flex; margin-left:8px; padding:2px 7px; border-radius:999px;
+  font:800 9px var(--f-mono,monospace); letter-spacing:.04em; text-transform:uppercase;
+  color:#f97316; background:rgba(249,115,22,.15); border:1px solid rgba(249,115,22,.28);
+  vertical-align:middle; pointer-events:none;
+}
 .routine-late-banner{
   margin:6px 8px 2px; padding:7px 12px; border-radius:8px;
   background:rgba(249,115,22,.08); border:1px solid rgba(249,115,22,.28);
@@ -17049,19 +17055,25 @@ window.decorateRoutineV35   = decorateRoutineV35;
 /* ── enhancements-v38: priority badges P1/P2/P3 in routine ── */
 .tl-prio-badge{
   display:inline-flex; align-items:center; justify-content:center;
-  width:19px; height:15px; border-radius:4px; flex-shrink:0;
+  width:20px; height:16px; border-radius:4px; flex-shrink:0;
   font:800 9px var(--f-mono,monospace); letter-spacing:.02em;
-  vertical-align:middle; margin-right:5px;
+  vertical-align:middle; margin-right:6px;
 }
-.tl-prio-critical{ background:rgba(239,68,68,.18); color:#ef4444; border:1px solid rgba(239,68,68,.35); }
-.tl-prio-high    { background:rgba(245,158,11,.18); color:#f59e0b; border:1px solid rgba(245,158,11,.35); }
-.tl-prio-normal  { background:rgba(16,185,129,.18); color:#10b981; border:1px solid rgba(16,185,129,.35); }
-.tl-item[data-prio="critical"]{ border-left:3px solid #ef4444 !important; background:linear-gradient(90deg,rgba(239,68,68,.07),transparent) !important; }
-.tl-item[data-prio="high"]    { border-left:3px solid #f59e0b !important; background:linear-gradient(90deg,rgba(245,158,11,.06),transparent) !important; }
-.tl-item[data-prio="normal"]  { border-left:3px solid #10b981 !important; background:linear-gradient(90deg,rgba(16,185,129,.05),transparent) !important; }
+.tl-prio-critical{ background:rgba(239,68,68,.22); color:#ef4444; border:1px solid rgba(239,68,68,.4); }
+.tl-prio-high    { background:rgba(245,158,11,.22); color:#f59e0b; border:1px solid rgba(245,158,11,.4); }
+.tl-prio-normal  { background:rgba(16,185,129,.22); color:#10b981; border:1px solid rgba(16,185,129,.4); }
+.tl-item[data-prio="critical"]:not(.late-v38){ border-left:3px solid rgba(239,68,68,.7) !important; background:linear-gradient(90deg,rgba(239,68,68,.07),transparent) !important; }
+.tl-item[data-prio="high"]:not(.late-v38)    { border-left:3px solid rgba(245,158,11,.6) !important; background:linear-gradient(90deg,rgba(245,158,11,.06),transparent) !important; }
+.tl-item[data-prio="normal"]:not(.late-v38)  { border-left:3px solid rgba(16,185,129,.5) !important; background:linear-gradient(90deg,rgba(16,185,129,.05),transparent) !important; }
 
 /* ── enhancements-v38: done banner % ── */
 .routine-done-banner strong{ font-weight:900; color:#34d399; }
+
+/* ── enhancements-v38: score du jour ── */
+#st-score{ transition: color .4s; }
+
+/* ── enhancements-v38: momentum chart ── */
+#momentum-chart-card{ margin-top:12px; }
 
 </style>
 
@@ -17789,38 +17801,76 @@ if (document.readyState !== 'loading'){
 if (window.__enhV38) return;
 window.__enhV38 = true;
 
-// ── 1. LATE BLOCK DETECTION ──────────────────────────────────────────────────
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+const NS = 'dashv2_';
+function storeGet(k, def){ try { const v = localStorage.getItem(NS+k); return v ? JSON.parse(v) : def; } catch(_){ return def; } }
+
+function todayKey(){
+  const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+// Parse single time token → minutes (works on "9:00", "9h00", etc.)
+function _parseMin(s){
+  if (!s) return null;
+  const m = String(s).match(/(\d{1,2})\s*(?:h|:)\s*(\d{0,2})/);
+  if (!m) return null;
+  return parseInt(m[1],10)*60 + parseInt((m[2]||'0').padEnd(2,'0'),10);
+}
+
+// Extract {start, end} minutes from a time string like "9:00 – 10:15" or "8:25"
+function _parseRange(text){
+  const parts = (String(text||'').match(/\d{1,2}\s*(?:h|:)\s*\d{2}/g) || []);
+  return { start: parts[0] ? _parseMin(parts[0]) : null,
+           end:   parts[1] ? _parseMin(parts[1]) : null };
+}
+
+// ── 1. LATE BLOCK DETECTION ───────────────────────────────────────────────────
+// Uses end-time comparison directly — NOT the fragile .now CSS class.
+// Badge class is "enh-late-badge" (NOT tl-badge-adaptive) so adaptive-routine
+// cleanup at line ~17639 cannot wipe it between cycles.
 function markLateBlocks(){
-  const now = new Date();
-  const curMin = now.getHours()*60 + now.getMinutes();
+  const curMin = new Date().getHours()*60 + new Date().getMinutes();
   const visible = document.querySelector('.shift-view:not(.hidden)');
   if (!visible) return;
 
   const flexItems = Array.from(
     visible.querySelectorAll('.tl-item[data-time]:not([data-adaptive-fixed-id])')
   );
-  // Active block = currently carrying .now class (set by highlightNow)
-  const activeIdx = flexItems.findIndex(item => item.classList.contains('now'));
 
   let lateCount = 0;
+
   flexItems.forEach((item, idx) => {
+    // Clean previous state
     item.classList.remove('late-v38');
-    item.querySelectorAll('.tl-badge-late').forEach(b => b.remove());
+    item.querySelectorAll('.enh-late-badge').forEach(b => b.remove());
 
-    if (item.classList.contains('done-early-v35')) return; // already validated
+    // Skip done/hidden items
+    if (item.classList.contains('done-early-v35')) return;
+    if (item.style.display === 'none') return;
 
-    const startMin = typeof parseTimeMin === 'function'
-      ? parseTimeMin(item.dataset.time || '') : null;
+    // Parse time range from the displayed/adapted .tl-time text
+    const timeEl = item.querySelector('.tl-time');
+    const timeText = timeEl
+      ? (timeEl.dataset.orig || timeEl.textContent.trim())
+      : (item.dataset.time || '');
+    const { start: startMin, end: endMin } = _parseRange(timeText);
     if (startMin === null) return;
 
-    // Late = comes before the active block and isn't done
-    // If no active block, late = started >15 min ago
-    const isLate = activeIdx >= 0 ? idx < activeIdx : (startMin + 15 < curMin);
-    if (!isLate) return;
+    // Determine block end: explicit end > next block's start > start+30
+    let blockEnd = endMin;
+    if (blockEnd === null){
+      const next = flexItems[idx + 1];
+      if (next) blockEnd = _parseMin(next.dataset.time || '');
+      if (blockEnd === null) blockEnd = startMin + 30;
+    }
+
+    // Late = block should have ended at least 5 min ago
+    if (blockEnd + 5 > curMin) return;
 
     item.classList.add('late-v38');
     const b = document.createElement('span');
-    b.className = 'tl-badge-adaptive tl-badge-late';
+    b.className = 'enh-late-badge';
     b.textContent = '⚠ retard';
     item.appendChild(b);
     lateCount++;
@@ -17838,44 +17888,61 @@ function markLateBlocks(){
   }
 }
 
-// ── 2. PRIORITY P1/P2/P3 BADGES IN ROUTINE ───────────────────────────────────
+// ── 2. PRIORITY BADGES P1/P2/P3 ──────────────────────────────────────────────
+// Auto-assigned from .tl-dot class; manual prio_colors override takes precedence.
+const DOT_PRIO = {
+  food:'critical', sleep:'critical',
+  study:'high', code:'high', nl:'high', work:'high', ai:'high',
+  sport:'normal', rest:'normal', read:'normal', hygiene:'normal', vinted:'normal'
+};
+
 function decorateRoutinePrioBadges(){
   const visible = document.querySelector('.shift-view:not(.hidden)');
   if (!visible) return;
 
   let prioColors = {};
-  try {
-    const raw = localStorage.getItem('dashv2_prio_colors');
-    if (raw) prioColors = JSON.parse(raw);
-  } catch(_){}
+  try { const r = localStorage.getItem('dashv2_prio_colors'); if (r) prioColors = JSON.parse(r); } catch(_){}
 
   Array.from(visible.querySelectorAll('.tl-item[data-time]:not([data-adaptive-fixed-id])')).forEach(item => {
     item.removeAttribute('data-prio');
     item.querySelectorAll('.tl-prio-badge').forEach(b => b.remove());
+    if (item.style.display === 'none') return;
 
-    const id = item.dataset.v35Id;
-    if (!id) return;
-    const p = prioColors[id];
-    if (!p || p === 'low') return;
+    // Manual override via prio_colors storage (keyed on v35Id)
+    let prio = null;
+    const v35Id = item.dataset.v35Id;
+    if (v35Id && prioColors[v35Id] && prioColors[v35Id] !== 'low')
+      prio = prioColors[v35Id];
 
-    item.dataset.prio = p;
+    // Auto-assign from dot class if no manual override
+    if (!prio){
+      const dot = item.querySelector('.tl-dot');
+      if (dot){
+        for (const cls of dot.classList){
+          if (DOT_PRIO[cls]){ prio = DOT_PRIO[cls]; break; }
+        }
+      }
+    }
+
+    if (!prio) return;
+
+    item.dataset.prio = prio;
     const badge = document.createElement('span');
-    badge.className = 'tl-prio-badge tl-prio-' + p;
-    badge.textContent = p === 'critical' ? 'P1' : p === 'high' ? 'P2' : 'P3';
-    // Place before .tl-name so it reads "P1 · NomBloc"
+    badge.className = 'tl-prio-badge tl-prio-' + prio;
+    badge.textContent = prio === 'critical' ? 'P1' : prio === 'high' ? 'P2' : 'P3';
     const nameEl = item.querySelector('.tl-name');
     if (nameEl) nameEl.insertBefore(badge, nameEl.firstChild);
     else item.appendChild(badge);
   });
 }
 
-// ── 3. ELO ADVANCEMENT CHART WITH PHASE ZONES ────────────────────────────────
+// ── 3. ELO CHART WITH PHASE ZONES ────────────────────────────────────────────
 const ELO_ZONES = [
-  { min:    0, max:  800, label:'Débutant',      fill:'rgba(75,85,99,.3)',     tc:'#6b7280' },
+  { min:    0, max:  800, label:'Débutant',      fill:'rgba(75,85,99,.28)',    tc:'#6b7280' },
   { min:  800, max: 1000, label:'Intermédiaire', fill:'rgba(34,211,238,.09)', tc:'#22d3ee' },
   { min: 1000, max: 1200, label:'Avancé',        fill:'rgba(52,211,153,.09)', tc:'#34d399' },
   { min: 1200, max: 1500, label:'Expert',        fill:'rgba(245,158,11,.10)', tc:'#f59e0b' },
-  { min: 1500, max: 2400, label:'Maître',        fill:'rgba(239,68,68,.09)', tc:'#ef4444' },
+  { min: 1500, max: 2800, label:'Maître',        fill:'rgba(239,68,68,.09)',  tc:'#ef4444' },
 ];
 
 function renderEloChart(svgId, hist){
@@ -17894,64 +17961,63 @@ function renderEloChart(svgId, hist){
     svg.appendChild(t); return;
   }
 
-  // Fill 30-day span with forward-fill for visual continuity
+  // Forward-fill 30 days
   const t0 = new Date(); t0.setHours(0,0,0,0);
   const start30 = new Date(t0); start30.setDate(t0.getDate()-29);
   const dayVals = new Array(30).fill(null);
   hist.forEach(h => {
     const diff = Math.round((new Date(h.d) - start30) / 86400000);
-    if (diff >= 0 && diff < 30) dayVals[diff] = h.v;
+    if (diff >= 0 && diff < 30) dayVals[diff] = +h.v;
   });
   let last = null;
   for (let i=0; i<30; i++){
     if (dayVals[i]!=null) last = dayVals[i];
     else if (last!=null) dayVals[i] = last;
   }
-
   const vals = dayVals.filter(v => v!=null);
   if (!vals.length) return;
-  const dataMin = Math.min(...vals);
-  const dataMax = Math.max(...vals);
+
+  const dataMin = Math.min(...vals), dataMax = Math.max(...vals);
   const yMin = Math.max(0, dataMin - 80);
   const yMax = dataMax + 120;
   const yR = yMax - yMin || 1;
-  const fy = v => pT + (H-pT-pB) * (1-(v-yMin)/yR);
+  const fy = v => pT + (H-pT-pB) * (1 - Math.max(0, Math.min(1, (v-yMin)/yR)));
   const xStep = (W-pL-pR) / 29;
 
   // ① Phase zone backgrounds
   ELO_ZONES.forEach(zone => {
-    const top = Math.max(pT,   fy(Math.min(zone.max, yMax)));
-    const bot = Math.min(H-pB, fy(Math.max(zone.min, yMin)));
+    const zTop = Math.min(zone.max, yMax), zBot = Math.max(zone.min, yMin);
+    if (zBot >= zTop) return;
+    const top = fy(zTop), bot = fy(zBot);
     if (bot <= top) return;
     const rect = document.createElementNS('http://www.w3.org/2000/svg','rect');
-    rect.setAttribute('x', pL); rect.setAttribute('y', top);
-    rect.setAttribute('width', W-pL-pR); rect.setAttribute('height', bot-top);
+    rect.setAttribute('x', pL); rect.setAttribute('y', top.toFixed(1));
+    rect.setAttribute('width', W-pL-pR); rect.setAttribute('height', (bot-top).toFixed(1));
     rect.setAttribute('fill', zone.fill);
     svg.appendChild(rect);
-    if (bot - top > 13){
+    if (bot - top > 12){
       const lbl = document.createElementNS('http://www.w3.org/2000/svg','text');
-      lbl.setAttribute('x', W-pR-3); lbl.setAttribute('y', (top+bot)/2+3);
+      lbl.setAttribute('x', W-pR-4); lbl.setAttribute('y', ((top+bot)/2+3.5).toFixed(1));
       lbl.setAttribute('text-anchor','end'); lbl.setAttribute('fill', zone.tc);
-      lbl.setAttribute('font-size','8'); lbl.setAttribute('opacity','.8');
+      lbl.setAttribute('font-size','8'); lbl.setAttribute('opacity','.9');
       lbl.setAttribute('font-family','JetBrains Mono,monospace');
       lbl.textContent = zone.label;
       svg.appendChild(lbl);
     }
   });
 
-  // ② Milestone lines at 800/1000/1200/1500
+  // ② Milestone dashes
   [800,1000,1200,1500].forEach(m => {
-    if (m < yMin || m > yMax) return;
-    const my = fy(m);
+    if (m <= yMin || m >= yMax) return;
+    const my = fy(m).toFixed(1);
     const ln = document.createElementNS('http://www.w3.org/2000/svg','line');
-    ln.setAttribute('x1',pL); ln.setAttribute('y1',my);
-    ln.setAttribute('x2',W-pR); ln.setAttribute('y2',my);
-    ln.setAttribute('stroke','#3a3a58'); ln.setAttribute('stroke-width','1');
+    ln.setAttribute('x1',pL); ln.setAttribute('y1',my); ln.setAttribute('x2',W-pR); ln.setAttribute('y2',my);
+    ln.setAttribute('stroke','rgba(255,255,255,.15)'); ln.setAttribute('stroke-width','1');
     ln.setAttribute('stroke-dasharray','3,3');
     svg.appendChild(ln);
     const lbl = document.createElementNS('http://www.w3.org/2000/svg','text');
-    lbl.setAttribute('x',pL-4); lbl.setAttribute('y',my+3);
-    lbl.setAttribute('text-anchor','end'); lbl.setAttribute('fill','#555570');
+    lbl.setAttribute('x',pL-4); lbl.setAttribute('y',parseFloat(my)+3);
+    lbl.setAttribute('text-anchor','end'); lbl.setAttribute('fill','#6b7280');
     lbl.setAttribute('font-size','8'); lbl.setAttribute('font-family','JetBrains Mono,monospace');
     lbl.textContent = m;
     svg.appendChild(lbl);
@@ -17959,17 +18025,16 @@ function renderEloChart(svgId, hist){
 
   // ③ X axis
   const xAx = document.createElementNS('http://www.w3.org/2000/svg','line');
-  xAx.setAttribute('x1',pL); xAx.setAttribute('y1',H-pB);
-  xAx.setAttribute('x2',W-pR); xAx.setAttribute('y2',H-pB);
-  xAx.setAttribute('stroke','#242438'); xAx.setAttribute('stroke-width','1');
+  xAx.setAttribute('x1',pL); xAx.setAttribute('y1',H-pB); xAx.setAttribute('x2',W-pR); xAx.setAttribute('y2',H-pB);
+  xAx.setAttribute('stroke','#2a2a40'); xAx.setAttribute('stroke-width','1');
   svg.appendChild(xAx);
 
-  // ④ Area fill + progression line
+  // ④ Area + line
   let d='', fi=-1, li=-1, ok=false;
   for (let i=0; i<30; i++){
     const v=dayVals[i]; if(v==null){ok=false;continue;}
     const cx=(pL+i*xStep).toFixed(1), cy=fy(v).toFixed(1);
-    d += (ok?` L ${cx} ${cy}`:`M ${cx} ${cy}`);
+    d += ok ? ` L ${cx} ${cy}` : `M ${cx} ${cy}`;
     ok=true; if(fi<0)fi=i; li=i;
   }
   if (d){
@@ -17979,27 +18044,23 @@ function renderEloChart(svgId, hist){
     svg.appendChild(area);
     const path = document.createElementNS('http://www.w3.org/2000/svg','path');
     path.setAttribute('d',d); path.setAttribute('fill','none');
-    path.setAttribute('stroke','#22d3ee'); path.setAttribute('stroke-width','2');
+    path.setAttribute('stroke','#22d3ee'); path.setAttribute('stroke-width','2.5');
     path.setAttribute('stroke-linejoin','round'); path.setAttribute('stroke-linecap','round');
     svg.appendChild(path);
-    // Dots
     for (let i=0; i<30; i++){
       const v=dayVals[i]; if(v==null) continue;
       const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
       c.setAttribute('cx',(pL+i*xStep).toFixed(1)); c.setAttribute('cy',fy(v).toFixed(1));
-      c.setAttribute('r', i===li?'4':'2');
-      c.setAttribute('fill', i===li?'#22d3ee':'rgba(34,211,238,.45)');
+      c.setAttribute('r', i===li?'4':'2.5');
+      c.setAttribute('fill', i===li?'#22d3ee':'rgba(34,211,238,.5)');
       svg.appendChild(c);
     }
-    // Current ELO value label
     if (li >= 0){
       const v=dayVals[li], cx=pL+li*xStep, cy=fy(v);
       const lbl = document.createElementNS('http://www.w3.org/2000/svg','text');
-      lbl.setAttribute('x', li>24 ? cx-7 : cx+7);
-      lbl.setAttribute('y', cy-8);
-      lbl.setAttribute('text-anchor', li>24?'end':'start');
-      lbl.setAttribute('fill','#22d3ee'); lbl.setAttribute('font-size','12');
-      lbl.setAttribute('font-weight','700');
+      lbl.setAttribute('x',(cx+(li>22?-9:9)).toFixed(1)); lbl.setAttribute('y',(cy-9).toFixed(1));
+      lbl.setAttribute('text-anchor',li>22?'end':'start');
+      lbl.setAttribute('fill','#22d3ee'); lbl.setAttribute('font-size','13'); lbl.setAttribute('font-weight','700');
       lbl.setAttribute('font-family','JetBrains Mono,monospace');
       lbl.textContent = Math.round(v);
       svg.appendChild(lbl);
@@ -18008,10 +18069,9 @@ function renderEloChart(svgId, hist){
 
   // ⑤ X labels
   ['J-29','J-14','Auj.'].forEach((label,i) => {
-    const xi = [0,14,29][i];
+    const xi=[0,14,29][i];
     const lbl = document.createElementNS('http://www.w3.org/2000/svg','text');
-    lbl.setAttribute('x', pL+xi*xStep);
-    lbl.setAttribute('y', H-pB+13);
+    lbl.setAttribute('x',(pL+xi*xStep).toFixed(1)); lbl.setAttribute('y',H-pB+12);
     lbl.setAttribute('text-anchor','middle'); lbl.setAttribute('fill','#6b6b85');
     lbl.setAttribute('font-size','9'); lbl.setAttribute('font-family','JetBrains Mono,monospace');
     lbl.textContent = label;
@@ -18027,15 +18087,161 @@ function refreshEloChart(){
   } catch(_){}
 }
 
-// ── 4. PATCH window.applyRoutineStateV35 ─────────────────────────────────────
-// Wrap the already-patched v37 version to run late-detection + prio badges after
+// ── 4. MOMENTUM CHART (30-day composite score) ────────────────────────────────
+function _momentumScore(dateStr){
+  let total = 0, parts = 0;
+  try {
+    const tasks = JSON.parse(localStorage.getItem(NS+'tasks_'+dateStr) || '[]');
+    if (tasks.length > 0){ total += (tasks.filter(t=>t.done).length/tasks.length)*100; parts++; }
+  } catch(_){}
+  try {
+    const sm = JSON.parse(localStorage.getItem(NS+'routine_v35_'+dateStr+'_sm') || 'null');
+    if (sm && typeof sm === 'object'){
+      const ids = Object.keys(sm);
+      if (ids.length > 0){ total += (ids.filter(k=>sm[k]==='done').length/ids.length)*100; parts++; }
+    }
+  } catch(_){}
+  try {
+    const log = JSON.parse(localStorage.getItem(NS+'log_'+dateStr) || 'null');
+    if (log && log.mood){ total += ((log.mood-1)/4)*100; parts++; }
+  } catch(_){}
+  return parts > 0 ? Math.round(total/parts) : null;
+}
+
+function _injectMomentumCard(){
+  if (document.getElementById('chart-momentum')) return;
+  const stats = document.getElementById('p-stats');
+  if (!stats) return;
+  const card = document.createElement('div');
+  card.className = 'chart-card'; card.id = 'momentum-chart-card';
+  card.innerHTML =
+    '<div class="chart-head"><span class="chart-title">Momentum · 30 jours</span>' +
+    '<span class="chart-legend">score composite tâches + routine + humeur</span></div>' +
+    '<svg class="chart-svg" id="chart-momentum" viewBox="0 0 400 180" preserveAspectRatio="none"></svg>';
+  const last = stats.querySelector('.chart-card:last-of-type');
+  if (last && last.parentNode) last.parentNode.insertBefore(card, last.nextSibling);
+  else stats.appendChild(card);
+}
+
+function renderMomentumChart(){
+  _injectMomentumCard();
+  const svg = document.getElementById('chart-momentum');
+  if (!svg) return;
+  const W=400, H=180, pL=30, pR=10, pT=14, pB=22;
+  svg.innerHTML = '';
+  const today = new Date(); today.setHours(0,0,0,0);
+  const scores = [];
+  for (let i=29; i>=0; i--){
+    const d = new Date(today); d.setDate(today.getDate()-i);
+    const k = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    scores.push(_momentumScore(k));
+  }
+  const vals = scores.filter(v=>v!==null);
+  if (vals.length < 2){
+    const t = document.createElementNS('http://www.w3.org/2000/svg','text');
+    t.setAttribute('x',200); t.setAttribute('y',90); t.setAttribute('text-anchor','middle');
+    t.setAttribute('fill','#6b6b85'); t.setAttribute('font-size','12');
+    t.setAttribute('font-family','Outfit,sans-serif'); t.setAttribute('font-style','italic');
+    t.textContent = 'Pas assez de données — log ta routine et tes tâches';
+    svg.appendChild(t); return;
+  }
+  const xStep=(W-pL-pR)/29, fy=v=>pT+(H-pT-pB)*(1-v/100);
+  // Zone backgrounds
+  [{min:0,max:40,fill:'rgba(239,68,68,.05)'},{min:40,max:70,fill:'rgba(245,158,11,.05)'},{min:70,max:100,fill:'rgba(52,211,153,.07)'}].forEach(z=>{
+    const r=document.createElementNS('http://www.w3.org/2000/svg','rect');
+    r.setAttribute('x',pL); r.setAttribute('y',fy(z.max).toFixed(1));
+    r.setAttribute('width',W-pL-pR); r.setAttribute('height',(fy(z.min)-fy(z.max)).toFixed(1));
+    r.setAttribute('fill',z.fill); svg.appendChild(r);
+  });
+  const xAx=document.createElementNS('http://www.w3.org/2000/svg','line');
+  xAx.setAttribute('x1',pL); xAx.setAttribute('y1',H-pB); xAx.setAttribute('x2',W-pR); xAx.setAttribute('y2',H-pB);
+  xAx.setAttribute('stroke','#2a2a40'); xAx.setAttribute('stroke-width','1'); svg.appendChild(xAx);
+  let d='', fi=-1, li=-1, ok=false;
+  scores.forEach((v,i)=>{
+    if(v==null){ok=false;return;}
+    const cx=(pL+i*xStep).toFixed(1), cy=fy(v).toFixed(1);
+    d+=ok?` L ${cx} ${cy}`:`M ${cx} ${cy}`; ok=true; if(fi<0)fi=i; li=i;
+  });
+  if(d){
+    const area=document.createElementNS('http://www.w3.org/2000/svg','path');
+    area.setAttribute('d',d+` L ${(pL+li*xStep).toFixed(1)} ${H-pB} L ${(pL+fi*xStep).toFixed(1)} ${H-pB} Z`);
+    area.setAttribute('fill','rgba(52,211,153,.10)'); area.setAttribute('stroke','none'); svg.appendChild(area);
+    const line=document.createElementNS('http://www.w3.org/2000/svg','path');
+    line.setAttribute('d',d); line.setAttribute('fill','none');
+    line.setAttribute('stroke','#34d399'); line.setAttribute('stroke-width','2');
+    line.setAttribute('stroke-linejoin','round'); line.setAttribute('stroke-linecap','round'); svg.appendChild(line);
+    if(li>=0){
+      const v=scores[li], cx=pL+li*xStep, cy=fy(v);
+      const c=document.createElementNS('http://www.w3.org/2000/svg','circle');
+      c.setAttribute('cx',cx.toFixed(1)); c.setAttribute('cy',cy.toFixed(1)); c.setAttribute('r','4'); c.setAttribute('fill','#34d399'); svg.appendChild(c);
+      const lbl=document.createElementNS('http://www.w3.org/2000/svg','text');
+      lbl.setAttribute('x',(cx+(li>22?-9:9)).toFixed(1)); lbl.setAttribute('y',(cy-9).toFixed(1));
+      lbl.setAttribute('text-anchor',li>22?'end':'start');
+      lbl.setAttribute('fill','#34d399'); lbl.setAttribute('font-size','13'); lbl.setAttribute('font-weight','700');
+      lbl.setAttribute('font-family','JetBrains Mono,monospace');
+      lbl.textContent = Math.round(v)+'%'; svg.appendChild(lbl);
+    }
+  }
+  ['J-29','J-14','Auj.'].forEach((label,i)=>{
+    const xi=[0,14,29][i];
+    const lbl=document.createElementNS('http://www.w3.org/2000/svg','text');
+    lbl.setAttribute('x',(pL+xi*xStep).toFixed(1)); lbl.setAttribute('y',H-pB+12);
+    lbl.setAttribute('text-anchor','middle'); lbl.setAttribute('fill','#6b6b85');
+    lbl.setAttribute('font-size','9'); lbl.setAttribute('font-family','JetBrains Mono,monospace');
+    lbl.textContent=label; svg.appendChild(lbl);
+  });
+}
+
+// ── 5. SCORE DU JOUR (home stats) ─────────────────────────────────────────────
+function updateScoreDuJour(){
+  const el = document.getElementById('st-total');
+  if (!el) return;
+  const statEl = el.closest('.stat');
+  const lbl = statEl && statEl.querySelector('.stat-l');
+  const score = _momentumScore(todayKey());
+  if (score !== null){
+    el.textContent = score + '%';
+    el.style.color = score >= 70 ? 'var(--jade,#34d399)' : score >= 40 ? 'var(--gold,#c8a84e)' : 'var(--flame,#ff6b35)';
+    if (lbl) lbl.textContent = 'Score du jour';
+  }
+}
+
+// ── 6. PRE-APPOINTMENT ALERTS ─────────────────────────────────────────────────
+const _alertedKeys = new Set();
+try { JSON.parse(sessionStorage.getItem('dashv2_alerted')||'[]').forEach(k=>_alertedKeys.add(k)); } catch(_){}
+
+function checkPreApptAlerts(){
+  const now = new Date();
+  const curMin = now.getHours()*60 + now.getMinutes();
+  let tasks = [];
+  try { tasks = JSON.parse(localStorage.getItem(NS+'tasks_'+todayKey())||'[]'); } catch(_){}
+  tasks.filter(t=>!t.done&&t.time&&t.endTime).forEach(t=>{
+    const startMin = _parseMin(t.time);
+    if (startMin === null) return;
+    const diff = startMin - curMin;
+    const k15 = t.id+'_15', k5 = t.id+'_5';
+    if (diff > 0 && diff <= 15 && !_alertedKeys.has(k15)){
+      _alertedKeys.add(k15);
+      try { sessionStorage.setItem('dashv2_alerted', JSON.stringify([..._alertedKeys])); } catch(_){}
+      try { if (typeof showToast==='function') showToast(`📅 "${t.title.slice(0,30)}" dans ${diff} min`); } catch(_){}
+    }
+    if (diff > 0 && diff <= 5 && !_alertedKeys.has(k5)){
+      _alertedKeys.add(k5);
+      try { sessionStorage.setItem('dashv2_alerted', JSON.stringify([..._alertedKeys])); } catch(_){}
+      try { if (typeof showToast==='function') showToast(`🔔 "${t.title.slice(0,30)}" — maintenant !`); } catch(_){}
+    }
+  });
+}
+
+// ── 7. PATCH applyRoutineStateV35 ────────────────────────────────────────────
+// Wait until after v37 (200ms) and adaptive-routine (950ms) have patched it
 setTimeout(() => {
-  const origApply = window.applyRoutineStateV35;
-  if (typeof origApply !== 'function' || window.__enhV38Patched) return;
+  const orig = window.applyRoutineStateV35;
+  if (typeof orig !== 'function' || window.__enhV38Patched) return;
   window.__enhV38Patched = true;
   window.applyRoutineStateV35 = function(){
-    origApply.apply(this, arguments);
-    // Update done banner with percentage
+    orig.apply(this, arguments);
+    // Update done-banner with %
     try {
       const tl = document.querySelector('.shift-view:not(.hidden) .timeline');
       if (tl){
@@ -18043,58 +18249,77 @@ setTimeout(() => {
         if (banner){
           const all = tl.parentElement.querySelectorAll('.tl-item[data-time]:not([data-adaptive-fixed-id])');
           const total = all.length;
-          const done = Array.from(all).filter(i => i.classList.contains('done-early-v35')).length;
-          if (total > 0 && done > 0){
+          const done = Array.from(all).filter(i=>i.classList.contains('done-early-v35')).length;
+          if (total > 0){
             const pct = Math.round(done/total*100);
             banner.innerHTML = `✓ ${done}/${total} blocs · <strong>${pct}%</strong> du jour`;
           }
         }
       }
     } catch(_){}
+    // Decorations run after DOM settles
     setTimeout(() => {
       try { markLateBlocks(); } catch(_){}
       try { decorateRoutinePrioBadges(); } catch(_){}
-    }, 40);
+      try { updateScoreDuJour(); } catch(_){}
+    }, 80);
   };
-}, 500); // after v37 has patched (200ms) and adaptive-routine (950ms)
+}, 1100); // safely after all earlier patches
 
-// ── 5. PATCH window.renderStats FOR ELO CHART ───────────────────────────────
-if (typeof window.renderStats === 'function'){
+// ── 8. PATCH renderStats FOR ELO + MOMENTUM ───────────────────────────────────
+function _patchRenderStats(){
+  if (window.__enhV38StatPatched) return;
+  if (typeof window.renderStats !== 'function') return;
+  window.__enhV38StatPatched = true;
   const origRS = window.renderStats;
   window.renderStats = function(){
     origRS.apply(this, arguments);
-    setTimeout(refreshEloChart, 20);
+    // Run enhanced charts after base charts finish (base draws to chart-elo first)
+    setTimeout(() => {
+      try { refreshEloChart(); } catch(_){}
+      try { renderMomentumChart(); } catch(_){}
+    }, 150);
   };
 }
+_patchRenderStats();
+setTimeout(_patchRenderStats, 300);
+setTimeout(_patchRenderStats, 1000);
 
 // ── BOOT ─────────────────────────────────────────────────────────────────────
 setTimeout(() => {
   try { markLateBlocks(); } catch(_){}
   try { decorateRoutinePrioBadges(); } catch(_){}
-  // Render ELO chart if stats tab is already visible
+  try { updateScoreDuJour(); } catch(_){}
+  try { checkPreApptAlerts(); } catch(_){}
   try {
-    if (document.querySelector('[data-page="stats"]:not(.hidden), #p-stats:not(.hidden)'))
-      refreshEloChart();
+    if (document.querySelector('#p-stats:not(.hidden)'))
+      { refreshEloChart(); renderMomentumChart(); }
   } catch(_){}
-}, 1400);
+}, 1800);
 
-// Update late detection every minute
+// Every minute: refresh late blocks, alerts, score
 setInterval(() => {
-  try {
-    if (document.querySelector('.shift-view:not(.hidden)')) markLateBlocks();
-  } catch(_){}
+  try { if (document.querySelector('.shift-view:not(.hidden)')) markLateBlocks(); } catch(_){}
+  try { checkPreApptAlerts(); } catch(_){}
+  try { updateScoreDuJour(); } catch(_){}
 }, 60000);
 
-// Re-run on routine tab or shift change
+// Tab navigation listeners
 document.addEventListener('click', e => {
   if (e.target.closest('.tab[data-tab="routine"],.shift-chip,[data-shift]')){
     setTimeout(() => {
       try { markLateBlocks(); } catch(_){}
       try { decorateRoutinePrioBadges(); } catch(_){}
-    }, 350);
+    }, 400);
   }
   if (e.target.closest('.tab[data-tab="stats"]')){
-    setTimeout(refreshEloChart, 350);
+    setTimeout(() => {
+      try { refreshEloChart(); } catch(_){}
+      try { renderMomentumChart(); } catch(_){}
+    }, 400);
+  }
+  if (e.target.closest('.tab[data-tab="home"],.tab[data-tab="maison"]')){
+    setTimeout(() => { try { updateScoreDuJour(); } catch(_){} }, 200);
   }
 }, true);
 
