@@ -3949,6 +3949,26 @@ Bachelor dev en septembre. Bilingue NL+FR d'ici 2 ans. Corps robuste malgré la 
 <span class="log-unit">actions</span>
 </div>
 
+<div class="log-row log-row-c7" id="log-c7-row">
+<span class="log-row-icon">🔴</span>
+<div class="log-row-label"><b>Douleur C7</b><em>0 = aucune · 10 = critique</em></div>
+<div class="c7-slider-wrap">
+<input type="range" id="log-c7" class="c7-slider" min="0" max="10" step="1" value="0">
+<output id="log-c7-val" class="c7-val">0</output>
+</div>
+</div>
+
+<div class="log-row log-row-sleep" id="log-sleep-row">
+<span class="log-row-icon">😴</span>
+<div class="log-row-label"><b>Sommeil</b><em>coucher → réveil</em></div>
+<div class="log-sleep-wrap">
+<input type="time" id="log-sleep-start" class="log-time-input" title="Heure de coucher">
+<span class="log-sleep-arrow">→</span>
+<input type="time" id="log-sleep-end" class="log-time-input" title="Heure de réveil">
+<span id="log-sleep-dur" class="log-sleep-dur">—</span>
+</div>
+</div>
+
 </div><!-- /.log-grid -->
 
 <div class="log-meals">
@@ -17075,6 +17095,101 @@ window.decorateRoutineV35   = decorateRoutineV35;
 /* ── enhancements-v38: momentum chart ── */
 #momentum-chart-card{ margin-top:12px; }
 
+/* ── features-v39: C7 slider ── */
+.log-row-c7,.log-row-sleep{ grid-column:1/-1; }
+.c7-slider-wrap{ display:flex; align-items:center; gap:10px; flex:1; min-width:0; }
+.c7-slider{ flex:1; min-width:80px; height:4px; cursor:pointer; accent-color:#34d399; }
+.c7-val{ min-width:20px; text-align:center; font:700 15px var(--f-mono,monospace); color:#34d399; transition:color .3s; }
+
+/* ── features-v39: sleep tracker ── */
+.log-sleep-wrap{ display:flex; align-items:center; gap:7px; flex:1; min-width:0; flex-wrap:wrap; }
+.log-time-input{
+  background:var(--surface-2,#1a1a2e); border:1px solid var(--border,#2a2a44);
+  color:var(--text,#e2e2f0); padding:4px 8px; border-radius:6px; font:600 12px var(--f-mono,monospace);
+  width:84px; outline:none;
+}
+.log-time-input:focus{ border-color:var(--accent,#6aa5fa); }
+.log-sleep-arrow{ color:var(--text-faint,#6b6b85); font-size:13px; }
+.log-sleep-dur{ font:700 13px var(--f-mono,monospace); min-width:28px; transition:color .3s; }
+
+/* ── features-v39: heatmap 90j ── */
+.heatmap-90-grid{
+  display:grid; grid-template-columns:repeat(13,1fr); gap:3px;
+  padding:12px 0 4px;
+}
+.hm-cell{
+  aspect-ratio:1; border-radius:3px; cursor:default;
+  background:rgba(255,255,255,.03); transition:transform .15s;
+}
+.hm-cell:hover{ transform:scale(1.3); z-index:2; position:relative; }
+
+/* ── features-v39: domain streaks ── */
+.domain-streaks-wrap{
+  display:flex; flex-wrap:wrap; gap:5px;
+  padding:6px 0 2px; grid-column:1/-1;
+}
+.domain-streak-pill{
+  font:700 10px var(--f-mono,monospace); padding:2px 8px;
+  border-radius:999px; border:1px solid; letter-spacing:.03em;
+  white-space:nowrap;
+}
+
+/* ── features-v39: task history ── */
+.task-history-card{
+  margin:18px 0 0; padding:14px 16px;
+  background:var(--surface-1,#111120); border:1px solid var(--border,#2a2a44);
+  border-radius:12px;
+}
+.th-head{ font:700 11px var(--f-mono,monospace); color:var(--text-faint); text-transform:uppercase; letter-spacing:.06em; margin-bottom:10px; }
+.th-rows{ display:flex; flex-direction:column; gap:5px; }
+.th-row{ display:grid; grid-template-columns:72px 1fr 90px; align-items:center; gap:8px; }
+.th-today .th-label{ color:var(--flame,#ff6b35); font-weight:700; }
+.th-label{ font:600 11px var(--f-mono,monospace); color:var(--text-dim); }
+.th-bar-wrap{ height:6px; background:rgba(255,255,255,.05); border-radius:3px; overflow:hidden; }
+.th-bar{ height:100%; border-radius:3px; transition:width .5s var(--ease); }
+.th-stat{ font:600 10px var(--f-mono,monospace); color:var(--text-faint); text-align:right; }
+
+/* ── features-v39: résumé matin ── */
+.morning-card{
+  margin-bottom:18px; padding:14px 16px; border-radius:12px;
+  background:linear-gradient(135deg,rgba(255,107,53,.08),rgba(34,211,238,.05));
+  border:1px solid rgba(255,107,53,.25);
+}
+.mc-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+.mc-greeting{ font:700 14px var(--f-sans,Outfit,sans-serif); color:var(--flame-2,#ff8c52); }
+.mc-close{ background:none; border:none; color:var(--text-faint); cursor:pointer; font-size:14px; padding:2px 6px; border-radius:4px; }
+.mc-close:hover{ background:rgba(255,255,255,.07); }
+.mc-body{ display:flex; flex-direction:column; gap:7px; }
+.mc-row{ display:flex; align-items:flex-start; gap:10px; font:500 12px var(--f-sans,Outfit,sans-serif); }
+.mc-lbl{ font:700 10px var(--f-mono,monospace); color:var(--text-faint); text-transform:uppercase; letter-spacing:.06em; width:80px; flex-shrink:0; padding-top:1px; }
+.mc-priorities{ display:flex; flex-direction:column; gap:3px; }
+.mc-priority{ font-size:12px; color:var(--text-dim); }
+.mc-appt{ font:600 11px var(--f-mono,monospace); color:var(--sapphire,#6aa5fa); margin-top:3px; }
+
+/* ── features-v39: focus mode ── */
+.focus-mode-btn{
+  display:inline-flex; align-items:center; gap:5px;
+  padding:5px 12px; border-radius:8px; border:1px solid rgba(255,107,53,.3);
+  background:transparent; color:var(--flame,#ff6b35); cursor:pointer;
+  font:600 11px var(--f-mono,monospace); margin:8px 0; transition:all .2s;
+}
+.focus-mode-btn:hover{ background:rgba(255,107,53,.08); }
+.focus-mode-btn.active{ background:rgba(255,107,53,.15); border-color:var(--flame); }
+#p-routine.focus-active .tl-item:not(.now){
+  opacity:.08 !important; pointer-events:none; transition:opacity .4s;
+}
+#p-routine.focus-active .tl-item.now{
+  position:relative; z-index:5;
+  box-shadow:0 0 0 2px var(--flame),0 4px 24px rgba(255,107,53,.25);
+  border-radius:8px; transform:scale(1.01);
+}
+#p-routine.focus-active .routine-done-banner,
+#p-routine.focus-active .routine-late-banner,
+#p-routine.focus-active .enh-late-badge { opacity:1 !important; pointer-events:auto; }
+
+/* ── features-v39: radar chart ── */
+#radar-chart-card .chart-svg{ height:240px; }
+
 </style>
 
 <script id="fix-v37-js">
@@ -18326,5 +18441,472 @@ document.addEventListener('click', e => {
 })();
 </script>
 
+<script id="features-v39">
+(function(){
+'use strict';
+if (window.__featV39) return;
+window.__featV39 = true;
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+const NS = 'dashv2_';
+function sg(k, def){ try{ const v=localStorage.getItem(NS+k); return v!==null?JSON.parse(v):def; }catch{return def;} }
+function ss(k, v){ try{ localStorage.setItem(NS+k, JSON.stringify(v)); }catch{} }
+
+function _dk(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function _today(){ const d=new Date(); d.setHours(0,0,0,0); return d; }
+function _todayKey(){ return _dk(_today()); }
+
+function _pm(s){
+  if (!s) return null;
+  const m=String(s).match(/(\d{1,2})\s*(?:h|:)\s*(\d{0,2})/);
+  if (!m) return null;
+  return parseInt(m[1],10)*60+parseInt((m[2]||'0').padEnd(2,'0'),10);
+}
+
+// Composite momentum score for a given date key
+function _score(dateStr){
+  let total=0, parts=0;
+  try{ const t=JSON.parse(localStorage.getItem(NS+'tasks_'+dateStr)||'[]'); if(t.length>0){total+=(t.filter(x=>x.done).length/t.length)*100;parts++;} }catch{}
+  try{ const sm=JSON.parse(localStorage.getItem(NS+'routine_v35_'+dateStr+'_sm')||'null'); if(sm&&typeof sm==='object'){const ids=Object.keys(sm);if(ids.length>0){total+=(ids.filter(k=>sm[k]==='done').length/ids.length)*100;parts++;}} }catch{}
+  try{ const log=JSON.parse(localStorage.getItem(NS+'log_'+dateStr)||'null'); if(log&&log.mood){total+=((log.mood-1)/4)*100;parts++;} }catch{}
+  try{ const sl=JSON.parse(localStorage.getItem(NS+'sleep_'+dateStr)||'null'); if(sl&&sl.dur!=null){total+=(sl.dur>=7&&sl.dur<=9?95:sl.dur>=6?65:35);parts++;} }catch{}
+  return parts>0?Math.round(total/parts):null;
+}
+
+function _scoreColor(s){ return s>=70?'var(--jade,#34d399)':s>=40?'var(--gold,#c8a84e)':'var(--flame,#ff6b35)'; }
+
+// ── 1. HEATMAP 90 JOURS ───────────────────────────────────────────────────────
+function renderHeatmap90(){
+  let card=document.getElementById('heatmap-90-card');
+  if (!card){
+    const stats=document.getElementById('p-stats'); if(!stats) return;
+    card=document.createElement('div');
+    card.className='chart-card'; card.id='heatmap-90-card';
+    card.innerHTML='<div class="chart-head"><span class="chart-title">Consistance · 90 jours</span>'
+      +'<span class="chart-legend">score composite par jour · vert foncé = excellent</span></div>'
+      +'<div id="heatmap-90-grid" class="heatmap-90-grid"></div>';
+    const first=stats.querySelector('.chart-card');
+    if(first) stats.insertBefore(card,first); else stats.appendChild(card);
+  }
+  const grid=document.getElementById('heatmap-90-grid');
+  if(!grid) return;
+  grid.innerHTML='';
+  const today=_today();
+  // Build 13 weeks × 7 days = 91 days, start on Monday
+  const dayOfWeek=today.getDay(); // 0=Sun
+  const daysBack=89 + (dayOfWeek===0?6:dayOfWeek-1); // align to Monday
+  const startDay=new Date(today); startDay.setDate(today.getDate()-daysBack);
+  // Pad empty cells to align first column
+  const startDow=startDay.getDay();
+  const padCells=startDow===0?6:startDow-1;
+  for(let p=0;p<padCells;p++){ const e=document.createElement('div'); grid.appendChild(e); }
+  for(let i=0;i<=daysBack;i++){
+    const d=new Date(startDay); d.setDate(startDay.getDate()+i);
+    const k=_dk(d);
+    const s=_score(k);
+    const cell=document.createElement('div');
+    cell.className='hm-cell';
+    const isToday=_dk(d)===_todayKey();
+    if(s===null) cell.style.background='rgba(255,255,255,.04)';
+    else if(s>=70) cell.style.background=`rgba(52,211,153,${(.2+s/100*.75).toFixed(2)})`;
+    else if(s>=40) cell.style.background=`rgba(245,158,11,${(.15+s/100*.5).toFixed(2)})`;
+    else           cell.style.background=`rgba(239,68,68,${(.12+s/100*.35).toFixed(2)})`;
+    if(isToday) cell.style.outline='2px solid var(--flame)';
+    cell.title=k+(s!==null?' · '+s+'%':' · pas de données');
+    grid.appendChild(cell);
+  }
+}
+
+// ── 2. STREAKS PAR DOMAINE ────────────────────────────────────────────────────
+function _domainStreak(key){
+  const today=_today(); let streak=0;
+  for(let i=0;i<60;i++){
+    const d=new Date(today); d.setDate(today.getDate()-i);
+    const log=JSON.parse(localStorage.getItem(NS+'log_'+_dk(d))||'null');
+    if(!log) break;
+    const ok=(key==='sport'||key==='flex')?!!log[key]:(log[key]||0)>0;
+    if(ok) streak++; else break;
+  }
+  return streak;
+}
+
+function renderDomainStreaks(){
+  // Inject below the streak stat in the home stats bar
+  let wrap=document.getElementById('domain-streaks-wrap');
+  if(!wrap){
+    const streakEl=document.getElementById('st-streak'); if(!streakEl) return;
+    const parent=streakEl.closest('.stats');
+    if(!parent) return;
+    wrap=document.createElement('div');
+    wrap.id='domain-streaks-wrap';
+    wrap.className='domain-streaks-wrap';
+    // Insert after the stats-3 bar
+    parent.after(wrap);
+  }
+  const DOMAINS=[
+    {key:'epfc',  label:'EPFC',  color:'var(--jade,#34d399)'},
+    {key:'code',  label:'Code',  color:'var(--violet,#a78bfa)'},
+    {key:'nl',    label:'NL',    color:'var(--sapphire,#6aa5fa)'},
+    {key:'sport', label:'Sport', color:'var(--flame,#ff6b35)'},
+    {key:'read',  label:'Lecture',color:'var(--teal,#2dd4bf)'},
+  ];
+  const pills=DOMAINS.map(d=>{
+    const s=_domainStreak(d.key);
+    if(!s) return '';
+    return `<span class="domain-streak-pill" style="border-color:${d.color};color:${d.color}">${d.label} ${s}j</span>`;
+  }).filter(Boolean).join('');
+  wrap.innerHTML=pills||'<span class="domain-streak-pill" style="color:var(--text-faint);border-color:transparent;font-size:10px">Log tes domaines pour voir les streaks</span>';
+}
+
+// ── 3. RADAR CHART HEBDO ─────────────────────────────────────────────────────
+function renderRadarChart(){
+  let card=document.getElementById('radar-chart-card');
+  if(!card){
+    const stats=document.getElementById('p-stats'); if(!stats) return;
+    card=document.createElement('div');
+    card.className='chart-card'; card.id='radar-chart-card';
+    card.innerHTML='<div class="chart-head"><span class="chart-title">Radar · semaine courante</span>'
+      +'<span class="chart-legend">% cible atteint par domaine</span></div>'
+      +'<svg class="chart-svg" id="chart-radar" viewBox="0 0 300 260" preserveAspectRatio="xMidYMid meet" style="height:260px"></svg>';
+    const lastCards=[...stats.querySelectorAll('.stats-cards')].pop();
+    if(lastCards) lastCards.after(card); else stats.insertBefore(card,stats.querySelector('.chart-card'));
+  }
+  const svg=document.getElementById('chart-radar');
+  if(!svg) return;
+  svg.innerHTML='';
+  // Week data: Mon–today
+  const today=_today();
+  const dow=today.getDay();
+  const weekStart=new Date(today); weekStart.setDate(today.getDate()-(dow===0?6:dow-1));
+  const totals={epfc:0,code:0,nl:0,sport:0,chess:0,vinted:0};
+  for(let i=0;i<7;i++){
+    const d=new Date(weekStart); d.setDate(weekStart.getDate()+i);
+    if(d>today) break;
+    const log=JSON.parse(localStorage.getItem(NS+'log_'+_dk(d))||'null');
+    if(!log) continue;
+    totals.epfc+=log.epfc||0; totals.code+=log.code||0; totals.nl+=log.nl||0;
+    if(log.sport) totals.sport++; totals.chess+=log.chess||0; totals.vinted+=log.vinted||0;
+  }
+  const AXES=[
+    {key:'epfc',   label:'EPFC',   target:300, color:'#34d399'},
+    {key:'code',   label:'Code',   target:200, color:'#a78bfa'},
+    {key:'nl',     label:'NL',     target:150, color:'#6aa5fa'},
+    {key:'sport',  label:'Sport',  target:3,   color:'#ff6b35'},
+    {key:'chess',  label:'Chess',  target:5,   color:'#f59e0b'},
+    {key:'vinted', label:'Vinted', target:10,  color:'#f472b6'},
+  ];
+  const N=AXES.length, cx=150, cy=125, R=80, a0=-Math.PI/2;
+  const pt=(r,i)=>{
+    const a=a0+(2*Math.PI*i/N);
+    return {x:cx+r*Math.cos(a), y:cy+r*Math.sin(a)};
+  };
+  // Grid rings
+  [.25,.5,.75,1].forEach(pct=>{
+    const pts=AXES.map((_,i)=>{ const p=pt(R*pct,i); return p.x.toFixed(1)+','+p.y.toFixed(1); }).join(' ');
+    const poly=document.createElementNS('http://www.w3.org/2000/svg','polygon');
+    poly.setAttribute('points',pts); poly.setAttribute('fill','none');
+    poly.setAttribute('stroke',pct===1?'rgba(255,255,255,.18)':'rgba(255,255,255,.06)');
+    poly.setAttribute('stroke-width','1'); svg.appendChild(poly);
+  });
+  // Axis lines + labels
+  AXES.forEach((ax,i)=>{
+    const end=pt(R,i);
+    const ln=document.createElementNS('http://www.w3.org/2000/svg','line');
+    ln.setAttribute('x1',cx); ln.setAttribute('y1',cy);
+    ln.setAttribute('x2',end.x.toFixed(1)); ln.setAttribute('y2',end.y.toFixed(1));
+    ln.setAttribute('stroke','rgba(255,255,255,.08)'); ln.setAttribute('stroke-width','1');
+    svg.appendChild(ln);
+    const lp=pt(R+18,i);
+    const lbl=document.createElementNS('http://www.w3.org/2000/svg','text');
+    lbl.setAttribute('x',lp.x.toFixed(1)); lbl.setAttribute('y',(lp.y+3).toFixed(1));
+    const cos=Math.cos(a0+(2*Math.PI*i/N));
+    lbl.setAttribute('text-anchor',cos<-0.3?'end':cos>0.3?'start':'middle');
+    lbl.setAttribute('fill',ax.color); lbl.setAttribute('font-size','9'); lbl.setAttribute('font-weight','700');
+    lbl.setAttribute('font-family','JetBrains Mono,monospace');
+    const pct=Math.round(Math.min(1,(totals[ax.key]||0)/ax.target)*100);
+    lbl.textContent=ax.label+' '+pct+'%'; svg.appendChild(lbl);
+  });
+  // Data fill
+  const scores=AXES.map(ax=>Math.min(1,(totals[ax.key]||0)/ax.target));
+  const dataPts=scores.map((s,i)=>{ const p=pt(R*s,i); return p.x.toFixed(1)+','+p.y.toFixed(1); }).join(' ');
+  const poly=document.createElementNS('http://www.w3.org/2000/svg','polygon');
+  poly.setAttribute('points',dataPts); poly.setAttribute('fill','rgba(34,211,238,.12)');
+  poly.setAttribute('stroke','#22d3ee'); poly.setAttribute('stroke-width','2');
+  poly.setAttribute('stroke-linejoin','round'); svg.appendChild(poly);
+  // Dots
+  scores.forEach((s,i)=>{
+    const p=pt(R*s,i);
+    const c=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c.setAttribute('cx',p.x.toFixed(1)); c.setAttribute('cy',p.y.toFixed(1));
+    c.setAttribute('r','3'); c.setAttribute('fill',AXES[i].color); svg.appendChild(c);
+  });
+}
+
+// ── 4. DOULEUR C7 ────────────────────────────────────────────────────────────
+function _c7Color(v){ return v>=7?'#ef4444':v>=4?'#f59e0b':'#34d399'; }
+
+function initC7Tracker(){
+  const slider=document.getElementById('log-c7');
+  const val=document.getElementById('log-c7-val');
+  if(!slider||!val) return;
+  const load=(key)=>{
+    const v=sg('c7_'+(key||_todayKey()),0);
+    slider.value=v; val.textContent=v;
+    val.style.color=slider.style.accentColor=_c7Color(v);
+  };
+  load(_todayKey());
+  slider.addEventListener('input',()=>{
+    const v=parseInt(slider.value);
+    val.textContent=v; val.style.color=slider.style.accentColor=_c7Color(v);
+    const key=(window.currentLogDate&&typeof dateKey==='function')?dateKey(window.currentLogDate):_todayKey();
+    ss('c7_'+key,v);
+    if(v>=7) try{ if(typeof showToast==='function') showToast(`⚠️ C7 ${v}/10 — repos, anti-inflammatoires`); }catch{}
+  });
+  window._v39LoadC7=load; // expose for date change hook
+}
+
+function renderC7Chart(){
+  let card=document.getElementById('c7-chart-card');
+  if(!card){
+    const stats=document.getElementById('p-stats'); if(!stats) return;
+    card=document.createElement('div'); card.className='chart-card'; card.id='c7-chart-card';
+    card.innerHTML='<div class="chart-head"><span class="chart-title">Douleur C7 · 30 jours</span>'
+      +'<span class="chart-legend">0 = aucune · 7+ = zone danger</span></div>'
+      +'<svg class="chart-svg" id="chart-c7" viewBox="0 0 400 120" preserveAspectRatio="none" style="height:120px"></svg>';
+    const moodCard=stats.querySelector('.chart-card:has(#chart-mood)');
+    if(moodCard&&moodCard.parentNode) moodCard.parentNode.insertBefore(card,moodCard.nextSibling);
+    else stats.appendChild(card);
+  }
+  const svg=document.getElementById('chart-c7'); if(!svg) return;
+  const W=400,H=120,pL=28,pR=10,pT=12,pB=20;
+  svg.innerHTML='';
+  const today=_today();
+  const vals=[];
+  for(let i=29;i>=0;i--){ const d=new Date(today); d.setDate(today.getDate()-i); vals.push(sg('c7_'+_dk(d),null)); }
+  if(!vals.some(v=>v!==null&&v>0)){
+    const t=document.createElementNS('http://www.w3.org/2000/svg','text');
+    t.setAttribute('x',200);t.setAttribute('y',60);t.setAttribute('text-anchor','middle');
+    t.setAttribute('fill','#6b6b85');t.setAttribute('font-size','12');
+    t.setAttribute('font-style','italic');t.setAttribute('font-family','Outfit,sans-serif');
+    t.textContent='Aucune douleur loggée — parfait !'; svg.appendChild(t); return;
+  }
+  const xStep=(W-pL-pR)/29;
+  const fy=v=>pT+(H-pT-pB)*(v/10);
+  // Danger zone
+  const dr=document.createElementNS('http://www.w3.org/2000/svg','rect');
+  dr.setAttribute('x',pL);dr.setAttribute('y',pT);dr.setAttribute('width',W-pL-pR);
+  dr.setAttribute('height',(fy(7)-pT).toFixed(1));dr.setAttribute('fill','rgba(239,68,68,.06)'); svg.appendChild(dr);
+  // X axis
+  const xa=document.createElementNS('http://www.w3.org/2000/svg','line');
+  xa.setAttribute('x1',pL);xa.setAttribute('y1',H-pB);xa.setAttribute('x2',W-pR);xa.setAttribute('y2',H-pB);
+  xa.setAttribute('stroke','#2a2a40');xa.setAttribute('stroke-width','1'); svg.appendChild(xa);
+  // Bars
+  const bw=Math.max(4,xStep-2);
+  vals.forEach((v,i)=>{
+    if(v===null||v===0) return;
+    const bh=(H-pT-pB)*(v/10);
+    const rect=document.createElementNS('http://www.w3.org/2000/svg','rect');
+    rect.setAttribute('x',(pL+i*xStep).toFixed(1));rect.setAttribute('y',(H-pB-bh).toFixed(1));
+    rect.setAttribute('width',bw.toFixed(1));rect.setAttribute('height',bh.toFixed(1));
+    rect.setAttribute('fill',_c7Color(v));rect.setAttribute('rx','2');
+    svg.appendChild(rect);
+  });
+  // Danger line at 7
+  const dl=document.createElementNS('http://www.w3.org/2000/svg','line');
+  dl.setAttribute('x1',pL);dl.setAttribute('y1',fy(7).toFixed(1));dl.setAttribute('x2',W-pR);dl.setAttribute('y2',fy(7).toFixed(1));
+  dl.setAttribute('stroke','rgba(239,68,68,.45)');dl.setAttribute('stroke-width','1');dl.setAttribute('stroke-dasharray','3,3'); svg.appendChild(dl);
+  ['J-29','J-14','Auj.'].forEach((label,i)=>{
+    const xi=[0,14,29][i];
+    const lbl=document.createElementNS('http://www.w3.org/2000/svg','text');
+    lbl.setAttribute('x',(pL+xi*xStep).toFixed(1));lbl.setAttribute('y',H-pB+12);
+    lbl.setAttribute('text-anchor','middle');lbl.setAttribute('fill','#6b6b85');
+    lbl.setAttribute('font-size','9');lbl.setAttribute('font-family','JetBrains Mono,monospace');
+    lbl.textContent=label; svg.appendChild(lbl);
+  });
+}
+
+// ── 5. MODE FOCUS ROUTINE ────────────────────────────────────────────────────
+function initFocusMode(){
+  const routine=document.getElementById('p-routine'); if(!routine) return;
+  if(document.getElementById('focus-mode-btn')) return;
+  const btn=document.createElement('button');
+  btn.id='focus-mode-btn'; btn.className='focus-mode-btn';
+  btn.textContent='⚡ Focus'; btn.title='Mode focus — ne montre que le bloc actif';
+  const chips=document.getElementById('shift-chips');
+  if(chips) chips.parentNode.insertBefore(btn,chips.nextSibling);
+  else routine.insertBefore(btn,routine.firstChild);
+  btn.addEventListener('click',()=>{
+    const on=routine.classList.toggle('focus-active');
+    btn.textContent=on?'✕ Quitter focus':'⚡ Focus';
+    btn.classList.toggle('active',on);
+    if(on){ const now=routine.querySelector('.tl-item.now'); if(now) setTimeout(()=>now.scrollIntoView({behavior:'smooth',block:'center'}),120); }
+  });
+}
+
+// ── 6. HISTORIQUE TÂCHES ─────────────────────────────────────────────────────
+const DFR=['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
+const MFR=['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc'];
+
+function renderTaskHistory(){
+  let card=document.getElementById('task-history-card');
+  if(!card){
+    const home=document.getElementById('p-home'); if(!home) return;
+    const prioAdd=home.querySelector('.prio-add');
+    if(!prioAdd) return;
+    card=document.createElement('div');
+    card.id='task-history-card'; card.className='task-history-card';
+    card.innerHTML='<div class="th-head">Historique tâches · 7 jours</div><div id="task-history-rows" class="th-rows"></div>';
+    prioAdd.after(card);
+  }
+  const rows=document.getElementById('task-history-rows'); if(!rows) return;
+  const today=_today();
+  let html='';
+  for(let i=6;i>=0;i--){
+    const d=new Date(today); d.setDate(today.getDate()-i);
+    const k=_dk(d);
+    let tasks=[]; try{ tasks=JSON.parse(localStorage.getItem(NS+'tasks_'+k)||'[]'); }catch{}
+    const total=tasks.length, done=tasks.filter(t=>t.done).length;
+    const pct=total>0?Math.round(done/total*100):null;
+    const isToday=i===0;
+    const dayLabel=isToday?'Auj.':(DFR[d.getDay()]+' '+d.getDate()+' '+MFR[d.getMonth()]);
+    const bw=pct??0;
+    const bc=pct===null?'transparent':pct>=70?'var(--jade)':pct>=40?'var(--gold)':'var(--flame)';
+    html+=`<div class="th-row${isToday?' th-today':''}"><span class="th-label">${dayLabel}</span>`
+      +`<div class="th-bar-wrap"><div class="th-bar" style="width:${bw}%;background:${bc}"></div></div>`
+      +`<span class="th-stat">${pct!==null?done+'/'+total+' · '+pct+'%':'—'}</span></div>`;
+  }
+  rows.innerHTML=html;
+}
+
+// ── 7. RÉSUMÉ MATIN ──────────────────────────────────────────────────────────
+function renderMorningCard(){
+  const h=new Date().getHours();
+  if(h<5||h>=12){
+    const c=document.getElementById('morning-card'); if(c) c.style.display='none'; return;
+  }
+  if(sessionStorage.getItem('mc_dismissed')===_todayKey()) return;
+  let card=document.getElementById('morning-card');
+  if(!card){
+    const home=document.getElementById('p-home'); if(!home) return;
+    card=document.createElement('div'); card.id='morning-card'; card.className='morning-card';
+    home.insertBefore(card,home.firstChild);
+  }
+  const yesterday=new Date(); yesterday.setDate(yesterday.getDate()-1);
+  const yScore=_score(_dk(yesterday));
+  const todayTasks=JSON.parse(localStorage.getItem(NS+'tasks_'+_todayKey())||'[]');
+  const pending=todayTasks.filter(t=>!t.done).slice(0,3);
+  const curMin=new Date().getHours()*60+new Date().getMinutes();
+  let nextAppt=null;
+  todayTasks.filter(t=>!t.done&&t.time&&t.endTime).forEach(t=>{
+    const start=_pm(t.time);
+    if(start!==null&&start>curMin&&(!nextAppt||start<nextAppt.start)) nextAppt={title:t.title,start,time:t.time};
+  });
+  const scoreHtml=yScore!==null?`<span style="color:${_scoreColor(yScore)};font-weight:700">${yScore}%</span>`:'<span style="color:var(--text-faint)">—</span>';
+  const priHtml=pending.length>0?pending.map(t=>`<div class="mc-priority">• ${t.title.slice(0,50)}</div>`).join(''):'<div class="mc-priority" style="color:var(--text-faint)">Aucune tâche — ajoutes-en !</div>';
+  const apptHtml=nextAppt?`<div class="mc-appt">📅 Prochain RDV : <strong>${nextAppt.time}</strong> — ${nextAppt.title.slice(0,40)}</div>`:'';
+  card.style.display='';
+  card.innerHTML=`<div class="mc-head"><span class="mc-greeting">🌅 Bonjour — bonne journée !</span><button class="mc-close" id="mc-close">✕</button></div>`
+    +`<div class="mc-body"><div class="mc-row"><span class="mc-lbl">Hier</span>${scoreHtml}</div>`
+    +`<div class="mc-row mc-priorities-row"><span class="mc-lbl">Aujourd'hui</span><div class="mc-priorities">${priHtml}</div></div>${apptHtml}</div>`;
+  document.getElementById('mc-close')?.addEventListener('click',()=>{
+    card.style.display='none'; sessionStorage.setItem('mc_dismissed',_todayKey());
+  });
+}
+
+// ── 8. SUIVI SOMMEIL ─────────────────────────────────────────────────────────
+function _sleepDur(start,end){
+  const sm=_pm(start), em=_pm(end); if(sm===null||em===null) return null;
+  let d=em-sm; if(d<0) d+=1440; return Math.round(d/60*10)/10;
+}
+function _updateSleepDur(){
+  const s=document.getElementById('log-sleep-start'),e=document.getElementById('log-sleep-end'),d=document.getElementById('log-sleep-dur');
+  if(!s||!e||!d) return;
+  const dur=_sleepDur(s.value,e.value);
+  if(dur!==null){ d.textContent=dur+'h'; d.style.color=dur>=7&&dur<=9?'var(--jade)':dur>=6?'var(--gold)':'var(--flame)'; }
+  else { d.textContent='—'; d.style.color=''; }
+}
+function initSleepTracker(){
+  const s=document.getElementById('log-sleep-start'), e=document.getElementById('log-sleep-end');
+  if(!s||!e) return;
+  const load=(key)=>{
+    const data=sg('sleep_'+(key||_todayKey()),null);
+    s.value=data?.start||''; e.value=data?.end||''; _updateSleepDur();
+  };
+  const save=()=>{
+    const key=(window.currentLogDate&&typeof dateKey==='function')?dateKey(window.currentLogDate):_todayKey();
+    const dur=_sleepDur(s.value,e.value);
+    if(s.value||e.value) ss('sleep_'+key,{start:s.value,end:e.value,dur});
+    _updateSleepDur();
+  };
+  load(_todayKey());
+  s.addEventListener('change',save); e.addEventListener('change',save);
+  window._v39LoadSleep=load; // expose for date change hook
+}
+
+// ── DATE CHANGE HOOK (patches renderLogForm) ─────────────────────────────────
+function _hookRenderLogForm(){
+  if(typeof window.renderLogForm!=='function'||window.__v39LogHooked) return;
+  window.__v39LogHooked=true;
+  const orig=window.renderLogForm;
+  window.renderLogForm=function(){
+    orig.apply(this,arguments);
+    const key=(window.currentLogDate&&typeof dateKey==='function')?dateKey(window.currentLogDate):_todayKey();
+    try{ window._v39LoadC7&&window._v39LoadC7(key); }catch{}
+    try{ window._v39LoadSleep&&window._v39LoadSleep(key); }catch{}
+  };
+}
+
+// ── STATS REFRESH ─────────────────────────────────────────────────────────────
+function refreshAllStats(){
+  try{ renderHeatmap90(); }catch{}
+  try{ renderRadarChart(); }catch{}
+  try{ renderC7Chart(); }catch{}
+}
+
+// ── PATCH renderStats ─────────────────────────────────────────────────────────
+function _patchRS(){
+  if(window.__v39RSPatched||typeof window.renderStats!=='function') return;
+  window.__v39RSPatched=true;
+  const orig=window.renderStats;
+  window.renderStats=function(){
+    orig.apply(this,arguments);
+    setTimeout(refreshAllStats,200);
+  };
+}
+_patchRS(); setTimeout(_patchRS,400); setTimeout(_patchRS,1200);
+
+// ── BOOT ─────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded',boot); if(document.readyState!=='loading') boot();
+function boot(){
+  setTimeout(()=>{
+    _hookRenderLogForm();
+    try{ initC7Tracker(); }catch{}
+    try{ initSleepTracker(); }catch{}
+    try{ initFocusMode(); }catch{}
+    try{ renderTaskHistory(); }catch{}
+    try{ renderDomainStreaks(); }catch{}
+    try{ renderMorningCard(); }catch{}
+    if(document.querySelector('#p-stats:not(.hidden)')) refreshAllStats();
+  },800);
+}
+
+// Tab navigation
+document.addEventListener('click',e=>{
+  if(e.target.closest('.tab[data-tab="stats"]'))
+    setTimeout(refreshAllStats,400);
+  if(e.target.closest('.tab[data-tab="home"],.tab[data-tab="maison"]')){
+    setTimeout(()=>{
+      try{ renderDomainStreaks(); }catch{}
+      try{ renderTaskHistory(); }catch{}
+      try{ renderMorningCard(); }catch{}
+    },250);
+  }
+},true);
+
+// Update domain streaks every 5 min
+setInterval(()=>{ try{ renderDomainStreaks(); renderTaskHistory(); }catch{} }, 300000);
+
+})();
+</script>
 </body>
 </html>
