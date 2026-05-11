@@ -188,7 +188,7 @@ if (typeof window.Notification === 'undefined'){
 <meta name="robots" content="noindex,nofollow,noarchive,noimageindex">
 <meta name="googlebot" content="noindex,nofollow,noarchive,noimageindex">
 <meta name="ai-robots" content="noai,noimageai">
-<title>Dashboard Ultimate · v73 Command</title>
+<title>Dashboard Ultimate · v80 EPFC Display Fix</title>
 <!-- PWA manifest (inline data-URI so single-file still works) -->
 <link rel="manifest" href='data:application/manifest+json,{"name":"Dashboard Ultimate","short_name":"Dashboard","description":"Ton dashboard personnel · routine · priorités · stats","start_url":".","display":"standalone","orientation":"portrait","theme_color":"%230a0a10","background_color":"%2308080d","icons":[{"src":"data:image/svg%2Bxml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 192 192%22%3E%3Crect width=%22192%22 height=%22192%22 rx=%2236%22 fill=%22%23ff6b35%22/%3E%3Ctext x=%2296%22 y=%22130%22 font-size=%22110%22 text-anchor=%22middle%22 fill=%22%230a0a10%22 font-family=%22sans-serif%22 font-weight=%22900%22%3E%E2%9A%A1%3C/text%3E%3C/svg%3E","sizes":"192x192","type":"image/svg+xml"},{"src":"data:image/svg%2Bxml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 512 512%22%3E%3Crect width=%22512%22 height=%22512%22 rx=%2296%22 fill=%22%23ff6b35%22/%3E%3Ctext x=%22256%22 y=%22346%22 font-size=%22292%22 text-anchor=%22middle%22 fill=%22%230a0a10%22 font-family=%22sans-serif%22 font-weight=%22900%22%3E%E2%9A%A1%3C/text%3E%3C/svg%3E","sizes":"512x512","type":"image/svg+xml"}]}'>
 <link rel="apple-touch-icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180"><rect width="180" height="180" rx="34" fill="%23ff6b35"/><text x="90" y="122" font-size="102" text-anchor="middle" fill="%230a0a10" font-family="sans-serif" font-weight="900">%E2%9A%A1</text></svg>'>
@@ -288,6 +288,678 @@ body.ud-v54-clean .tl-desc{overflow-wrap:anywhere;word-break:normal;}
   body.ud-v54-clean .tl-dot{grid-column:1!important;}
 }
 </style>
+
+<style id="v75-forcefix-style">
+/* V75 FORCE FIX — blocs visibles, sans dépendance fragile aux anciennes fonctions */
+.v75-force-strip{display:grid;gap:12px;margin:16px 0}
+.v75-force-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.v75-force-card{border:1px solid rgba(139,92,246,.38);background:linear-gradient(135deg,rgba(30,27,75,.86),rgba(2,6,23,.88));border-radius:18px;padding:14px;box-shadow:0 14px 32px rgba(0,0,0,.22)}
+.v75-force-card h3,.v75-force-card h4{margin:0 0 8px;font:900 13px var(--f-sans,system-ui);letter-spacing:.04em;text-transform:uppercase;color:#c4b5fd}
+.v75-big-score{font:950 44px/1 var(--f-sans,system-ui);color:#f8fafc;letter-spacing:-.04em}
+.v75-sub{font:700 12px/1.5 var(--f-sans,system-ui);color:var(--text-faint,#94a3b8)}
+.v75-morning-list{margin:8px 0 0;padding-left:18px;color:#e5e7eb;font:700 12px/1.55 var(--f-sans,system-ui)}
+.v75-bar-wrap{height:16px;background:rgba(15,23,42,.9);border:1px solid rgba(148,163,184,.28);border-radius:999px;overflow:hidden;margin:10px 0 8px}
+.v75-bar{height:100%;width:0%;background:linear-gradient(90deg,#22c55e,#a3e635);border-radius:inherit;transition:width .25s ease}
+.v75-pre-rdv{display:none;border:1px solid rgba(168,85,247,.65);background:linear-gradient(90deg,rgba(88,28,135,.94),rgba(126,34,206,.82));color:#fff;border-radius:16px;padding:12px 14px;font:900 13px var(--f-sans,system-ui);box-shadow:0 12px 28px rgba(126,34,206,.25)}
+.v75-pre-rdv.show{display:block}
+.v75-stats-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:16px 0}
+.v75-chart-box{min-height:220px}
+#heatmap-90d{display:grid;grid-template-columns:repeat(15,minmax(12px,1fr));gap:4px;margin-top:10px}
+.v75-heat-cell{aspect-ratio:1;border-radius:5px;background:#111827;border:1px solid rgba(148,163,184,.14)}
+.v75-heat-0{background:#111827}.v75-heat-1{background:#064e3b}.v75-heat-2{background:#047857}.v75-heat-3{background:#16a34a}.v75-heat-4{background:#22c55e}.v75-heat-5{background:#86efac}
+.v75-domain-row,.v75-task-row,.v75-test-row{display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid rgba(148,163,184,.16);padding:8px 0;font:800 12px var(--f-sans,system-ui);color:#e5e7eb}
+.v75-domain-row:first-child,.v75-task-row:first-child,.v75-test-row:first-child{border-top:0}
+.v75-pill{border-radius:999px;padding:3px 8px;background:rgba(15,23,42,.9);border:1px solid rgba(148,163,184,.24);font:900 11px var(--f-mono,monospace)}
+.v75-test-row.pass span:last-child{color:#22c55e}.v75-test-row.fail span:last-child{color:#ef4444}
+.v75-chart-fallback svg{width:100%;height:220px;display:block}
+.v75-fixed-focus{position:fixed;right:18px;bottom:18px;z-index:9999;border:1px solid rgba(251,146,60,.6);border-radius:999px;background:linear-gradient(135deg,#f97316,#7c2d12);color:white;box-shadow:0 16px 38px rgba(0,0,0,.35);font:950 13px var(--f-sans,system-ui);padding:12px 16px;cursor:pointer}
+.v75-focus-overlay{position:fixed;inset:0;z-index:10000;background:rgba(2,6,23,.82);display:none;align-items:center;justify-content:center;padding:20px}
+.v75-focus-overlay.open{display:flex}
+.v75-focus-box{width:min(420px,100%);border:1px solid rgba(251,146,60,.45);border-radius:24px;background:#08080d;color:white;padding:22px;text-align:center;box-shadow:0 30px 80px rgba(0,0,0,.5)}
+.v75-focus-time{font:950 62px/1 var(--f-mono,monospace);letter-spacing:-.06em;margin:12px 0;color:#fdba74}
+.v75-focus-task{font:900 15px var(--f-sans,system-ui);color:#e5e7eb;margin-bottom:14px}
+.v75-focus-actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.v75-focus-actions button{border:1px solid rgba(148,163,184,.24);border-radius:12px;background:rgba(15,23,42,.92);color:#fff;font:900 12px var(--f-sans,system-ui);padding:10px 12px;cursor:pointer}
+.v75-version-badge{display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(34,197,94,.35);background:rgba(6,78,59,.35);border-radius:999px;padding:5px 10px;color:#bbf7d0;font:900 11px var(--f-mono,monospace);margin:8px 0}
+@media(max-width:760px){
+  .v75-force-grid,.v75-stats-grid{grid-template-columns:1fr}
+  #heatmap-90d{grid-template-columns:repeat(10,minmax(12px,1fr))}
+  .v75-fixed-focus{right:12px;bottom:12px}
+}
+</style>
+
+
+<style id="v76-visible-fix-style">
+/* V76 — corrige l'erreur V75 : les cartes doivent être visibles AVANT la mission du jour. */
+#v75-focus-fab,
+#v75-focus-overlay{
+  display:none!important;
+  visibility:hidden!important;
+  pointer-events:none!important;
+}
+#v75-home-modules.v76-top-modules{
+  display:block!important;
+  visibility:visible!important;
+  opacity:1!important;
+  margin:12px 0 14px!important;
+  position:relative!important;
+  z-index:3!important;
+}
+#v75-home-modules .v76-grid{
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:10px!important;
+}
+#score-du-jour,
+#momentum-card,
+#morning-card{
+  display:block!important;
+  visibility:visible!important;
+  opacity:1!important;
+}
+.v76-card-primary{
+  border-color:rgba(251,146,60,.55)!important;
+  background:linear-gradient(135deg,rgba(124,45,18,.78),rgba(15,23,42,.92))!important;
+}
+.v76-section-label{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  border:1px solid rgba(251,146,60,.35);
+  background:rgba(124,45,18,.28);
+  border-radius:999px;
+  padding:6px 10px;
+  color:#fed7aa;
+  font:900 11px var(--f-mono,monospace);
+  margin:10px 0 4px;
+  text-transform:uppercase;
+  letter-spacing:.05em;
+}
+@media(max-width:760px){
+  #v75-home-modules .v76-grid{
+    grid-template-columns:1fr!important;
+  }
+  #v75-home-modules .v75-force-card{
+    padding:12px!important;
+    border-radius:16px!important;
+  }
+  #v75-home-modules .v75-big-score{
+    font-size:38px!important;
+  }
+}
+</style>
+
+
+<style id="v77-ops-fix-style">
+/* V77 OPS FIX — échecs, priorités niveau/couleur, activités en retard */
+#v77-overdue-card,
+#v77-chess-card,
+#v77-prio-command,
+#v77-chess-panel{
+  display:block!important;
+  visibility:visible!important;
+  opacity:1!important;
+}
+#v77-overdue-card{
+  margin:12px 0 14px;
+  border:1px solid rgba(239,68,68,.38);
+  background:linear-gradient(135deg,rgba(127,29,29,.72),rgba(15,23,42,.92));
+  border-radius:18px;
+  padding:13px;
+  box-shadow:0 14px 35px rgba(0,0,0,.24);
+}
+#v77-overdue-card.is-empty{
+  border-color:rgba(16,185,129,.28);
+  background:linear-gradient(135deg,rgba(6,78,59,.42),rgba(15,23,42,.9));
+}
+.v77-card-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:8px;
+}
+.v77-card-title{
+  font:900 12px var(--f-sans,system-ui);
+  text-transform:uppercase;
+  letter-spacing:.10em;
+  color:#fed7aa;
+}
+.v77-badge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:999px;
+  padding:4px 8px;
+  font:900 10px var(--f-mono,monospace);
+  border:1px solid rgba(255,255,255,.16);
+  background:rgba(255,255,255,.08);
+  color:#fff;
+}
+.v77-overdue-list{
+  display:grid;
+  gap:7px;
+}
+.v77-overdue-item{
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  gap:9px;
+  align-items:center;
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:13px;
+  background:rgba(2,6,23,.36);
+  padding:8px 9px;
+}
+.v77-overdue-time{
+  font:900 11px var(--f-mono,monospace);
+  color:#fecaca;
+}
+.v77-overdue-name{
+  font:800 12px var(--f-sans,system-ui);
+  color:var(--text,#fff);
+  overflow-wrap:anywhere;
+}
+.v77-overdue-type{
+  font:900 9px var(--f-sans,system-ui);
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  color:#cbd5e1;
+}
+#v77-chess-card .v77-chess-line,
+#v77-chess-panel .v77-chess-line{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  border-top:1px solid rgba(255,255,255,.10);
+  padding-top:7px;
+  margin-top:7px;
+  font:800 12px var(--f-sans,system-ui);
+}
+.v77-chess-actions{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:8px;
+  margin-top:10px;
+}
+.v77-mini-btn{
+  min-height:38px;
+  border-radius:12px;
+  border:1px solid rgba(251,146,60,.34);
+  background:rgba(251,146,60,.12);
+  color:#fff;
+  font:900 11px var(--f-sans,system-ui);
+  cursor:pointer;
+}
+.v77-mini-btn.done{
+  background:rgba(16,185,129,.20);
+  border-color:rgba(16,185,129,.42);
+}
+#v77-prio-command{
+  margin:10px 0 10px;
+  border:1px solid rgba(148,163,184,.22);
+  background:linear-gradient(135deg,rgba(15,23,42,.82),rgba(2,6,23,.74));
+  border-radius:16px;
+  padding:12px;
+}
+.v77-prio-legend{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:8px;
+}
+.v77-prio-chip{
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.13);
+  padding:8px;
+  font:900 10px var(--f-sans,system-ui);
+  text-transform:uppercase;
+  letter-spacing:.04em;
+}
+.v77-prio-chip small{
+  display:block;
+  margin-top:3px;
+  font:700 9px var(--f-sans,system-ui);
+  color:#cbd5e1;
+  text-transform:none;
+  letter-spacing:0;
+}
+.v77-prio-chip.critical{background:rgba(239,68,68,.15);color:#fecaca;border-color:rgba(239,68,68,.35);}
+.v77-prio-chip.high{background:rgba(245,158,11,.14);color:#fed7aa;border-color:rgba(245,158,11,.35);}
+.v77-prio-chip.normal{background:rgba(59,130,246,.14);color:#bfdbfe;border-color:rgba(59,130,246,.35);}
+.v77-prio-chip.low{background:rgba(16,185,129,.14);color:#bbf7d0;border-color:rgba(16,185,129,.35);}
+.v77-prio-control{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  margin-left:auto;
+}
+.v77-prio-level{
+  min-height:30px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.16);
+  background:rgba(2,6,23,.62);
+  color:#fff;
+  font:900 10px var(--f-sans,system-ui);
+  padding:0 8px;
+}
+.v77-level-badge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:24px;
+  border-radius:999px;
+  padding:0 8px;
+  font:900 9px var(--f-mono,monospace);
+  text-transform:uppercase;
+}
+.prio-item.v77-level-critical{border-color:rgba(239,68,68,.48)!important;background:linear-gradient(90deg,rgba(239,68,68,.16),rgba(15,23,42,.82))!important;}
+.prio-item.v77-level-high{border-color:rgba(245,158,11,.46)!important;background:linear-gradient(90deg,rgba(245,158,11,.13),rgba(15,23,42,.82))!important;}
+.prio-item.v77-level-normal{border-color:rgba(59,130,246,.40)!important;background:linear-gradient(90deg,rgba(59,130,246,.10),rgba(15,23,42,.82))!important;}
+.prio-item.v77-level-low{border-color:rgba(16,185,129,.36)!important;background:linear-gradient(90deg,rgba(16,185,129,.09),rgba(15,23,42,.82))!important;}
+.v77-level-critical .v77-level-badge{background:rgba(239,68,68,.22);color:#fecaca;}
+.v77-level-high .v77-level-badge{background:rgba(245,158,11,.20);color:#fed7aa;}
+.v77-level-normal .v77-level-badge{background:rgba(59,130,246,.20);color:#bfdbfe;}
+.v77-level-low .v77-level-badge{background:rgba(16,185,129,.20);color:#bbf7d0;}
+#v77-chess-panel{
+  margin:12px 0 16px;
+  border:1px solid rgba(99,102,241,.32);
+  border-radius:18px;
+  background:linear-gradient(135deg,rgba(49,46,129,.42),rgba(15,23,42,.90));
+  padding:14px;
+}
+.v77-chess-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+}
+.v77-field{
+  display:grid;
+  gap:5px;
+}
+.v77-field label{
+  font:900 10px var(--f-sans,system-ui);
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  color:#cbd5e1;
+}
+.v77-field input{
+  min-height:38px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.16);
+  background:rgba(2,6,23,.52);
+  color:#fff;
+  padding:0 10px;
+  font:900 13px var(--f-mono,monospace);
+}
+@media(max-width:760px){
+  .v77-prio-legend{grid-template-columns:1fr 1fr;}
+  .v77-prio-control{width:100%;margin-left:0;margin-top:7px;justify-content:space-between;}
+  .v77-prio-level{flex:1;}
+  .v77-chess-grid{grid-template-columns:1fr;}
+  .v77-overdue-item{grid-template-columns:1fr;align-items:start;}
+}
+</style>
+
+
+<style id="v78-grade-system-style">
+.v78-grade-panel{display:block!important;margin:12px 0 18px;border:1px solid rgba(251,146,60,.28);border-radius:20px;background:radial-gradient(circle at top left,rgba(251,146,60,.18),transparent 38%),linear-gradient(135deg,rgba(15,23,42,.92),rgba(2,6,23,.82));padding:14px;box-shadow:0 18px 45px rgba(0,0,0,.28)}
+.v78-grade-top{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center}.v78-grade-emblem{width:52px;height:52px;display:grid;place-items:center;border-radius:17px;border:1px solid rgba(255,255,255,.16);background:linear-gradient(135deg,rgba(251,146,60,.30),rgba(99,102,241,.20));font-size:27px}.v78-grade-title{margin:0;font:900 15px var(--f-sans,system-ui);color:var(--text,#fff)}.v78-grade-sub{margin-top:3px;font:750 11.5px/1.45 var(--f-sans,system-ui);color:var(--text-dim,#cbd5e1)}.v78-grade-rank{display:grid;gap:3px;min-width:92px;text-align:right}.v78-grade-rank b{font:950 18px var(--f-mono,monospace);color:#fed7aa}.v78-grade-rank span{font:900 9.5px var(--f-sans,system-ui);color:#cbd5e1;text-transform:uppercase;letter-spacing:.08em}.v78-progress-wrap{margin-top:12px;height:13px;border-radius:999px;overflow:hidden;border:1px solid rgba(255,255,255,.12);background:rgba(2,6,23,.65)}.v78-progress-bar{height:100%;border-radius:999px;background:linear-gradient(90deg,#fb923c,#facc15,#22c55e);transition:width .25s ease}.v78-grade-meta{display:flex;justify-content:space-between;gap:10px;margin-top:7px;font:800 10.5px var(--f-sans,system-ui);color:#cbd5e1}.v78-grade-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:12px}.v78-grade-stat{border:1px solid rgba(255,255,255,.11);border-radius:14px;padding:9px;background:rgba(2,6,23,.36)}.v78-grade-stat span{display:block;font:900 9px var(--f-sans,system-ui);text-transform:uppercase;letter-spacing:.08em;color:#94a3b8}.v78-grade-stat b{display:block;margin-top:4px;font:950 14px var(--f-mono,monospace);color:#fff}.v78-grade-actions{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:12px}.v78-grade-btn{min-height:40px;border-radius:13px;border:1px solid rgba(148,163,184,.22);background:rgba(15,23,42,.72);color:#e5e7eb;font:900 10.5px var(--f-sans,system-ui);cursor:pointer}.v78-grade-btn.done{border-color:rgba(34,197,94,.45);background:rgba(34,197,94,.18);color:#bbf7d0}.v78-roadmap{display:grid;gap:7px;margin-top:12px}.v78-step{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;border:1px solid rgba(255,255,255,.10);border-radius:13px;padding:8px;background:rgba(255,255,255,.035)}.v78-step-dot{width:23px;height:23px;display:grid;place-items:center;border-radius:999px;border:1px solid rgba(255,255,255,.14);font:950 10px var(--f-mono,monospace)}.v78-step.done .v78-step-dot{border-color:rgba(34,197,94,.45);background:rgba(34,197,94,.18);color:#bbf7d0}.v78-step-name{font:850 11.5px var(--f-sans,system-ui);color:#fff}.v78-step-sub{font:700 10px/1.35 var(--f-sans,system-ui);color:#94a3b8}.v78-step-tag{font:900 9px var(--f-sans,system-ui);text-transform:uppercase;letter-spacing:.08em;color:#fed7aa}.v78-grade-panel[data-domain="epfc"]{border-color:rgba(16,185,129,.30)}.v78-grade-panel[data-domain="code"]{border-color:rgba(99,102,241,.32)}.v78-grade-panel[data-domain="trading"]{border-color:rgba(56,189,248,.32)}.v78-grade-panel[data-domain="nl"]{border-color:rgba(59,130,246,.34)}.v78-grade-panel[data-domain="chess"]{border-color:rgba(168,85,247,.34)}
+@media(max-width:760px){.v78-grade-top{grid-template-columns:auto 1fr}.v78-grade-rank{text-align:left;grid-column:1/-1;grid-template-columns:auto auto;align-items:end;justify-content:space-between}.v78-grade-grid{grid-template-columns:1fr}.v78-grade-actions{grid-template-columns:1fr 1fr}.v78-step{grid-template-columns:auto 1fr}.v78-step-tag{grid-column:2}}
+</style>
+
+
+<style id="v79-freeze-guard-style">
+/* V79 Freeze Guard — aucun rerender global après clic */
+#v79-freeze-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  margin:8px 0 10px;
+  padding:7px 10px;
+  border-radius:999px;
+  border:1px solid rgba(34,197,94,.35);
+  background:rgba(34,197,94,.12);
+  color:#bbf7d0;
+  font:900 10px var(--f-mono,monospace);
+  letter-spacing:.06em;
+  text-transform:uppercase;
+}
+.v79-grade-panel{
+  display:block!important;
+  margin:12px 0 18px;
+  border:1px solid rgba(251,146,60,.28);
+  border-radius:20px;
+  background:linear-gradient(135deg,rgba(15,23,42,.94),rgba(2,6,23,.86));
+  padding:14px;
+}
+.v79-grade-top{
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  gap:12px;
+  align-items:center;
+}
+.v79-emblem{
+  width:50px;height:50px;display:grid;place-items:center;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.16);
+  background:rgba(251,146,60,.15);
+  font-size:26px;
+}
+.v79-title{margin:0;font:900 15px var(--f-sans,system-ui);color:#fff}
+.v79-sub{margin-top:3px;font:750 11.5px/1.45 var(--f-sans,system-ui);color:#cbd5e1}
+.v79-rank{text-align:right}
+.v79-rank b{display:block;font:950 18px var(--f-mono,monospace);color:#fed7aa}
+.v79-rank span{font:900 9px var(--f-sans,system-ui);text-transform:uppercase;letter-spacing:.08em;color:#94a3b8}
+.v79-bar-wrap{margin-top:12px;height:13px;border-radius:999px;overflow:hidden;border:1px solid rgba(255,255,255,.12);background:rgba(2,6,23,.65)}
+.v79-bar{height:100%;width:0%;border-radius:999px;background:linear-gradient(90deg,#fb923c,#facc15,#22c55e)}
+.v79-meta{display:flex;justify-content:space-between;gap:10px;margin-top:7px;font:800 10.5px var(--f-sans,system-ui);color:#cbd5e1}
+.v79-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:12px}
+.v79-stat{border:1px solid rgba(255,255,255,.11);border-radius:14px;padding:9px;background:rgba(2,6,23,.36)}
+.v79-stat span{display:block;font:900 9px var(--f-sans,system-ui);text-transform:uppercase;letter-spacing:.08em;color:#94a3b8}
+.v79-stat b{display:block;margin-top:4px;font:950 14px var(--f-mono,monospace);color:#fff}
+.v79-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}
+.v79-btn{
+  min-height:40px;border-radius:13px;border:1px solid rgba(148,163,184,.22);
+  background:rgba(15,23,42,.72);color:#e5e7eb;font:900 10.5px var(--f-sans,system-ui);
+}
+.v79-btn.done{border-color:rgba(34,197,94,.45);background:rgba(34,197,94,.18);color:#bbf7d0}
+.v79-road{display:grid;gap:7px;margin-top:12px}
+.v79-step{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;border:1px solid rgba(255,255,255,.10);border-radius:13px;padding:8px;background:rgba(255,255,255,.035)}
+.v79-step-dot{width:23px;height:23px;display:grid;place-items:center;border-radius:999px;border:1px solid rgba(255,255,255,.14);font:950 10px var(--f-mono,monospace)}
+.v79-step.done .v79-step-dot{border-color:rgba(34,197,94,.45);background:rgba(34,197,94,.18);color:#bbf7d0}
+.v79-step-name{font:850 11.5px var(--f-sans,system-ui);color:#fff}
+.v79-step-sub{font:700 10px/1.35 var(--f-sans,system-ui);color:#94a3b8}
+.v79-step-tag{font:900 9px var(--f-sans,system-ui);text-transform:uppercase;letter-spacing:.08em;color:#fed7aa}
+@media(max-width:760px){
+  .v79-grade-top{grid-template-columns:auto 1fr}
+  .v79-rank{grid-column:1 / -1;text-align:left;display:flex;justify-content:space-between;align-items:end}
+  .v79-grid{grid-template-columns:1fr}
+  .v79-actions{grid-template-columns:1fr}
+  .v79-step{grid-template-columns:auto 1fr}
+  .v79-step-tag{grid-column:2}
+}
+</style>
+
+
+<style id="v80-epfc-display-fix-style">
+/* V80 — correction affichage priorités + EPFC informatique */
+#v80-fix-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  margin:8px 0 10px;
+  padding:7px 10px;
+  border-radius:999px;
+  border:1px solid rgba(34,197,94,.38);
+  background:rgba(34,197,94,.12);
+  color:#bbf7d0;
+  font:900 10px var(--f-mono,monospace);
+  text-transform:uppercase;
+  letter-spacing:.06em;
+}
+
+/* Priorités : anti texte vertical / anti compression mobile */
+#prio-list{
+  display:grid!important;
+  gap:10px!important;
+  min-width:0!important;
+}
+#prio-list .prio-item{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr)!important;
+  grid-auto-flow:row!important;
+  gap:8px!important;
+  width:100%!important;
+  min-width:0!important;
+  max-width:100%!important;
+  padding:14px 12px 14px 22px!important;
+  align-items:start!important;
+  writing-mode:horizontal-tb!important;
+  text-orientation:mixed!important;
+  word-break:normal!important;
+  overflow-wrap:normal!important;
+  white-space:normal!important;
+}
+#prio-list .prio-item *,
+#prio-list .prio-item{
+  writing-mode:horizontal-tb!important;
+  text-orientation:mixed!important;
+}
+#prio-list .prio-item .prio-text,
+#prio-list .prio-item [contenteditable],
+#prio-list .prio-item .prio-title,
+#prio-list .prio-item .prio-label,
+#prio-list .prio-item label,
+#prio-list .prio-item p,
+#prio-list .prio-item b,
+#prio-list .prio-item strong{
+  display:block!important;
+  min-width:0!important;
+  max-width:100%!important;
+  width:auto!important;
+  white-space:normal!important;
+  word-break:normal!important;
+  overflow-wrap:anywhere!important;
+  line-height:1.35!important;
+  letter-spacing:normal!important;
+}
+
+/* Les contrôles niveau/couleur ne doivent plus manger la largeur du texte */
+#prio-list .v77-prio-control{
+  display:flex!important;
+  flex-direction:row!important;
+  flex-wrap:wrap!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  gap:8px!important;
+  width:100%!important;
+  max-width:100%!important;
+  margin:6px 0 0!important;
+  grid-column:1 / -1!important;
+}
+#prio-list .v77-prio-level{
+  width:auto!important;
+  min-width:132px!important;
+  max-width:170px!important;
+  flex:0 0 auto!important;
+}
+#prio-list .v77-level-badge{
+  flex:0 0 auto!important;
+}
+
+/* Ancien picker à points : trop large sur mobile, on le masque. Le select C1/P1/P2/P3 reste. */
+@media(max-width:760px){
+  #prio-list .prio-picker-v35{
+    display:none!important;
+  }
+  #prio-list .prio-del,
+  #prio-list [data-act="del"]{
+    position:absolute!important;
+    right:10px!important;
+    top:10px!important;
+  }
+  #prio-list .v77-prio-control{
+    padding-right:38px!important;
+  }
+}
+
+/* EPFC : masquer les anciens panneaux EPFC assurance/génériques */
+#v78-grade-epfc,
+#v79-grade-epfc{
+  display:none!important;
+}
+
+/* Panneau EPFC informatique */
+#v80-epfc-panel{
+  display:block!important;
+  margin:12px 0 18px;
+  border:1px solid rgba(16,185,129,.32);
+  border-radius:20px;
+  background:
+    radial-gradient(circle at top left,rgba(16,185,129,.16),transparent 38%),
+    linear-gradient(135deg,rgba(15,23,42,.94),rgba(2,6,23,.86));
+  padding:14px;
+}
+.v80-epfc-top{
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  gap:12px;
+  align-items:center;
+}
+.v80-epfc-icon{
+  width:52px;
+  height:52px;
+  display:grid;
+  place-items:center;
+  border-radius:17px;
+  border:1px solid rgba(255,255,255,.16);
+  background:rgba(16,185,129,.16);
+  font-size:27px;
+}
+.v80-epfc-title{
+  margin:0;
+  font:900 15px var(--f-sans,system-ui);
+  color:#fff;
+}
+.v80-epfc-sub{
+  margin-top:4px;
+  font:750 11.5px/1.45 var(--f-sans,system-ui);
+  color:#cbd5e1;
+}
+.v80-epfc-rank{
+  text-align:right;
+}
+.v80-epfc-rank b{
+  display:block;
+  font:950 18px var(--f-mono,monospace);
+  color:#bbf7d0;
+}
+.v80-epfc-rank span{
+  font:900 9px var(--f-sans,system-ui);
+  color:#94a3b8;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+}
+.v80-bar-wrap{
+  margin-top:12px;
+  height:13px;
+  border-radius:999px;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(2,6,23,.65);
+}
+.v80-bar{
+  height:100%;
+  width:0%;
+  border-radius:999px;
+  background:linear-gradient(90deg,#22c55e,#facc15,#fb923c);
+}
+.v80-epfc-meta{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  margin-top:7px;
+  font:800 10.5px var(--f-sans,system-ui);
+  color:#cbd5e1;
+}
+.v80-ue-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:9px;
+  margin-top:13px;
+}
+.v80-ue-card{
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:15px;
+  background:rgba(2,6,23,.38);
+  padding:10px;
+}
+.v80-ue-card.done{
+  border-color:rgba(34,197,94,.45);
+  background:rgba(34,197,94,.12);
+}
+.v80-ue-head{
+  display:flex;
+  justify-content:space-between;
+  gap:8px;
+  align-items:flex-start;
+}
+.v80-ue-code{
+  font:950 11px var(--f-mono,monospace);
+  color:#fed7aa;
+}
+.v80-ue-ects{
+  font:900 10px var(--f-sans,system-ui);
+  color:#bbf7d0;
+  white-space:nowrap;
+}
+.v80-ue-name{
+  margin-top:5px;
+  font:850 12px/1.35 var(--f-sans,system-ui);
+  color:#fff;
+}
+.v80-ue-sub{
+  margin-top:5px;
+  font:700 10px/1.35 var(--f-sans,system-ui);
+  color:#94a3b8;
+}
+.v80-ue-actions{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:6px;
+  margin-top:9px;
+}
+.v80-ue-btn{
+  min-height:32px;
+  border-radius:10px;
+  border:1px solid rgba(148,163,184,.22);
+  background:rgba(15,23,42,.72);
+  color:#e5e7eb;
+  font:900 9px var(--f-sans,system-ui);
+}
+.v80-ue-btn.done{
+  border-color:rgba(34,197,94,.45);
+  background:rgba(34,197,94,.18);
+  color:#bbf7d0;
+}
+.v80-exam-box{
+  margin-top:13px;
+  border:1px solid rgba(251,146,60,.28);
+  border-radius:16px;
+  padding:11px;
+  background:rgba(251,146,60,.08);
+}
+.v80-exam-title{
+  font:950 12px var(--f-sans,system-ui);
+  color:#fed7aa;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+}
+.v80-exam-list{
+  margin:8px 0 0;
+  padding-left:18px;
+  font:750 11.5px/1.55 var(--f-sans,system-ui);
+  color:#e5e7eb;
+}
+@media(max-width:760px){
+  .v80-epfc-top{
+    grid-template-columns:auto 1fr;
+  }
+  .v80-epfc-rank{
+    grid-column:1 / -1;
+    text-align:left;
+    display:flex;
+    justify-content:space-between;
+    align-items:end;
+  }
+  .v80-ue-grid{
+    grid-template-columns:1fr;
+  }
+  .v80-ue-actions{
+    grid-template-columns:1fr;
+  }
+}
+</style>
+
 </head>
 <body>
 <div class="app">
@@ -344,6 +1016,29 @@ body.ud-v54-clean .tl-desc{overflow-wrap:anywhere;word-break:normal;}
 </div>
 
 
+
+<!-- V76 VISIBLE FIX · HOME MODULES ABOVE MISSION -->
+<div class="v76-top-modules" id="v75-home-modules" aria-label="Pilotage du jour">
+  <div class="v75-pre-rdv" id="v75-pre-rdv">🟣 Alerte pré-RDV : aucune tâche dans les 30 prochaines minutes.</div>
+  <div class="v76-grid">
+    <div id="score-du-jour" class="v75-force-card v76-card-primary" aria-live="polite">
+      <h3>Score du jour</h3>
+      <div class="v75-big-score" id="v75-score-value">—</div>
+      <div class="v75-sub" id="v75-score-detail">Tâches + humeur + domaines + C7</div>
+    </div>
+    <div id="momentum-card" class="v75-force-card" aria-live="polite">
+      <h3>Momentum 7j</h3>
+      <div class="v75-bar-wrap"><div class="v75-bar" id="momentum-bar"></div></div>
+      <div class="v75-sub" id="momentum-label">Momentum 7j : —/100</div>
+    </div>
+    <div id="morning-card" class="v75-force-card" aria-live="polite">
+      <h3>Morning card</h3>
+      <div id="v75-morning-body" class="v75-sub">Chargement sommeil + tâches du jour…</div>
+    </div>
+  </div>
+</div>
+<!-- /V76 VISIBLE FIX · HOME MODULES ABOVE MISSION -->
+
 <div class="next-action" id="next-action" aria-live="polite">
   <div class="na-head">
     <span class="na-label" id="na-label">Prochaine action</span>
@@ -384,6 +1079,8 @@ body.ud-v54-clean .tl-desc{overflow-wrap:anywhere;word-break:normal;}
 </div>
 </div>
 </div>
+
+
 
 <div class="stats stats-3">
 <div class="stat"><div class="stat-v flame mono" id="st-streak">0</div><div class="stat-l">Jours streak</div></div>
@@ -847,6 +1544,55 @@ Bachelor dev en septembre. Bilingue NL+FR d'ici 2 ans. Corps robuste malgré la 
 <button type="button" data-period="90">90 jours</button>
 <button type="button" data-period="365">1 an</button>
 </div>
+
+
+<!-- V75 FORCE FIX · STATS MODULES -->
+<div class="v76-section-label" id="v75-stats-badge">Pilotage avancé · 90j / 7j / C7 / tâches</div>
+<div class="v75-stats-grid" id="v75-stats-modules">
+  <div class="chart-card v75-force-card">
+    <div class="chart-head">
+      <span class="chart-title">Heatmap 90j · <em>domaines</em></span>
+      <span class="chart-legend" id="v75-heatmap-meta">—</span>
+    </div>
+    <div id="heatmap-90d" aria-label="Heatmap activité 90 jours"></div>
+  </div>
+  <div class="chart-card v75-force-card">
+    <div class="chart-head">
+      <span class="chart-title">Streaks 🔥 · <em>par domaine</em></span>
+      <span class="chart-legend">jours consécutifs</span>
+    </div>
+    <div id="domain-streaks-v39"></div>
+  </div>
+  <div class="chart-card v75-force-card">
+    <div class="chart-head">
+      <span class="chart-title">Radar 7j · <em>cohérence</em></span>
+      <span class="chart-legend">SVG fallback, Chart.js non obligatoire</span>
+    </div>
+    <div id="radar-wrap" class="v75-chart-box">
+      <canvas id="radar-chart" height="220"></canvas>
+      <div id="radar-fallback" class="v75-chart-fallback"></div>
+    </div>
+  </div>
+  <div class="chart-card v75-force-card">
+    <div class="chart-head">
+      <span class="chart-title">Douleur C7 · <em>30j</em></span>
+      <span class="chart-legend">0 aucune · 10 critique</span>
+    </div>
+    <div id="c7-chart-wrap" class="v75-chart-box">
+      <canvas id="chart-c7" height="220"></canvas>
+      <div id="c7-fallback" class="v75-chart-fallback"></div>
+    </div>
+  </div>
+  <div id="task-history-card" class="chart-card v75-force-card">
+    <h3>Historique tâches · 10j</h3>
+    <div id="task-history-list" class="v75-sub">Chargement…</div>
+  </div>
+  <div id="v75-selftest-card" class="chart-card v75-force-card">
+    <h3>Contrôle modules</h3>
+    <div id="v75-selftest-list"></div>
+  </div>
+</div>
+<!-- /V75 FORCE FIX · STATS MODULES -->
 
 <div class="stats-cards">
 <div class="stats-card accent"><div class="stats-card-lbl">Streak actuel</div><div class="stats-card-val" id="sv-streak">0</div><div class="stats-card-sub">jours consécutifs</div></div>
@@ -2012,6 +2758,13 @@ Si t'as de la fièvre, douleurs fortes, ou t'es vraiment KO : <strong>protocole 
     Le module Settings se charge à l'ouverture de l'onglet…
   </div>
 </div>
+
+<div class="v75-force-card" id="v75-settings-selftest">
+  <h3>V75 Force Fix · Self-test</h3>
+  <div class="v75-sub">Ce bloc vérifie que les conteneurs existent vraiment dans le DOM après déploiement.</div>
+  <div id="v75-settings-selftest-list" style="margin-top:10px"></div>
+</div>
+
 </section>
 
 </main>
@@ -3839,350 +4592,6 @@ if (document.readyState === 'loading'){
 </script>
 
 
-
-
-<style id="trading-styles">
-.trd-phase-card{background:linear-gradient(135deg,rgba(167,139,250,.10),rgba(106,165,250,.06));
-  border:1px solid var(--border);border-radius:14px;padding:16px;margin:14px 0 18px;}
-.trd-phase-label{font:600 10px var(--f-mono);color:var(--violet-2);letter-spacing:.08em;text-transform:uppercase}
-.trd-phase-name{font:700 18px var(--f-display);color:var(--text);margin:4px 0 10px}
-.trd-phase-prog{display:flex;align-items:center;gap:10px}
-.trd-phase-bar{flex:1;height:6px;background:var(--surface-2);border-radius:6px;overflow:hidden}
-.trd-phase-fill{height:100%;background:linear-gradient(90deg,var(--violet),var(--sapphire));border-radius:6px;transition:width .5s var(--ease)}
-.trd-phase-pct{font:700 11px var(--f-mono);color:var(--text-dim)}
-.trd-phase-next{font:400 12px var(--f-sans);color:var(--text-faint);margin-top:8px}
-
-.trd-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;margin:12px 0}
-.trd-card-h{font:700 13px var(--f-sans);color:var(--text);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px;display:flex;align-items:center;gap:6px}
-.trd-card-sub{font:400 12px var(--f-sans);color:var(--text-faint);margin-bottom:10px}
-.trd-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
-.trd-grid-2 label{display:flex;flex-direction:column;font:600 10px var(--f-mono);color:var(--text-faint);text-transform:uppercase;letter-spacing:.04em;gap:4px}
-.trd-grid-2 input,.trd-grid-2 select,.trd-card textarea,.trd-card>input{
-  background:var(--surface-2);border:1px solid var(--border);border-radius:8px;
-  padding:10px;color:var(--text);font:14px var(--f-sans);min-height:40px;
-  width:100%;}
-.trd-card textarea{font:13px var(--f-sans);resize:vertical;min-height:60px;margin-bottom:10px}
-.trd-result{background:var(--bg-deep);border:1px dashed var(--border-strong);border-radius:8px;
-  padding:12px;font:700 18px var(--f-mono);color:var(--flame-2);text-align:center;margin-top:8px}
-.trd-result-sub{font:400 11px var(--f-sans);color:var(--text-faint);text-align:center;margin-top:4px}
-
-.trd-checklist{display:grid;gap:6px;margin:8px 0}
-.trd-checklist label{display:flex;align-items:center;gap:8px;font:400 12px var(--f-sans);color:var(--text-dim);cursor:pointer;min-height:32px;touch-action:manipulation}
-.trd-checklist input{width:18px;height:18px;accent-color:var(--flame)}
-
-.trd-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
-.trd-btn{padding:10px 16px;border-radius:8px;border:1px solid var(--border);background:transparent;
-  color:var(--text-dim);font:600 12px var(--f-sans);cursor:pointer;touch-action:manipulation;min-height:44px;letter-spacing:.04em;text-transform:uppercase}
-.trd-btn.primary{background:var(--g-flame);color:#0a0a10;border-color:transparent}
-.trd-btn.ghost{background:transparent}
-.trd-btn:disabled{opacity:.5;cursor:not-allowed}
-
-.trd-stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
-.trd-stat{background:var(--surface-2);border-radius:8px;padding:8px;text-align:center}
-.trd-stat-l{font:600 9px var(--f-mono);color:var(--text-faint);text-transform:uppercase;letter-spacing:.06em}
-.trd-stat-v{font:800 18px var(--f-display);color:var(--text);margin-top:4px}
-.trd-stat-v.win{color:var(--jade)}.trd-stat-v.loss{color:var(--coral)}.trd-stat-v.warn{color:var(--amber)}
-.trd-pnl-line{height:6px;background:var(--surface-2);border-radius:4px;overflow:hidden;margin-top:4px}
-.trd-pnl-fill{height:100%;transition:width .5s var(--ease)}
-
-.trd-pf-bars{display:grid;gap:8px;margin:10px 0}
-.trd-pf-bar{display:grid;grid-template-columns:60px 1fr;gap:10px;align-items:center}
-.trd-pf-l{font:600 10px var(--f-mono);color:var(--text-faint);text-transform:uppercase}
-.trd-pf-track{height:8px;background:var(--surface-2);border-radius:4px;overflow:hidden;position:relative}
-.trd-pf-fill{height:100%;border-radius:4px;transition:width .5s var(--ease)}
-.trd-pf-fill.profit{background:linear-gradient(90deg,var(--jade),var(--jade-2))}
-.trd-pf-fill.dd{background:linear-gradient(90deg,var(--amber),var(--coral))}
-
-.trd-rules{list-style:none;padding:0;margin:0}
-.trd-rules li{padding:8px 0 8px 24px;position:relative;font:400 13px/1.5 var(--f-sans);color:var(--text-dim);border-bottom:1px solid var(--border-soft)}
-.trd-rules li:last-child{border-bottom:none}
-.trd-rules li::before{content:"▸";position:absolute;left:6px;color:var(--flame);font-weight:900}
-
-.trd-ai-out{margin-top:10px;min-height:0}
-
-.trd-warn-banner{background:linear-gradient(135deg,rgba(248,113,113,.10),rgba(251,191,36,.06));
-  border:1px solid rgba(248,113,113,.3);border-radius:12px;padding:12px;margin:14px 0;
-  font:13px/1.5 var(--f-sans);color:var(--coral-2)}
-.trd-warn-banner b{color:var(--coral)}
-
-@media (min-width:600px){
-  .trd-stats-grid{grid-template-columns:repeat(6,1fr)}
-}
-</style>
-
-<script id="trading-module">
-(function(){
-'use strict';
-if (window.__tradingModuleInstalled) return;
-window.__tradingModuleInstalled = true;
-
-const NS = 'dashv2_';
-const sg = (k, d) => { try { return JSON.parse(localStorage.getItem(NS+k)) ?? d; } catch(_) { return d; } };
-const ss = (k, v) => { try { localStorage.setItem(NS+k, JSON.stringify(v)); return true; } catch(_) { return false; } };
-
-const KEYS = {
-  journal: 'trading_journal_v2',
-  pf: 'trading_propfirm_v2',
-  read: 'trading_read_v2',
-  phase: 'trading_phase_v2'
-};
-
-// ─── Position calculator ─────────────────────────────────────
-function calcPosition(){
-  const cap = parseFloat(document.getElementById('trd-cap')?.value) || 0;
-  const risk = parseFloat(document.getElementById('trd-risk')?.value) || 0;
-  const stop = parseFloat(document.getElementById('trd-stop')?.value) || 0;
-  const pv = parseFloat(document.getElementById('trd-pv')?.value) || 0;
-  const out = document.getElementById('trd-result');
-  const sub = document.getElementById('trd-result-sub');
-  if (!out) return;
-  if (!cap || !risk || !stop || !pv){
-    out.textContent = '— Configure pour calculer';
-    sub.textContent = 'Risk by trade is your job. Stop is sacred.';
-    return;
-  }
-  const dollarRisk = cap * (risk / 100);
-  const contracts = dollarRisk / (stop * pv);
-  out.innerHTML = `${contracts.toFixed(2)} contrats · risque <b style="color:var(--coral)">$${dollarRisk.toFixed(0)}</b>`;
-  if (risk > 1){
-    sub.innerHTML = '⚠️ <b style="color:var(--coral)">Risk > 1%</b> — au-dessus de la limite recommandée.';
-  } else if (risk > 0.5){
-    sub.innerHTML = `Risk ${risk}% · OK en swing. Trop pour un challenge propfirm (vise 0.25-0.5%).`;
-  } else {
-    sub.innerHTML = `Risk ${risk}% · zone safe pour propfirm.`;
-  }
-}
-
-// ─── Journal ─────────────────────────────────────────────────
-function saveTrade(){
-  const trade = {
-    ts: new Date().toISOString(),
-    date: document.getElementById('trd-j-date')?.value || new Date().toISOString().slice(0,10),
-    instrument: document.getElementById('trd-j-inst')?.value.trim() || '',
-    setup: document.getElementById('trd-j-setup')?.value.trim() || '',
-    result: document.getElementById('trd-j-res')?.value || '',
-    pnl: parseFloat(document.getElementById('trd-j-pnl')?.value) || 0,
-    r: parseFloat(document.getElementById('trd-j-r')?.value) || 0,
-    notes: document.getElementById('trd-j-notes')?.value.trim() || '',
-    rule: document.getElementById('trd-j-rule')?.checked || false,
-    sized: document.getElementById('trd-j-sized')?.checked || false,
-    stop: document.getElementById('trd-j-stop')?.checked || false
-  };
-  if (!trade.instrument){ showToast('⚠️ Instrument requis'); return; }
-  const arr = sg(KEYS.journal, []);
-  arr.push(trade);
-  ss(KEYS.journal, arr);
-  // Reset form
-  ['trd-j-inst','trd-j-setup','trd-j-pnl','trd-j-r','trd-j-notes'].forEach(id => {
-    const el = document.getElementById(id); if (el) el.value = '';
-  });
-  ['trd-j-rule','trd-j-sized','trd-j-stop'].forEach(id => {
-    const el = document.getElementById(id); if (el) el.checked = false;
-  });
-  if (window.__aiCore?.Bookmarks){
-    window.__aiCore.Bookmarks.set('trading', `Dernier trade: ${trade.instrument} ${trade.result} ${trade.r}R`, 'Trading');
-  }
-  computeStats();
-  showToast('✓ Trade sauvegardé');
-}
-
-// ─── Stats ───────────────────────────────────────────────────
-function computeStats(){
-  const arr = sg(KEYS.journal, []);
-  const cutoff = Date.now() - 30 * 24 * 3600 * 1000;
-  const recent = arr.filter(t => new Date(t.ts).getTime() >= cutoff && t.result !== 'SKIP');
-  const set = (id, val, cls) => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.textContent = val;
-    el.className = 'trd-stat-v' + (cls ? ' ' + cls : '');
-  };
-  if (!recent.length){
-    ['trd-s-n','trd-s-wr','trd-s-r','trd-s-e','trd-s-pf','trd-s-dd'].forEach(id => set(id, '—'));
-    return;
-  }
-  const wins = recent.filter(t => t.result === 'W');
-  const losses = recent.filter(t => t.result === 'L');
-  const wr = wins.length / recent.length;
-  const avgR = recent.reduce((s,t) => s + (t.r||0), 0) / recent.length;
-  const expectancy = recent.reduce((s,t) => s + (t.pnl||0), 0) / recent.length;
-  const grossW = wins.reduce((s,t) => s + (t.pnl||0), 0);
-  const grossL = Math.abs(losses.reduce((s,t) => s + (t.pnl||0), 0));
-  const pf = grossL > 0 ? (grossW / grossL) : (grossW > 0 ? Infinity : 0);
-  // Drawdown : equity curve, peak-to-trough
-  let eq = 0, peak = 0, maxDD = 0;
-  recent.slice().sort((a,b) => a.ts.localeCompare(b.ts)).forEach(t => {
-    eq += (t.pnl || 0);
-    if (eq > peak) peak = eq;
-    const dd = peak - eq;
-    if (dd > maxDD) maxDD = dd;
-  });
-  set('trd-s-n', recent.length);
-  set('trd-s-wr', (wr*100).toFixed(0)+'%', wr >= 0.5 ? 'win' : (wr < 0.4 ? 'loss' : 'warn'));
-  set('trd-s-r', avgR.toFixed(2)+'R', avgR >= 1 ? 'win' : (avgR < 0 ? 'loss' : 'warn'));
-  set('trd-s-e', '$'+expectancy.toFixed(0), expectancy > 0 ? 'win' : 'loss');
-  set('trd-s-pf', isFinite(pf) ? pf.toFixed(2) : '∞', pf >= 1.5 ? 'win' : (pf < 1 ? 'loss' : 'warn'));
-  set('trd-s-dd', '$'+maxDD.toFixed(0), maxDD === 0 ? 'win' : 'warn');
-}
-
-// ─── Propfirm tracker ────────────────────────────────────────
-function loadPF(){
-  const pf = sg(KEYS.pf, {});
-  ['firm','acct','target','dd','prog','ddc'].forEach(k => {
-    const el = document.getElementById('trd-pf-'+k);
-    if (el && pf[k] !== undefined) el.value = pf[k];
-  });
-  updatePFBars();
-}
-function savePF(){
-  const pf = {};
-  ['firm','acct','target','dd','prog','ddc'].forEach(k => {
-    const el = document.getElementById('trd-pf-'+k);
-    if (el) pf[k] = el.type === 'number' ? parseFloat(el.value)||0 : el.value;
-  });
-  ss(KEYS.pf, pf);
-  updatePFBars();
-  showToast('✓ Challenge sauvegardé');
-}
-function updatePFBars(){
-  const target = parseFloat(document.getElementById('trd-pf-target')?.value) || 10;
-  const ddmax = parseFloat(document.getElementById('trd-pf-dd')?.value) || 10;
-  const prog = parseFloat(document.getElementById('trd-pf-prog')?.value) || 0;
-  const ddc = parseFloat(document.getElementById('trd-pf-ddc')?.value) || 0;
-  const fp = document.getElementById('trd-pf-fp');
-  const fd = document.getElementById('trd-pf-fd');
-  if (fp) fp.style.width = Math.min(100, (prog/target)*100) + '%';
-  if (fd) fd.style.width = Math.min(100, (ddc/ddmax)*100) + '%';
-}
-
-// ─── AI Review ───────────────────────────────────────────────
-async function aiReview(){
-  const out = document.getElementById('trd-ai-out');
-  const btn = document.getElementById('trd-ai-review');
-  if (!window.__aiCore?.coachAsk){
-    out.textContent = '⚠️ AI core non chargé.';
-    return;
-  }
-  btn.disabled = true;
-  btn.textContent = '… analyse en cours';
-  out.innerHTML = '<div style="padding:12px;color:var(--text-faint);font-size:13px">Claude analyse tes 30 derniers trades…</div>';
-
-  const arr = sg(KEYS.journal, []);
-  const cutoff = Date.now() - 7 * 24 * 3600 * 1000;
-  const week = arr.filter(t => new Date(t.ts).getTime() >= cutoff);
-  const month = arr.filter(t => new Date(t.ts).getTime() >= Date.now() - 30*24*3600*1000);
-  const pf = sg(KEYS.pf, {});
-
-  const ctx = {
-    ...(window.__aiCore.buildContextV2()),
-    trading: {
-      week: week.map(t => ({ d:t.date, ins:t.instrument, set:t.setup, res:t.result, r:t.r, pnl:t.pnl, ruleOK: t.rule, sizedOK: t.sized })),
-      monthCount: month.length,
-      propfirm: pf
-    }
-  };
-
-  const data = await window.__aiCore.coachAsk({
-    mode: 'analyse',
-    question: "Analyse mes trades de la semaine. Format strict :\n1. Patterns de comportement (revenge trading, FOMO, etc.)\n2. Ce qui marche dans mon edge\n3. Ce qui me coûte de l'argent\n4. Une règle à ajouter cette semaine\n5. Mon next focus pour les 7 prochains jours",
-    context: ctx,
-    systemPrompt: "Tu es un coach trading senior, ex-prop trader. Réponds en français, ton direct, sans complaisance. Focus discipline et risk, pas hype technique. Cite les chiffres réels du contexte. Maximum 200 mots.",
-    max_tokens: 350
-  });
-
-  out.innerHTML = '';
-  window.__aiCore.renderAIResponse(out, { ...data, _timestamp: new Date().toISOString() }, { allowApply: true });
-  if (!data.blocked && window.__aiCore.History){
-    window.__aiCore.History.add({ mode:'analyse', question: 'trading review', ...data });
-  }
-  btn.disabled = false;
-  btn.textContent = 'Relancer review';
-}
-
-// ─── Reading ─────────────────────────────────────────────────
-function saveReading(){
-  const book = document.getElementById('trd-read-book')?.value.trim();
-  const pages = parseInt(document.getElementById('trd-read-pages')?.value) || 0;
-  if (!book) return;
-  const data = sg(KEYS.read, {}) || {};
-  data.book = book;
-  data.pagesThisWeek = pages;
-  data.updatedAt = new Date().toISOString();
-  ss(KEYS.read, data);
-  if (window.__aiCore?.Bookmarks){
-    window.__aiCore.Bookmarks.set('trading_read', book, 'Lecture trading');
-  }
-  showToast('✓ Bookmark trading mis à jour');
-}
-function loadReading(){
-  const data = sg(KEYS.read, {});
-  if (data.book){
-    const b = document.getElementById('trd-read-book'); if (b) b.value = data.book;
-    const p = document.getElementById('trd-read-pages'); if (p && data.pagesThisWeek) p.value = data.pagesThisWeek;
-  }
-}
-
-// ─── Init ────────────────────────────────────────────────────
-function bind(){
-  // Pré-remplir date du jour
-  const dateEl = document.getElementById('trd-j-date');
-  if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().slice(0,10);
-
-  // Calculator live
-  ['trd-cap','trd-risk','trd-stop','trd-pv'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el && !el.dataset.bound){ el.addEventListener('input', calcPosition); el.dataset.bound = '1'; }
-  });
-  calcPosition();
-
-  // Save buttons
-  const sb = document.getElementById('trd-j-save');
-  if (sb && !sb.dataset.bound){ sb.addEventListener('click', saveTrade); sb.dataset.bound='1'; }
-  const cb = document.getElementById('trd-j-clear');
-  if (cb && !cb.dataset.bound){ cb.addEventListener('click', () => {
-    ['trd-j-inst','trd-j-setup','trd-j-pnl','trd-j-r','trd-j-notes'].forEach(id => {
-      const el = document.getElementById(id); if (el) el.value='';
-    });
-  }); cb.dataset.bound='1'; }
-
-  // Propfirm
-  ['trd-pf-target','trd-pf-dd','trd-pf-prog','trd-pf-ddc'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el && !el.dataset.bound){ el.addEventListener('input', updatePFBars); el.dataset.bound='1'; }
-  });
-  const pfb = document.getElementById('trd-pf-save');
-  if (pfb && !pfb.dataset.bound){ pfb.addEventListener('click', savePF); pfb.dataset.bound='1'; }
-
-  // Reading
-  const rb = document.getElementById('trd-read-save');
-  if (rb && !rb.dataset.bound){ rb.addEventListener('click', saveReading); rb.dataset.bound='1'; }
-
-  // AI
-  const aib = document.getElementById('trd-ai-review');
-  if (aib && !aib.dataset.bound){ aib.addEventListener('click', aiReview); aib.dataset.bound='1'; }
-
-  loadPF();
-  loadReading();
-  computeStats();
-}
-
-// Re-bind on tab switch
-document.addEventListener('click', e => {
-  const t = e.target.closest('[data-tab="trading"]');
-  if (t) setTimeout(bind, 80);
-});
-if (document.readyState === 'loading'){
-  document.addEventListener('DOMContentLoaded', () => setTimeout(bind, 200));
-} else {
-  setTimeout(bind, 200);
-}
-
-window.__trading = { calcPosition, saveTrade, computeStats, savePF, aiReview };
-
-})();
-</script>
-
-<!-- Section Trading injectée dans <main> -->
 <style id="ultimate-styles-v3">
 /* ─── TODAY VIEW ─── */
 .today-hero{padding:20px 16px;background:linear-gradient(135deg,rgba(255,107,53,.12),rgba(106,165,250,.06));
@@ -6523,212 +6932,6 @@ setTimeout(() => {
 </script>
 
 
-<script id="trading-journal-loader">
-(function(){
-'use strict';
-if (window.__tradingJournalLoaded) return;
-window.__tradingJournalLoaded = true;
-
-// Lazy load journal au clic sur trading
-function loadJournal(){
-  const host = document.getElementById('trading-journal-host');
-  if (!host || host.dataset.loaded) return;
-  host.dataset.loaded = '1';
-
-  host.innerHTML = `
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
-      <input id="tj-instr" type="text" placeholder="Instrument (MNQ, EURUSD…)" style="padding:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;color:var(--text);font:13px var(--f-sans);min-height:44px">
-      <select id="tj-res" style="padding:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;color:var(--text);font:13px var(--f-sans);min-height:44px">
-        <option value="W">Win</option><option value="L">Loss</option><option value="BE">Break-even</option><option value="SKIP">Trade skippé</option>
-      </select>
-      <input id="tj-pnl" type="number" step="0.01" placeholder="P&L $" style="padding:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;color:var(--text);font:13px var(--f-sans);min-height:44px">
-      <input id="tj-r" type="number" step="0.1" placeholder="R multiple" style="padding:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;color:var(--text);font:13px var(--f-sans);min-height:44px">
-    </div>
-    <input id="tj-setup" type="text" placeholder="Setup (ORB, pullback EMA, range…)" style="width:100%;padding:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;color:var(--text);font:13px var(--f-sans);min-height:44px;margin-bottom:8px">
-    <textarea id="tj-notes" placeholder="Émotion, contexte, ce que t'as bien fait, ce que t'as raté" style="width:100%;padding:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;color:var(--text);font:13px var(--f-sans);min-height:60px;margin-bottom:8px;resize:vertical"></textarea>
-    <div style="display:grid;gap:6px;margin:8px 0;padding:8px;background:rgba(255,107,53,.06);border-radius:6px">
-      <label style="display:flex;align-items:center;gap:8px;font:13px var(--f-sans);color:var(--text-dim);min-height:32px;cursor:pointer">
-        <input id="tj-rule" type="checkbox" style="width:18px;height:18px;accent-color:var(--flame)">
-        Trade pris selon mes règles écrites
-      </label>
-      <label style="display:flex;align-items:center;gap:8px;font:13px var(--f-sans);color:var(--text-dim);min-height:32px;cursor:pointer">
-        <input id="tj-sized" type="checkbox" style="width:18px;height:18px;accent-color:var(--flame)">
-        Position correctement dimensionnée (≤ 0.5% risk)
-      </label>
-      <label style="display:flex;align-items:center;gap:8px;font:13px var(--f-sans);color:var(--text-dim);min-height:32px;cursor:pointer">
-        <input id="tj-stop" type="checkbox" style="width:18px;height:18px;accent-color:var(--flame)">
-        Stop placé AVANT l'entrée
-      </label>
-    </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button id="tj-save" style="flex:1;background:linear-gradient(135deg,#fb923c,#f97316);color:#0a0a10;border:none;border-radius:8px;padding:12px 16px;font:700 12px var(--f-sans);cursor:pointer;min-height:48px;text-transform:uppercase;letter-spacing:.04em;touch-action:manipulation">Sauvegarder trade</button>
-      <button id="tj-clear" style="padding:12px 16px;background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--text-dim);font:600 12px var(--f-sans);cursor:pointer;min-height:48px;text-transform:uppercase;letter-spacing:.04em;touch-action:manipulation">Effacer</button>
-    </div>
-    <div id="tj-saved" style="margin-top:10px;font:12px var(--f-mono);color:var(--jade);text-align:center"></div>
-
-    <div id="tj-stats" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0 10px"></div>
-
-    <h4 style="font:700 11px var(--f-sans);color:var(--text-faint);text-transform:uppercase;letter-spacing:.06em;margin:14px 0 6px">📋 Derniers trades</h4>
-    <div id="tj-history" style="font:12px var(--f-mono);color:var(--text-dim);max-height:240px;overflow-y:auto"></div>
-  `;
-
-  const $ = id => document.getElementById(id);
-
-  $('tj-save').addEventListener('click', () => {
-    const trade = {
-      ts: new Date().toISOString(),
-      date: new Date().toISOString().slice(0,10),
-      instr: $('tj-instr').value.trim(),
-      setup: $('tj-setup').value.trim(),
-      res: $('tj-res').value,
-      pnl: parseFloat($('tj-pnl').value) || 0,
-      r: parseFloat($('tj-r').value) || 0,
-      notes: $('tj-notes').value.trim(),
-      rule: $('tj-rule').checked,
-      sized: $('tj-sized').checked,
-      stop: $('tj-stop').checked
-    };
-    if (!trade.instr){ showToast('⚠️ Instrument requis'); return; }
-    try {
-      const arr = JSON.parse(localStorage.getItem('dashv2_trading_journal') || '[]');
-      arr.unshift(trade);
-      localStorage.setItem('dashv2_trading_journal', JSON.stringify(arr.slice(0, 500)));
-      // Bookmark trading update
-      try {
-        if (window.__aiCore?.Bookmarks){
-          window.__aiCore.Bookmarks.set('trading', `Dernier trade: ${trade.instr} ${trade.res} ${trade.r}R · phase ${(JSON.parse(localStorage.getItem('dashv2_trading_phase')||'{}')).phase || '?'}`, 'Trading');
-        }
-      } catch(_){}
-      $('tj-saved').textContent = '✓ Trade sauvegardé';
-      ['tj-instr','tj-setup','tj-pnl','tj-r','tj-notes'].forEach(id => $(id).value = '');
-      ['tj-rule','tj-sized','tj-stop'].forEach(id => $(id).checked = false);
-      renderHistory();
-      renderStats();
-      setTimeout(() => $('tj-saved').textContent = '', 2000);
-    } catch(e){ showToast('Erreur: ' + e.message); }
-  });
-
-  $('tj-clear').addEventListener('click', () => {
-    ['tj-instr','tj-setup','tj-pnl','tj-r','tj-notes'].forEach(id => $(id).value = '');
-    ['tj-rule','tj-sized','tj-stop'].forEach(id => $(id).checked = false);
-  });
-
-  function renderStats(){
-    try {
-      const arr = JSON.parse(localStorage.getItem('dashv2_trading_journal') || '[]');
-      const cutoff = Date.now() - 30*24*3600*1000;
-      const recent = arr.filter(t => new Date(t.ts).getTime() >= cutoff && t.res !== 'SKIP');
-      const el = $('tj-stats');
-      if (!recent.length){
-        el.innerHTML = `<div style="grid-column:1/-1;text-align:center;font:12px var(--f-mono);color:var(--text-faint);padding:8px">Pas encore de trades sur 30 jours</div>`;
-        return;
-      }
-      const wins = recent.filter(t => t.res === 'W');
-      const losses = recent.filter(t => t.res === 'L');
-      const wr = (wins.length / recent.length * 100).toFixed(0);
-      const avgR = (recent.reduce((s,t) => s+(t.r||0), 0) / recent.length).toFixed(2);
-      const grossW = wins.reduce((s,t) => s+(t.pnl||0), 0);
-      const grossL = Math.abs(losses.reduce((s,t) => s+(t.pnl||0), 0));
-      const pf = grossL > 0 ? (grossW/grossL).toFixed(2) : (grossW > 0 ? '∞' : '0');
-      const ruleRate = (recent.filter(t => t.rule && t.sized && t.stop).length / recent.length * 100).toFixed(0);
-      const totalPnL = recent.reduce((s,t) => s+(t.pnl||0), 0).toFixed(0);
-
-      const stat = (label, val, color='var(--text)') => `
-        <div style="background:var(--surface-2);border-radius:8px;padding:8px;text-align:center">
-          <div style="font:600 9px var(--f-mono);color:var(--text-faint);text-transform:uppercase;letter-spacing:.06em">${label}</div>
-          <div style="font:800 16px var(--f-display);color:${color};margin-top:4px">${val}</div>
-        </div>`;
-
-      el.innerHTML =
-        stat(`30j · Trades`, recent.length) +
-        stat('Win rate', wr+'%', wr>=45?'var(--jade)':'var(--coral)') +
-        stat('Profit factor', pf, parseFloat(pf)>=1.5?'var(--jade)':parseFloat(pf)<1?'var(--coral)':'var(--amber)') +
-        stat('Avg R', avgR+'R', parseFloat(avgR)>=1?'var(--jade)':'var(--amber)') +
-        stat('P&L $', totalPnL, parseFloat(totalPnL)>0?'var(--jade)':'var(--coral)') +
-        stat('Règles OK', ruleRate+'%', parseInt(ruleRate)>=90?'var(--jade)':parseInt(ruleRate)>=70?'var(--amber)':'var(--coral)');
-    } catch(e){}
-  }
-
-  function renderHistory(){
-    try {
-      const arr = JSON.parse(localStorage.getItem('dashv2_trading_journal') || '[]');
-      const el = $('tj-history');
-      if (!arr.length){ el.innerHTML = `<div style="text-align:center;color:var(--text-faint);padding:8px">Aucun trade encore.</div>`; return; }
-      el.innerHTML = arr.slice(0, 20).map(t => {
-        const d = new Date(t.ts).toLocaleDateString('fr-FR', { day:'2-digit', month:'2-digit' });
-        const color = t.res === 'W' ? 'var(--jade)' : (t.res === 'L' ? 'var(--coral)' : 'var(--amber)');
-        const rules = (t.rule && t.sized && t.stop) ? '✓' : '⚠';
-        return `<div style="padding:6px 0;border-bottom:1px dashed var(--border)">
-          <span style="color:${color};font-weight:700">${t.res}</span>
-          <span style="color:var(--text-faint)"> · ${d} · </span>
-          <span style="color:var(--text)">${t.instr}</span>
-          ${t.setup ? `<span style="color:var(--text-faint)"> · ${t.setup}</span>` : ''}
-          <span style="color:var(--text-faint)"> · </span>
-          <span style="color:${parseFloat(t.r)>=0?'var(--jade)':'var(--coral)'}">${t.r||0}R</span>
-          <span style="color:var(--text-faint)"> · </span>
-          <span style="color:${parseFloat(t.pnl)>=0?'var(--jade)':'var(--coral)'}">$${t.pnl||0}</span>
-          <span style="color:var(--text-faint)"> · ${rules}</span>
-        </div>`;
-      }).join('');
-    } catch(_){}
-  }
-
-  renderStats();
-  renderHistory();
-}
-
-function loadPhase(){
-  const sel = document.getElementById('trd-phase-select');
-  const start = document.getElementById('trd-phase-start');
-  const notes = document.getElementById('trd-phase-notes');
-  const save = document.getElementById('trd-phase-save');
-  const saved = document.getElementById('trd-phase-saved');
-  if (!sel || sel.dataset.loaded) return;
-  sel.dataset.loaded = '1';
-
-  // Load
-  try {
-    const data = JSON.parse(localStorage.getItem('dashv2_trading_phase') || '{}');
-    if (data.phase !== undefined) sel.value = data.phase;
-    if (data.start) start.value = data.start;
-    if (data.notes) notes.value = data.notes;
-  } catch(e){ window.__warn && window.__warn('audit-catch', e); }
-
-  save.addEventListener('click', () => {
-    const data = {
-      phase: sel.value,
-      start: start.value,
-      notes: notes.value.trim(),
-      updatedAt: new Date().toISOString()
-    };
-    localStorage.setItem('dashv2_trading_phase', JSON.stringify(data));
-    saved.textContent = '✓ Phase sauvegardée';
-    // Update bookmark
-    try {
-      if (window.__aiCore?.Bookmarks){
-        const phaseLabel = sel.options[sel.selectedIndex].text;
-        window.__aiCore.Bookmarks.set('trading_phase', phaseLabel, 'Trading · phase');
-      }
-    } catch(_){}
-    setTimeout(() => saved.textContent = '', 2000);
-  });
-}
-
-document.addEventListener('click', e => {
-  const tab = e.target.closest('.tab[data-tab="trading"]');
-  if (tab){
-    setTimeout(() => { loadJournal(); loadPhase(); }, 150);
-  }
-}, true);
-
-setTimeout(() => {
-  const cur = document.querySelector('.tab.active');
-  if (cur && cur.dataset.tab === 'trading'){ loadJournal(); loadPhase(); }
-}, 600);
-
-})();
-</script>
-
 
 
 <style id="fixes-v34">
@@ -8414,23 +8617,6 @@ window.decorateRoutineV35   = decorateRoutineV35;
   overflow-x: hidden !important;
   max-width: 100% !important;
 }
-#trading-journal-host,
-#trading-journal-host * {
-  max-width: 100% !important;
-  box-sizing: border-box !important;
-}
-#tj-history {
-  overflow-x: hidden !important;
-  word-break: break-word !important;
-  white-space: normal !important;
-}
-#tj-stats {
-  grid-template-columns: repeat(2, 1fr) !important;
-}
-@media (min-width: 480px) {
-  #tj-stats { grid-template-columns: repeat(3, 1fr) !important; }
-}
-
 /* ── 2. Sommaire: hard-kill TOC everywhere ── */
 .toc, nav.toc, [aria-label="Sommaire de l'onglet"] {
   display: none !important;
@@ -8534,109 +8720,23 @@ window.decorateRoutineV35   = decorateRoutineV35;
 .tl-item[data-prio="critical"] { border-left:3px solid #ef4444 !important; }
 .tl-item[data-prio="high"]     { border-left:3px solid #f59e0b !important; }
 .tl-item[data-prio="normal"]   { border-left:3px solid #6b7280 !important; }
-/* ── Momentum card ── */
-#momentum-card {
-  background: linear-gradient(135deg,#1e293b,#0f172a);
-  border:1px solid rgba(99,102,241,.3);
-  border-radius:12px; padding:12px 16px; margin:8px 0;
-}
-#momentum-card .mom-title {
-  font:700 12px/1 var(--f-mono,monospace);
-  color:#a5b4fc; text-transform:uppercase; letter-spacing:.06em; margin-bottom:8px;
-}
-#momentum-bar-wrap { height:8px; border-radius:4px; background:#334155; overflow:hidden; }
-#momentum-bar { height:100%; border-radius:4px; transition:width .6s ease; background:linear-gradient(90deg,#6366f1,#22d3ee); }
-#momentum-label { font:600 13px/1 var(--f-mono,monospace); color:#e2e8f0; margin-top:6px; }
-/* ── Score du jour ── */
-#score-du-jour {
-  background:linear-gradient(135deg,#0f172a,#1e293b);
-  border:1px solid rgba(34,211,238,.3);
-  border-radius:12px; padding:12px 16px; margin:8px 0;
-  display:flex; align-items:center; gap:12px;
-}
-#score-du-jour .sdj-label { font:700 11px/1 var(--f-mono,monospace); color:#94a3b8; text-transform:uppercase; }
-#score-du-jour .sdj-value { font:800 28px/1 var(--f-mono,monospace); color:#22d3ee; }
-#score-du-jour .sdj-grade { font:700 14px/1 var(--f-mono,monospace); padding:2px 8px; border-radius:6px; }
-/* ── C7 slider ── */
+/* ── C7 slider (HTML row we added) ── */
 .log-row-c7 { align-items:center; }
 .c7-slider-wrap { display:flex; align-items:center; gap:8px; flex:1; min-width:0; }
 .c7-slider { flex:1; accent-color:#ef4444; }
 .c7-val { font:700 14px/1 var(--f-mono,monospace); color:#ef4444; min-width:20px; }
-/* ── Sleep tracker ── */
+/* ── Sleep tracker (HTML row we added) ── */
 .log-row-sleep { align-items:center; }
 .log-sleep-wrap { display:flex; align-items:center; gap:6px; flex:1; flex-wrap:wrap; }
 .log-time-input { background:#1e293b; border:1px solid #334155; color:#e2e8f0; border-radius:6px; padding:4px 8px; font:13px var(--f-mono,monospace); }
 .log-sleep-arrow { color:#64748b; }
 .log-sleep-dur { font:700 12px/1 var(--f-mono,monospace); color:#22d3ee; padding:2px 8px; background:#0f172a; border-radius:8px; }
-/* ── Pre-appt banner ── */
-.preappt-banner {
-  background:linear-gradient(90deg,#7c3aed,#6d28d9);
-  color:#fff; font:700 12px/1.3 sans-serif;
-  padding:8px 14px; border-radius:8px;
-  margin:6px 4px; text-align:center;
-  box-shadow:0 2px 8px rgba(124,58,237,.4);
-}
-/* ── Heatmap ── */
-#heatmap-90d { margin:8px 0; }
-.heatmap-grid { display:flex; flex-wrap:wrap; gap:2px; }
-.heatmap-cell {
-  width:12px; height:12px; border-radius:2px;
-  background:#1e293b; cursor:pointer; transition:transform .1s;
-}
-.heatmap-cell:hover { transform:scale(1.4); }
-.heatmap-cell[data-level="1"] { background:#1e3a2f; }
-.heatmap-cell[data-level="2"] { background:#166534; }
-.heatmap-cell[data-level="3"] { background:#16a34a; }
-.heatmap-cell[data-level="4"] { background:#22c55e; }
-/* ── Domain streaks ── */
-.domain-streak-pill {
-  display:inline-flex; align-items:center; gap:4px;
-  background:#1e293b; border:1px solid #334155;
-  border-radius:20px; padding:3px 10px; font:600 11px/1 var(--f-mono,monospace);
-  color:#e2e8f0; margin:2px;
-}
-.domain-streak-pill .streak-fire { color:#f97316; }
-/* ── Focus mode ── */
-#focus-mode-btn {
-  position:fixed; bottom:80px; right:16px; z-index:999;
-  background:linear-gradient(135deg,#6366f1,#8b5cf6);
-  color:#fff; border:none; border-radius:50%;
-  width:48px; height:48px; font-size:20px;
-  box-shadow:0 4px 14px rgba(99,102,241,.5);
-  cursor:pointer; transition:transform .2s;
-}
-#focus-mode-btn:hover { transform:scale(1.1); }
-body.focus-mode > *:not(#focus-overlay) { opacity:0 !important; pointer-events:none !important; }
-#focus-overlay {
-  display:none; position:fixed; inset:0; z-index:9998;
-  background:#000; color:#fff;
-  flex-direction:column; align-items:center; justify-content:center;
-}
-body.focus-mode #focus-overlay { display:flex; }
-#focus-task-name { font:700 28px/1.2 var(--f-mono,monospace); color:#22d3ee; text-align:center; margin-bottom:12px; }
-#focus-timer { font:800 56px/1 var(--f-mono,monospace); color:#fff; margin-bottom:24px; }
-#focus-exit-btn { background:#334155; color:#fff; border:none; border-radius:8px; padding:10px 24px; font:700 14px sans-serif; cursor:pointer; }
-/* ── Morning card ── */
-#morning-card {
-  background:linear-gradient(135deg,#0c4a6e,#164e63);
-  border:1px solid rgba(34,211,238,.3);
-  border-radius:12px; padding:14px 16px; margin:8px 0;
-}
-#morning-card .mc-title { font:700 13px/1 var(--f-mono,monospace); color:#7dd3fc; margin-bottom:8px; }
-#morning-card .mc-item { font:12px/1.6 sans-serif; color:#e0f2fe; }
-/* ── Radar chart ── */
-#radar-wrap { position:relative; height:220px; margin:8px 0; }
-#radar-wrap canvas { width:100% !important; height:100% !important; }
-/* ── Task history ── */
-#task-history-card {
-  background:#0f172a; border:1px solid #1e293b;
-  border-radius:12px; padding:12px; margin:8px 0;
-}
-#task-history-card h4 { font:700 11px/1 var(--f-mono,monospace); color:#64748b; text-transform:uppercase; margin-bottom:8px; }
-.th-row { display:flex; justify-content:space-between; align-items:center; padding:4px 0; border-bottom:1px solid #1e293b; font:12px sans-serif; color:#94a3b8; }
-.th-row:last-child { border-bottom:none; }
-.th-date { color:#475569; }
-.th-score { font:700 12px var(--f-mono,monospace); color:#22d3ee; }
+/* ── Resume hint ── */
+.now-resume { display:flex; align-items:flex-start; gap:8px; padding:8px 12px; background:rgba(99,102,241,.12); border:1px solid rgba(99,102,241,.3); border-radius:10px; margin-top:8px; }
+.now-resume.hidden { display:none !important; }
+.nr-icon { font-size:16px; flex-shrink:0; }
+.nr-text b { font:700 12px var(--f-mono,monospace); color:#a5b4fc; }
+.nr-text span { font:400 12px var(--f-sans,sans-serif); color:#e2e8f0; }
 </style>
 
 <script id="fix-v37-js">
@@ -14667,7 +14767,6 @@ window.UD_V72_OPTS = Object.assign({
 if (window.__enhV38) return;
 window.__enhV38 = true;
 
-/* ── helpers ── */
 function _parseMin(t){
   if (!t) return null;
   const m = String(t).match(/(\d{1,2})[h:](\d{2})/);
@@ -14679,14 +14778,33 @@ function _parseRange(t){
   return { start: _parseMin(p[0]), end: _parseMin(p[1]) || null };
 }
 
+/* ── Reprendre demain : populate #now-resume from yesterday log ── */
+function showResumeHint(){
+  const nr = document.getElementById('now-resume');
+  if (!nr) return;
+  try {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yKey = yesterday.toISOString().slice(0, 10);
+    const logs = JSON.parse(localStorage.getItem('dashv2_logs') || '{}');
+    const hint = (logs[yKey] || {}).resume_tomorrow_here;
+    if (!hint) return;
+    const domEl = document.getElementById('now-resume-domain');
+    const txtEl = document.getElementById('now-resume-text');
+    if (domEl) domEl.textContent = '📍 Reprendre : ';
+    if (txtEl) txtEl.textContent = hint;
+    nr.classList.remove('hidden');
+  } catch(e) {}
+}
+
 /* ── Late block detection ── */
 function markLateBlocks(){
   const curMin = new Date().getHours()*60 + new Date().getMinutes();
   const visible = document.querySelector('.shift-view:not(.hidden)');
   if (!visible) return;
-  const flexItems = Array.from(visible.querySelectorAll('.tl-item[data-time]:not([data-adaptive-fixed-id])'));
+  const items = Array.from(visible.querySelectorAll('.tl-item[data-time]:not([data-adaptive-fixed-id])'));
   let lateCount = 0;
-  flexItems.forEach((item, idx) => {
+  items.forEach((item, idx) => {
     item.classList.remove('late-v38');
     item.querySelectorAll('.enh-late-badge').forEach(b => b.remove());
     if (item.classList.contains('done-early-v35')) return;
@@ -14697,7 +14815,7 @@ function markLateBlocks(){
     if (startMin === null) return;
     let blockEnd = endMin;
     if (blockEnd === null){
-      const next = flexItems[idx+1];
+      const next = items[idx+1];
       if (next) blockEnd = _parseMin(next.dataset.time || '');
       if (blockEnd === null) blockEnd = startMin + 30;
     }
@@ -14711,18 +14829,12 @@ function markLateBlocks(){
   });
   let banner = visible.querySelector('.routine-late-banner');
   if (lateCount > 0){
-    if (!banner){
-      banner = document.createElement('div');
-      banner.className = 'routine-late-banner';
-      visible.prepend(banner);
-    }
+    if (!banner){ banner = document.createElement('div'); banner.className = 'routine-late-banner'; visible.prepend(banner); }
     banner.textContent = `⏰ ${lateCount} bloc${lateCount>1?'s':''} en retard`;
-  } else {
-    if (banner) banner.remove();
-  }
+  } else { if (banner) banner.remove(); }
 }
 
-/* ── Priority badge auto-assign ── */
+/* ── Priority badge auto-assign from .tl-dot class ── */
 const DOT_PRIO = {
   food:'critical', sleep:'critical',
   study:'high', code:'high', nl:'high', work:'high', ai:'high',
@@ -14747,12 +14859,11 @@ function decorateRoutinePrioBadges(){
     const b = document.createElement('span');
     b.className = `tl-prio-badge tl-prio-${prio}`;
     b.textContent = labelMap[prio] || prio;
-    const nameEl = item.querySelector('.tl-name,.tl-title,.tl-label') || item;
-    nameEl.appendChild(b);
+    (item.querySelector('.tl-name,.tl-title,.tl-label') || item).appendChild(b);
   });
 }
 
-/* ── ELO chart with phase zones ── */
+/* ── ELO chart phase zones ── */
 function enhanceEloChart(){
   const canvas = document.getElementById('chart-elo');
   if (!canvas || typeof Chart === 'undefined') return;
@@ -14760,20 +14871,16 @@ function enhanceEloChart(){
   if (!chart || !chart.data || !chart.data.labels || chart.data.labels.length < 2) return;
   if (chart.__eloEnhanced) return;
   chart.__eloEnhanced = true;
-  const labels = chart.data.labels;
-  const n = labels.length;
+  const labels = chart.data.labels, n = labels.length;
   const zoneColors = ['rgba(239,68,68,.12)','rgba(249,115,22,.09)','rgba(34,197,94,.09)','rgba(99,102,241,.09)'];
   const zoneNames = ['Démarrage','Progression','Pic','Maîtrise'];
-  const zoneSize = Math.ceil(n/4);
+  const sz = Math.ceil(n/4);
   const annotations = {};
   for (let z=0; z<4; z++){
-    const xMin = labels[Math.min(z*zoneSize, n-1)];
-    const xMax = labels[Math.min((z+1)*zoneSize-1, n-1)];
     annotations[`zone${z}`] = {
-      type:'box', xMin, xMax,
-      backgroundColor: zoneColors[z],
-      borderWidth:0,
-      label:{ content: zoneNames[z], display:true, position:'start', color:'rgba(255,255,255,.35)', font:{size:9} }
+      type:'box', xMin:labels[Math.min(z*sz,n-1)], xMax:labels[Math.min((z+1)*sz-1,n-1)],
+      backgroundColor:zoneColors[z], borderWidth:0,
+      label:{ content:zoneNames[z], display:true, position:'start', color:'rgba(255,255,255,.35)', font:{size:9} }
     };
   }
   if (!chart.options.plugins) chart.options.plugins = {};
@@ -14781,391 +14888,1152 @@ function enhanceEloChart(){
   chart.options.plugins.annotation.annotations = annotations;
   chart.update('none');
 }
-
-/* ── Patch renderStats ── */
 (function patchRenderStats(){
   const _orig = window.renderStats;
   if (typeof _orig !== 'function') return;
-  window.renderStats = function(){
-    _orig.apply(this, arguments);
-    setTimeout(enhanceEloChart, 150);
-    setTimeout(enhanceEloChart, 600);
-    setTimeout(enhanceEloChart, 1200);
-  };
+  window.renderStats = function(){ _orig.apply(this, arguments); setTimeout(enhanceEloChart,150); setTimeout(enhanceEloChart,700); };
 })();
-
-/* ── Score du jour ── */
-function _momentumScore(dateStr){
-  const logs = (() => { try { return JSON.parse(localStorage.getItem('dashv2_logs')||'{}'); } catch(e){ return {}; } })();
-  const tasks = (() => { try { return JSON.parse(localStorage.getItem('dashv2_tasks')||'[]'); } catch(e){ return []; } })();
-  const moods = (() => { try { return JSON.parse(localStorage.getItem('dashv2_mood')||'{}'); } catch(e){ return {}; } })();
-  const dayLog = logs[dateStr] || {};
-  const dayTasks = tasks.filter(t => t.date === dateStr);
-  const tasksDone = dayTasks.length ? Math.round(dayTasks.filter(t=>t.done).length/dayTasks.length*30) : 15;
-  const moodVal = moods[dateStr] ? Math.round((moods[dateStr]-1)/9*30) : 15;
-  const logScore = (() => {
-    const keys = ['epfc','code','nl','anki','read','sport','chess'];
-    let s = 0; keys.forEach(k => { if (dayLog[k] && parseFloat(dayLog[k])>0) s+=4; }); return Math.min(s,30);
-  })();
-  const c7 = dayLog.c7 ? Math.round((10 - parseFloat(dayLog.c7||'0'))/10*10) : 5;
-  return Math.min(tasksDone + moodVal + logScore + c7, 100);
-}
-function renderScoreDuJour(){
-  const containers = document.querySelectorAll('#score-du-jour,#sdj-container');
-  if (!containers.length) return;
-  const today = new Date().toISOString().slice(0,10);
-  const score = _momentumScore(today);
-  const grade = score>=90?'S':score>=75?'A':score>=60?'B':score>=45?'C':'D';
-  const gradeColors = {S:'#22d3ee',A:'#22c55e',B:'#84cc16',C:'#f59e0b',D:'#ef4444'};
-  containers.forEach(el => {
-    el.innerHTML = `<div class="sdj-label">Score du jour</div>
-      <div class="sdj-value">${score}</div>
-      <div class="sdj-grade" style="background:${gradeColors[grade]}20;color:${gradeColors[grade]}">${grade}</div>`;
-  });
-}
-
-/* ── C7 slider persistence ── */
-function initC7Slider(){
-  const slider = document.getElementById('log-c7');
-  const output = document.getElementById('log-c7-val');
-  if (!slider || !output) return;
-  const today = new Date().toISOString().slice(0,10);
-  const logs = (() => { try { return JSON.parse(localStorage.getItem('dashv2_logs')||'{}'); } catch(e){ return {}; } })();
-  const saved = (logs[today]||{}).c7;
-  if (saved !== undefined){ slider.value = saved; output.value = saved; }
-  slider.addEventListener('input', () => {
-    output.value = slider.value;
-    const l = (() => { try { return JSON.parse(localStorage.getItem('dashv2_logs')||'{}'); } catch(e){ return {}; } })();
-    if (!l[today]) l[today] = {};
-    l[today].c7 = slider.value;
-    localStorage.setItem('dashv2_logs', JSON.stringify(l));
-  });
-}
-
-/* ── Sleep tracker persistence ── */
-function initSleepTracker(){
-  const start = document.getElementById('log-sleep-start');
-  const end = document.getElementById('log-sleep-end');
-  const dur = document.getElementById('log-sleep-dur');
-  if (!start || !end || !dur) return;
-  const today = new Date().toISOString().slice(0,10);
-  const logs = (() => { try { return JSON.parse(localStorage.getItem('dashv2_logs')||'{}'); } catch(e){ return {}; } })();
-  const saved = logs[today] || {};
-  if (saved.sleepStart) start.value = saved.sleepStart;
-  if (saved.sleepEnd) end.value = saved.sleepEnd;
-  function updateDur(){
-    const s = _parseMin(start.value.replace(':','h'));
-    const e = _parseMin(end.value.replace(':','h'));
-    if (s===null || e===null){ dur.textContent='—'; return; }
-    let diff = e - s; if (diff < 0) diff += 24*60;
-    const h = Math.floor(diff/60), m = diff%60;
-    dur.textContent = `${h}h${m.toString().padStart(2,'0')}`;
-  }
-  updateDur();
-  function save(){
-    updateDur();
-    const l = (() => { try { return JSON.parse(localStorage.getItem('dashv2_logs')||'{}'); } catch(e){ return {}; } })();
-    if (!l[today]) l[today] = {};
-    l[today].sleepStart = start.value;
-    l[today].sleepEnd = end.value;
-    localStorage.setItem('dashv2_logs', JSON.stringify(l));
-  }
-  start.addEventListener('change', save);
-  end.addEventListener('change', save);
-}
-
-/* ── Pre-appointment alerts ── */
-function checkPreApptAlerts(){
-  const tasks = (() => { try { return JSON.parse(localStorage.getItem('dashv2_tasks')||'[]'); } catch(e){ return []; } })();
-  const today = new Date().toISOString().slice(0,10);
-  const curMin = new Date().getHours()*60 + new Date().getMinutes();
-  const upcoming = tasks.filter(t => {
-    if (t.date !== today || t.done) return false;
-    const m = _parseMin(t.time || '');
-    return m !== null && m > curMin && m - curMin <= 30;
-  });
-  const visible = document.querySelector('.shift-view:not(.hidden)');
-  if (!visible) return;
-  visible.querySelectorAll('.preappt-banner').forEach(b=>b.remove());
-  upcoming.forEach(t => {
-    const min = _parseMin(t.time||'') - curMin;
-    const b = document.createElement('div');
-    b.className = 'preappt-banner';
-    b.textContent = `📅 "${t.title||t.name||t.text}" dans ${min} min`;
-    visible.prepend(b);
-  });
-}
-
-/* ── Momentum bar ── */
-function renderMomentumBar(){
-  const wrap = document.getElementById('momentum-card');
-  if (!wrap) return;
-  const days = 7;
-  let total = 0;
-  for (let i=0; i<days; i++){
-    const d = new Date(); d.setDate(d.getDate()-i);
-    total += _momentumScore(d.toISOString().slice(0,10));
-  }
-  const avg = Math.round(total/days);
-  const bar = wrap.querySelector('#momentum-bar');
-  const label = wrap.querySelector('#momentum-label');
-  if (bar) bar.style.width = avg + '%';
-  if (label) label.textContent = `Momentum 7j : ${avg}/100`;
-}
 
 /* ── Boot ── */
 function boot(){
-  initC7Slider();
-  initSleepTracker();
-  renderScoreDuJour();
-  renderMomentumBar();
-  setTimeout(() => {
-    markLateBlocks();
-    decorateRoutinePrioBadges();
-    checkPreApptAlerts();
-    enhanceEloChart();
-  }, 1200);
-  setInterval(() => {
-    markLateBlocks();
-    checkPreApptAlerts();
-  }, 60000);
+  showResumeHint();
+  setTimeout(() => { markLateBlocks(); decorateRoutinePrioBadges(); enhanceEloChart(); }, 1200);
+  setInterval(markLateBlocks, 60000);
   document.addEventListener('click', e => {
-    const tab = e.target.closest('.tab[data-tab],.bottom-nav-item[data-tab],.nav-pill[data-tab]');
-    if (!tab) return;
-    setTimeout(() => {
-      markLateBlocks();
-      decorateRoutinePrioBadges();
-      checkPreApptAlerts();
-      enhanceEloChart();
-      renderScoreDuJour();
-    }, 300);
+    if (!e.target.closest('.tab[data-tab],.bottom-nav-item[data-tab],.nav-pill[data-tab]')) return;
+    setTimeout(() => { markLateBlocks(); decorateRoutinePrioBadges(); enhanceEloChart(); }, 350);
   }, true);
 }
-
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, {once:true});
 else boot();
-
 })();
 </script>
 
-<script id="features-v39">
+
+
+
+<script id="v75-forcefix-script">
 (function(){
 'use strict';
-if (window.__featV39) return;
-window.__featV39 = true;
+if (window.__V75ForceFixInstalled) return;
+window.__V75ForceFixInstalled = true;
 
-function _getItem(k){ try{ return JSON.parse(localStorage.getItem(k)||'null'); }catch(e){ return null; } }
-function _today(){ return new Date().toISOString().slice(0,10); }
-function _daysAgo(n){ const d=new Date(); d.setDate(d.getDate()-n); return d.toISOString().slice(0,10); }
+var DOMAINS = ['epfc','code','nl','anki','read','sport','flex','chess','vinted'];
+var LABELS = {epfc:'EPFC',code:'Code',nl:'NL',anki:'Anki',read:'Lecture',sport:'Sport',flex:'Souplesse',chess:'Échecs',vinted:'Vinted'};
+var ICONS = {epfc:'🎓',code:'💻',nl:'🇳🇱',anki:'🎴',read:'📚',sport:'💪',flex:'🧘',chess:'♟️',vinted:'🛍️'};
 
-/* ── Heatmap 90 jours ── */
-function renderHeatmap(){
-  const wrap = document.getElementById('heatmap-90d');
-  if (!wrap) return;
-  const logs = _getItem('dashv2_logs') || {};
-  const grid = document.createElement('div');
-  grid.className = 'heatmap-grid';
-  for (let i=89; i>=0; i--){
-    const date = _daysAgo(i);
-    const dayLog = logs[date] || {};
-    const keys = ['epfc','code','nl','anki','read','sport','chess','vinted'];
-    const count = keys.filter(k => dayLog[k] && parseFloat(dayLog[k])>0).length;
-    const level = count===0?0:count<=2?1:count<=4?2:count<=6?3:4;
-    const cell = document.createElement('div');
-    cell.className = 'heatmap-cell';
-    cell.dataset.level = level;
-    cell.title = `${date} – ${count} domaines`;
-    grid.appendChild(cell);
+function $(s,r){ return (r||document).querySelector(s); }
+function $all(s,r){ return Array.prototype.slice.call((r||document).querySelectorAll(s)); }
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+function read(k,d){ try{ var v=localStorage.getItem(k); return v == null || v === '' ? d : JSON.parse(v); }catch(_){ return d; } }
+function write(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch(_){ return false; } }
+function num(v){ var n=parseFloat(v); return isFinite(n)?n:0; }
+function pad(n){ return String(n).padStart(2,'0'); }
+function keyDate(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+function today(){ return keyDate(new Date()); }
+function addDays(dateKey,delta){ var p=dateKey.split('-').map(Number); var d=new Date(p[0],p[1]-1,p[2],12,0,0); d.setDate(d.getDate()+delta); return keyDate(d); }
+function daysAgo(n){ var d=new Date(); d.setHours(12,0,0,0); d.setDate(d.getDate()-n); return keyDate(d); }
+function dateLabel(k){ try{ var p=k.split('-').map(Number); return pad(p[2])+'/'+pad(p[1]); }catch(_){ return k; } }
+
+function merge(a,b){
+  if (b && typeof b === 'object' && !Array.isArray(b)){
+    Object.keys(b).forEach(function(k){ if (b[k] !== undefined && b[k] !== null && b[k] !== '') a[k]=b[k]; });
   }
-  wrap.innerHTML = '<div style="font:700 11px/1 var(--f-mono,monospace);color:#64748b;text-transform:uppercase;margin-bottom:6px;">Activité 90j</div>';
-  wrap.appendChild(grid);
+  return a;
 }
-
-/* ── Domain streaks ── */
-function renderDomainStreaksV39(){
-  const wrap = document.getElementById('domain-streaks-v39');
-  if (!wrap) return;
-  const logs = _getItem('dashv2_logs') || {};
-  const domains = ['epfc','code','nl','anki','read','sport','chess','vinted'];
-  const icons = {epfc:'🏥',code:'💻',nl:'🌐',anki:'🎴',read:'📚',sport:'🏃',chess:'♟',vinted:'🛍'};
-  let html = '';
-  domains.forEach(d => {
-    let streak = 0, i = 0;
-    while(i <= 365){
-      const v = parseFloat((logs[_daysAgo(i)]||{})[d]||'0');
-      if (v > 0){ streak++; i++; } else break;
-    }
-    if (streak > 0){
-      html += `<span class="domain-streak-pill">${icons[d]||d} ${d} <span class="streak-fire">🔥${streak}</span></span>`;
-    }
-  });
-  wrap.innerHTML = html || '<span style="color:#64748b;font-size:12px">Aucun streak actif</span>';
-}
-
-/* ── Radar chart ── */
-function renderRadarChart(){
-  const canvas = document.getElementById('radar-chart');
-  if (!canvas || typeof Chart === 'undefined') return;
-  if (Chart.getChart && Chart.getChart(canvas)) Chart.getChart(canvas).destroy();
-  const logs = _getItem('dashv2_logs') || {};
-  const domains = ['epfc','code','nl','anki','read','sport','chess'];
-  const labels = ['EPFC','Code','NL','Anki','Read','Sport','Chess'];
-  const data = domains.map(d => {
-    let days = 0;
-    for (let i=0;i<7;i++){
-      const v = parseFloat((logs[_daysAgo(i)]||{})[d]||'0');
-      if (v>0) days++;
-    }
-    return Math.min(days/7*10, 10);
-  });
-  new Chart(canvas, {
-    type:'radar',
-    data:{ labels, datasets:[{ label:'7j', data, backgroundColor:'rgba(99,102,241,.2)', borderColor:'rgba(99,102,241,.8)', pointBackgroundColor:'#6366f1', pointRadius:4 }] },
-    options:{ responsive:true, maintainAspectRatio:false, scales:{ r:{ min:0, max:10, ticks:{ color:'#475569', font:{size:9} }, grid:{color:'#1e293b'}, pointLabels:{color:'#94a3b8',font:{size:10}} } }, plugins:{ legend:{ display:false } } }
-  });
-}
-
-/* ── C7 trend chart ── */
-function renderC7Chart(){
-  const canvas = document.getElementById('chart-c7');
-  if (!canvas || typeof Chart === 'undefined') return;
-  if (Chart.getChart && Chart.getChart(canvas)) Chart.getChart(canvas).destroy();
-  const logs = _getItem('dashv2_logs') || {};
-  const labels=[], data=[];
-  for (let i=29;i>=0;i--){
-    const date = _daysAgo(i);
-    labels.push(date.slice(5));
-    data.push(parseFloat((logs[date]||{}).c7||'0'));
-  }
-  new Chart(canvas, {
-    type:'line',
-    data:{ labels, datasets:[{ label:'C7', data, borderColor:'#ef4444', backgroundColor:'rgba(239,68,68,.1)', tension:.3, pointRadius:2 }] },
-    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false} }, scales:{ y:{ min:0, max:10, ticks:{color:'#475569'}, grid:{color:'#1e293b'} }, x:{ ticks:{color:'#475569',maxTicksLimit:8}, grid:{color:'#1e293b'} } } }
-  });
-}
-
-/* ── Focus mode ── */
-function initFocusMode(){
-  if (document.getElementById('focus-mode-btn')) return;
-  const btn = document.createElement('button');
-  btn.id = 'focus-mode-btn';
-  btn.title = 'Focus mode';
-  btn.textContent = '🎯';
-  document.body.appendChild(btn);
-
-  const overlay = document.createElement('div');
-  overlay.id = 'focus-overlay';
-  overlay.innerHTML = `
-    <div id="focus-task-name">Mode Focus</div>
-    <div id="focus-timer">25:00</div>
-    <button id="focus-exit-btn">Quitter le focus</button>
-  `;
-  document.body.appendChild(overlay);
-
-  let timerInterval = null;
-  let secondsLeft = 25*60;
-
-  function startTimer(){
-    clearInterval(timerInterval);
-    timerInterval = setInterval(() => {
-      secondsLeft--;
-      const m = Math.floor(secondsLeft/60);
-      const s = secondsLeft%60;
-      const el = document.getElementById('focus-timer');
-      if (el) el.textContent = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
-      if (secondsLeft <= 0){
-        clearInterval(timerInterval);
-        document.body.classList.remove('focus-mode');
-        if (typeof showToast === 'function') showToast('✅ Session focus terminée !', 'success');
+function scanDated(kind, date){
+  var out = kind === 'tasks' ? [] : {};
+  try{
+    for(var i=0;i<localStorage.length;i++){
+      var k=localStorage.key(i)||'';
+      if(k.indexOf(date)===-1) continue;
+      var low=k.toLowerCase();
+      if(kind==='log' && low.indexOf('log')===-1) continue;
+      if(kind==='tasks' && low.indexOf('task')===-1) continue;
+      var v=read(k,null);
+      if(kind==='tasks'){
+        if(Array.isArray(v)) out=out.concat(v);
+        else if(v && Array.isArray(v.items)) out=out.concat(v.items);
+        else if(v && typeof v==='object') out=out.concat(Object.keys(v).map(function(id){ var x=v[id]; return typeof x==='object'?x:{title:String(x)}; }));
+      } else {
+        merge(out, v);
       }
-    }, 1000);
+    }
+  }catch(_){}
+  return out;
+}
+function getDayLog(date){
+  date = date || today();
+  var out = {};
+  merge(out, scanDated('log', date));
+  var logs = read('dashv2_logs', {});
+  if (logs && logs[date]) merge(out, logs[date]);
+  var state = read('state', {});
+  if (state && state.logs && state.logs[date]) merge(out, state.logs[date]);
+  merge(out, read('log_'+date, {}));
+  merge(out, read('logs_'+date, {}));
+  merge(out, read('dashv2_log_'+date, {}));
+  // Normalisations C7 / sommeil
+  if(out.c7 == null) out.c7 = out.c7Pain != null ? out.c7Pain : (out.neckPain != null ? out.neckPain : 0);
+  if(out.sleepStart == null) out.sleepStart = out.bedtime || out.sleep_start || '';
+  if(out.sleepEnd == null) out.sleepEnd = out.wakeup || out.sleep_end || '';
+  return out;
+}
+function getTasks(date){
+  date = date || today();
+  var arr = [];
+  function add(v){
+    if(!v) return;
+    if(Array.isArray(v)) arr = arr.concat(v);
+    else if(Array.isArray(v.items)) arr = arr.concat(v.items);
+    else if(typeof v === 'object') arr = arr.concat(Object.keys(v).map(function(id){ var x=v[id]; if(typeof x==='object'){ x.id=x.id||id; return x; } return {id:id,title:String(x)}; }));
+  }
+  add(scanDated('tasks', date));
+  add(read('dashv2_tasks_'+date, null));
+  add(read('tasks_'+date, null));
+  var all = read('dashv2_tasks', null); add(all && all[date] ? all[date] : all);
+  var state = read('state', null); if(state && state.tasks && state.tasks[date]) add(state.tasks[date]);
+  var seen = {};
+  return arr.filter(function(t){
+    if(!t || typeof t !== 'object') return false;
+    var title = t.title || t.text || t.name || t.label || '';
+    if(!title) return false;
+    var sig = [title,t.time||t.start||t.startTime||'',t.date||date].join('|');
+    if(seen[sig]) return false;
+    seen[sig]=1; return true;
+  });
+}
+function isDone(t){ return !!(t.done || t.completed || t.checked || t.status==='done' || t.isDone); }
+function taskTitle(t){ return t.title || t.text || t.name || t.label || 'Tâche'; }
+function taskTime(t){ return t.time || t.start || t.startTime || t.begin || ''; }
+function domainScore(log){
+  var active=0,total=0;
+  DOMAINS.forEach(function(k){
+    var v=log[k];
+    var ok=false;
+    if(typeof v==='boolean') ok=v;
+    else if(typeof v==='number') ok=v>0;
+    else if(v && typeof v==='object') ok=!!(v.done || v.minutes || v.value || v.count);
+    else ok=!!v;
+    if(ok) active++;
+    total++;
+  });
+  return total ? active/total : 0;
+}
+function scoreForDate(date){
+  var log=getDayLog(date), tasks=getTasks(date);
+  var done=tasks.filter(isDone).length, tscore=tasks.length?done/tasks.length:0.5;
+  var mood=num(log.mood||log.humeur||0)/5; if(!mood) mood=0.5;
+  var dscore=domainScore(log);
+  var c7=num(log.c7); var cscore=1-Math.min(10,Math.max(0,c7))/10;
+  var score=Math.round((tscore*.35 + mood*.20 + dscore*.30 + cscore*.15)*100);
+  return Math.max(0,Math.min(100,score));
+}
+function sleepDuration(start,end){
+  if(!start || !end) return '';
+  var a=start.split(':').map(Number), b=end.split(':').map(Number);
+  if(a.length<2 || b.length<2) return '';
+  var s=a[0]*60+a[1], e=b[0]*60+b[1]; if(e<s) e+=1440;
+  var m=e-s; return Math.floor(m/60)+'h'+pad(m%60);
+}
+function ensureContainers(){
+  var home=$('#p-home'), stats=$('#p-stats'), settings=$('#p-settings');
+  if(home && !$('#v75-home-modules')){
+    var anchor=home.querySelector('.stats.stats-3');
+    var div=document.createElement('div');
+    div.innerHTML='<div class="v75-version-badge" id="v75-version-badge">V75 FORCE FIX ACTIF · DOM visible</div><div class="v75-force-strip" id="v75-home-modules"><div class="v75-pre-rdv" id="v75-pre-rdv">🟣 Alerte pré-RDV : aucune tâche dans les 30 prochaines minutes.</div><div class="v75-force-grid"><div id="morning-card" class="v75-force-card" aria-live="polite"><h3>🌅 Morning card</h3><div id="v75-morning-body" class="v75-sub">Chargement…</div></div><div id="score-du-jour" class="v75-force-card" aria-live="polite"><h3>Score du jour</h3><div class="v75-big-score" id="v75-score-value">—</div><div class="v75-sub" id="v75-score-detail">Tâches + humeur + domaines + C7</div></div><div id="momentum-card" class="v75-force-card" aria-live="polite"><h3>Momentum 7j</h3><div class="v75-bar-wrap"><div class="v75-bar" id="momentum-bar"></div></div><div class="v75-sub" id="momentum-label">Momentum 7j : —/100</div></div></div></div>';
+    while(div.firstChild) home.insertBefore(div.firstChild, anchor || home.firstChild);
+  }
+  if(stats && !$('#v75-stats-modules')){
+    var anchor2=stats.querySelector('.stats-cards');
+    var box=document.createElement('div');
+    box.innerHTML='<div class="v76-section-label" id="v75-stats-badge">Pilotage avancé · 90j / 7j / C7 / tâches</div><div class="v75-stats-grid" id="v75-stats-modules"><div class="chart-card v75-force-card"><div class="chart-head"><span class="chart-title">Heatmap 90j · <em>domaines</em></span><span class="chart-legend" id="v75-heatmap-meta">—</span></div><div id="heatmap-90d" aria-label="Heatmap activité 90 jours"></div></div><div class="chart-card v75-force-card"><div class="chart-head"><span class="chart-title">Streaks 🔥 · <em>par domaine</em></span><span class="chart-legend">jours consécutifs</span></div><div id="domain-streaks-v39"></div></div><div class="chart-card v75-force-card"><div class="chart-head"><span class="chart-title">Radar 7j · <em>cohérence</em></span><span class="chart-legend">SVG fallback</span></div><div id="radar-wrap" class="v75-chart-box"><canvas id="radar-chart" height="220"></canvas><div id="radar-fallback" class="v75-chart-fallback"></div></div></div><div class="chart-card v75-force-card"><div class="chart-head"><span class="chart-title">Douleur C7 · <em>30j</em></span><span class="chart-legend">0 aucune · 10 critique</span></div><div id="c7-chart-wrap" class="v75-chart-box"><canvas id="chart-c7" height="220"></canvas><div id="c7-fallback" class="v75-chart-fallback"></div></div></div><div id="task-history-card" class="chart-card v75-force-card"><h3>Historique tâches · 10j</h3><div id="task-history-list" class="v75-sub">Chargement…</div></div><div id="v75-selftest-card" class="chart-card v75-force-card"><h3>Contrôle modules</h3><div id="v75-selftest-list"></div></div></div>';
+    while(box.firstChild) stats.insertBefore(box.firstChild, anchor2 || stats.firstChild);
+  }
+  if(settings && !$('#v75-settings-selftest')){
+    var sc=document.createElement('div');
+    sc.className='v75-force-card'; sc.id='v75-settings-selftest';
+    sc.innerHTML='<h3>Contrôle modules</h3><div class="v75-sub">Diagnostic rapide des modules actifs.</div><div id="v75-settings-selftest-list" style="margin-top:10px"></div>';
+    settings.appendChild(sc);
+  }
+}
+function renderMorning(){
+  var body=$('#v75-morning-body'); if(!body) return;
+  var now=new Date(), log=getDayLog(today()), tasks=getTasks(today()).slice(0,5);
+  var sleep=sleepDuration(log.sleepStart,log.sleepEnd) || 'non loggé';
+  var visible=now.getHours()<12;
+  var html='<b>'+ (visible?'Briefing matin':'Résumé jour') +'</b><br>Sommeil : <b>'+esc(sleep)+'</b>';
+  html += tasks.length?'<ul class="v75-morning-list">'+tasks.map(function(t){return '<li>'+esc(taskTime(t)?taskTime(t)+' · ':'')+esc(taskTitle(t))+'</li>';}).join('')+'</ul>':'<div class="v75-sub">Aucune tâche détectée pour aujourd’hui.</div>';
+  body.innerHTML=html;
+}
+function renderScore(){
+  var v=$('#v75-score-value'), d=$('#v75-score-detail'); if(!v||!d) return;
+  var score=scoreForDate(today()), log=getDayLog(today()), tasks=getTasks(today());
+  var done=tasks.filter(isDone).length;
+  v.textContent=score+'/100';
+  d.innerHTML='Tâches <b>'+done+'/'+tasks.length+'</b> · Humeur <b>'+(log.mood||log.humeur||'—')+'</b> · C7 <b>'+(log.c7==null?'—':log.c7)+'</b>';
+}
+function renderMomentum(){
+  var scores=[], sum=0;
+  for(var i=6;i>=0;i--){ var s=scoreForDate(daysAgo(i)); scores.push(s); sum+=s; }
+  var avg=Math.round(sum/7), bar=$('#momentum-bar'), lab=$('#momentum-label');
+  if(bar) bar.style.width=avg+'%';
+  if(lab) lab.textContent='Momentum 7j : '+avg+'/100 · '+scores.join(' · ');
+}
+function renderPreRDV(){
+  var el=$('#v75-pre-rdv'); if(!el) return;
+  var now=new Date(), nowM=now.getHours()*60+now.getMinutes(), hit=null;
+  getTasks(today()).forEach(function(t){
+    var tm=taskTime(t); if(!tm || isDone(t)) return;
+    var p=tm.split(':').map(Number); if(p.length<2) return;
+    var m=p[0]*60+p[1], diff=m-nowM;
+    if(diff>=0 && diff<=30 && (!hit || diff<hit.diff)) hit={task:t,diff:diff};
+  });
+  if(hit){ el.classList.add('show'); el.textContent='🟣 Alerte pré-RDV : '+taskTitle(hit.task)+' dans '+hit.diff+' min'; }
+  else { el.classList.remove('show'); }
+}
+function renderHeatmap(){
+  var grid=$('#heatmap-90d'), meta=$('#v75-heatmap-meta'); if(!grid) return;
+  var active=0, html='';
+  for(var i=89;i>=0;i--){
+    var d=daysAgo(i), log=getDayLog(d), s=scoreForDate(d);
+    var level=Math.max(0,Math.min(5,Math.ceil(s/20)));
+    if(domainScore(log)>0 || getTasks(d).length) active++;
+    html+='<div class="v75-heat-cell v75-heat-'+level+'" title="'+d+' · '+s+'/100"></div>';
+  }
+  grid.innerHTML=html;
+  if(meta) meta.textContent=active+' jours actifs / 90';
+}
+function streakForDomain(k){
+  var s=0;
+  for(var i=0;i<365;i++){
+    var log=getDayLog(daysAgo(i)), v=log[k], ok=false;
+    if(typeof v==='boolean') ok=v;
+    else if(typeof v==='number') ok=v>0;
+    else if(v && typeof v==='object') ok=!!(v.done||v.minutes||v.value||v.count);
+    else ok=!!v;
+    if(ok) s++; else break;
+  }
+  return s;
+}
+function renderStreaks(){
+  var el=$('#domain-streaks-v39'); if(!el) return;
+  el.innerHTML=DOMAINS.map(function(k){ return '<div class="v75-domain-row"><span>'+ICONS[k]+' '+LABELS[k]+'</span><span class="v75-pill">'+streakForDomain(k)+'j 🔥</span></div>'; }).join('');
+}
+function renderTaskHistory(){
+  var el=$('#task-history-list'); if(!el) return;
+  var html='';
+  for(var i=9;i>=0;i--){
+    var d=daysAgo(i), tasks=getTasks(d), done=tasks.filter(isDone).length;
+    html+='<div class="v75-task-row"><span>'+dateLabel(d)+'</span><span class="v75-pill">'+done+'/'+tasks.length+'</span></div>';
+  }
+  el.innerHTML=html;
+}
+function svgLine(values,max,label){
+  max=max||100;
+  var w=380,h=180,p=24;
+  var pts=values.map(function(v,i){ var x=p+(w-2*p)*(values.length<=1?0:i/(values.length-1)); var y=h-p-(h-2*p)*(Math.max(0,Math.min(max,v))/max); return [x,y]; });
+  var poly=pts.map(function(p){return p[0].toFixed(1)+','+p[1].toFixed(1);}).join(' ');
+  return '<svg viewBox="0 0 '+w+' '+h+'" role="img" aria-label="'+esc(label)+'"><rect width="'+w+'" height="'+h+'" rx="16" fill="rgba(2,6,23,.55)"/><polyline points="'+poly+'" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><text x="20" y="26" fill="currentColor" font-size="13" font-weight="900">'+esc(label)+'</text></svg>';
+}
+function renderC7(){
+  var fb=$('#c7-fallback'); if(!fb) return;
+  var vals=[]; for(var i=29;i>=0;i--) vals.push(num(getDayLog(daysAgo(i)).c7));
+  fb.innerHTML=svgLine(vals,10,'C7 30j');
+}
+function renderRadar(){
+  var fb=$('#radar-fallback'); if(!fb) return;
+  var vals=DOMAINS.slice(0,6).map(function(k){
+    var c=0; for(var i=0;i<7;i++){ var log=getDayLog(daysAgo(i)); var v=log[k]; if(typeof v==='boolean'?v:(typeof v==='number'?v>0:!!v)) c++; }
+    return Math.round(c/7*100);
+  });
+  fb.innerHTML=svgLine(vals,100,'Radar cohérence 7j');
+}
+function bindC7Sleep(){
+  var c7=$('#log-c7'), c7v=$('#log-c7-val'), ss=$('#log-sleep-start'), se=$('#log-sleep-end'), dur=$('#log-sleep-dur');
+  var log=getDayLog(today());
+  if(c7 && !c7.dataset.v75Bound){
+    if(log.c7!=null){ c7.value=log.c7; if(c7v)c7v.textContent=log.c7; }
+    c7.addEventListener('input',function(){ if(c7v)c7v.textContent=c7.value; saveDaily({c7:num(c7.value),c7Pain:num(c7.value)}); renderAllSoon(); });
+    c7.dataset.v75Bound='1';
+  }
+  if(ss && !ss.dataset.v75Bound){
+    if(log.sleepStart) ss.value=log.sleepStart;
+    if(se && log.sleepEnd) se.value=log.sleepEnd;
+    var h=function(){ var obj={sleepStart:ss.value,sleepEnd:se?se.value:''}; obj.sleepDuration=sleepDuration(obj.sleepStart,obj.sleepEnd); if(dur)dur.textContent=obj.sleepDuration||'—'; saveDaily(obj); renderAllSoon(); };
+    ss.addEventListener('change',h); if(se) se.addEventListener('change',h);
+    if(dur) dur.textContent=sleepDuration(ss.value, se?se.value:'')||'—';
+    ss.dataset.v75Bound='1';
+  }
+}
+function saveDaily(patch){
+  var d=today();
+  var a=read('dashv2_logs',{}); a[d]=merge(a[d]||{},patch); write('dashv2_logs',a);
+  var b=read('dashv2_log_'+d,{}); merge(b,patch); write('dashv2_log_'+d,b);
+  var c=read('log_'+d,{}); merge(c,patch); write('log_'+d,c);
+}
+var soonTimer=null;
+function renderAllSoon(){ clearTimeout(soonTimer); soonTimer=setTimeout(renderAll,80); }
+function renderSelfTest(){
+  var tests=[
+    ['morning-card',!!$('#morning-card')],
+    ['score-du-jour',!!$('#score-du-jour')],
+    ['momentum-card',!!$('#momentum-card')],
+    ['pre-RDV banner',!!$('#v75-pre-rdv')],
+    ['C7 slider',!!$('#log-c7')],
+    ['sleep tracker',!!$('#log-sleep-start') && !!$('#log-sleep-end')],
+    ['heatmap-90d',!!$('#heatmap-90d')],
+    ['domain-streaks-v39',!!$('#domain-streaks-v39')],
+    ['radar-chart',!!$('#radar-chart')],
+    ['chart-c7',!!$('#chart-c7')],
+    ['task-history-card',!!$('#task-history-card')],
+    ['UDV75 API',!!window.UDV75]
+  ];
+  var html=tests.map(function(t){return '<div class="v75-test-row '+(t[1]?'pass':'fail')+'"><span>'+esc(t[0])+'</span><span>'+(t[1]?'PASS':'FAIL')+'</span></div>';}).join('');
+  var a=$('#v75-selftest-list'), b=$('#v75-settings-selftest-list'); if(a)a.innerHTML=html; if(b)b.innerHTML=html;
+}
+function ensureFocus(){
+  return; // V76: bouton Focus 25 V75 supprimé, focus natif conservé.
+  if($('#v75-focus-fab')) return;
+  var btn=document.createElement('button'); btn.id='v75-focus-fab'; btn.className='v75-fixed-focus'; btn.textContent='🎯 Focus 25';
+  var ov=document.createElement('div'); ov.id='v75-focus-overlay'; ov.className='v75-focus-overlay'; ov.innerHTML='<div class="v75-focus-box"><h3>Focus mode</h3><div class="v75-focus-time" id="v75-focus-time">25:00</div><div class="v75-focus-task" id="v75-focus-task">Tâche courante</div><div class="v75-focus-actions"><button id="v75-focus-start">Démarrer</button><button id="v75-focus-reset">Reset</button><button id="v75-focus-close">Fermer</button></div></div>';
+  document.body.appendChild(btn); document.body.appendChild(ov);
+  var left=25*60,timer=null;
+  function draw(){ var m=Math.floor(left/60),s=left%60; var t=$('#v75-focus-time'); if(t)t.textContent=pad(m)+':'+pad(s); var task=getTasks(today()).filter(function(x){return !isDone(x);})[0]; var tt=$('#v75-focus-task'); if(tt)tt.textContent=task?taskTitle(task):'Aucune tâche active'; }
+  btn.onclick=function(){ ov.classList.add('open'); draw(); };
+  $('#v75-focus-close').onclick=function(){ ov.classList.remove('open'); };
+  $('#v75-focus-reset').onclick=function(){ clearInterval(timer); timer=null; left=25*60; draw(); };
+  $('#v75-focus-start').onclick=function(){ if(timer) return; timer=setInterval(function(){ left--; if(left<=0){clearInterval(timer);timer=null;left=0;} draw(); },1000); };
+  draw();
+}
+function renderAll(){
+  try{
+    ensureContainers(); bindC7Sleep(); ensureFocus();
+    renderMorning(); renderScore(); renderMomentum(); renderPreRDV();
+    renderHeatmap(); renderStreaks(); renderTaskHistory(); renderRadar(); renderC7(); renderSelfTest();
+  }catch(e){ try{ console.error('[V75 ForceFix]',e); }catch(_){} }
+}
+function boot(){
+  renderAll();
+  setInterval(function(){ renderPreRDV(); renderMorning(); renderScore(); renderMomentum(); },60000);
+  document.addEventListener('click',function(e){
+    if(e.target.closest('.tab,[data-tab],#log-save,#task-add,.task-add-btn,.task-check,.task-done,.meal-chip,.log-mood-btn')) setTimeout(renderAll,200);
+  },true);
+  document.addEventListener('input',function(e){
+    if(e.target.matches('.log-input,#task-title,#task-time,#task-end-time,#log-c7,#log-sleep-start,#log-sleep-end')) setTimeout(renderAll,200);
+  },true);
+}
+window.UDV75={renderAll:renderAll,getDayLog:getDayLog,getTasks:getTasks,scoreForDate:scoreForDate,version:'v75-forcefix'};
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot,{once:true}); else boot();
+})();
+</script>
+
+
+<script id="v76-visible-fix-script">
+(function(){
+'use strict';
+if (window.__V76VisibleFixInstalled) return;
+window.__V76VisibleFixInstalled = true;
+
+function $(s,r){ return (r||document).querySelector(s); }
+
+function killBadFocus(){
+  var bad = document.getElementById('v75-focus-fab');
+  if (bad) bad.remove();
+  var ov = document.getElementById('v75-focus-overlay');
+  if (ov) ov.remove();
+}
+
+function ensureVisibleHomeModules(){
+  var home = document.getElementById('p-home');
+  if (!home) return;
+
+  var modules = document.getElementById('v75-home-modules');
+  if (!modules){
+    modules = document.createElement('div');
+    modules.id = 'v75-home-modules';
+    modules.className = 'v76-top-modules';
+    modules.innerHTML =
+      '<div class="v75-pre-rdv" id="v75-pre-rdv">🟣 Alerte pré-RDV : aucune tâche dans les 30 prochaines minutes.</div>' +
+      '<div class="v76-grid">' +
+        '<div id="score-du-jour" class="v75-force-card v76-card-primary" aria-live="polite"><h3>Score du jour</h3><div class="v75-big-score" id="v75-score-value">—</div><div class="v75-sub" id="v75-score-detail">Tâches + humeur + domaines + C7</div></div>' +
+        '<div id="momentum-card" class="v75-force-card" aria-live="polite"><h3>Momentum 7j</h3><div class="v75-bar-wrap"><div class="v75-bar" id="momentum-bar"></div></div><div class="v75-sub" id="momentum-label">Momentum 7j : —/100</div></div>' +
+        '<div id="morning-card" class="v75-force-card" aria-live="polite"><h3>Morning card</h3><div id="v75-morning-body" class="v75-sub">Chargement sommeil + tâches du jour…</div></div>' +
+      '</div>';
   }
 
-  btn.addEventListener('click', () => {
-    const firstTask = document.querySelector('.shift-view:not(.hidden) .tl-item:not(.done-early-v35)');
-    const taskName = firstTask ? (firstTask.querySelector('.tl-name,.tl-title,.tl-label')?.textContent?.trim()||'Tâche en cours') : 'Session Pomodoro';
-    const el = document.getElementById('focus-task-name');
-    if (el) el.textContent = taskName;
-    secondsLeft = 25*60;
-    document.body.classList.add('focus-mode');
-    startTimer();
-  });
-  document.getElementById('focus-exit-btn')?.addEventListener('click', () => {
-    document.body.classList.remove('focus-mode');
-    clearInterval(timerInterval);
-  });
+  modules.classList.add('v76-top-modules');
+
+  var grid = modules.querySelector('.v76-grid') || modules.querySelector('.v75-force-grid');
+  if (grid) grid.className = 'v76-grid';
+
+  // Remove debug badge from V75.
+  var badge = document.getElementById('v75-version-badge');
+  if (badge) badge.remove();
+
+  // Hard placement: immediately after search, before the huge "Mission maintenant" card.
+  var search = home.querySelector('.home-search');
+  var mission = document.getElementById('next-action');
+  if (search && search.nextSibling !== modules){
+    home.insertBefore(modules, search.nextSibling);
+  } else if (mission && mission.previousSibling !== modules){
+    home.insertBefore(modules, mission);
+  } else if (!modules.parentNode){
+    home.insertBefore(modules, home.firstChild);
+  }
+
+  modules.style.display = 'block';
+  modules.style.visibility = 'visible';
+  modules.style.opacity = '1';
 }
 
-/* ── Task history ── */
-function renderTaskHistory(){
-  const wrap = document.getElementById('task-history-card');
-  if (!wrap) return;
-  const tasks = _getItem('dashv2_tasks') || [];
-  const byDate = {};
-  tasks.forEach(t => {
-    if (!t.date) return;
-    if (!byDate[t.date]) byDate[t.date] = {done:0,total:0};
-    byDate[t.date].total++;
-    if (t.done) byDate[t.date].done++;
-  });
-  const dates = Object.keys(byDate).sort().reverse().slice(0,10);
-  let html = '<h4>Historique tâches</h4>';
-  if (!dates.length){ html += '<div class="th-row" style="color:#475569">Aucun historique</div>'; }
-  dates.forEach(d => {
-    const { done, total } = byDate[d];
-    const pct = Math.round(done/total*100);
-    html += `<div class="th-row"><span class="th-date">${d}</span><span>${done}/${total}</span><span class="th-score">${pct}%</span></div>`;
-  });
-  wrap.innerHTML = html;
+function forceRender(){
+  try{
+    if (window.UDV75 && typeof window.UDV75.renderAll === 'function'){
+      window.UDV75.renderAll();
+    }
+  }catch(e){
+    console.error('[V76 visible fix] render failed', e);
+  }
 }
 
-/* ── Morning card ── */
-function renderMorningCard(){
-  const wrap = document.getElementById('morning-card');
-  if (!wrap) return;
-  const hour = new Date().getHours();
-  if (hour >= 12) { wrap.style.display='none'; return; }
-  wrap.style.display='';
-  const tasks = _getItem('dashv2_tasks') || [];
-  const today = _today();
-  const todayTasks = tasks.filter(t => t.date === today && !t.done);
-  const logs = _getItem('dashv2_logs') || {};
-  const sleepStart = (logs[today]||{}).sleepStart || '?';
-  const sleepEnd = (logs[today]||{}).sleepEnd || '?';
-  wrap.innerHTML = `<div class="mc-title">🌅 Bonjour — ${new Date().toLocaleDateString('fr-FR',{weekday:'long'})}</div>
-    <div class="mc-item">😴 Sommeil: ${sleepStart} → ${sleepEnd}</div>
-    <div class="mc-item">📋 ${todayTasks.length} tâche${todayTasks.length!==1?'s':''} à faire aujourd'hui</div>
-    ${todayTasks.slice(0,3).map(t=>`<div class="mc-item" style="padding-left:12px">• ${t.title||t.name||t.text||'Tâche'}</div>`).join('')}`;
-}
-
-/* ── Boot ── */
 function boot(){
-  renderHeatmap();
-  renderDomainStreaksV39();
-  renderTaskHistory();
-  renderMorningCard();
-  initFocusMode();
-  setTimeout(() => {
-    renderRadarChart();
-    renderC7Chart();
-  }, 500);
-  document.addEventListener('click', e => {
-    const tab = e.target.closest('.tab[data-tab],.bottom-nav-item[data-tab],.nav-pill[data-tab]');
-    if (!tab) return;
-    const t = (tab.dataset.tab||'').toLowerCase();
-    setTimeout(() => {
-      renderHeatmap();
-      renderDomainStreaksV39();
-      renderTaskHistory();
-      renderMorningCard();
-      if (t.includes('stat')){ renderRadarChart(); renderC7Chart(); }
-    }, 300);
-  }, true);
+  killBadFocus();
+  ensureVisibleHomeModules();
+  forceRender();
+
+  setTimeout(function(){ killBadFocus(); ensureVisibleHomeModules(); forceRender(); }, 250);
+  setTimeout(function(){ killBadFocus(); ensureVisibleHomeModules(); forceRender(); }, 900);
+  setTimeout(function(){ killBadFocus(); ensureVisibleHomeModules(); forceRender(); }, 1800);
+  // V79: MutationObserver global désactivé pour éviter freeze mobile.
+  // V79: click global V76 désactivé. Rendu uniquement au boot.
 }
+
+window.UDV76 = {boot:boot, ensureVisibleHomeModules:ensureVisibleHomeModules, killBadFocus:killBadFocus, version:'v76-visible-fix'};
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, {once:true});
 else boot();
+})();
+</script>
 
+
+<script id="v77-ops-fix-script">
+(function(){
+'use strict';
+if (window.__V77OpsFixInstalled) return;
+window.__V77OpsFixInstalled = true;
+
+const NS = 'dashv2_';
+const LEVELS = {
+  critical:{label:'C1 Vital', short:'C1', icon:'🔴', cls:'critical'},
+  high:{label:'P1 Haut', short:'P1', icon:'🟠', cls:'high'},
+  normal:{label:'P2 Normal', short:'P2', icon:'🔵', cls:'normal'},
+  low:{label:'P3 Bonus', short:'P3', icon:'🟢', cls:'low'}
+};
+
+function $(s,r){ return (r||document).querySelector(s); }
+function $$(s,r){ return Array.from((r||document).querySelectorAll(s)); }
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function todayKey(offset=0){
+  const d = new Date();
+  d.setDate(d.getDate()+offset);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function readRaw(key, fallback){
+  try{
+    const raw = localStorage.getItem(key);
+    return raw == null ? fallback : JSON.parse(raw);
+  }catch(_){ return fallback; }
+}
+function writeRaw(key, val){
+  try{ localStorage.setItem(key, JSON.stringify(val)); }catch(e){ console.warn('[V77] storage failed', e); }
+}
+function read(key, fallback){ return readRaw(NS+key, fallback); }
+function write(key, val){ return writeRaw(NS+key, val); }
+function toMin(s){
+  if (!s) return null;
+  const m = String(s).trim().match(/(\d{1,2})(?:h|:)(\d{0,2})?/i);
+  if (!m) return null;
+  return Math.min(1439, Math.max(0, Number(m[1])*60 + Number((m[2]||'0').padEnd(2,'0'))));
+}
+function fmtMin(min){
+  if (min == null) return '—';
+  min = ((Math.round(min)%1440)+1440)%1440;
+  return String(Math.floor(min/60)).padStart(2,'0')+':'+String(min%60).padStart(2,'0');
+}
+function normId(s){
+  return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\w]+/g,'_').replace(/^_+|_+$/g,'').slice(0,80) || ('item_'+Date.now());
+}
+function prioId(el, idx){
+  const text = (el.querySelector('.prio-text')?.textContent || el.textContent || '').replace(/\s+/g,' ').trim();
+  const id = el.dataset.p || el.dataset.id || el.dataset.v77pid || ('prio_'+idx+'_'+normId(text));
+  el.dataset.v77pid = id;
+  return id;
+}
+function inferLevel(el, idx){
+  if (el.classList.contains('prio-critical') || idx === 0) return 'critical';
+  if (el.classList.contains('prio-high') || el.classList.contains('prio-hi') || idx < 3) return 'high';
+  if (el.classList.contains('prio-low')) return 'low';
+  return 'normal';
+}
+
+/* ───────────────────── Priorités niveau + code couleur ───────────────────── */
+function ensurePrioCommand(){
+  const list = $('#prio-list');
+  if (!list) return;
+  if (!$('#v77-prio-command')){
+    const box = document.createElement('div');
+    box.id = 'v77-prio-command';
+    box.innerHTML = `
+      <div class="v77-card-head">
+        <div class="v77-card-title">Priorités · niveau + code couleur</div>
+        <span class="v77-badge">V77</span>
+      </div>
+      <div class="v77-prio-legend">
+        <div class="v77-prio-chip critical">🔴 C1 Vital<small>à faire aujourd’hui, zéro débat</small></div>
+        <div class="v77-prio-chip high">🟠 P1 Haut<small>impact fort, à placer vite</small></div>
+        <div class="v77-prio-chip normal">🔵 P2 Normal<small>important mais contrôlé</small></div>
+        <div class="v77-prio-chip low">🟢 P3 Bonus<small>optionnel si énergie</small></div>
+      </div>`;
+    list.parentNode.insertBefore(box, list);
+  }
+}
+function decoratePrioritiesV77(){
+  ensurePrioCommand();
+  const levels = read('prio_levels', {});
+  $$('#prio-list .prio-item').forEach((el, idx) => {
+    const id = prioId(el, idx);
+    const level = levels[id] || inferLevel(el, idx);
+    Object.keys(LEVELS).forEach(k => {
+      el.classList.remove('v77-level-'+k, 'prio-'+k);
+    });
+    el.classList.add('v77-level-'+level, 'prio-'+level);
+    el.dataset.level = level;
+
+    let ctrl = el.querySelector('.v77-prio-control');
+    if (!ctrl){
+      ctrl = document.createElement('div');
+      ctrl.className = 'v77-prio-control';
+      ctrl.innerHTML = `
+        <span class="v77-level-badge"></span>
+        <select class="v77-prio-level" aria-label="Niveau de priorité">
+          <option value="critical">🔴 C1 Vital</option>
+          <option value="high">🟠 P1 Haut</option>
+          <option value="normal">🔵 P2 Normal</option>
+          <option value="low">🟢 P3 Bonus</option>
+        </select>`;
+      const del = el.querySelector('.prio-del,[data-act="del"]');
+      if (del) el.insertBefore(ctrl, del);
+      else el.appendChild(ctrl);
+      ctrl.addEventListener('click', e => e.stopPropagation(), true);
+      ctrl.querySelector('select').addEventListener('change', e => {
+        const cur = read('prio_levels', {});
+        cur[id] = e.target.value;
+        write('prio_levels', cur);
+        decoratePrioritiesV77();
+        renderOverdueV77();
+      });
+    }
+    const select = ctrl.querySelector('select');
+    const badge = ctrl.querySelector('.v77-level-badge');
+    if (select) select.value = level;
+    if (badge) badge.textContent = LEVELS[level].icon + ' ' + LEVELS[level].short;
+  });
+}
+
+/* ───────────────────── Activités en retard ───────────────────── */
+function taskTitle(t){ return t.title || t.text || t.name || 'Tâche'; }
+function taskStart(t){ return t.time || t.startTime || t.start || ''; }
+function taskEnd(t){ return t.endTime || t.end || ''; }
+function getTasks(date=todayKey()){
+  const all = [];
+  const add = v => { if (Array.isArray(v)) all.push(...v); };
+  add(read('tasks_'+date, []));
+  add(readRaw(NS+'tasks_'+date, []));
+  const bag = read('tasks', null);
+  if (Array.isArray(bag)) add(bag.filter(t => !t.date || t.date === date));
+  else if (bag && Array.isArray(bag[date])) add(bag[date]);
+  const seen = new Set();
+  return all.filter(t => {
+    const k = (t.id || '')+'|'+taskTitle(t)+'|'+taskStart(t);
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+}
+function routineLateItems(){
+  const now = new Date().getHours()*60 + new Date().getMinutes();
+  const out = [];
+  const view = $('.shift-view:not(.hidden)') || $('#p-routine .shift-view');
+  if (!view) return out;
+  const items = $$('.tl-item[data-time]', view);
+  items.forEach((item, idx) => {
+    if (item.classList.contains('done-early-v35') || item.classList.contains('is-done') || item.style.display === 'none') return;
+    const timeText = (item.querySelector('.tl-time')?.dataset.orig || item.querySelector('.tl-time')?.textContent || item.dataset.time || '').trim();
+    const parts = timeText.split(/[–\-→]/);
+    const start = toMin(parts[0]);
+    let end = toMin(parts[1]);
+    if (start == null) return;
+    if (end == null) end = start + 30;
+    const title = (item.querySelector('.tl-name')?.textContent || 'Bloc routine').replace(/\s+/g,' ').trim();
+    if (end + 5 < now){
+      out.push({type:'routine', time:fmtMin(start), title, lateBy:now-end});
+    }
+  });
+  return out;
+}
+function taskLateItems(){
+  const now = new Date().getHours()*60 + new Date().getMinutes();
+  return getTasks(todayKey()).filter(t => !t.done && taskStart(t) && toMin(taskStart(t)) != null && toMin(taskStart(t)) + 5 < now)
+    .map(t => ({type:'tâche', time:taskStart(t), title:taskTitle(t), lateBy:now-toMin(taskStart(t))}));
+}
+function priorityLateItems(){
+  const out = [];
+  $$('#prio-list .prio-item').forEach((el, idx) => {
+    if (el.classList.contains('done')) return;
+    const level = el.dataset.level || inferLevel(el, idx);
+    if (level !== 'critical') return;
+    const txt = (el.querySelector('.prio-text')?.textContent || el.textContent || '').replace(/\s+/g,' ').trim();
+    if (txt) out.push({type:'priorité C1', time:'NOW', title:txt.slice(0,140), lateBy:0});
+  });
+  return out.slice(0,3);
+}
+function ensureOverdueCard(){
+  const home = $('#p-home');
+  if (!home) return null;
+  let card = $('#v77-overdue-card');
+  if (!card){
+    card = document.createElement('div');
+    card.id = 'v77-overdue-card';
+  }
+  const modules = $('#v75-home-modules');
+  const mission = $('#next-action');
+  if (modules && modules.nextSibling !== card) home.insertBefore(card, modules.nextSibling);
+  else if (mission && mission.previousSibling !== card) home.insertBefore(card, mission);
+  else if (!card.parentNode) home.insertBefore(card, home.firstChild);
+  return card;
+}
+function renderOverdueV77(){
+  const card = ensureOverdueCard();
+  if (!card) return;
+  const items = [...priorityLateItems(), ...taskLateItems(), ...routineLateItems()]
+    .sort((a,b) => (b.lateBy||0)-(a.lateBy||0))
+    .slice(0,8);
+  card.classList.toggle('is-empty', !items.length);
+  if (!items.length){
+    card.innerHTML = `
+      <div class="v77-card-head">
+        <div class="v77-card-title">Activités en retard</div>
+        <span class="v77-badge">0</span>
+      </div>
+      <div class="v75-sub">RAS. Aucun bloc critique détecté en retard.</div>`;
+    return;
+  }
+  card.innerHTML = `
+    <div class="v77-card-head">
+      <div class="v77-card-title">Activités en retard</div>
+      <span class="v77-badge">${items.length}</span>
+    </div>
+    <div class="v77-overdue-list">
+      ${items.map(it => `
+        <div class="v77-overdue-item">
+          <div class="v77-overdue-time">${esc(it.time)}</div>
+          <div class="v77-overdue-name">${esc(it.title)}</div>
+          <div class="v77-overdue-type">${esc(it.type)}</div>
+        </div>`).join('')}
+    </div>`;
+}
+
+/* ───────────────────── Échecs opérationnel ───────────────────── */
+function chessBand(elo){
+  elo = Number(elo||0);
+  if (elo < 800) return {band:'N0', label:'Fondations', next:'Ne donne plus les pièces'};
+  if (elo < 1200) return {band:'N1', label:'Tactique propre', next:'Fourchettes, clouages, finales simples'};
+  if (elo < 1600) return {band:'N2', label:'Club solide', next:'Calcul + plans + répertoire'};
+  return {band:'N3', label:'Avancé', next:'Analyse profonde et finales'};
+}
+function chessState(){
+  return {
+    global: read('chess_state', {elo:800,target:1200}),
+    day: read('chess_'+todayKey(), {puzzles:false, finales:false, partie:false, analyse:false})
+  };
+}
+function saveChessGlobal(g){ write('chess_state', g); }
+function saveChessDay(d){ write('chess_'+todayKey(), d); }
+function chessScore(day){
+  return ['puzzles','finales','partie','analyse'].filter(k => day[k]).length;
+}
+function ensureChessHomeCard(){
+  const grid = $('#v75-home-modules .v76-grid') || $('#v75-home-modules .v75-force-grid');
+  if (!grid) return null;
+  let card = $('#v77-chess-card');
+  if (!card){
+    card = document.createElement('div');
+    card.id = 'v77-chess-card';
+    card.className = 'v75-force-card';
+    grid.appendChild(card);
+  }
+  return card;
+}
+function renderChessHomeV77(){
+  const card = ensureChessHomeCard();
+  if (!card) return;
+  const st = chessState();
+  const band = chessBand(st.global.elo);
+  const done = chessScore(st.day);
+  card.innerHTML = `
+    <h3>Échecs · ${band.band}</h3>
+    <div class="v75-sub">${esc(band.label)} · Elo ${Number(st.global.elo||0)} → cible ${Number(st.global.target||1200)}</div>
+    <div class="v77-chess-line"><span>Progression jour</span><b>${done}/4</b></div>
+    <div class="v77-chess-line"><span>Ordre</span><b>${esc(band.next)}</b></div>
+    <div class="v77-chess-actions">
+      ${['puzzles','finales','partie','analyse'].map(k => `<button class="v77-mini-btn ${st.day[k]?'done':''}" data-v77-chess="${k}">${st.day[k]?'✓ ':''}${k}</button>`).join('')}
+    </div>`;
+}
+function ensureChessPanel(){
+  const page = $('#p-chess');
+  if (!page) return null;
+  let panel = $('#v77-chess-panel');
+  if (!panel){
+    panel = document.createElement('div');
+    panel.id = 'v77-chess-panel';
+    const after = page.querySelector('.callout') || page.querySelector('.page-header');
+    if (after && after.nextSibling) page.insertBefore(panel, after.nextSibling);
+    else page.appendChild(panel);
+  }
+  return panel;
+}
+function renderChessPanelV77(){
+  const panel = ensureChessPanel();
+  if (!panel) return;
+  const st = chessState();
+  const band = chessBand(st.global.elo);
+  const done = chessScore(st.day);
+  panel.innerHTML = `
+    <div class="v77-card-head">
+      <div class="v77-card-title">Échecs · tracker opérationnel</div>
+      <span class="v77-badge">${band.band} · ${done}/4</span>
+    </div>
+    <div class="v77-chess-grid">
+      <div class="v77-field"><label>Elo actuel</label><input id="v77-chess-elo" type="number" min="100" max="3000" step="1" value="${Number(st.global.elo||800)}"></div>
+      <div class="v77-field"><label>Objectif Elo</label><input id="v77-chess-target" type="number" min="100" max="3000" step="1" value="${Number(st.global.target||1200)}"></div>
+    </div>
+    <div class="v77-chess-line"><span>Niveau</span><b>${esc(band.label)}</b></div>
+    <div class="v77-chess-line"><span>Focus tactique</span><b>${esc(band.next)}</b></div>
+    <div class="v77-chess-actions">
+      ${['puzzles','finales','partie','analyse'].map(k => `<button class="v77-mini-btn ${st.day[k]?'done':''}" data-v77-chess="${k}">${st.day[k]?'✓ ':''}${k}</button>`).join('')}
+    </div>
+    <div class="v75-sub" style="margin-top:9px">Règle : puzzles lents, finales de base, une partie rapide, analyse avant de rejouer.</div>`;
+}
+function bindChess(){
+  if (window.__V77ChessBound) return;
+  window.__V77ChessBound = true;
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('[data-v77-chess]');
+    if (!btn) return;
+    e.preventDefault();
+    const key = btn.dataset.v77Chess;
+    const st = chessState();
+    st.day[key] = !st.day[key];
+    saveChessDay(st.day);
+    // also update main daily log chess count so stats see chess activity
+    const logKey = 'log_'+todayKey();
+    const dailyLog = read(logKey, {});
+    dailyLog.chess = chessScore(st.day);
+    write(logKey, dailyLog);
+    renderAllV77();
+  }, true);
+  document.addEventListener('change', e => {
+    if (e.target.id === 'v77-chess-elo' || e.target.id === 'v77-chess-target'){
+      const st = chessState();
+      st.global.elo = Number($('#v77-chess-elo')?.value || st.global.elo || 800);
+      st.global.target = Number($('#v77-chess-target')?.value || st.global.target || 1200);
+      saveChessGlobal(st.global);
+      renderAllV77();
+    }
+  }, true);
+}
+
+/* ───────────────────── Boot ───────────────────── */
+function renderAllV77(){
+  decoratePrioritiesV77();
+  renderOverdueV77();
+  renderChessHomeV77();
+  renderChessPanelV77();
+}
+function observe(){
+  const prio = $('#prio-list');
+  if (prio && !prio.dataset.v77obs){
+    prio.dataset.v77obs = '1';
+    /* V79: observer prio désactivé pour éviter boucle de rendu */
+  }
+  const task = $('#task-list');
+  if (task && !task.dataset.v77obs){
+    task.dataset.v77obs = '1';
+    /* V79: observer task désactivé pour éviter boucle de rendu */
+  }
+}
+function boot(){
+  bindChess();
+  renderAllV77();
+  observe();
+  setTimeout(renderAllV77, 250);
+  setTimeout(renderAllV77, 900);
+  setTimeout(renderAllV77, 1800);
+  setInterval(renderOverdueV77, 60000);
+  /* V79: click global V77 désactivé */
+}
+window.UDV77 = {version:'v77-ops-fix', renderAll:renderAllV77, renderOverdue:renderOverdueV77, decoratePriorities:decoratePrioritiesV77};
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, {once:true});
+else boot();
+})();
+</script>
+
+
+
+
+<script id="v79-freeze-guard-script">
+(function(){
+'use strict';
+if (window.__V79FreezeGuardInstalled) return;
+window.__V79FreezeGuardInstalled = true;
+
+const NS='dashv2_';
+const $=(s,r=document)=>r.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const clamp=(n,a,b)=>Math.max(a,Math.min(b,Number(n)||0));
+const pct=(a,b)=>b?clamp(Math.round((a/b)*100),0,100):0;
+function today(offset=0){const d=new Date;d.setDate(d.getDate()+offset);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function keyDate(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function rr(k,f){try{const r=localStorage.getItem(k);return r==null?f:JSON.parse(r)}catch(_){return f}}
+function wr(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){console.warn('[V79]',e)}}
+function read(k,f){return rr(NS+k,f)}
+function write(k,v){wr(NS+k,v)}
+function log(date){
+  const out={};
+  [rr(NS+'log_'+date,null),rr('dashv2_log_'+date,null)].forEach(v=>{if(v&&typeof v==='object'&&!Array.isArray(v))Object.assign(out,v)});
+  [rr(NS+'logs',null),rr('dashv2_logs',null)].forEach(b=>{if(b&&typeof b==='object'&&b[date])Object.assign(out,b[date])});
+  return out;
+}
+function range(days){
+  const arr=[],d=new Date;
+  for(let i=days-1;i>=0;i--){const x=new Date(d);x.setDate(x.getDate()-i);const k=keyDate(x);arr.push({date:k,log:log(k)})}
+  return arr;
+}
+function sum(days,fields){return range(days).reduce((a,r)=>a+fields.reduce((s,f)=>s+Number(r.log[f]||0),0),0)}
+function active(days,fields){return range(days).reduce((a,r)=>a+(fields.some(f=>Number(r.log[f]||0)>0||r.log[f]===true)?1:0),0)}
+
+const CONFIG={
+ epfc:{page:'p-epfc',title:'EPFC · grades de maîtrise',icon:'🎓',fields:['epfc'],actions:[['math','Maths financières'],['droit','Droit civil'],['rc','Responsabilité civile'],['assu','Assurance'],['exam','Mode examen']],grades:[[0,'N0 Recrue','Orientation','Comprendre le programme.'],[500,'N1 Base','Fondations','Notes propres.'],[1200,'N2 Opérationnel','Exercices','Refaire avec modèle.'],[2500,'N3 Autonome','Cas pratiques','Résoudre sans regarder.'],[4500,'N4 Examen','Performance','Chrono et séries.'],[7500,'N5 Avancé','Domination','Expliquer et maîtriser.']]},
+ code:{page:'p-code',title:'Code · grades de compétence',icon:'🧪',fields:['code'],actions:[['python','Python base'],['functions','Fonctions'],['collections','Collections'],['debug','Debug'],['kata','10 exercices']],grades:[[0,'N0 Recrue','Syntaxe','Comprendre la base.'],[300,'N1 Débutant','Fondations','Conditions/boucles.'],[900,'N2 Junior','Fonctions','Découper proprement.'],[1800,'N3 Opérationnel','Problèmes','Katas faciles seul.'],[3600,'N4 Builder','Projet','Petit outil utile.'],[6500,'N5 Autonome','Qualité','Tester/refactoriser.']]},
+ trading:{page:'p-trading',title:'Élec/IoT · grades techniques',icon:'🔌',fields:['iot','elec','trading'],actions:[['ohm','Loi d’Ohm'],['multimeter','Multimètre'],['arduino','Arduino/ESP'],['breadboard','Breadboard'],['project','Mini-projet']],grades:[[0,'N0 Recrue','Sécurité','Risques et composants.'],[3,'N1 Base','Mesure','Mesurer sans cramer.'],[8,'N2 Technicien','Montage','Circuit simple.'],[15,'N3 Opérationnel','Microcontrôleur','Capteur + sortie.'],[25,'N4 Maker','Projet','Boîtier + code.'],[40,'N5 Intégrateur','Système','Tester/fiabiliser.']]},
+ nl:{page:'p-nl',title:'Néerlandais · grades CEFR',icon:'🇳🇱',fields:['nl','anki'],actions:[['anki','Anki régulier'],['grammar','Grammaire'],['listening','Écoute'],['speaking','Oral'],['writing','Écrit']],grades:[[0,'A0 Recrue','Survie','Mots isolés.'],[450,'A1 Stable','Base','Questions simples.'],[1200,'A2 Opérationnel','Vie courante','Tâches simples.'],[2600,'B1 Combat','Autonomie','Expliquer/raconter.'],[5200,'B2 Pro','Travail','Argumenter.'],[9000,'C1 Elite','Précision','Fluide/pro.']]}
+};
+const CHESS=[[0,'G0 Recrue','Pièces en prise','Ne plus donner de pièces.'],[800,'G1 Soldat','Tactiques','Fourchette/clouage.'],[1000,'G2 Caporal','Ouvertures','Développer/roquer.'],[1200,'G3 Sergent','Calcul','2-3 coups.'],[1400,'G4 Lieutenant','Plans','Plans par structure.'],[1600,'G5 Capitaine','Conversion','Transformer avantage.'],[1800,'G6 Commandant','Précision','Calcul + prophylaxie.'],[2000,'G7 Colonel','Club','Préparation/analyse.'],[2200,'G8 Elite','Expert','Répertoire + finales.']];
+
+function grade(points,grades){
+  points=Number(points)||0;let cur=grades[0],next=null;
+  for(let i=0;i<grades.length;i++){if(points>=grades[i][0])cur=grades[i];if(points<grades[i][0]){next=grades[i];break}}
+  if(!next)next=[cur[0]+1000,'MAX','Maintien','Consolider.'];
+  return{cur,next,points,progress:pct(points-cur[0],next[0]-cur[0])};
+}
+function manual(domain){return read('v79_'+domain+'_manual', read('v78_'+domain+'_manual',{}))}
+function saveManual(domain,data){write('v79_'+domain+'_manual',data);write('v78_'+domain+'_manual',data)}
+function domainPoints(domain){
+  const c=CONFIG[domain],base=domain==='trading'?sum(90,c.fields):sum(365,c.fields);
+  const done=c.actions.filter(a=>manual(domain)[a[0]]).length;
+  return Math.round(base + done*(domain==='trading'?4:240));
+}
+function renderDomain(domain){
+  const c=CONFIG[domain],page=document.getElementById(c.page); if(!page)return;
+  let p=document.getElementById('v79-grade-'+domain);
+  if(!p){p=document.createElement('div');p.id='v79-grade-'+domain;p.className='v79-grade-panel';const h=page.querySelector('.page-header')||page.querySelector('.page-title')||page.firstElementChild;h&&h.nextSibling?page.insertBefore(p,h.nextSibling):page.insertBefore(p,page.firstChild)}
+  const pts=domainPoints(domain),g=grade(pts,c.grades),m=manual(domain),done=c.actions.filter(a=>m[a[0]]).length;
+  p.innerHTML=`<div id="v79-freeze-badge">✅ V79 Freeze Guard actif</div>
+  <div class="v79-grade-top"><div class="v79-emblem">${c.icon}</div><div><h2 class="v79-title">${esc(c.title)}</h2><div class="v79-sub"><b>Ordre actuel :</b> ${esc(g.cur[3])}</div></div><div class="v79-rank"><b>${esc(g.cur[1])}</b><span>${esc(g.cur[2])}</span></div></div>
+  <div class="v79-bar-wrap"><div class="v79-bar" style="width:${g.progress}%"></div></div>
+  <div class="v79-meta"><span>${pts} pts</span><span>Prochain : ${esc(g.next[1])} · ${g.next[0]} pts</span></div>
+  <div class="v79-grid"><div class="v79-stat"><span>7 jours</span><b>${Math.round(sum(7,c.fields))}</b></div><div class="v79-stat"><span>30 jours</span><b>${Math.round(sum(30,c.fields))}</b></div><div class="v79-stat"><span>Validés</span><b>${done}/${c.actions.length}</b></div></div>
+  <div class="v79-actions">${c.actions.map(([k,l])=>`<button type="button" class="v79-btn ${m[k]?'done':''}" data-v79-domain="${domain}" data-v79-action="${k}">${m[k]?'✓ ':''}${esc(l)}</button>`).join('')}</div>
+  <div class="v79-road">${c.grades.map((r,i)=>{const ok=pts>=r[0];return`<div class="v79-step ${ok?'done':''}"><div class="v79-step-dot">${ok?'✓':i}</div><div><div class="v79-step-name">${esc(r[1])} · ${esc(r[2])}</div><div class="v79-step-sub">${esc(r[3])}</div></div><div class="v79-step-tag">${r[0]} pts</div></div>`}).join('')}</div>`;
+}
+function chessState(){return read('chess_state',{elo:800,target:1200})}
+function chessDay(){return read('chess_'+today(),{puzzles:false,finales:false,partie:false,analyse:false})}
+function chessScore(d){return['puzzles','finales','partie','analyse'].filter(k=>d[k]).length}
+function renderChess(){
+  const page=document.getElementById('p-chess'); if(!page)return;
+  let p=document.getElementById('v79-grade-chess');
+  if(!p){p=document.createElement('div');p.id='v79-grade-chess';p.className='v79-grade-panel';const h=page.querySelector('.page-header')||page.querySelector('.page-title')||page.firstElementChild;h&&h.nextSibling?page.insertBefore(p,h.nextSibling):page.insertBefore(p,page.firstChild)}
+  const s=chessState(),d=chessDay(),elo=Number(s.elo||800),g=grade(elo,CHESS),done=chessScore(d);
+  p.innerHTML=`<div id="v79-freeze-badge">✅ V79 Freeze Guard actif</div>
+  <div class="v79-grade-top"><div class="v79-emblem">♟️</div><div><h2 class="v79-title">Échecs · grades par Elo</h2><div class="v79-sub"><b>Ordre actuel :</b> ${esc(g.cur[3])}</div></div><div class="v79-rank"><b>${esc(g.cur[1])}</b><span>${esc(g.cur[2])}</span></div></div>
+  <div class="v79-bar-wrap"><div class="v79-bar" style="width:${g.progress}%"></div></div>
+  <div class="v79-meta"><span>Elo ${elo}</span><span>Prochain : ${esc(g.next[1])} · ${g.next[0]} Elo</span></div>
+  <div class="v79-grid"><div class="v79-stat"><span>Elo actuel</span><b>${elo}</b></div><div class="v79-stat"><span>Objectif</span><b>${Number(s.target||1200)}</b></div><div class="v79-stat"><span>Drill jour</span><b>${done}/4</b></div></div>
+  <div class="v79-actions">${['puzzles','finales','partie','analyse'].map(k=>`<button type="button" class="v79-btn ${d[k]?'done':''}" data-v79-chess="${k}">${d[k]?'✓ ':''}${k}</button>`).join('')}</div>
+  <div class="v79-grid"><label class="v79-stat"><span>Elo actuel</span><input id="v79-chess-elo" type="number" value="${elo}" style="width:100%;margin-top:6px;background:rgba(2,6,23,.5);border:1px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;padding:9px"></label><label class="v79-stat"><span>Objectif Elo</span><input id="v79-chess-target" type="number" value="${Number(s.target||1200)}" style="width:100%;margin-top:6px;background:rgba(2,6,23,.5);border:1px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;padding:9px"></label><div class="v79-stat"><span>Règle</span><b>Analyse avant replay</b></div></div>
+  <div class="v79-road">${CHESS.map((r,i)=>{const ok=elo>=r[0];return`<div class="v79-step ${ok?'done':''}"><div class="v79-step-dot">${ok?'✓':i}</div><div><div class="v79-step-name">${esc(r[1])} · ${esc(r[2])}</div><div class="v79-step-sub">${esc(r[3])}</div></div><div class="v79-step-tag">${r[0]} Elo</div></div>`}).join('')}</div>`;
+}
+function renderAllSafe(){Object.keys(CONFIG).forEach(renderDomain);renderChess()}
+function boot(){
+  renderAllSafe();
+  setTimeout(renderAllSafe,400);
+
+  // Event delegation limité : pas de rerender global après chaque clic.
+  document.addEventListener('click',function(e){
+    const a=e.target.closest && e.target.closest('[data-v79-domain]');
+    if(a){
+      e.preventDefault(); e.stopPropagation();
+      const domain=a.dataset.v79Domain,k=a.dataset.v79Action,m=manual(domain);
+      m[k]=!m[k]; saveManual(domain,m); renderDomain(domain); return;
+    }
+    const c=e.target.closest && e.target.closest('[data-v79-chess]');
+    if(c){
+      e.preventDefault(); e.stopPropagation();
+      const k=c.dataset.v79Chess,d=chessDay(); d[k]=!d[k]; write('chess_'+today(),d);
+      const lg=log(today()); lg.chess=chessScore(d); write('log_'+today(),lg);
+      renderChess(); return;
+    }
+  },true);
+
+  document.addEventListener('change',function(e){
+    if(e.target.id==='v79-chess-elo'||e.target.id==='v79-chess-target'){
+      const s=chessState();
+      s.elo=Number($('#v79-chess-elo')?.value||s.elo||800);
+      s.target=Number($('#v79-chess-target')?.value||s.target||1200);
+      write('chess_state',s); renderChess();
+    }
+  },true);
+}
+window.UDV79={version:'v79-freeze-guard',renderAll:renderAllSafe,renderDomain,renderChess};
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+})();
+</script>
+
+
+<script id="v80-epfc-display-fix-script">
+(function(){
+'use strict';
+if (window.__V80EpfcDisplayFixInstalled) return;
+window.__V80EpfcDisplayFixInstalled = true;
+
+const NS = 'dashv2_';
+const $ = (s,r=document) => r.querySelector(s);
+const $$ = (s,r=document) => Array.from(r.querySelectorAll(s));
+const esc = s => String(s ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function read(k,f){ try{ const r=localStorage.getItem(NS+k); return r==null?f:JSON.parse(r); }catch(_){ return f; } }
+function write(k,v){ try{ localStorage.setItem(NS+k,JSON.stringify(v)); }catch(e){ console.warn('[V80]',e); } }
+function clamp(n,a,b){ return Math.max(a, Math.min(b, Number(n)||0)); }
+
+const EPFC_Y1 = [
+  {code:'MAP4', name:'Mathématique appliquée à l’informatique', periods:60, ects:5, focus:'Logique, fonctions, bases utiles pour algorithmique.'},
+  {code:'BNE2', name:'Bases des réseaux', periods:80, ects:6, focus:'Modèle réseau, IP, adressage, notions serveur/client.'},
+  {code:'BDO1', name:'Initiation aux bases de données', periods:60, ects:5, focus:'Modèle relationnel, SQL de base, tables, clés.'},
+  {code:'PRM3', name:'Principes algorithmiques et programmation', periods:120, ects:8, focus:'Variables, conditions, boucles, fonctions, logique de résolution.'},
+  {code:'WEB1', name:'Web : principes de base', periods:40, ects:3, focus:'HTML, CSS, structure d’une page, bases web.'},
+  {code:'STO4', name:'Structure des ordinateurs', periods:60, ects:5, focus:'Architecture, composants, mémoire, processeur, OS de base.'},
+  {code:'STA1', name:'Éléments de statistique', periods:40, ects:3, focus:'Statistiques descriptives, probabilités simples, lecture de données.'},
+  {code:'PAN2', name:'Analyse informatique', periods:60, ects:4, focus:'Analyser un besoin, formaliser, préparer une solution.'}
+];
+
+const EXAM_ORDER = [
+  'PRM3 : 20 exercices courts sans solution — conditions, boucles, fonctions.',
+  'BDO1 : créer un schéma simple + 10 requêtes SQL SELECT/WHERE/JOIN.',
+  'WEB1 : refaire une page propre HTML/CSS sur mobile.',
+  'MAP4/STA1 : séries calculatoires + interprétation sans tricher.',
+  'BNE2/STO4 : fiches ultra courtes + QCM technique.'
+];
+
+function progressState(){ return read('v80_epfc_y1_progress', {}); }
+function saveProgress(st){ write('v80_epfc_y1_progress', st); }
+
+function ueScore(ue, st){
+  const s = st[ue.code] || {};
+  return ['course','exos','exam'].filter(k => s[k]).length;
+}
+function totalScore(st){
+  const max = EPFC_Y1.length * 3;
+  const done = EPFC_Y1.reduce((a,ue)=>a+ueScore(ue,st),0);
+  return {done,max,pct:max ? Math.round(done/max*100) : 0};
+}
+function gradeFromPct(p){
+  if (p >= 90) return ['N4 Examen','Prêt test blanc'];
+  if (p >= 65) return ['N3 Autonome','Exercices sans modèle'];
+  if (p >= 40) return ['N2 Opérationnel','Cours + exercices guidés'];
+  if (p >= 15) return ['N1 Base','Fondations en cours'];
+  return ['N0 Recrue','Démarrage première année'];
+}
+
+function ensureEpfcPanel(){
+  const page = document.getElementById('p-epfc');
+  if (!page) return null;
+
+  // Cache les anciens panneaux faux/génériques.
+  ['v78-grade-epfc','v79-grade-epfc'].forEach(id => {
+    const old = document.getElementById(id);
+    if (old) old.style.display = 'none';
+  });
+
+  let panel = document.getElementById('v80-epfc-panel');
+  if (!panel){
+    panel = document.createElement('div');
+    panel.id = 'v80-epfc-panel';
+    const header = page.querySelector('.page-header') || page.querySelector('.page-title') || page.firstElementChild;
+    if (header && header.nextSibling) page.insertBefore(panel, header.nextSibling);
+    else page.insertBefore(panel, page.firstChild);
+  }
+  return panel;
+}
+
+function renderEpfcV80(){
+  const panel = ensureEpfcPanel();
+  if (!panel) return;
+
+  const st = progressState();
+  const sc = totalScore(st);
+  const [grade, label] = gradeFromPct(sc.pct);
+  const ectsDone = EPFC_Y1.reduce((a,ue)=>{
+    const s = st[ue.code] || {};
+    return a + (s.exam ? ue.ects : 0);
+  },0);
+  const ectsTotal = EPFC_Y1.reduce((a,ue)=>a+ue.ects,0);
+
+  panel.innerHTML = `
+    <div id="v80-fix-badge">✅ V80 affichage priorités + EPFC informatique</div>
+    <div class="v80-epfc-top">
+      <div class="v80-epfc-icon">🎓</div>
+      <div>
+        <h2 class="v80-epfc-title">EPFC · Informatique — Développement d’applications</h2>
+        <div class="v80-epfc-sub">
+          Priorité actuelle : <b>niveau 1 / première année</b>. Aucun module assurance ici.
+          Tu valides par matière : cours compris → exercices → mode examen.
+        </div>
+      </div>
+      <div class="v80-epfc-rank">
+        <b>${esc(grade)}</b>
+        <span>${esc(label)}</span>
+      </div>
+    </div>
+    <div class="v80-bar-wrap"><div class="v80-bar" style="width:${sc.pct}%"></div></div>
+    <div class="v80-epfc-meta">
+      <span>${sc.done}/${sc.max} validations · ${sc.pct}%</span>
+      <span>ECTS sécurisés par test blanc : ${ectsDone}/${ectsTotal}</span>
+    </div>
+
+    <div class="v80-ue-grid">
+      ${EPFC_Y1.map(ue => {
+        const s = st[ue.code] || {};
+        const score = ueScore(ue,st);
+        return `
+          <div class="v80-ue-card ${score===3?'done':''}" data-v80-ue-card="${ue.code}">
+            <div class="v80-ue-head">
+              <div class="v80-ue-code">${ue.code}</div>
+              <div class="v80-ue-ects">${ue.ects} ECTS · ${ue.periods}p</div>
+            </div>
+            <div class="v80-ue-name">${esc(ue.name)}</div>
+            <div class="v80-ue-sub">${esc(ue.focus)}</div>
+            <div class="v80-ue-actions">
+              <button type="button" class="v80-ue-btn ${s.course?'done':''}" data-v80-ue="${ue.code}" data-v80-step="course">${s.course?'✓ ':''}Cours compris</button>
+              <button type="button" class="v80-ue-btn ${s.exos?'done':''}" data-v80-ue="${ue.code}" data-v80-step="exos">${s.exos?'✓ ':''}Exercices</button>
+              <button type="button" class="v80-ue-btn ${s.exam?'done':''}" data-v80-ue="${ue.code}" data-v80-step="exam">${s.exam?'✓ ':''}Mode examen</button>
+            </div>
+          </div>`;
+      }).join('')}
+    </div>
+
+    <div class="v80-exam-box">
+      <div class="v80-exam-title">Mode examen informatique — pas assurance</div>
+      <ol class="v80-exam-list">
+        ${EXAM_ORDER.map(x=>`<li>${esc(x)}</li>`).join('')}
+      </ol>
+    </div>
+  `;
+}
+
+function fixPriorityLayoutV80(){
+  const cmd = document.getElementById('v77-prio-command');
+  if (cmd){
+    const badge = cmd.querySelector('.v77-badge');
+    if (badge) badge.textContent = 'V80';
+  }
+
+  $$('#prio-list .prio-item').forEach((el, idx) => {
+    el.classList.add('v80-prio-fixed');
+    el.style.writingMode = 'horizontal-tb';
+    el.style.textOrientation = 'mixed';
+    el.style.minWidth = '0';
+    el.style.width = '100%';
+    el.style.maxWidth = '100%';
+
+    // Sécurité : si un ancien script a réduit le texte à une colonne, on force tous les enfants en horizontal.
+    $$('*', el).forEach(child => {
+      child.style.writingMode = 'horizontal-tb';
+      child.style.textOrientation = 'mixed';
+      child.style.wordBreak = 'normal';
+    });
+
+    // Si aucun vrai .prio-text n'existe, on ne reconstruit pas pour éviter de casser le handler.
+    const txt = el.querySelector('.prio-text,.prio-title,.prio-label,[contenteditable]');
+    if (txt){
+      txt.style.display = 'block';
+      txt.style.width = 'auto';
+      txt.style.minWidth = '0';
+      txt.style.maxWidth = '100%';
+      txt.style.whiteSpace = 'normal';
+      txt.style.overflowWrap = 'anywhere';
+      txt.style.lineHeight = '1.35';
+    }
+  });
+}
+
+function bindV80(){
+  if (window.__V80Bound) return;
+  window.__V80Bound = true;
+
+  document.addEventListener('click', e => {
+    const btn = e.target.closest && e.target.closest('[data-v80-ue]');
+    if (!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    const code = btn.dataset.v80Ue;
+    const step = btn.dataset.v80Step;
+    const st = progressState();
+    st[code] = st[code] || {};
+    st[code][step] = !st[code][step];
+    saveProgress(st);
+    renderEpfcV80();
+  }, true);
+}
+
+function boot(){
+  bindV80();
+  renderEpfcV80();
+  fixPriorityLayoutV80();
+
+  // L’ancien rendu priorités peut se faire après boot : on repasse 3 fois, sans boucle permanente.
+  setTimeout(fixPriorityLayoutV80, 250);
+  setTimeout(fixPriorityLayoutV80, 900);
+  setTimeout(fixPriorityLayoutV80, 1800);
+
+  // Quand tu changes d’onglet ou ajoutes une priorité : correction ponctuelle seulement.
+  document.addEventListener('click', function(e){
+    if (e.target.closest && (e.target.closest('.tab,[data-go],#prio-new-btn,#prio-list'))){
+      setTimeout(fixPriorityLayoutV80, 120);
+      if (e.target.closest('.tab[data-tab="epfc"],[data-go="epfc"]')) setTimeout(renderEpfcV80, 120);
+    }
+  }, true);
+}
+
+window.UDV80 = {
+  version:'v80-epfc-display-fix',
+  renderEpfc:renderEpfcV80,
+  fixPriorityLayout:fixPriorityLayoutV80,
+  epfcYear1:EPFC_Y1
+};
+
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, {once:true});
+else boot();
 })();
 </script>
 
