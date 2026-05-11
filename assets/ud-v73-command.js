@@ -1,8 +1,8 @@
 /* ═══════════════════════════════════════════════════════════
    UD v73 · Command cockpit
    - Mobile bottom nav: 5 boutons, tous les modules conservés.
-   - Mission maintenant: priorité calculée sans empiler N2/N3 sur la 1re année.
-   - Additif: ne supprime pas les moteurs V60-V72.
+   - Mission maintenant: priorité calculée sur le noyau actif.
+   - Correctif audit: pas de monkey patch window.go, pas de storage isolé si un store global existe.
    ═══════════════════════════════════════════════════════════ */
 (function(){
   'use strict';
@@ -16,8 +16,13 @@
   const pad = n => String(n).padStart(2,'0');
   const todayKey = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; };
   const nowMin = () => { const d = new Date(); return d.getHours()*60 + d.getMinutes(); };
-  const read = (k,d=null) => { try { const v = localStorage.getItem(NS+k); return v == null ? d : JSON.parse(v); } catch(_) { return d; } };
-  const write = (k,v) => { try { localStorage.setItem(NS+k, JSON.stringify(v)); } catch(_){} };
+
+  const Store = window.UDStore || window.DashStore || {
+    get(k,d=null){ try { const v = localStorage.getItem(NS+k); return v == null ? d : JSON.parse(v); } catch(_) { return d; } },
+    set(k,v){ try { localStorage.setItem(NS+k, JSON.stringify(v)); return true; } catch(_) { return false; } }
+  };
+  const read = (k,d=null) => Store.get(k,d);
+  const write = (k,v) => Store.set(k,v);
 
   const STUDY_ITEMS = [
     ['epfc','🎓 EPFC','niveau 1 actif, N2/N3 en parking'],
@@ -43,7 +48,7 @@
 
   function go(tab){
     try {
-      if (typeof window.go === 'function' && !window.go.__v73Fallback) window.go(tab);
+      if (typeof window.go === 'function') window.go(tab);
       else fallbackGo(tab);
     } catch(_) { fallbackGo(tab); }
     syncNav(tab);
@@ -155,12 +160,10 @@
     const morning = t < 11*60;
     const weekend = [0,6].includes(new Date().getDay());
     const items = Object.entries(DOMAIN).map(([key,d]) => {
-      const done = minutesFrom(log, key === 'lab' ? 'lab' : key);
+      const done = minutesFrom(log, key);
       let score = d.score + Math.max(0, d.minutes - done) * 1.2;
       if (key === 'epfc' && (morning || afterWork)) score += 18;
       if (key === 'code' && weekend) score += 12;
-      if (key === 'nl' && t > 21*60) score += 20; // facile tard le soir
-      if (key === 'lab' && !weekend) score -= 8;
       if (done >= d.minutes) score -= 50;
       if (skipped(key)) score -= 100;
       return {key, ...d, done, remaining:Math.max(0,d.minutes-done), score};
@@ -238,30 +241,15 @@
     });
   }
 
-  function wrapGo(){
-    if (window.go && window.go.__v73Wrapped) return;
-    const old = window.go;
-    const wrapped = function(name){
-      if (typeof old === 'function' && old !== wrapped) old(name);
-      else fallbackGo(name);
-      syncNav(name);
-      closeDrawer();
-      setTimeout(updateMission,100);
-    };
-    wrapped.__v73Wrapped = true;
-    window.go = wrapped;
-  }
-
   function boot(){
     document.body.classList.add('ud-v73-ready');
     buildBottomNav();
-    wrapGo();
     bindMissionButtons();
     hardenExternalLinks();
     updateMission();
     setInterval(updateMission, 60*1000);
     document.addEventListener('click', e => { if (e.target.closest && e.target.closest('.tab[data-tab]')) setTimeout(()=>syncNav(),80); }, true);
-    window.UD_V73 = { updateMission, pickMission, go, openDrawer };
+    window.UD_V73 = { updateMission, pickMission, go, openDrawer, syncNav };
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, {once:true}); else boot();
 })();
