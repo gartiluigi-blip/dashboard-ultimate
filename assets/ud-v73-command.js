@@ -1,8 +1,9 @@
 /* ═══════════════════════════════════════════════════════════
    UD v73 · Command cockpit
    - Mobile bottom nav: 5 boutons, tous les modules conservés.
-   - Mission maintenant: priorité calculée sans empiler N2/N3 sur la 1re année.
-   - Additif: ne supprime pas les moteurs V60-V72.
+   - Mission maintenant: priorité calculée sur le noyau actif.
+   - Correctif audit: pas de monkey patch window.go, pas de storage isolé si un store global existe.
+   - Bridge architecture: expose UDStore + UDRouter si le core ne les expose pas encore.
    ═══════════════════════════════════════════════════════════ */
 (function(){
   'use strict';
@@ -16,8 +17,100 @@
   const pad = n => String(n).padStart(2,'0');
   const todayKey = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; };
   const nowMin = () => { const d = new Date(); return d.getHours()*60 + d.getMinutes(); };
-  const read = (k,d=null) => { try { const v = localStorage.getItem(NS+k); return v == null ? d : JSON.parse(v); } catch(_) { return d; } };
-  const write = (k,v) => { try { localStorage.setItem(NS+k, JSON.stringify(v)); } catch(_){} };
+
+  function ensureUDStore(){
+    if (window.UDStore && typeof window.UDStore.get === 'function' && typeof window.UDStore.set === 'function') return window.UDStore;
+    const subs = new Set();
+    const api = {
+      get(k,d=null){
+        try { const v = localStorage.getItem(NS+k); return v == null ? d : JSON.parse(v); }
+        catch(_) { return d; }
+      },
+      set(k,v){
+        try {
+          localStorage.setItem(NS+k, JSON.stringify(v));
+          notify(k, v);
+          return true;
+        } catch(_) { return false; }
+      },
+      del(k){
+        try {
+          localStorage.removeItem(NS+k);
+          notify(k, undefined);
+          return true;
+        } catch(_) { return false; }
+      },
+      all(){
+        const out = {};
+        try {
+          for (let i = 0; i < localStorage.length; i++){
+            const key = localStorage.key(i);
+            if (key && key.startsWith(NS)){
+              try { out[key.slice(NS.length)] = JSON.parse(localStorage.getItem(key)); } catch(_){}
+            }
+          }
+        } catch(_){}
+        return out;
+      },
+      subscribe(fn){
+        if (typeof fn !== 'function') return () => {};
+        subs.add(fn);
+        return () => subs.delete(fn);
+      },
+      subscribePrefix(prefix, fn){
+        return api.subscribe(batch => {
+          for (const [k,v] of batch){
+            if (k.startsWith(prefix)){ fn(k, v, batch); return; }
+          }
+        });
+      }
+    };
+    function notify(k,v){
+      const batch = new Map([[k,v]]);
+      subs.forEach(fn => { try { fn(batch); } catch(e){ console.error('UDStore subscriber error', e); } });
+      try { window.dispatchEvent(new CustomEvent('udstore:change', { detail:{ key:k, value:v } })); } catch(_){}
+    }
+    window.UDStore = api;
+    return api;
+  }
+
+  function ensureUDRouter(){
+    if (window.UDRouter && typeof window.UDRouter.go === 'function') return window.UDRouter;
+    const subs = new Set();
+    const api = {
+      go(tab){
+        const name = String(tab || 'home');
+        try {
+          if (typeof window.go === 'function') window.go(name);
+          else fallbackGo(name);
+        } catch(_) { fallbackGo(name); }
+        notify(name);
+      },
+      current(){
+        const a = $('.tab[data-tab].active');
+        if (a) return a.dataset.tab;
+        const p = $('section.page.active');
+        if (p) return p.dataset.page || p.id.replace(/^p-/,'');
+        return ensureUDStore().get('tab','home');
+      },
+      subscribe(fn){
+        if (typeof fn !== 'function') return () => {};
+        subs.add(fn);
+        return () => subs.delete(fn);
+      }
+    };
+    function notify(tab){
+      subs.forEach(fn => { try { fn(tab); } catch(e){ console.error('UDRouter subscriber error', e); } });
+      try { window.dispatchEvent(new CustomEvent('udrouter:change', { detail:{ tab } })); } catch(_){}
+    }
+    window.UDRouter = api;
+    return api;
+  }
+
+  const Store = ensureUDStore();
+  const Router = ensureUDRouter();
+  const read = (k,d=null) => Store.get(k,d);
+  const write = (k,v) => Store.set(k,v);
 
   const STUDY_ITEMS = [
     ['epfc','🎓 EPFC','niveau 1 actif, N2/N3 en parking'],
@@ -42,10 +135,7 @@
   };
 
   function go(tab){
-    try {
-      if (typeof window.go === 'function' && !window.go.__v73Fallback) window.go(tab);
-      else fallbackGo(tab);
-    } catch(_) { fallbackGo(tab); }
+    Router.go(tab);
     syncNav(tab);
     closeDrawer();
     setTimeout(updateMission,120);
@@ -57,12 +147,7 @@
     try { window.scrollTo({top:0,behavior:'smooth'}); } catch(_) { window.scrollTo(0,0); }
   }
 
-  function currentTab(){
-    const a = $('.tab[data-tab].active');
-    if (a) return a.dataset.tab;
-    const p = $('section.page.active');
-    return p ? (p.dataset.page || p.id.replace(/^p-/,'')) : read('tab','home');
-  }
+  function currentTab(){ return Router.current(); }
   function syncNav(tab=currentTab()){
     $$('#ud-v73-bottomnav [data-go-tab]').forEach(b=>b.classList.toggle('active', b.dataset.goTab===tab));
     const studyTabs = new Set(STUDY_ITEMS.map(x=>x[0]));
@@ -155,12 +240,10 @@
     const morning = t < 11*60;
     const weekend = [0,6].includes(new Date().getDay());
     const items = Object.entries(DOMAIN).map(([key,d]) => {
-      const done = minutesFrom(log, key === 'lab' ? 'lab' : key);
+      const done = minutesFrom(log, key);
       let score = d.score + Math.max(0, d.minutes - done) * 1.2;
       if (key === 'epfc' && (morning || afterWork)) score += 18;
       if (key === 'code' && weekend) score += 12;
-      if (key === 'nl' && t > 21*60) score += 20; // facile tard le soir
-      if (key === 'lab' && !weekend) score -= 8;
       if (done >= d.minutes) score -= 50;
       if (skipped(key)) score -= 100;
       return {key, ...d, done, remaining:Math.max(0,d.minutes-done), score};
@@ -238,30 +321,16 @@
     });
   }
 
-  function wrapGo(){
-    if (window.go && window.go.__v73Wrapped) return;
-    const old = window.go;
-    const wrapped = function(name){
-      if (typeof old === 'function' && old !== wrapped) old(name);
-      else fallbackGo(name);
-      syncNav(name);
-      closeDrawer();
-      setTimeout(updateMission,100);
-    };
-    wrapped.__v73Wrapped = true;
-    window.go = wrapped;
-  }
-
   function boot(){
     document.body.classList.add('ud-v73-ready');
     buildBottomNav();
-    wrapGo();
     bindMissionButtons();
     hardenExternalLinks();
     updateMission();
     setInterval(updateMission, 60*1000);
+    Router.subscribe(tab => setTimeout(() => syncNav(tab), 20));
     document.addEventListener('click', e => { if (e.target.closest && e.target.closest('.tab[data-tab]')) setTimeout(()=>syncNav(),80); }, true);
-    window.UD_V73 = { updateMission, pickMission, go, openDrawer };
+    window.UD_V73 = { updateMission, pickMission, go, openDrawer, syncNav, Store, Router };
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, {once:true}); else boot();
 })();
