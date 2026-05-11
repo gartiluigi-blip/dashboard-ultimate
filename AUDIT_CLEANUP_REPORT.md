@@ -54,6 +54,12 @@ Stabiliser les zones dangereuses repérées pendant l'audit sans refaire tout le
   - `!important` ;
   - lectures/écritures directes localStorage ;
   - timers et listeners.
+- `tools/audit-secrets.js` bloque les patterns de secrets dans le repo :
+  - clé Anthropic `sk-ant-...` ;
+  - clé OpenAI `sk-...` / `sk-proj-...` ;
+  - token GitHub `ghp_...` ;
+  - token GitHub fine-grained `github_pat_...` ;
+  - bearer token long.
 - `.github/workflows/check.yml` lance `npm run check` en CI.
 
 ## Non fait volontairement
