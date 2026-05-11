@@ -4,9 +4,10 @@
   "version": "0.0.0",
   "description": "Personal dashboard static app validation scripts.",
   "scripts": {
-    "check": "node --check assets/ud-v72-godmode-pack.js && node --check assets/ud-v73-command.js && node --check netlify/functions/coach.js && node tools/smoke-coach.js",
-    "check:syntax": "node --check assets/ud-v72-godmode-pack.js && node --check assets/ud-v73-command.js && node --check netlify/functions/coach.js",
-    "smoke:coach": "node tools/smoke-coach.js"
+    "check": "npm run check:syntax && npm run smoke:coach && npm run audit:static",
+    "check:syntax": "node --check assets/ud-v72-godmode-pack.js && node --check assets/ud-v73-command.js && node --check netlify/functions/coach.js && node --check tools/smoke-coach.js && node --check tools/audit-static.js",
+    "smoke:coach": "node tools/smoke-coach.js",
+    "audit:static": "node tools/audit-static.js"
   },
   "engines": {
     "node": ">=18"
