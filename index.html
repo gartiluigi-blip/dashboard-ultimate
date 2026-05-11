@@ -4592,350 +4592,6 @@ if (document.readyState === 'loading'){
 </script>
 
 
-
-
-<style id="trading-styles">
-.trd-phase-card{background:linear-gradient(135deg,rgba(167,139,250,.10),rgba(106,165,250,.06));
-  border:1px solid var(--border);border-radius:14px;padding:16px;margin:14px 0 18px;}
-.trd-phase-label{font:600 10px var(--f-mono);color:var(--violet-2);letter-spacing:.08em;text-transform:uppercase}
-.trd-phase-name{font:700 18px var(--f-display);color:var(--text);margin:4px 0 10px}
-.trd-phase-prog{display:flex;align-items:center;gap:10px}
-.trd-phase-bar{flex:1;height:6px;background:var(--surface-2);border-radius:6px;overflow:hidden}
-.trd-phase-fill{height:100%;background:linear-gradient(90deg,var(--violet),var(--sapphire));border-radius:6px;transition:width .5s var(--ease)}
-.trd-phase-pct{font:700 11px var(--f-mono);color:var(--text-dim)}
-.trd-phase-next{font:400 12px var(--f-sans);color:var(--text-faint);margin-top:8px}
-
-.trd-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;margin:12px 0}
-.trd-card-h{font:700 13px var(--f-sans);color:var(--text);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px;display:flex;align-items:center;gap:6px}
-.trd-card-sub{font:400 12px var(--f-sans);color:var(--text-faint);margin-bottom:10px}
-.trd-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
-.trd-grid-2 label{display:flex;flex-direction:column;font:600 10px var(--f-mono);color:var(--text-faint);text-transform:uppercase;letter-spacing:.04em;gap:4px}
-.trd-grid-2 input,.trd-grid-2 select,.trd-card textarea,.trd-card>input{
-  background:var(--surface-2);border:1px solid var(--border);border-radius:8px;
-  padding:10px;color:var(--text);font:14px var(--f-sans);min-height:40px;
-  width:100%;}
-.trd-card textarea{font:13px var(--f-sans);resize:vertical;min-height:60px;margin-bottom:10px}
-.trd-result{background:var(--bg-deep);border:1px dashed var(--border-strong);border-radius:8px;
-  padding:12px;font:700 18px var(--f-mono);color:var(--flame-2);text-align:center;margin-top:8px}
-.trd-result-sub{font:400 11px var(--f-sans);color:var(--text-faint);text-align:center;margin-top:4px}
-
-.trd-checklist{display:grid;gap:6px;margin:8px 0}
-.trd-checklist label{display:flex;align-items:center;gap:8px;font:400 12px var(--f-sans);color:var(--text-dim);cursor:pointer;min-height:32px;touch-action:manipulation}
-.trd-checklist input{width:18px;height:18px;accent-color:var(--flame)}
-
-.trd-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
-.trd-btn{padding:10px 16px;border-radius:8px;border:1px solid var(--border);background:transparent;
-  color:var(--text-dim);font:600 12px var(--f-sans);cursor:pointer;touch-action:manipulation;min-height:44px;letter-spacing:.04em;text-transform:uppercase}
-.trd-btn.primary{background:var(--g-flame);color:#0a0a10;border-color:transparent}
-.trd-btn.ghost{background:transparent}
-.trd-btn:disabled{opacity:.5;cursor:not-allowed}
-
-.trd-stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
-.trd-stat{background:var(--surface-2);border-radius:8px;padding:8px;text-align:center}
-.trd-stat-l{font:600 9px var(--f-mono);color:var(--text-faint);text-transform:uppercase;letter-spacing:.06em}
-.trd-stat-v{font:800 18px var(--f-display);color:var(--text);margin-top:4px}
-.trd-stat-v.win{color:var(--jade)}.trd-stat-v.loss{color:var(--coral)}.trd-stat-v.warn{color:var(--amber)}
-.trd-pnl-line{height:6px;background:var(--surface-2);border-radius:4px;overflow:hidden;margin-top:4px}
-.trd-pnl-fill{height:100%;transition:width .5s var(--ease)}
-
-.trd-pf-bars{display:grid;gap:8px;margin:10px 0}
-.trd-pf-bar{display:grid;grid-template-columns:60px 1fr;gap:10px;align-items:center}
-.trd-pf-l{font:600 10px var(--f-mono);color:var(--text-faint);text-transform:uppercase}
-.trd-pf-track{height:8px;background:var(--surface-2);border-radius:4px;overflow:hidden;position:relative}
-.trd-pf-fill{height:100%;border-radius:4px;transition:width .5s var(--ease)}
-.trd-pf-fill.profit{background:linear-gradient(90deg,var(--jade),var(--jade-2))}
-.trd-pf-fill.dd{background:linear-gradient(90deg,var(--amber),var(--coral))}
-
-.trd-rules{list-style:none;padding:0;margin:0}
-.trd-rules li{padding:8px 0 8px 24px;position:relative;font:400 13px/1.5 var(--f-sans);color:var(--text-dim);border-bottom:1px solid var(--border-soft)}
-.trd-rules li:last-child{border-bottom:none}
-.trd-rules li::before{content:"▸";position:absolute;left:6px;color:var(--flame);font-weight:900}
-
-.trd-ai-out{margin-top:10px;min-height:0}
-
-.trd-warn-banner{background:linear-gradient(135deg,rgba(248,113,113,.10),rgba(251,191,36,.06));
-  border:1px solid rgba(248,113,113,.3);border-radius:12px;padding:12px;margin:14px 0;
-  font:13px/1.5 var(--f-sans);color:var(--coral-2)}
-.trd-warn-banner b{color:var(--coral)}
-
-@media (min-width:600px){
-  .trd-stats-grid{grid-template-columns:repeat(6,1fr)}
-}
-</style>
-
-<script id="trading-module">
-(function(){
-'use strict';
-if (window.__tradingModuleInstalled) return;
-window.__tradingModuleInstalled = true;
-
-const NS = 'dashv2_';
-const sg = (k, d) => { try { return JSON.parse(localStorage.getItem(NS+k)) ?? d; } catch(_) { return d; } };
-const ss = (k, v) => { try { localStorage.setItem(NS+k, JSON.stringify(v)); return true; } catch(_) { return false; } };
-
-const KEYS = {
-  journal: 'trading_journal_v2',
-  pf: 'trading_propfirm_v2',
-  read: 'trading_read_v2',
-  phase: 'trading_phase_v2'
-};
-
-// ─── Position calculator ─────────────────────────────────────
-function calcPosition(){
-  const cap = parseFloat(document.getElementById('trd-cap')?.value) || 0;
-  const risk = parseFloat(document.getElementById('trd-risk')?.value) || 0;
-  const stop = parseFloat(document.getElementById('trd-stop')?.value) || 0;
-  const pv = parseFloat(document.getElementById('trd-pv')?.value) || 0;
-  const out = document.getElementById('trd-result');
-  const sub = document.getElementById('trd-result-sub');
-  if (!out) return;
-  if (!cap || !risk || !stop || !pv){
-    out.textContent = '— Configure pour calculer';
-    sub.textContent = 'Risk by trade is your job. Stop is sacred.';
-    return;
-  }
-  const dollarRisk = cap * (risk / 100);
-  const contracts = dollarRisk / (stop * pv);
-  out.innerHTML = `${contracts.toFixed(2)} contrats · risque <b style="color:var(--coral)">$${dollarRisk.toFixed(0)}</b>`;
-  if (risk > 1){
-    sub.innerHTML = '⚠️ <b style="color:var(--coral)">Risk > 1%</b> — au-dessus de la limite recommandée.';
-  } else if (risk > 0.5){
-    sub.innerHTML = `Risk ${risk}% · OK en swing. Trop pour un challenge propfirm (vise 0.25-0.5%).`;
-  } else {
-    sub.innerHTML = `Risk ${risk}% · zone safe pour propfirm.`;
-  }
-}
-
-// ─── Journal ─────────────────────────────────────────────────
-function saveTrade(){
-  const trade = {
-    ts: new Date().toISOString(),
-    date: document.getElementById('trd-j-date')?.value || new Date().toISOString().slice(0,10),
-    instrument: document.getElementById('trd-j-inst')?.value.trim() || '',
-    setup: document.getElementById('trd-j-setup')?.value.trim() || '',
-    result: document.getElementById('trd-j-res')?.value || '',
-    pnl: parseFloat(document.getElementById('trd-j-pnl')?.value) || 0,
-    r: parseFloat(document.getElementById('trd-j-r')?.value) || 0,
-    notes: document.getElementById('trd-j-notes')?.value.trim() || '',
-    rule: document.getElementById('trd-j-rule')?.checked || false,
-    sized: document.getElementById('trd-j-sized')?.checked || false,
-    stop: document.getElementById('trd-j-stop')?.checked || false
-  };
-  if (!trade.instrument){ showToast('⚠️ Instrument requis'); return; }
-  const arr = sg(KEYS.journal, []);
-  arr.push(trade);
-  ss(KEYS.journal, arr);
-  // Reset form
-  ['trd-j-inst','trd-j-setup','trd-j-pnl','trd-j-r','trd-j-notes'].forEach(id => {
-    const el = document.getElementById(id); if (el) el.value = '';
-  });
-  ['trd-j-rule','trd-j-sized','trd-j-stop'].forEach(id => {
-    const el = document.getElementById(id); if (el) el.checked = false;
-  });
-  if (window.__aiCore?.Bookmarks){
-    window.__aiCore.Bookmarks.set('trading', `Dernier trade: ${trade.instrument} ${trade.result} ${trade.r}R`, 'Trading');
-  }
-  computeStats();
-  showToast('✓ Trade sauvegardé');
-}
-
-// ─── Stats ───────────────────────────────────────────────────
-function computeStats(){
-  const arr = sg(KEYS.journal, []);
-  const cutoff = Date.now() - 30 * 24 * 3600 * 1000;
-  const recent = arr.filter(t => new Date(t.ts).getTime() >= cutoff && t.result !== 'SKIP');
-  const set = (id, val, cls) => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.textContent = val;
-    el.className = 'trd-stat-v' + (cls ? ' ' + cls : '');
-  };
-  if (!recent.length){
-    ['trd-s-n','trd-s-wr','trd-s-r','trd-s-e','trd-s-pf','trd-s-dd'].forEach(id => set(id, '—'));
-    return;
-  }
-  const wins = recent.filter(t => t.result === 'W');
-  const losses = recent.filter(t => t.result === 'L');
-  const wr = wins.length / recent.length;
-  const avgR = recent.reduce((s,t) => s + (t.r||0), 0) / recent.length;
-  const expectancy = recent.reduce((s,t) => s + (t.pnl||0), 0) / recent.length;
-  const grossW = wins.reduce((s,t) => s + (t.pnl||0), 0);
-  const grossL = Math.abs(losses.reduce((s,t) => s + (t.pnl||0), 0));
-  const pf = grossL > 0 ? (grossW / grossL) : (grossW > 0 ? Infinity : 0);
-  // Drawdown : equity curve, peak-to-trough
-  let eq = 0, peak = 0, maxDD = 0;
-  recent.slice().sort((a,b) => a.ts.localeCompare(b.ts)).forEach(t => {
-    eq += (t.pnl || 0);
-    if (eq > peak) peak = eq;
-    const dd = peak - eq;
-    if (dd > maxDD) maxDD = dd;
-  });
-  set('trd-s-n', recent.length);
-  set('trd-s-wr', (wr*100).toFixed(0)+'%', wr >= 0.5 ? 'win' : (wr < 0.4 ? 'loss' : 'warn'));
-  set('trd-s-r', avgR.toFixed(2)+'R', avgR >= 1 ? 'win' : (avgR < 0 ? 'loss' : 'warn'));
-  set('trd-s-e', '$'+expectancy.toFixed(0), expectancy > 0 ? 'win' : 'loss');
-  set('trd-s-pf', isFinite(pf) ? pf.toFixed(2) : '∞', pf >= 1.5 ? 'win' : (pf < 1 ? 'loss' : 'warn'));
-  set('trd-s-dd', '$'+maxDD.toFixed(0), maxDD === 0 ? 'win' : 'warn');
-}
-
-// ─── Propfirm tracker ────────────────────────────────────────
-function loadPF(){
-  const pf = sg(KEYS.pf, {});
-  ['firm','acct','target','dd','prog','ddc'].forEach(k => {
-    const el = document.getElementById('trd-pf-'+k);
-    if (el && pf[k] !== undefined) el.value = pf[k];
-  });
-  updatePFBars();
-}
-function savePF(){
-  const pf = {};
-  ['firm','acct','target','dd','prog','ddc'].forEach(k => {
-    const el = document.getElementById('trd-pf-'+k);
-    if (el) pf[k] = el.type === 'number' ? parseFloat(el.value)||0 : el.value;
-  });
-  ss(KEYS.pf, pf);
-  updatePFBars();
-  showToast('✓ Challenge sauvegardé');
-}
-function updatePFBars(){
-  const target = parseFloat(document.getElementById('trd-pf-target')?.value) || 10;
-  const ddmax = parseFloat(document.getElementById('trd-pf-dd')?.value) || 10;
-  const prog = parseFloat(document.getElementById('trd-pf-prog')?.value) || 0;
-  const ddc = parseFloat(document.getElementById('trd-pf-ddc')?.value) || 0;
-  const fp = document.getElementById('trd-pf-fp');
-  const fd = document.getElementById('trd-pf-fd');
-  if (fp) fp.style.width = Math.min(100, (prog/target)*100) + '%';
-  if (fd) fd.style.width = Math.min(100, (ddc/ddmax)*100) + '%';
-}
-
-// ─── AI Review ───────────────────────────────────────────────
-async function aiReview(){
-  const out = document.getElementById('trd-ai-out');
-  const btn = document.getElementById('trd-ai-review');
-  if (!window.__aiCore?.coachAsk){
-    out.textContent = '⚠️ AI core non chargé.';
-    return;
-  }
-  btn.disabled = true;
-  btn.textContent = '… analyse en cours';
-  out.innerHTML = '<div style="padding:12px;color:var(--text-faint);font-size:13px">Claude analyse tes 30 derniers trades…</div>';
-
-  const arr = sg(KEYS.journal, []);
-  const cutoff = Date.now() - 7 * 24 * 3600 * 1000;
-  const week = arr.filter(t => new Date(t.ts).getTime() >= cutoff);
-  const month = arr.filter(t => new Date(t.ts).getTime() >= Date.now() - 30*24*3600*1000);
-  const pf = sg(KEYS.pf, {});
-
-  const ctx = {
-    ...(window.__aiCore.buildContextV2()),
-    trading: {
-      week: week.map(t => ({ d:t.date, ins:t.instrument, set:t.setup, res:t.result, r:t.r, pnl:t.pnl, ruleOK: t.rule, sizedOK: t.sized })),
-      monthCount: month.length,
-      propfirm: pf
-    }
-  };
-
-  const data = await window.__aiCore.coachAsk({
-    mode: 'analyse',
-    question: "Analyse mes trades de la semaine. Format strict :\n1. Patterns de comportement (revenge trading, FOMO, etc.)\n2. Ce qui marche dans mon edge\n3. Ce qui me coûte de l'argent\n4. Une règle à ajouter cette semaine\n5. Mon next focus pour les 7 prochains jours",
-    context: ctx,
-    systemPrompt: "Tu es un coach trading senior, ex-prop trader. Réponds en français, ton direct, sans complaisance. Focus discipline et risk, pas hype technique. Cite les chiffres réels du contexte. Maximum 200 mots.",
-    max_tokens: 350
-  });
-
-  out.innerHTML = '';
-  window.__aiCore.renderAIResponse(out, { ...data, _timestamp: new Date().toISOString() }, { allowApply: true });
-  if (!data.blocked && window.__aiCore.History){
-    window.__aiCore.History.add({ mode:'analyse', question: 'trading review', ...data });
-  }
-  btn.disabled = false;
-  btn.textContent = 'Relancer review';
-}
-
-// ─── Reading ─────────────────────────────────────────────────
-function saveReading(){
-  const book = document.getElementById('trd-read-book')?.value.trim();
-  const pages = parseInt(document.getElementById('trd-read-pages')?.value) || 0;
-  if (!book) return;
-  const data = sg(KEYS.read, {}) || {};
-  data.book = book;
-  data.pagesThisWeek = pages;
-  data.updatedAt = new Date().toISOString();
-  ss(KEYS.read, data);
-  if (window.__aiCore?.Bookmarks){
-    window.__aiCore.Bookmarks.set('trading_read', book, 'Lecture trading');
-  }
-  showToast('✓ Bookmark trading mis à jour');
-}
-function loadReading(){
-  const data = sg(KEYS.read, {});
-  if (data.book){
-    const b = document.getElementById('trd-read-book'); if (b) b.value = data.book;
-    const p = document.getElementById('trd-read-pages'); if (p && data.pagesThisWeek) p.value = data.pagesThisWeek;
-  }
-}
-
-// ─── Init ────────────────────────────────────────────────────
-function bind(){
-  // Pré-remplir date du jour
-  const dateEl = document.getElementById('trd-j-date');
-  if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().slice(0,10);
-
-  // Calculator live
-  ['trd-cap','trd-risk','trd-stop','trd-pv'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el && !el.dataset.bound){ el.addEventListener('input', calcPosition); el.dataset.bound = '1'; }
-  });
-  calcPosition();
-
-  // Save buttons
-  const sb = document.getElementById('trd-j-save');
-  if (sb && !sb.dataset.bound){ sb.addEventListener('click', saveTrade); sb.dataset.bound='1'; }
-  const cb = document.getElementById('trd-j-clear');
-  if (cb && !cb.dataset.bound){ cb.addEventListener('click', () => {
-    ['trd-j-inst','trd-j-setup','trd-j-pnl','trd-j-r','trd-j-notes'].forEach(id => {
-      const el = document.getElementById(id); if (el) el.value='';
-    });
-  }); cb.dataset.bound='1'; }
-
-  // Propfirm
-  ['trd-pf-target','trd-pf-dd','trd-pf-prog','trd-pf-ddc'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el && !el.dataset.bound){ el.addEventListener('input', updatePFBars); el.dataset.bound='1'; }
-  });
-  const pfb = document.getElementById('trd-pf-save');
-  if (pfb && !pfb.dataset.bound){ pfb.addEventListener('click', savePF); pfb.dataset.bound='1'; }
-
-  // Reading
-  const rb = document.getElementById('trd-read-save');
-  if (rb && !rb.dataset.bound){ rb.addEventListener('click', saveReading); rb.dataset.bound='1'; }
-
-  // AI
-  const aib = document.getElementById('trd-ai-review');
-  if (aib && !aib.dataset.bound){ aib.addEventListener('click', aiReview); aib.dataset.bound='1'; }
-
-  loadPF();
-  loadReading();
-  computeStats();
-}
-
-// Re-bind on tab switch
-document.addEventListener('click', e => {
-  const t = e.target.closest('[data-tab="trading"]');
-  if (t) setTimeout(bind, 80);
-});
-if (document.readyState === 'loading'){
-  document.addEventListener('DOMContentLoaded', () => setTimeout(bind, 200));
-} else {
-  setTimeout(bind, 200);
-}
-
-window.__trading = { calcPosition, saveTrade, computeStats, savePF, aiReview };
-
-})();
-</script>
-
-<!-- Section Trading injectée dans <main> -->
 <style id="ultimate-styles-v3">
 /* ─── TODAY VIEW ─── */
 .today-hero{padding:20px 16px;background:linear-gradient(135deg,rgba(255,107,53,.12),rgba(106,165,250,.06));
@@ -7276,212 +6932,6 @@ setTimeout(() => {
 </script>
 
 
-<script id="trading-journal-loader">
-(function(){
-'use strict';
-if (window.__tradingJournalLoaded) return;
-window.__tradingJournalLoaded = true;
-
-// Lazy load journal au clic sur trading
-function loadJournal(){
-  const host = document.getElementById('trading-journal-host');
-  if (!host || host.dataset.loaded) return;
-  host.dataset.loaded = '1';
-
-  host.innerHTML = `
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
-      <input id="tj-instr" type="text" placeholder="Instrument (MNQ, EURUSD…)" style="padding:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;color:var(--text);font:13px var(--f-sans);min-height:44px">
-      <select id="tj-res" style="padding:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;color:var(--text);font:13px var(--f-sans);min-height:44px">
-        <option value="W">Win</option><option value="L">Loss</option><option value="BE">Break-even</option><option value="SKIP">Trade skippé</option>
-      </select>
-      <input id="tj-pnl" type="number" step="0.01" placeholder="P&L $" style="padding:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;color:var(--text);font:13px var(--f-sans);min-height:44px">
-      <input id="tj-r" type="number" step="0.1" placeholder="R multiple" style="padding:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;color:var(--text);font:13px var(--f-sans);min-height:44px">
-    </div>
-    <input id="tj-setup" type="text" placeholder="Setup (ORB, pullback EMA, range…)" style="width:100%;padding:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;color:var(--text);font:13px var(--f-sans);min-height:44px;margin-bottom:8px">
-    <textarea id="tj-notes" placeholder="Émotion, contexte, ce que t'as bien fait, ce que t'as raté" style="width:100%;padding:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;color:var(--text);font:13px var(--f-sans);min-height:60px;margin-bottom:8px;resize:vertical"></textarea>
-    <div style="display:grid;gap:6px;margin:8px 0;padding:8px;background:rgba(255,107,53,.06);border-radius:6px">
-      <label style="display:flex;align-items:center;gap:8px;font:13px var(--f-sans);color:var(--text-dim);min-height:32px;cursor:pointer">
-        <input id="tj-rule" type="checkbox" style="width:18px;height:18px;accent-color:var(--flame)">
-        Trade pris selon mes règles écrites
-      </label>
-      <label style="display:flex;align-items:center;gap:8px;font:13px var(--f-sans);color:var(--text-dim);min-height:32px;cursor:pointer">
-        <input id="tj-sized" type="checkbox" style="width:18px;height:18px;accent-color:var(--flame)">
-        Position correctement dimensionnée (≤ 0.5% risk)
-      </label>
-      <label style="display:flex;align-items:center;gap:8px;font:13px var(--f-sans);color:var(--text-dim);min-height:32px;cursor:pointer">
-        <input id="tj-stop" type="checkbox" style="width:18px;height:18px;accent-color:var(--flame)">
-        Stop placé AVANT l'entrée
-      </label>
-    </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button id="tj-save" style="flex:1;background:linear-gradient(135deg,#fb923c,#f97316);color:#0a0a10;border:none;border-radius:8px;padding:12px 16px;font:700 12px var(--f-sans);cursor:pointer;min-height:48px;text-transform:uppercase;letter-spacing:.04em;touch-action:manipulation">Sauvegarder trade</button>
-      <button id="tj-clear" style="padding:12px 16px;background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--text-dim);font:600 12px var(--f-sans);cursor:pointer;min-height:48px;text-transform:uppercase;letter-spacing:.04em;touch-action:manipulation">Effacer</button>
-    </div>
-    <div id="tj-saved" style="margin-top:10px;font:12px var(--f-mono);color:var(--jade);text-align:center"></div>
-
-    <div id="tj-stats" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0 10px"></div>
-
-    <h4 style="font:700 11px var(--f-sans);color:var(--text-faint);text-transform:uppercase;letter-spacing:.06em;margin:14px 0 6px">📋 Derniers trades</h4>
-    <div id="tj-history" style="font:12px var(--f-mono);color:var(--text-dim);max-height:240px;overflow-y:auto"></div>
-  `;
-
-  const $ = id => document.getElementById(id);
-
-  $('tj-save').addEventListener('click', () => {
-    const trade = {
-      ts: new Date().toISOString(),
-      date: new Date().toISOString().slice(0,10),
-      instr: $('tj-instr').value.trim(),
-      setup: $('tj-setup').value.trim(),
-      res: $('tj-res').value,
-      pnl: parseFloat($('tj-pnl').value) || 0,
-      r: parseFloat($('tj-r').value) || 0,
-      notes: $('tj-notes').value.trim(),
-      rule: $('tj-rule').checked,
-      sized: $('tj-sized').checked,
-      stop: $('tj-stop').checked
-    };
-    if (!trade.instr){ showToast('⚠️ Instrument requis'); return; }
-    try {
-      const arr = JSON.parse(localStorage.getItem('dashv2_trading_journal') || '[]');
-      arr.unshift(trade);
-      localStorage.setItem('dashv2_trading_journal', JSON.stringify(arr.slice(0, 500)));
-      // Bookmark trading update
-      try {
-        if (window.__aiCore?.Bookmarks){
-          window.__aiCore.Bookmarks.set('trading', `Dernier trade: ${trade.instr} ${trade.res} ${trade.r}R · phase ${(JSON.parse(localStorage.getItem('dashv2_trading_phase')||'{}')).phase || '?'}`, 'Trading');
-        }
-      } catch(_){}
-      $('tj-saved').textContent = '✓ Trade sauvegardé';
-      ['tj-instr','tj-setup','tj-pnl','tj-r','tj-notes'].forEach(id => $(id).value = '');
-      ['tj-rule','tj-sized','tj-stop'].forEach(id => $(id).checked = false);
-      renderHistory();
-      renderStats();
-      setTimeout(() => $('tj-saved').textContent = '', 2000);
-    } catch(e){ showToast('Erreur: ' + e.message); }
-  });
-
-  $('tj-clear').addEventListener('click', () => {
-    ['tj-instr','tj-setup','tj-pnl','tj-r','tj-notes'].forEach(id => $(id).value = '');
-    ['tj-rule','tj-sized','tj-stop'].forEach(id => $(id).checked = false);
-  });
-
-  function renderStats(){
-    try {
-      const arr = JSON.parse(localStorage.getItem('dashv2_trading_journal') || '[]');
-      const cutoff = Date.now() - 30*24*3600*1000;
-      const recent = arr.filter(t => new Date(t.ts).getTime() >= cutoff && t.res !== 'SKIP');
-      const el = $('tj-stats');
-      if (!recent.length){
-        el.innerHTML = `<div style="grid-column:1/-1;text-align:center;font:12px var(--f-mono);color:var(--text-faint);padding:8px">Pas encore de trades sur 30 jours</div>`;
-        return;
-      }
-      const wins = recent.filter(t => t.res === 'W');
-      const losses = recent.filter(t => t.res === 'L');
-      const wr = (wins.length / recent.length * 100).toFixed(0);
-      const avgR = (recent.reduce((s,t) => s+(t.r||0), 0) / recent.length).toFixed(2);
-      const grossW = wins.reduce((s,t) => s+(t.pnl||0), 0);
-      const grossL = Math.abs(losses.reduce((s,t) => s+(t.pnl||0), 0));
-      const pf = grossL > 0 ? (grossW/grossL).toFixed(2) : (grossW > 0 ? '∞' : '0');
-      const ruleRate = (recent.filter(t => t.rule && t.sized && t.stop).length / recent.length * 100).toFixed(0);
-      const totalPnL = recent.reduce((s,t) => s+(t.pnl||0), 0).toFixed(0);
-
-      const stat = (label, val, color='var(--text)') => `
-        <div style="background:var(--surface-2);border-radius:8px;padding:8px;text-align:center">
-          <div style="font:600 9px var(--f-mono);color:var(--text-faint);text-transform:uppercase;letter-spacing:.06em">${label}</div>
-          <div style="font:800 16px var(--f-display);color:${color};margin-top:4px">${val}</div>
-        </div>`;
-
-      el.innerHTML =
-        stat(`30j · Trades`, recent.length) +
-        stat('Win rate', wr+'%', wr>=45?'var(--jade)':'var(--coral)') +
-        stat('Profit factor', pf, parseFloat(pf)>=1.5?'var(--jade)':parseFloat(pf)<1?'var(--coral)':'var(--amber)') +
-        stat('Avg R', avgR+'R', parseFloat(avgR)>=1?'var(--jade)':'var(--amber)') +
-        stat('P&L $', totalPnL, parseFloat(totalPnL)>0?'var(--jade)':'var(--coral)') +
-        stat('Règles OK', ruleRate+'%', parseInt(ruleRate)>=90?'var(--jade)':parseInt(ruleRate)>=70?'var(--amber)':'var(--coral)');
-    } catch(e){}
-  }
-
-  function renderHistory(){
-    try {
-      const arr = JSON.parse(localStorage.getItem('dashv2_trading_journal') || '[]');
-      const el = $('tj-history');
-      if (!arr.length){ el.innerHTML = `<div style="text-align:center;color:var(--text-faint);padding:8px">Aucun trade encore.</div>`; return; }
-      el.innerHTML = arr.slice(0, 20).map(t => {
-        const d = new Date(t.ts).toLocaleDateString('fr-FR', { day:'2-digit', month:'2-digit' });
-        const color = t.res === 'W' ? 'var(--jade)' : (t.res === 'L' ? 'var(--coral)' : 'var(--amber)');
-        const rules = (t.rule && t.sized && t.stop) ? '✓' : '⚠';
-        return `<div style="padding:6px 0;border-bottom:1px dashed var(--border)">
-          <span style="color:${color};font-weight:700">${t.res}</span>
-          <span style="color:var(--text-faint)"> · ${d} · </span>
-          <span style="color:var(--text)">${t.instr}</span>
-          ${t.setup ? `<span style="color:var(--text-faint)"> · ${t.setup}</span>` : ''}
-          <span style="color:var(--text-faint)"> · </span>
-          <span style="color:${parseFloat(t.r)>=0?'var(--jade)':'var(--coral)'}">${t.r||0}R</span>
-          <span style="color:var(--text-faint)"> · </span>
-          <span style="color:${parseFloat(t.pnl)>=0?'var(--jade)':'var(--coral)'}">$${t.pnl||0}</span>
-          <span style="color:var(--text-faint)"> · ${rules}</span>
-        </div>`;
-      }).join('');
-    } catch(_){}
-  }
-
-  renderStats();
-  renderHistory();
-}
-
-function loadPhase(){
-  const sel = document.getElementById('trd-phase-select');
-  const start = document.getElementById('trd-phase-start');
-  const notes = document.getElementById('trd-phase-notes');
-  const save = document.getElementById('trd-phase-save');
-  const saved = document.getElementById('trd-phase-saved');
-  if (!sel || sel.dataset.loaded) return;
-  sel.dataset.loaded = '1';
-
-  // Load
-  try {
-    const data = JSON.parse(localStorage.getItem('dashv2_trading_phase') || '{}');
-    if (data.phase !== undefined) sel.value = data.phase;
-    if (data.start) start.value = data.start;
-    if (data.notes) notes.value = data.notes;
-  } catch(e){ window.__warn && window.__warn('audit-catch', e); }
-
-  save.addEventListener('click', () => {
-    const data = {
-      phase: sel.value,
-      start: start.value,
-      notes: notes.value.trim(),
-      updatedAt: new Date().toISOString()
-    };
-    localStorage.setItem('dashv2_trading_phase', JSON.stringify(data));
-    saved.textContent = '✓ Phase sauvegardée';
-    // Update bookmark
-    try {
-      if (window.__aiCore?.Bookmarks){
-        const phaseLabel = sel.options[sel.selectedIndex].text;
-        window.__aiCore.Bookmarks.set('trading_phase', phaseLabel, 'Trading · phase');
-      }
-    } catch(_){}
-    setTimeout(() => saved.textContent = '', 2000);
-  });
-}
-
-document.addEventListener('click', e => {
-  const tab = e.target.closest('.tab[data-tab="trading"]');
-  if (tab){
-    setTimeout(() => { loadJournal(); loadPhase(); }, 150);
-  }
-}, true);
-
-setTimeout(() => {
-  const cur = document.querySelector('.tab.active');
-  if (cur && cur.dataset.tab === 'trading'){ loadJournal(); loadPhase(); }
-}, 600);
-
-})();
-</script>
-
 
 
 <style id="fixes-v34">
@@ -9167,23 +8617,6 @@ window.decorateRoutineV35   = decorateRoutineV35;
   overflow-x: hidden !important;
   max-width: 100% !important;
 }
-#trading-journal-host,
-#trading-journal-host * {
-  max-width: 100% !important;
-  box-sizing: border-box !important;
-}
-#tj-history {
-  overflow-x: hidden !important;
-  word-break: break-word !important;
-  white-space: normal !important;
-}
-#tj-stats {
-  grid-template-columns: repeat(2, 1fr) !important;
-}
-@media (min-width: 480px) {
-  #tj-stats { grid-template-columns: repeat(3, 1fr) !important; }
-}
-
 /* ── 2. Sommaire: hard-kill TOC everywhere ── */
 .toc, nav.toc, [aria-label="Sommaire de l'onglet"] {
   display: none !important;
@@ -9287,29 +8720,6 @@ window.decorateRoutineV35   = decorateRoutineV35;
 .tl-item[data-prio="critical"] { border-left:3px solid #ef4444 !important; }
 .tl-item[data-prio="high"]     { border-left:3px solid #f59e0b !important; }
 .tl-item[data-prio="normal"]   { border-left:3px solid #6b7280 !important; }
-/* ── Momentum card ── */
-#momentum-card {
-  background: linear-gradient(135deg,#1e293b,#0f172a);
-  border:1px solid rgba(99,102,241,.3);
-  border-radius:12px; padding:12px 16px; margin:8px 0;
-}
-#momentum-card .mom-title {
-  font:700 12px/1 var(--f-mono,monospace);
-  color:#a5b4fc; text-transform:uppercase; letter-spacing:.06em; margin-bottom:8px;
-}
-#momentum-bar-wrap { height:8px; border-radius:4px; background:#334155; overflow:hidden; }
-#momentum-bar { height:100%; border-radius:4px; transition:width .6s ease; background:linear-gradient(90deg,#6366f1,#22d3ee); }
-#momentum-label { font:600 13px/1 var(--f-mono,monospace); color:#e2e8f0; margin-top:6px; }
-/* ── Score du jour ── */
-#score-du-jour {
-  background:linear-gradient(135deg,#0f172a,#1e293b);
-  border:1px solid rgba(34,211,238,.3);
-  border-radius:12px; padding:12px 16px; margin:8px 0;
-  display:flex; align-items:center; gap:12px;
-}
-#score-du-jour .sdj-label { font:700 11px/1 var(--f-mono,monospace); color:#94a3b8; text-transform:uppercase; }
-#score-du-jour .sdj-value { font:800 28px/1 var(--f-mono,monospace); color:#22d3ee; }
-#score-du-jour .sdj-grade { font:700 14px/1 var(--f-mono,monospace); padding:2px 8px; border-radius:6px; }
 /* ── C7 slider ── */
 .log-row-c7 { align-items:center; }
 .c7-slider-wrap { display:flex; align-items:center; gap:8px; flex:1; min-width:0; }
@@ -9321,75 +8731,12 @@ window.decorateRoutineV35   = decorateRoutineV35;
 .log-time-input { background:#1e293b; border:1px solid #334155; color:#e2e8f0; border-radius:6px; padding:4px 8px; font:13px var(--f-mono,monospace); }
 .log-sleep-arrow { color:#64748b; }
 .log-sleep-dur { font:700 12px/1 var(--f-mono,monospace); color:#22d3ee; padding:2px 8px; background:#0f172a; border-radius:8px; }
-/* ── Pre-appt banner ── */
-.preappt-banner {
-  background:linear-gradient(90deg,#7c3aed,#6d28d9);
-  color:#fff; font:700 12px/1.3 sans-serif;
-  padding:8px 14px; border-radius:8px;
-  margin:6px 4px; text-align:center;
-  box-shadow:0 2px 8px rgba(124,58,237,.4);
-}
-/* ── Heatmap ── */
-#heatmap-90d { margin:8px 0; }
-.heatmap-grid { display:flex; flex-wrap:wrap; gap:2px; }
-.heatmap-cell {
-  width:12px; height:12px; border-radius:2px;
-  background:#1e293b; cursor:pointer; transition:transform .1s;
-}
-.heatmap-cell:hover { transform:scale(1.4); }
-.heatmap-cell[data-level="1"] { background:#1e3a2f; }
-.heatmap-cell[data-level="2"] { background:#166534; }
-.heatmap-cell[data-level="3"] { background:#16a34a; }
-.heatmap-cell[data-level="4"] { background:#22c55e; }
-/* ── Domain streaks ── */
-.domain-streak-pill {
-  display:inline-flex; align-items:center; gap:4px;
-  background:#1e293b; border:1px solid #334155;
-  border-radius:20px; padding:3px 10px; font:600 11px/1 var(--f-mono,monospace);
-  color:#e2e8f0; margin:2px;
-}
-.domain-streak-pill .streak-fire { color:#f97316; }
-/* ── Focus mode ── */
-#focus-mode-btn {
-  position:fixed; bottom:80px; right:16px; z-index:999;
-  background:linear-gradient(135deg,#6366f1,#8b5cf6);
-  color:#fff; border:none; border-radius:50%;
-  width:48px; height:48px; font-size:20px;
-  box-shadow:0 4px 14px rgba(99,102,241,.5);
-  cursor:pointer; transition:transform .2s;
-}
-#focus-mode-btn:hover { transform:scale(1.1); }
-body.focus-mode > *:not(#focus-overlay) { opacity:0 !important; pointer-events:none !important; }
-#focus-overlay {
-  display:none; position:fixed; inset:0; z-index:9998;
-  background:#000; color:#fff;
-  flex-direction:column; align-items:center; justify-content:center;
-}
-body.focus-mode #focus-overlay { display:flex; }
-#focus-task-name { font:700 28px/1.2 var(--f-mono,monospace); color:#22d3ee; text-align:center; margin-bottom:12px; }
-#focus-timer { font:800 56px/1 var(--f-mono,monospace); color:#fff; margin-bottom:24px; }
-#focus-exit-btn { background:#334155; color:#fff; border:none; border-radius:8px; padding:10px 24px; font:700 14px sans-serif; cursor:pointer; }
-/* ── Morning card ── */
-#morning-card {
-  background:linear-gradient(135deg,#0c4a6e,#164e63);
-  border:1px solid rgba(34,211,238,.3);
-  border-radius:12px; padding:14px 16px; margin:8px 0;
-}
-#morning-card .mc-title { font:700 13px/1 var(--f-mono,monospace); color:#7dd3fc; margin-bottom:8px; }
-#morning-card .mc-item { font:12px/1.6 sans-serif; color:#e0f2fe; }
-/* ── Radar chart ── */
-#radar-wrap { position:relative; height:220px; margin:8px 0; }
-#radar-wrap canvas { width:100% !important; height:100% !important; }
-/* ── Task history ── */
-#task-history-card {
-  background:#0f172a; border:1px solid #1e293b;
-  border-radius:12px; padding:12px; margin:8px 0;
-}
-#task-history-card h4 { font:700 11px/1 var(--f-mono,monospace); color:#64748b; text-transform:uppercase; margin-bottom:8px; }
-.th-row { display:flex; justify-content:space-between; align-items:center; padding:4px 0; border-bottom:1px solid #1e293b; font:12px sans-serif; color:#94a3b8; }
-.th-row:last-child { border-bottom:none; }
-.th-date { color:#475569; }
-.th-score { font:700 12px var(--f-mono,monospace); color:#22d3ee; }
+/* ── Resume hint widget ── */
+.now-resume { display:flex; align-items:flex-start; gap:8px; padding:8px 12px; background:rgba(99,102,241,.12); border:1px solid rgba(99,102,241,.3); border-radius:10px; margin-top:8px; }
+.now-resume.hidden { display:none !important; }
+.nr-icon { font-size:16px; flex-shrink:0; }
+.nr-text b { font:700 12px var(--f-mono,monospace); color:#a5b4fc; }
+.nr-text span { font:400 12px var(--f-sans,sans-serif); color:#e2e8f0; }
 </style>
 
 <script id="fix-v37-js">
@@ -15420,7 +14767,6 @@ window.UD_V72_OPTS = Object.assign({
 if (window.__enhV38) return;
 window.__enhV38 = true;
 
-/* ── helpers ── */
 function _parseMin(t){
   if (!t) return null;
   const m = String(t).match(/(\d{1,2})[h:](\d{2})/);
@@ -15432,14 +14778,33 @@ function _parseRange(t){
   return { start: _parseMin(p[0]), end: _parseMin(p[1]) || null };
 }
 
+/* ── Reprendre demain : populate #now-resume from yesterday log ── */
+function showResumeHint(){
+  const nr = document.getElementById('now-resume');
+  if (!nr) return;
+  try {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yKey = yesterday.toISOString().slice(0, 10);
+    const logs = JSON.parse(localStorage.getItem('dashv2_logs') || '{}');
+    const hint = (logs[yKey] || {}).resume_tomorrow_here;
+    if (!hint) return;
+    const domEl = document.getElementById('now-resume-domain');
+    const txtEl = document.getElementById('now-resume-text');
+    if (domEl) domEl.textContent = '📍 Reprendre : ';
+    if (txtEl) txtEl.textContent = hint;
+    nr.classList.remove('hidden');
+  } catch(e) {}
+}
+
 /* ── Late block detection ── */
 function markLateBlocks(){
   const curMin = new Date().getHours()*60 + new Date().getMinutes();
   const visible = document.querySelector('.shift-view:not(.hidden)');
   if (!visible) return;
-  const flexItems = Array.from(visible.querySelectorAll('.tl-item[data-time]:not([data-adaptive-fixed-id])'));
+  const items = Array.from(visible.querySelectorAll('.tl-item[data-time]:not([data-adaptive-fixed-id])'));
   let lateCount = 0;
-  flexItems.forEach((item, idx) => {
+  items.forEach((item, idx) => {
     item.classList.remove('late-v38');
     item.querySelectorAll('.enh-late-badge').forEach(b => b.remove());
     if (item.classList.contains('done-early-v35')) return;
@@ -15450,7 +14815,7 @@ function markLateBlocks(){
     if (startMin === null) return;
     let blockEnd = endMin;
     if (blockEnd === null){
-      const next = flexItems[idx+1];
+      const next = items[idx+1];
       if (next) blockEnd = _parseMin(next.dataset.time || '');
       if (blockEnd === null) blockEnd = startMin + 30;
     }
@@ -15464,18 +14829,12 @@ function markLateBlocks(){
   });
   let banner = visible.querySelector('.routine-late-banner');
   if (lateCount > 0){
-    if (!banner){
-      banner = document.createElement('div');
-      banner.className = 'routine-late-banner';
-      visible.prepend(banner);
-    }
+    if (!banner){ banner = document.createElement('div'); banner.className = 'routine-late-banner'; visible.prepend(banner); }
     banner.textContent = `⏰ ${lateCount} bloc${lateCount>1?'s':''} en retard`;
-  } else {
-    if (banner) banner.remove();
-  }
+  } else { if (banner) banner.remove(); }
 }
 
-/* ── Priority badge auto-assign ── */
+/* ── Priority badge auto-assign from .tl-dot class ── */
 const DOT_PRIO = {
   food:'critical', sleep:'critical',
   study:'high', code:'high', nl:'high', work:'high', ai:'high',
@@ -15500,12 +14859,11 @@ function decorateRoutinePrioBadges(){
     const b = document.createElement('span');
     b.className = `tl-prio-badge tl-prio-${prio}`;
     b.textContent = labelMap[prio] || prio;
-    const nameEl = item.querySelector('.tl-name,.tl-title,.tl-label') || item;
-    nameEl.appendChild(b);
+    (item.querySelector('.tl-name,.tl-title,.tl-label') || item).appendChild(b);
   });
 }
 
-/* ── ELO chart with phase zones ── */
+/* ── ELO chart phase zones ── */
 function enhanceEloChart(){
   const canvas = document.getElementById('chart-elo');
   if (!canvas || typeof Chart === 'undefined') return;
@@ -15513,20 +14871,16 @@ function enhanceEloChart(){
   if (!chart || !chart.data || !chart.data.labels || chart.data.labels.length < 2) return;
   if (chart.__eloEnhanced) return;
   chart.__eloEnhanced = true;
-  const labels = chart.data.labels;
-  const n = labels.length;
+  const labels = chart.data.labels, n = labels.length;
   const zoneColors = ['rgba(239,68,68,.12)','rgba(249,115,22,.09)','rgba(34,197,94,.09)','rgba(99,102,241,.09)'];
   const zoneNames = ['Démarrage','Progression','Pic','Maîtrise'];
-  const zoneSize = Math.ceil(n/4);
+  const sz = Math.ceil(n/4);
   const annotations = {};
   for (let z=0; z<4; z++){
-    const xMin = labels[Math.min(z*zoneSize, n-1)];
-    const xMax = labels[Math.min((z+1)*zoneSize-1, n-1)];
     annotations[`zone${z}`] = {
-      type:'box', xMin, xMax,
-      backgroundColor: zoneColors[z],
-      borderWidth:0,
-      label:{ content: zoneNames[z], display:true, position:'start', color:'rgba(255,255,255,.35)', font:{size:9} }
+      type:'box', xMin:labels[Math.min(z*sz,n-1)], xMax:labels[Math.min((z+1)*sz-1,n-1)],
+      backgroundColor:zoneColors[z], borderWidth:0,
+      label:{ content:zoneNames[z], display:true, position:'start', color:'rgba(255,255,255,.35)', font:{size:9} }
     };
   }
   if (!chart.options.plugins) chart.options.plugins = {};
@@ -15534,393 +14888,28 @@ function enhanceEloChart(){
   chart.options.plugins.annotation.annotations = annotations;
   chart.update('none');
 }
-
-/* ── Patch renderStats ── */
 (function patchRenderStats(){
   const _orig = window.renderStats;
   if (typeof _orig !== 'function') return;
-  window.renderStats = function(){
-    _orig.apply(this, arguments);
-    setTimeout(enhanceEloChart, 150);
-    setTimeout(enhanceEloChart, 600);
-    setTimeout(enhanceEloChart, 1200);
-  };
+  window.renderStats = function(){ _orig.apply(this, arguments); setTimeout(enhanceEloChart,150); setTimeout(enhanceEloChart,700); };
 })();
-
-/* ── Score du jour ── */
-function _momentumScore(dateStr){
-  const logs = (() => { try { return JSON.parse(localStorage.getItem('dashv2_logs')||'{}'); } catch(e){ return {}; } })();
-  const tasks = (() => { try { return JSON.parse(localStorage.getItem('dashv2_tasks')||'[]'); } catch(e){ return []; } })();
-  const moods = (() => { try { return JSON.parse(localStorage.getItem('dashv2_mood')||'{}'); } catch(e){ return {}; } })();
-  const dayLog = logs[dateStr] || {};
-  const dayTasks = tasks.filter(t => t.date === dateStr);
-  const tasksDone = dayTasks.length ? Math.round(dayTasks.filter(t=>t.done).length/dayTasks.length*30) : 15;
-  const moodVal = moods[dateStr] ? Math.round((moods[dateStr]-1)/9*30) : 15;
-  const logScore = (() => {
-    const keys = ['epfc','code','nl','anki','read','sport','chess'];
-    let s = 0; keys.forEach(k => { if (dayLog[k] && parseFloat(dayLog[k])>0) s+=4; }); return Math.min(s,30);
-  })();
-  const c7 = dayLog.c7 ? Math.round((10 - parseFloat(dayLog.c7||'0'))/10*10) : 5;
-  return Math.min(tasksDone + moodVal + logScore + c7, 100);
-}
-function renderScoreDuJour(){
-  const containers = document.querySelectorAll('#score-du-jour,#sdj-container');
-  if (!containers.length) return;
-  const today = new Date().toISOString().slice(0,10);
-  const score = _momentumScore(today);
-  const grade = score>=90?'S':score>=75?'A':score>=60?'B':score>=45?'C':'D';
-  const gradeColors = {S:'#22d3ee',A:'#22c55e',B:'#84cc16',C:'#f59e0b',D:'#ef4444'};
-  containers.forEach(el => {
-    el.innerHTML = `<div class="sdj-label">Score du jour</div>
-      <div class="sdj-value">${score}</div>
-      <div class="sdj-grade" style="background:${gradeColors[grade]}20;color:${gradeColors[grade]}">${grade}</div>`;
-  });
-}
-
-/* ── C7 slider persistence ── */
-function initC7Slider(){
-  const slider = document.getElementById('log-c7');
-  const output = document.getElementById('log-c7-val');
-  if (!slider || !output) return;
-  const today = new Date().toISOString().slice(0,10);
-  const logs = (() => { try { return JSON.parse(localStorage.getItem('dashv2_logs')||'{}'); } catch(e){ return {}; } })();
-  const saved = (logs[today]||{}).c7;
-  if (saved !== undefined){ slider.value = saved; output.value = saved; }
-  slider.addEventListener('input', () => {
-    output.value = slider.value;
-    const l = (() => { try { return JSON.parse(localStorage.getItem('dashv2_logs')||'{}'); } catch(e){ return {}; } })();
-    if (!l[today]) l[today] = {};
-    l[today].c7 = slider.value;
-    localStorage.setItem('dashv2_logs', JSON.stringify(l));
-  });
-}
-
-/* ── Sleep tracker persistence ── */
-function initSleepTracker(){
-  const start = document.getElementById('log-sleep-start');
-  const end = document.getElementById('log-sleep-end');
-  const dur = document.getElementById('log-sleep-dur');
-  if (!start || !end || !dur) return;
-  const today = new Date().toISOString().slice(0,10);
-  const logs = (() => { try { return JSON.parse(localStorage.getItem('dashv2_logs')||'{}'); } catch(e){ return {}; } })();
-  const saved = logs[today] || {};
-  if (saved.sleepStart) start.value = saved.sleepStart;
-  if (saved.sleepEnd) end.value = saved.sleepEnd;
-  function updateDur(){
-    const s = _parseMin(start.value.replace(':','h'));
-    const e = _parseMin(end.value.replace(':','h'));
-    if (s===null || e===null){ dur.textContent='—'; return; }
-    let diff = e - s; if (diff < 0) diff += 24*60;
-    const h = Math.floor(diff/60), m = diff%60;
-    dur.textContent = `${h}h${m.toString().padStart(2,'0')}`;
-  }
-  updateDur();
-  function save(){
-    updateDur();
-    const l = (() => { try { return JSON.parse(localStorage.getItem('dashv2_logs')||'{}'); } catch(e){ return {}; } })();
-    if (!l[today]) l[today] = {};
-    l[today].sleepStart = start.value;
-    l[today].sleepEnd = end.value;
-    localStorage.setItem('dashv2_logs', JSON.stringify(l));
-  }
-  start.addEventListener('change', save);
-  end.addEventListener('change', save);
-}
-
-/* ── Pre-appointment alerts ── */
-function checkPreApptAlerts(){
-  const tasks = (() => { try { return JSON.parse(localStorage.getItem('dashv2_tasks')||'[]'); } catch(e){ return []; } })();
-  const today = new Date().toISOString().slice(0,10);
-  const curMin = new Date().getHours()*60 + new Date().getMinutes();
-  const upcoming = tasks.filter(t => {
-    if (t.date !== today || t.done) return false;
-    const m = _parseMin(t.time || '');
-    return m !== null && m > curMin && m - curMin <= 30;
-  });
-  const visible = document.querySelector('.shift-view:not(.hidden)');
-  if (!visible) return;
-  visible.querySelectorAll('.preappt-banner').forEach(b=>b.remove());
-  upcoming.forEach(t => {
-    const min = _parseMin(t.time||'') - curMin;
-    const b = document.createElement('div');
-    b.className = 'preappt-banner';
-    b.textContent = `📅 "${t.title||t.name||t.text}" dans ${min} min`;
-    visible.prepend(b);
-  });
-}
-
-/* ── Momentum bar ── */
-function renderMomentumBar(){
-  const wrap = document.getElementById('momentum-card');
-  if (!wrap) return;
-  const days = 7;
-  let total = 0;
-  for (let i=0; i<days; i++){
-    const d = new Date(); d.setDate(d.getDate()-i);
-    total += _momentumScore(d.toISOString().slice(0,10));
-  }
-  const avg = Math.round(total/days);
-  const bar = wrap.querySelector('#momentum-bar');
-  const label = wrap.querySelector('#momentum-label');
-  if (bar) bar.style.width = avg + '%';
-  if (label) label.textContent = `Momentum 7j : ${avg}/100`;
-}
 
 /* ── Boot ── */
 function boot(){
-  initC7Slider();
-  initSleepTracker();
-  renderScoreDuJour();
-  renderMomentumBar();
-  setTimeout(() => {
-    markLateBlocks();
-    decorateRoutinePrioBadges();
-    checkPreApptAlerts();
-    enhanceEloChart();
-  }, 1200);
-  setInterval(() => {
-    markLateBlocks();
-    checkPreApptAlerts();
-  }, 60000);
+  showResumeHint();
+  setTimeout(() => { markLateBlocks(); decorateRoutinePrioBadges(); enhanceEloChart(); }, 1200);
+  setInterval(markLateBlocks, 60000);
   document.addEventListener('click', e => {
-    const tab = e.target.closest('.tab[data-tab],.bottom-nav-item[data-tab],.nav-pill[data-tab]');
-    if (!tab) return;
-    setTimeout(() => {
-      markLateBlocks();
-      decorateRoutinePrioBadges();
-      checkPreApptAlerts();
-      enhanceEloChart();
-      renderScoreDuJour();
-    }, 300);
+    if (!e.target.closest('.tab[data-tab],.bottom-nav-item[data-tab],.nav-pill[data-tab]')) return;
+    setTimeout(() => { markLateBlocks(); decorateRoutinePrioBadges(); enhanceEloChart(); }, 350);
   }, true);
 }
-
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, {once:true});
 else boot();
-
 })();
 </script>
 
-<script id="features-v39">
-(function(){
-'use strict';
-if (window.__featV39) return;
-window.__featV39 = true;
 
-function _getItem(k){ try{ return JSON.parse(localStorage.getItem(k)||'null'); }catch(e){ return null; } }
-function _today(){ return new Date().toISOString().slice(0,10); }
-function _daysAgo(n){ const d=new Date(); d.setDate(d.getDate()-n); return d.toISOString().slice(0,10); }
-
-/* ── Heatmap 90 jours ── */
-function renderHeatmap(){
-  const wrap = document.getElementById('heatmap-90d');
-  if (!wrap) return;
-  const logs = _getItem('dashv2_logs') || {};
-  const grid = document.createElement('div');
-  grid.className = 'heatmap-grid';
-  for (let i=89; i>=0; i--){
-    const date = _daysAgo(i);
-    const dayLog = logs[date] || {};
-    const keys = ['epfc','code','nl','anki','read','sport','chess','vinted'];
-    const count = keys.filter(k => dayLog[k] && parseFloat(dayLog[k])>0).length;
-    const level = count===0?0:count<=2?1:count<=4?2:count<=6?3:4;
-    const cell = document.createElement('div');
-    cell.className = 'heatmap-cell';
-    cell.dataset.level = level;
-    cell.title = `${date} – ${count} domaines`;
-    grid.appendChild(cell);
-  }
-  wrap.innerHTML = '<div style="font:700 11px/1 var(--f-mono,monospace);color:#64748b;text-transform:uppercase;margin-bottom:6px;">Activité 90j</div>';
-  wrap.appendChild(grid);
-}
-
-/* ── Domain streaks ── */
-function renderDomainStreaksV39(){
-  const wrap = document.getElementById('domain-streaks-v39');
-  if (!wrap) return;
-  const logs = _getItem('dashv2_logs') || {};
-  const domains = ['epfc','code','nl','anki','read','sport','chess','vinted'];
-  const icons = {epfc:'🏥',code:'💻',nl:'🌐',anki:'🎴',read:'📚',sport:'🏃',chess:'♟',vinted:'🛍'};
-  let html = '';
-  domains.forEach(d => {
-    let streak = 0, i = 0;
-    while(i <= 365){
-      const v = parseFloat((logs[_daysAgo(i)]||{})[d]||'0');
-      if (v > 0){ streak++; i++; } else break;
-    }
-    if (streak > 0){
-      html += `<span class="domain-streak-pill">${icons[d]||d} ${d} <span class="streak-fire">🔥${streak}</span></span>`;
-    }
-  });
-  wrap.innerHTML = html || '<span style="color:#64748b;font-size:12px">Aucun streak actif</span>';
-}
-
-/* ── Radar chart ── */
-function renderRadarChart(){
-  const canvas = document.getElementById('radar-chart');
-  if (!canvas || typeof Chart === 'undefined') return;
-  if (Chart.getChart && Chart.getChart(canvas)) Chart.getChart(canvas).destroy();
-  const logs = _getItem('dashv2_logs') || {};
-  const domains = ['epfc','code','nl','anki','read','sport','chess'];
-  const labels = ['EPFC','Code','NL','Anki','Read','Sport','Chess'];
-  const data = domains.map(d => {
-    let days = 0;
-    for (let i=0;i<7;i++){
-      const v = parseFloat((logs[_daysAgo(i)]||{})[d]||'0');
-      if (v>0) days++;
-    }
-    return Math.min(days/7*10, 10);
-  });
-  new Chart(canvas, {
-    type:'radar',
-    data:{ labels, datasets:[{ label:'7j', data, backgroundColor:'rgba(99,102,241,.2)', borderColor:'rgba(99,102,241,.8)', pointBackgroundColor:'#6366f1', pointRadius:4 }] },
-    options:{ responsive:true, maintainAspectRatio:false, scales:{ r:{ min:0, max:10, ticks:{ color:'#475569', font:{size:9} }, grid:{color:'#1e293b'}, pointLabels:{color:'#94a3b8',font:{size:10}} } }, plugins:{ legend:{ display:false } } }
-  });
-}
-
-/* ── C7 trend chart ── */
-function renderC7Chart(){
-  const canvas = document.getElementById('chart-c7');
-  if (!canvas || typeof Chart === 'undefined') return;
-  if (Chart.getChart && Chart.getChart(canvas)) Chart.getChart(canvas).destroy();
-  const logs = _getItem('dashv2_logs') || {};
-  const labels=[], data=[];
-  for (let i=29;i>=0;i--){
-    const date = _daysAgo(i);
-    labels.push(date.slice(5));
-    data.push(parseFloat((logs[date]||{}).c7||'0'));
-  }
-  new Chart(canvas, {
-    type:'line',
-    data:{ labels, datasets:[{ label:'C7', data, borderColor:'#ef4444', backgroundColor:'rgba(239,68,68,.1)', tension:.3, pointRadius:2 }] },
-    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false} }, scales:{ y:{ min:0, max:10, ticks:{color:'#475569'}, grid:{color:'#1e293b'} }, x:{ ticks:{color:'#475569',maxTicksLimit:8}, grid:{color:'#1e293b'} } } }
-  });
-}
-
-/* ── Focus mode ── */
-function initFocusMode(){
-  if (document.getElementById('focus-mode-btn')) return;
-  const btn = document.createElement('button');
-  btn.id = 'focus-mode-btn';
-  btn.title = 'Focus mode';
-  btn.textContent = '🎯';
-  document.body.appendChild(btn);
-
-  const overlay = document.createElement('div');
-  overlay.id = 'focus-overlay';
-  overlay.innerHTML = `
-    <div id="focus-task-name">Mode Focus</div>
-    <div id="focus-timer">25:00</div>
-    <button id="focus-exit-btn">Quitter le focus</button>
-  `;
-  document.body.appendChild(overlay);
-
-  let timerInterval = null;
-  let secondsLeft = 25*60;
-
-  function startTimer(){
-    clearInterval(timerInterval);
-    timerInterval = setInterval(() => {
-      secondsLeft--;
-      const m = Math.floor(secondsLeft/60);
-      const s = secondsLeft%60;
-      const el = document.getElementById('focus-timer');
-      if (el) el.textContent = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
-      if (secondsLeft <= 0){
-        clearInterval(timerInterval);
-        document.body.classList.remove('focus-mode');
-        if (typeof showToast === 'function') showToast('✅ Session focus terminée !', 'success');
-      }
-    }, 1000);
-  }
-
-  btn.addEventListener('click', () => {
-    const firstTask = document.querySelector('.shift-view:not(.hidden) .tl-item:not(.done-early-v35)');
-    const taskName = firstTask ? (firstTask.querySelector('.tl-name,.tl-title,.tl-label')?.textContent?.trim()||'Tâche en cours') : 'Session Pomodoro';
-    const el = document.getElementById('focus-task-name');
-    if (el) el.textContent = taskName;
-    secondsLeft = 25*60;
-    document.body.classList.add('focus-mode');
-    startTimer();
-  });
-  document.getElementById('focus-exit-btn')?.addEventListener('click', () => {
-    document.body.classList.remove('focus-mode');
-    clearInterval(timerInterval);
-  });
-}
-
-/* ── Task history ── */
-function renderTaskHistory(){
-  const wrap = document.getElementById('task-history-card');
-  if (!wrap) return;
-  const tasks = _getItem('dashv2_tasks') || [];
-  const byDate = {};
-  tasks.forEach(t => {
-    if (!t.date) return;
-    if (!byDate[t.date]) byDate[t.date] = {done:0,total:0};
-    byDate[t.date].total++;
-    if (t.done) byDate[t.date].done++;
-  });
-  const dates = Object.keys(byDate).sort().reverse().slice(0,10);
-  let html = '<h4>Historique tâches</h4>';
-  if (!dates.length){ html += '<div class="th-row" style="color:#475569">Aucun historique</div>'; }
-  dates.forEach(d => {
-    const { done, total } = byDate[d];
-    const pct = Math.round(done/total*100);
-    html += `<div class="th-row"><span class="th-date">${d}</span><span>${done}/${total}</span><span class="th-score">${pct}%</span></div>`;
-  });
-  wrap.innerHTML = html;
-}
-
-/* ── Morning card ── */
-function renderMorningCard(){
-  const wrap = document.getElementById('morning-card');
-  if (!wrap) return;
-  const hour = new Date().getHours();
-  if (hour >= 12) { wrap.style.display='none'; return; }
-  wrap.style.display='';
-  const tasks = _getItem('dashv2_tasks') || [];
-  const today = _today();
-  const todayTasks = tasks.filter(t => t.date === today && !t.done);
-  const logs = _getItem('dashv2_logs') || {};
-  const sleepStart = (logs[today]||{}).sleepStart || '?';
-  const sleepEnd = (logs[today]||{}).sleepEnd || '?';
-  wrap.innerHTML = `<div class="mc-title">🌅 Bonjour — ${new Date().toLocaleDateString('fr-FR',{weekday:'long'})}</div>
-    <div class="mc-item">😴 Sommeil: ${sleepStart} → ${sleepEnd}</div>
-    <div class="mc-item">📋 ${todayTasks.length} tâche${todayTasks.length!==1?'s':''} à faire aujourd'hui</div>
-    ${todayTasks.slice(0,3).map(t=>`<div class="mc-item" style="padding-left:12px">• ${t.title||t.name||t.text||'Tâche'}</div>`).join('')}`;
-}
-
-/* ── Boot ── */
-function boot(){
-  renderHeatmap();
-  renderDomainStreaksV39();
-  renderTaskHistory();
-  renderMorningCard();
-  initFocusMode();
-  setTimeout(() => {
-    renderRadarChart();
-    renderC7Chart();
-  }, 500);
-  document.addEventListener('click', e => {
-    const tab = e.target.closest('.tab[data-tab],.bottom-nav-item[data-tab],.nav-pill[data-tab]');
-    if (!tab) return;
-    const t = (tab.dataset.tab||'').toLowerCase();
-    setTimeout(() => {
-      renderHeatmap();
-      renderDomainStreaksV39();
-      renderTaskHistory();
-      renderMorningCard();
-      if (t.includes('stat')){ renderRadarChart(); renderC7Chart(); }
-    }, 300);
-  }, true);
-}
-
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, {once:true});
-else boot();
-
-})();
-</script>
 
 
 <script id="v75-forcefix-script">
