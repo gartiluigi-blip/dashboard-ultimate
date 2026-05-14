@@ -11,6 +11,8 @@ const files = [
   'assets/ud-v73-command.js',
   'assets/ud-v74-ops-features.js',
   'netlify/functions/coach.js',
+  'tools/check-all.js',
+  'tools/check-syntax.js',
   'tools/patch-all.js',
   'tools/patch-index-storage.js',
   'tools/patch-v73-core.js',
