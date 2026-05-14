@@ -13,8 +13,7 @@ const allowedFiles = new Set([
   'assets/core/router.js',
   'assets/main.cfc54acb.js',
   'assets/ud-v72-godmode-pack.js',
-  'assets/ud-v73-command.js',
-  'assets/ud-v74-ops-features.js'
+  'assets/ud-v73-command.js'
 ]);
 
 const patterns = [
