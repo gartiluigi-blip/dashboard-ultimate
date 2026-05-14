@@ -12,13 +12,17 @@ const v73 = read('assets/ud-v73-command.js');
 const v72 = read('assets/ud-v72-godmode-pack.js');
 const coach = read('netlify/functions/coach.js');
 
-function count(haystack, needle) {
-  return haystack.split(needle).length - 1;
+function stripComments(src) {
+  return src
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/(^|[^:])\/\/.*$/gm, '$1');
 }
 
-// v73 must not monkey patch window.go anymore.
-assert.equal(count(v73, 'window.go ='), 0, 'v73 must not assign window.go');
-assert.equal(count(v73, 'wrapGo'), 0, 'v73 wrapGo must stay removed');
+const v73Code = stripComments(v73);
+
+// v73 must not monkey patch window.go anymore. This regex detects assignment only.
+assert.equal(/window\.go\s*=/.test(v73Code), false, 'v73 must not assign window.go');
+assert.equal(/\bwrapGo\b/.test(v73Code), false, 'v73 wrapGo must stay removed');
 assert.match(v73, /window\.UDStore/, 'v73 must expose or use UDStore bridge');
 assert.match(v73, /window\.UDRouter/, 'v73 must expose or use UDRouter bridge');
 
