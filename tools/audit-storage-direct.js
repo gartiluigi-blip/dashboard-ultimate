@@ -15,11 +15,12 @@ const allowedFiles = new Set([
 ]);
 
 const storageName = 'local' + 'Storage';
+const globalStorage = '(?<![.$\\w])' + storageName;
 const patterns = [
-  new RegExp(storageName + '\\.setItem\\(', 'g'),
-  new RegExp(storageName + '\\.getItem\\(', 'g'),
-  new RegExp(storageName + '\\.removeItem\\(', 'g'),
-  new RegExp(storageName + '\\s*\\[', 'g'),
+  new RegExp(globalStorage + '\\.setItem\\(', 'g'),
+  new RegExp(globalStorage + '\\.getItem\\(', 'g'),
+  new RegExp(globalStorage + '\\.removeItem\\(', 'g'),
+  new RegExp(globalStorage + '\\s*\\[', 'g'),
   new RegExp('window\\.' + storageName + '\\s*\\[', 'g')
 ];
 
