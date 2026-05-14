@@ -10,7 +10,7 @@
     "patch:v75-focus": "node tools/patch-dead-code-v75-focus.js",
     "patch:epfc-panels": "node tools/patch-epfc-dead-panels.js",
     "patch": "node tools/patch-all.js",
-    "check": "npm run patch && npm run check:syntax && npm run smoke:coach && npm run audit:main-storage && npm run audit:dead-code && npm run audit:static && npm run audit:prototypes && npm run audit:storage && npm run audit:lines && npm run audit:size && npm run audit:v74 && npm run audit:index && npm run audit:secrets",
+    "check": "node tools/check-all.js",
     "check:syntax": "node tools/check-syntax.js",
     "smoke:coach": "node tools/smoke-coach.js",
     "audit:main-storage": "node tools/audit-main-storage-report.js",
