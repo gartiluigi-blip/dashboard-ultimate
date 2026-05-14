@@ -5,9 +5,16 @@
   if (window.__UDV74Ops) return;
   window.__UDV74Ops = true;
 
-  const NS = 'dashv2_';
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
+
+  const Store = window.UDStore;
+  const Router = window.UDRouter;
+
+  if (!Store || !Router) {
+    console.error('UD v74 requires core store/router modules before boot.');
+    return;
+  }
 
   const EPFC = [
     ['PRM3', 'Programmation', '20 exercices Python boucles/listes/fonctions'],
@@ -35,41 +42,6 @@
     'target',
     'goal'
   ];
-
-  const Store = window.UDStore || {
-    get(key, fallback = null) {
-      try {
-        const raw = localStorage.getItem(NS + key);
-        return raw == null ? fallback : JSON.parse(raw);
-      } catch (_) {
-        return fallback;
-      }
-    },
-    set(key, value) {
-      try {
-        localStorage.setItem(NS + key, JSON.stringify(value));
-        return true;
-      } catch (_) {
-        return false;
-      }
-    },
-    del(key) {
-      try {
-        localStorage.removeItem(NS + key);
-        return true;
-      } catch (_) {
-        return false;
-      }
-    }
-  };
-
-  const Router = window.UDRouter || {
-    go(tab) {
-      try {
-        if (window.go) window.go(tab);
-      } catch (_) {}
-    }
-  };
 
   function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>"']/g, char => ({
@@ -461,7 +433,7 @@
     loadCss();
     buildShell();
     render('voice');
-    window.UDV74 = { render, Store, Router, version: 'v74-readable' };
+    window.UDV74 = { render, Store, Router, version: 'v74-storage-core' };
   }
 
   if (document.readyState === 'loading') {
