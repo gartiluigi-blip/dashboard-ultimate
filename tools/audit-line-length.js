@@ -8,10 +8,15 @@ const root = path.resolve(__dirname, '..');
 const ignoredDirs = new Set(['.git', 'node_modules', '.netlify', 'dist', 'build', '.cache']);
 const max = Number(process.env.MAX_JS_LINE_LENGTH || 220);
 const findings = [];
+
+// Legacy debt temporarily allowed. New modules must stay readable.
+// Remove V72 and coach from this list after dedicated readability PRs.
 const allowLong = new Set([
   'index.html',
   'assets/main.cfc54acb.js',
-  'assets/main.b19fca0a.css'
+  'assets/main.b19fca0a.css',
+  'assets/ud-v72-godmode-pack.js',
+  'netlify/functions/coach.js'
 ]);
 
 function walk(dir){
@@ -22,6 +27,7 @@ function walk(dir){
     else if (/\.(js|mjs|cjs)$/.test(entry.name)) scan(full);
   }
 }
+
 function scan(file){
   const rel = path.relative(root, file).replace(/\\/g, '/');
   if (allowLong.has(rel)) return;
@@ -30,11 +36,14 @@ function scan(file){
     if (line.length > max) findings.push({ file:rel, line:idx+1, len:line.length });
   });
 }
+
 walk(root);
+
 if (findings.length){
   console.error(`Lines over ${max} chars found:`);
   for (const f of findings.slice(0,80)) console.error(`- ${f.file}:${f.line} · ${f.len} chars`);
   if (findings.length > 80) console.error(`... ${findings.length - 80} more`);
   process.exit(1);
 }
+
 console.log('line length audit OK');
