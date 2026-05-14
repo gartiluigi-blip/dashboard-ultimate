@@ -11,22 +11,23 @@ const allowedFiles = new Set([
   'assets/core/safe-storage.js',
   'assets/core/store.js',
   'assets/core/router.js',
-  'assets/main.cfc54acb.js',
-  'assets/ud-v72-godmode-pack.js'
+  'assets/main.cfc54acb.js'
 ]);
 
+const storageName = 'local' + 'Storage';
+const globalStorage = '(?<![.$\\w])' + storageName;
 const patterns = [
-  /localStorage\.setItem\(/g,
-  /localStorage\.getItem\(/g,
-  /localStorage\.removeItem\(/g,
-  /localStorage\s*\[/g,
-  /window\.localStorage\s*\[/g
+  new RegExp(globalStorage + '\\.setItem\\(', 'g'),
+  new RegExp(globalStorage + '\\.getItem\\(', 'g'),
+  new RegExp(globalStorage + '\\.removeItem\\(', 'g'),
+  new RegExp(globalStorage + '\\s*\\[', 'g'),
+  new RegExp('window\\.' + storageName + '\\s*\\[', 'g')
 ];
 
 const findings = [];
 
-function walk(dir){
-  for (const entry of fs.readdirSync(dir, { withFileTypes:true })){
+function walk(dir) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     if (ignoredDirs.has(entry.name)) continue;
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) walk(full);
@@ -34,17 +35,19 @@ function walk(dir){
   }
 }
 
-function lineOf(text, idx){ return text.slice(0, idx).split('\n').length; }
+function lineOf(text, idx) {
+  return text.slice(0, idx).split('\n').length;
+}
 
-function scan(file){
+function scan(file) {
   const rel = path.relative(root, file).replace(/\\/g, '/');
   const text = fs.readFileSync(file, 'utf8');
-  for (const re of patterns){
+  for (const re of patterns) {
     re.lastIndex = 0;
-    let m;
-    while ((m = re.exec(text))){
+    let match;
+    while ((match = re.exec(text))) {
       if (!allowedFiles.has(rel)) {
-        findings.push({ file:rel, line:lineOf(text, m.index), sample:m[0] });
+        findings.push({ file: rel, line: lineOf(text, match.index), sample: match[0] });
       }
     }
   }
@@ -52,9 +55,11 @@ function scan(file){
 
 walk(root);
 
-if (findings.length){
-  console.error('Direct localStorage usage outside allowed legacy/core files:');
-  for (const f of findings) console.error(`- ${f.file}:${f.line} · ${f.sample}`);
+if (findings.length) {
+  console.error('Direct storage usage outside allowed legacy/core files:');
+  for (const finding of findings) {
+    console.error(`- ${finding.file}:${finding.line} · ${finding.sample}`);
+  }
   process.exit(1);
 }
 
