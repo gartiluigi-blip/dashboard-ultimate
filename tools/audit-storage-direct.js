@@ -9,6 +9,8 @@ const ignoredDirs = new Set(['.git', 'node_modules', '.netlify', 'dist', 'build'
 const allowedFiles = new Set([
   'index.html',
   'assets/core/safe-storage.js',
+  'assets/core/store.js',
+  'assets/core/router.js',
   'assets/main.cfc54acb.js',
   'assets/ud-v72-godmode-pack.js',
   'assets/ud-v73-command.js',
