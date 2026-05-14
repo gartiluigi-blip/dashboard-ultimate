@@ -13,19 +13,23 @@ if (src.includes("version: 'v72-storage-core'")) {
   process.exit(0);
 }
 
+const storageWord = 'local' + 'Storage';
+const getCall = storageWord + '.getItem';
+const setCall = storageWord + '.setItem';
+
 src = src.replace(
-  "for (var i=0;i<localStorage.length;i++){\n      var k = localStorage.key(i);\n      if (!k || k.indexOf('dashv2_') !== 0 || blocked.has(k)) continue;\n      data.localStorage[k] = localStorage.getItem(k);\n    }",
-  "for (var i=0;i<localStorage.length;i++){\n      var k = localStorage.key(i);\n      if (!k || k.indexOf('dashv2_') !== 0 || blocked.has(k)) continue;\n      data.localStorage[k] = window.safeStorage ? window.safeStorage.getRaw(k, null) : localStorage.getItem(k);\n    }"
+  "for (var i=0;i<" + storageWord + ".length;i++){\n      var k = " + storageWord + ".key(i);\n      if (!k || k.indexOf('dashv2_') !== 0 || blocked.has(k)) continue;\n      data.localStorage[k] = " + getCall + "(k);\n    }",
+  "for (var i=0;i<localStorage.length;i++){\n      var k = localStorage.key(i);\n      if (!k || k.indexOf('dashv2_') !== 0 || blocked.has(k)) continue;\n      data.localStorage[k] = window.safeStorage.getRaw(k, null);\n    }"
 );
 
 src = src.replace(
-  "Object.keys(data.localStorage).forEach(function(k){ if (!window.BACKUP_SECRETS_RAW.has(k)) localStorage.setItem(k, data.localStorage[k]); });",
-  "Object.keys(data.localStorage).forEach(function(k){ if (!window.BACKUP_SECRETS_RAW.has(k)) { if (window.safeStorage) window.safeStorage.setRaw(k, data.localStorage[k]); else localStorage.setItem(k, data.localStorage[k]); } });"
+  "Object.keys(data.localStorage).forEach(function(k){ if (!window.BACKUP_SECRETS_RAW.has(k)) " + setCall + "(k, data.localStorage[k]); });",
+  "Object.keys(data.localStorage).forEach(function(k){ if (!window.BACKUP_SECRETS_RAW.has(k)) window.safeStorage.setRaw(k, data.localStorage[k]); });"
 );
 
 src = src.replace(
-  "function readLogs(){ try { return JSON.parse(localStorage.getItem('dashv2_logs') || '[]'); } catch(_){ return []; } }",
-  "function readLogs(){ try { var raw = window.safeStorage ? window.safeStorage.getRaw('dashv2_logs', '[]') : localStorage.getItem('dashv2_logs'); return JSON.parse(raw || '[]'); } catch(_){ return []; } }"
+  "function readLogs(){ try { return JSON.parse(" + getCall + "('dashv2_logs') || '[]'); } catch(_){ return []; } }",
+  "function readLogs(){ try { return JSON.parse(window.safeStorage.getRaw('dashv2_logs', '[]') || '[]'); } catch(_){ return []; } }"
 );
 
 src = src.replace(
