@@ -4,22 +4,16 @@
 # ============================================================
 
 [build]
-  command = "node tools/patch-index-storage.js"
+  command = "npm run patch"
   publish = "."
   functions = "netlify/functions"
 
 [build.environment]
-  # Pin Node so functions don't break on Netlify default-version bumps.
   NODE_VERSION = "20"
-  # Avoid noisy npm output in Netlify build logs
   NPM_CONFIG_LOGLEVEL = "warn"
-  # If you ever add a build step, prevent dev deps from being installed:
-  # NPM_FLAGS = "--production=false"
 
 [functions]
   node_bundler = "esbuild"
-  # If a future function needs an external module not bundleable, list it here:
-  # external_node_modules = ["sharp"]
 
 [context.production]
   [context.production.environment]
