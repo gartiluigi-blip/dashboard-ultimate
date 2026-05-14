@@ -17,25 +17,42 @@ const storageWord = 'local' + 'Storage';
 const getCall = storageWord + '.getItem';
 const setCall = storageWord + '.setItem';
 
-src = src.replace(
-  "for (var i=0;i<" + storageWord + ".length;i++){\n      var k = " + storageWord + ".key(i);\n      if (!k || k.indexOf('dashv2_') !== 0 || blocked.has(k)) continue;\n      data.localStorage[k] = " + getCall + "(k);\n    }",
-  "for (var i=0;i<localStorage.length;i++){\n      var k = localStorage.key(i);\n      if (!k || k.indexOf('dashv2_') !== 0 || blocked.has(k)) continue;\n      data.localStorage[k] = window.safeStorage.getRaw(k, null);\n    }"
-);
+const exportLoopBefore = [
+  'for (var i=0;i<' + storageWord + '.length;i++){',
+  '      var k = ' + storageWord + '.key(i);',
+  "      if (!k || k.indexOf('dashv2_') !== 0 || blocked.has(k)) continue;",
+  '      data.localStorage[k] = ' + getCall + '(k);',
+  '    }'
+].join('\n');
 
-src = src.replace(
-  "Object.keys(data.localStorage).forEach(function(k){ if (!window.BACKUP_SECRETS_RAW.has(k)) " + setCall + "(k, data.localStorage[k]); });",
-  "Object.keys(data.localStorage).forEach(function(k){ if (!window.BACKUP_SECRETS_RAW.has(k)) window.safeStorage.setRaw(k, data.localStorage[k]); });"
-);
+const exportLoopAfter = [
+  'for (var i=0;i<localStorage.length;i++){',
+  '      var k = localStorage.key(i);',
+  "      if (!k || k.indexOf('dashv2_') !== 0 || blocked.has(k)) continue;",
+  '      data.localStorage[k] = window.safeStorage.getRaw(k, null);',
+  '    }'
+].join('\n');
 
-src = src.replace(
-  "function readLogs(){ try { return JSON.parse(" + getCall + "('dashv2_logs') || '[]'); } catch(_){ return []; } }",
-  "function readLogs(){ try { return JSON.parse(window.safeStorage.getRaw('dashv2_logs', '[]') || '[]'); } catch(_){ return []; } }"
-);
+const importBefore = 'Object.keys(data.localStorage).forEach(function(k){ '
+  + 'if (!window.BACKUP_SECRETS_RAW.has(k)) '
+  + setCall
+  + '(k, data.localStorage[k]); });';
 
-src = src.replace(
-  'v72.opts = OPTS;',
-  "v72.opts = OPTS;\n  v72.version = 'v72-storage-core';"
-);
+const importAfter = 'Object.keys(data.localStorage).forEach(function(k){ '
+  + 'if (!window.BACKUP_SECRETS_RAW.has(k)) '
+  + 'window.safeStorage.setRaw(k, data.localStorage[k]); });';
+
+const readLogsBefore = 'function readLogs(){ try { return JSON.parse('
+  + getCall
+  + "('dashv2_logs') || '[]'); } catch(_){ return []; } }";
+
+const readLogsAfter = 'function readLogs(){ try { return JSON.parse('
+  + "window.safeStorage.getRaw('dashv2_logs', '[]') || '[]'); } catch(_){ return []; } }";
+
+src = src.replace(exportLoopBefore, exportLoopAfter);
+src = src.replace(importBefore, importAfter);
+src = src.replace(readLogsBefore, readLogsAfter);
+src = src.replace('v72.opts = OPTS;', "v72.opts = OPTS;\n  v72.version = 'v72-storage-core';");
 
 fs.writeFileSync(file, src);
 console.log('patched v72 storage calls to safeStorage');
