@@ -1,81 +1,181 @@
-# Required refactor execution plan
+# Refactor execution plan
 
-## Situation
+## Situation actuelle
 
-Le dashboard fonctionne, mais il est fragile. La priorité n'est plus d'ajouter des features. La priorité est de sécuriser la base.
+Le dashboard est stabilisé par une chaîne de patchers, audits et checks CI. Le repo ne doit plus évoluer par gros remplacements de `index.html` ou du bundle principal.
 
-## PR en cours : `hardening/godmode-required-changes`
+La règle opérationnelle est simple : une PR = une cible = `npm run check` vert.
 
-Objectif : empêcher la dette d'augmenter.
+## Terminé
 
-### Changements inclus
+### Hardening initial
 
-- CI sur toutes les branches.
-- Audit prototype mutations.
-- Audit direct localStorage hors fichiers legacy/core.
-- Audit taille fichiers.
-- Audit ligne trop longue.
-- Storage map initiale.
+- CI déclenchée sur toutes les branches.
+- Audits ajoutés : prototypes, storage direct, lignes longues, taille, secrets, dette index.
+- Budgets taille ajoutés.
+- Cartographie storage ajoutée.
 
-### Baseline volontaire
+### Suppression du patch prototype
 
-`index.html` contient encore un patch `Storage.prototype`. Il est baseliné temporairement dans `tools/audit-prototypes.js` pour permettre la PR de garde-fous.
+- Effet runtime du patch `Storage.prototype` supprimé via `tools/patch-index-storage.js`.
+- `assets/core/safe-storage.js` ajouté.
+- Baseline prototype retirée.
+- Audit prototype sans exception.
 
-La PR suivante doit le supprimer.
+### Core storage/router
 
----
+- `assets/core/store.js` ajouté.
+- `assets/core/router.js` ajouté.
+- Core injecté via patch index.
+- V74 consomme le core.
+- V73 est patché pour exiger le core.
+- V72 est patché pour passer par `safeStorage`.
 
-## PR suivante obligatoire
+### Readability / Ops
 
-### `refactor/remove-storage-prototype-patch`
+- V73 reformatté.
+- V74 reformatté.
+- CSS Ops extrait vers `assets/styles/ops.css`.
 
-Objectif : supprimer le patch global `Storage.prototype`.
+### Rapports automatisés
 
-Étapes :
+- `tools/audit-main-storage-report.js` génère `docs/main-storage-report.md`.
+- `tools/audit-dead-code-report.js` génère `docs/dead-code-report.md`.
 
-1. Créer `assets/core/safe-storage.js`.
-2. Déplacer le test private mode.
-3. Déplacer le cleanup vieux logs.
-4. Supprimer `audit-localstorage-safe` de `index.html`.
-5. Retirer la baseline dans `tools/audit-prototypes.js`.
-6. Vérifier `npm run check`.
+### Cleanup contrôlé
 
----
+- CSS mort V75 focus retiré via patcher.
+- Panneaux EPFC legacy V78/V79 masqués retirés via patcher.
 
-## Ensuite
+### Runners
 
-### `refactor/readability-v73-v74`
+- `tools/patch-all.js` centralise les patchers.
+- `tools/check-syntax.js` centralise les checks syntaxe.
+- `tools/check-all.js` centralise `npm run check`.
+- `package.json` est réduit aux points d'entrée utiles.
 
-- Reformater V73.
-- Reformater V74.
-- Pas de changement fonctionnel.
-- Réduire lignes longues.
+### Documentation
 
-### `refactor/extract-ops-css`
+- `docs/maintenance-playbook.md` ajouté.
 
-- Sortir CSS V74 vers `assets/styles/ops.css`.
-- Ne plus injecter CSS via JS pour Ops.
+## Architecture de validation
 
-### `refactor/core-store-router`
+### Point d'entrée patch
 
-- Créer vrai core `assets/core/store.js`.
-- Créer vrai core `assets/core/router.js`.
-- V73/V74 consomment le core, pas un bridge.
+```bash
+npm run patch
+```
 
-### `refactor/shrink-index-html-phase1`
+Exécute `tools/patch-all.js`.
 
-- Extraire boot guards.
-- Extraire styles v75-v80.
-- Supprimer composants masqués par CSS.
+### Point d'entrée validation
+
+```bash
+npm run check
+```
+
+Exécute `tools/check-all.js`.
+
+### Syntaxe
+
+```bash
+npm run check:syntax
+```
+
+Exécute `tools/check-syntax.js`.
+
+## Zones encore legacy
+
+### `index.html`
+
+Risque : très gros fichier, beaucoup de CSS/JS inline, vieux panneaux masqués, dette UX.
+
+Traitement autorisé :
+
+- patcher ciblé ;
+- rapport automatisé ;
+- extraction progressive ;
+- aucune réécriture complète.
+
+### `assets/main.cfc54acb.js`
+
+Risque : bundle dense, store interne `S`, accès storage legacy, remplacement complet dangereux.
+
+Traitement autorisé :
+
+- rapport automatisé ;
+- patcher court et déterministe ;
+- extraction progressive vers `assets/core/` ;
+- garder dans whitelist storage tant que le patch n'est pas CI-green.
+
+## Prochaines PR recommandées
+
+### PR suivante : `audit/index-section-size-report`
+
+Objectif : générer un rapport par grandes sections de `index.html` pour savoir quoi extraire en premier.
+
+Livrables :
+
+- `tools/audit-index-section-size-report.js`
+- `docs/index-section-size-report.md`
+- intégration dans `npm run check`
+
+### Ensuite : `audit/inline-css-report`
+
+Objectif : cartographier les blocs CSS inline avant extraction.
+
+Livrables :
+
+- rapport nombre de blocs `<style>` ;
+- taille par bloc ;
+- premières lignes ;
+- ordre d'extraction proposé.
+
+### Ensuite : `audit/inline-script-report`
+
+Objectif : cartographier les scripts inline avant extraction.
+
+Livrables :
+
+- rapport nombre de scripts inline ;
+- taille par bloc ;
+- signaux dangereux ;
+- ordre d'extraction proposé.
+
+### Ensuite : `cleanup/dead-code-phase2`
+
+Objectif : supprimer uniquement les blocs confirmés morts par rapport.
+
+Candidats :
+
+- panneaux masqués restants ;
+- styles de composants déjà supprimés ;
+- anciens correctifs Vxx remplacés.
+
+### Ensuite : `refactor/main-store-phase1`
+
+Objectif : traiter le bloc store `S` du bundle principal, seulement si le patcher reste court et CI-green.
+
+Approche :
+
+- ne pas remplacer tout `assets/main.cfc54acb.js` ;
+- ne pas forcer si le connecteur bloque ;
+- garder le rapport main storage comme garde-fou ;
+- retirer `assets/main.cfc54acb.js` de la whitelist storage seulement après patch validé.
 
 ## Règles définitives
 
 Une PR est refusée si :
 
-- nouveau script inline dans `index.html` ;
+- `npm run check` rouge ;
+- nouveau patch direct massif dans `index.html` ;
+- remplacement complet de `assets/main.cfc54acb.js` ;
 - nouvelle mutation prototype ;
-- nouveau `localStorage` direct hors fichiers autorisés ;
-- nouvelle feature sans storage documenté ;
-- fichier nouveau avec lignes JS > 220 caractères ;
-- budget taille dépassé ;
-- `npm run check` rouge.
+- nouveau storage direct hors core/legacy autorisé ;
+- nouveau script inline massif ;
+- nouvelle feature sans audit si elle touche au core ;
+- nouveau fichier JS critique absent de `tools/check-syntax.js`.
+
+## Décision d'exécution
+
+Le refactor doit avancer par opérations chirurgicales. Si un patch est bloqué par le connecteur ou devient trop gros, il faut changer d'angle : créer un rapport, extraire un module, ou découper la PR.
