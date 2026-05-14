@@ -5,15 +5,9 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const root = path.resolve(__dirname, '..');
-const legacyLabel = 'Storage' + '.prototype mutation';
 
-// Legacy debt intentionally baselined so this PR can land guardrails before the risky extraction.
-// PR refactor/remove-storage-prototype-patch must delete these entries.
-const allowed = new Set([
-  `index.html:39:${legacyLabel}`,
-  `index.html:43:${legacyLabel}`,
-  `index.html:63:${legacyLabel}`
-]);
+// No baseline: patch-index-storage runs before this audit and removes the legacy block.
+const allowed = new Set([]);
 
 const ignoredDirs = new Set(['.git', 'node_modules', '.netlify', 'dist', 'build', '.cache']);
 const exts = new Set(['.js', '.html']);
