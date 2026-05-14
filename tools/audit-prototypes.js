@@ -5,7 +5,18 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const root = path.resolve(__dirname, '..');
-const allowed = new Set([]);
+
+// Legacy debt intentionally baselined so this PR can land guardrails before the risky extraction.
+// PR refactor/remove-storage-prototype-patch must delete these 3 entries.
+const allowed = new Set([
+  'index.html:33:Storage.prototype mutation',
+  'index.html:34:Storage.prototype mutation',
+  'index.html:35:Storage.prototype mutation',
+  'index.html:36:Storage.prototype mutation',
+  'index.html:40:Storage.prototype mutation',
+  'index.html:63:Storage.prototype mutation'
+]);
+
 const ignoredDirs = new Set(['.git', 'node_modules', '.netlify', 'dist', 'build', '.cache']);
 const exts = new Set(['.js', '.html']);
 
