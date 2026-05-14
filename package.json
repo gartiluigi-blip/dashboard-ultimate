@@ -4,8 +4,9 @@
   "version": "0.0.0",
   "description": "Personal dashboard static app validation scripts.",
   "scripts": {
-    "check": "npm run check:syntax && npm run smoke:coach && npm run audit:static && npm run audit:prototypes && npm run audit:storage && npm run audit:lines && npm run audit:size && npm run audit:v74 && npm run audit:index && npm run audit:secrets",
-    "check:syntax": "node --check assets/ud-v72-godmode-pack.js && node --check assets/ud-v73-command.js && node --check assets/ud-v74-ops-features.js && node --check netlify/functions/coach.js && node --check tools/smoke-coach.js && node --check tools/audit-static.js && node --check tools/audit-v74.js && node --check tools/audit-index-debt.js && node --check tools/audit-secrets.js && node --check tools/audit-prototypes.js && node --check tools/audit-storage-direct.js && node --check tools/audit-line-length.js && node --check tools/audit-size.js",
+    "patch:index-storage": "node tools/patch-index-storage.js",
+    "check": "npm run patch:index-storage && npm run check:syntax && npm run smoke:coach && npm run audit:static && npm run audit:prototypes && npm run audit:storage && npm run audit:lines && npm run audit:size && npm run audit:v74 && npm run audit:index && npm run audit:secrets",
+    "check:syntax": "node --check assets/ud-v72-godmode-pack.js && node --check assets/ud-v73-command.js && node --check assets/ud-v74-ops-features.js && node --check netlify/functions/coach.js && node --check tools/patch-index-storage.js && node --check tools/smoke-coach.js && node --check tools/audit-static.js && node --check tools/audit-v74.js && node --check tools/audit-index-debt.js && node --check tools/audit-secrets.js && node --check tools/audit-prototypes.js && node --check tools/audit-storage-direct.js && node --check tools/audit-line-length.js && node --check tools/audit-size.js",
     "smoke:coach": "node tools/smoke-coach.js",
     "audit:static": "node tools/audit-static.js",
     "audit:prototypes": "node tools/audit-prototypes.js",
