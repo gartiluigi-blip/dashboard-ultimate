@@ -1,37 +1,472 @@
-/* UD v74 · Ops Command Suite compact */
-(function(){
-'use strict';
-if(window.__UDV74Ops) return; window.__UDV74Ops=true;
-const NS='dashv2_';
-const $=(s,r=document)=>r.querySelector(s);
-const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
-const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const pad=n=>String(n).padStart(2,'0');
-const today=(o=0)=>{const d=new Date();d.setDate(d.getDate()+o);return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`};
-const num=v=>Number(String(v??'').replace(',','.'))||0;
-const Store=window.UDStore||{get(k,d=null){try{const r=localStorage.getItem(NS+k);return r==null?d:JSON.parse(r)}catch(_){return d}},set(k,v){try{localStorage.setItem(NS+k,JSON.stringify(v));return true}catch(_){return false}},del(k){try{localStorage.removeItem(NS+k);return true}catch(_){return false}}};
-const Router=window.UDRouter||{go(t){try{window.go&&window.go(t)}catch(_){}}};
-const EPFC=[['PRM3','Programmation','20 exercices Python boucles/listes/fonctions'],['BDO1','SQL base','20 requêtes SELECT/WHERE/JOIN'],['BDG4','SQL exploitation','mini base + GROUP BY/sous-requêtes'],['WEB1','Web','page responsive HTML/CSS/JS + DOM'],['BNE2','Réseaux','fiche OSI/TCP-IP + 10 Q/R'],['STO4','Structure ordinateur','binaire/hex + CPU/RAM/bus/ALU'],['SYS4','Systèmes','Windows/Linux : fichiers/process/droits'],['MAP4','Maths info','logique, ensembles, fonctions'],['STA1','Stats','moyenne/variance/proba'],['PAN2','Analyse','diagramme + besoins'],['ICO1','Communication','mail pro + synthèse']];
-function id(){return 'v74_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,8)}
-function toast(m){try{window.showToast?window.showToast(m):console.log('[v74]',m)}catch(_){}}
-function style(){if($('#ud-v74-style'))return;const s=document.createElement('style');s.id='ud-v74-style';s.textContent=`#ud-v74-fab{position:fixed;right:14px;bottom:calc(92px + env(safe-area-inset-bottom,0px));z-index:999998;border:1px solid rgba(251,146,60,.55);background:linear-gradient(135deg,#fb923c,#7c2d12);color:#fff;border-radius:999px;padding:12px 15px;font:950 12px system-ui;box-shadow:0 18px 44px rgba(0,0,0,.45)}#ud-v74-panel{position:fixed;left:10px;right:10px;bottom:calc(148px + env(safe-area-inset-bottom,0px));z-index:999998;max-height:72vh;overflow:auto;border:1px solid rgba(148,163,184,.24);border-radius:22px;background:linear-gradient(180deg,rgba(15,23,42,.98),rgba(2,6,23,.98));color:#f8fafc;box-shadow:0 28px 80px rgba(0,0,0,.58);padding:14px;display:none;font-family:system-ui}#ud-v74-panel.open{display:block}.v74-head{display:flex;align-items:center;justify-content:space-between}.v74-head h3{margin:0;font:950 15px system-ui}.v74-x{width:36px;height:36px;border-radius:12px;border:1px solid rgba(148,163,184,.25);background:#0f172a;color:#fff;font:900 20px system-ui}.v74-tabs{display:flex;gap:6px;overflow:auto;margin:10px 0}.v74-tabs button{white-space:nowrap;border:1px solid rgba(148,163,184,.22);border-radius:999px;background:rgba(15,23,42,.8);color:#cbd5e1;padding:8px 10px;font:850 11px system-ui}.v74-tabs button.active{background:rgba(251,146,60,.22);border-color:rgba(251,146,60,.55);color:#fff}.v74-card{border:1px solid rgba(148,163,184,.18);background:rgba(15,23,42,.62);border-radius:16px;padding:12px;margin:9px 0}.v74-card h4{margin:0 0 8px;font:950 13px system-ui;color:#fed7aa}.v74-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.v74-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;border-top:1px solid rgba(148,163,184,.13);padding:8px 0}.v74-row:first-child{border-top:0}.v74-input,.v74-select,.v74-area{width:100%;box-sizing:border-box;border:1px solid rgba(148,163,184,.24);border-radius:12px;background:#020617;color:#f8fafc;padding:10px;font:800 13px system-ui}.v74-area{min-height:72px}.v74-btn{border:1px solid rgba(251,146,60,.38);border-radius:12px;background:rgba(251,146,60,.16);color:#fff;padding:10px 12px;font:900 12px system-ui}.v74-btn.primary{background:linear-gradient(135deg,#fb923c,#f97316);color:#111827;border:0}.v74-pill{border-radius:999px;border:1px solid rgba(148,163,184,.22);padding:4px 8px;font:900 10px monospace;color:#cbd5e1}.v74-sub{font:750 12px/1.45 system-ui;color:#94a3b8}.v74-ok{color:#86efac}.v74-bad{color:#fca5a5}@media(max-width:520px){.v74-grid{grid-template-columns:1fr}}`;document.head.appendChild(s)}
-function shell(){if($('#ud-v74-fab'))return;const f=document.createElement('button');f.id='ud-v74-fab';f.textContent='⚡ Ops';const p=document.createElement('section');p.id='ud-v74-panel';p.innerHTML='<div class="v74-head"><h3>⚡ Ops Command Suite</h3><button class="v74-x" data-x>×</button></div><div class="v74-tabs" id="v74-tabs"></div><div id="v74-body"></div>';document.body.append(f,p);f.onclick=()=>p.classList.toggle('open');p.onclick=click;p.oninput=()=>{if($('#fin-income'))financeCalc()}}
-function tabs(a){const t=[['voice','Voice'],['brief','Briefing'],['epfc','EPFC'],['vinted','Vinted'],['finance','Finance'],['weekly','Weekly']];$('#v74-tabs').innerHTML=t.map(x=>`<button data-tab="${x[0]}" class="${a===x[0]?'active':''}">${x[1]}</button>`).join('')}
-function render(a='voice'){tabs(a);({voice,brief,epfc,vinted,finance,weekly}[a]||voice)()}
-function click(e){if(e.target.closest('[data-x]'))return $('#ud-v74-panel').classList.remove('open');const t=e.target.closest('[data-tab]');if(t)return render(t.dataset.tab);const a=e.target.closest('[data-act]');if(!a)return;const x=a.dataset.act;if(x==='voice')return applyVoice();if(x==='brief')return genBrief();if(x==='proof')return saveProof(a.dataset.code);if(x==='vadd')return addVinted();if(x==='vsold')return vStatus(a.dataset.id,'vendu');if(x==='vdel')return vDel(a.dataset.id);if(x==='fsave')return saveFinance();}
-function voice(){ $('#v74-body').innerHTML='<div class="v74-card"><h4>🎙️ Voice Command</h4><textarea id="voice-text" class="v74-area" placeholder="J’ai fait 45 minutes EPFC PRM3"></textarea><button class="v74-btn primary" data-act="voice">Appliquer</button><div class="v74-sub">Version locale : log session / tâche / note rapide. IA serveur gardée pour prochaine PR si besoin.</div></div>' }
-function applyVoice(){const s=$('#voice-text').value.trim();if(!s)return;const m=s.match(/(\d+)\s*(min|minutes)/i), mins=m?num(m[1]):0;const low=s.toLowerCase();if(mins){const mod=low.includes('code')?'code':low.includes('nl')?'nl':low.includes('sport')?'sport':'epfc';const k='log_'+today();const l=Store.get(k,{});l[mod]=num(l[mod])+mins;Store.set(k,l);toast(mod+' +'+mins+' min');return}const tasks=Store.get('tasks_'+today(),[]);tasks.push({id:id(),title:s,priority:'medium',done:false,createdAt:new Date().toISOString()});Store.set('tasks_'+today(),tasks);toast('Tâche ajoutée')}
-function brief(){const b=Store.get('v74_brief_'+today(),'');$('#v74-body').innerHTML='<div class="v74-card"><h4>🧭 Briefing du jour</h4><button class="v74-btn primary" data-act="brief">Générer local</button><div id="brief-out" class="v74-sub" style="margin-top:10px">'+esc(b||'Pas encore généré.')+'</div></div>'}
-function genBrief(){const l=Store.get('log_'+today(),{}),p=Store.get('epfc_proofs_v1',{});const next=EPFC.find(x=>(p[x[0]]||{}).status!=='validé');const txt=['Mission: '+(next?next[0]+' '+next[1]:'révision générale'),'EPFC aujourd’hui: '+num(l.epfc)+' min','Code aujourd’hui: '+num(l.code)+' min','Règle: une preuve avant tout nouveau front','Action: 35 min maintenant'].join('\n');Store.set('v74_brief_'+today(),txt);$('#brief-out').innerHTML=esc(txt).replace(/\n/g,'<br>')}
-function epfc(){const p=Store.get('epfc_proofs_v1',{});$('#v74-body').innerHTML='<div class="v74-card"><h4>🎓 EPFC Proof Tracker</h4>'+EPFC.map(([c,n,pr])=>{const s=p[c]||{};return `<div class="v74-card"><div class="v74-row"><b>${c} · ${esc(n)}</b><span class="v74-pill">${esc(s.status||'todo')}</span></div><div class="v74-sub">${esc(pr)}</div><select class="v74-select" id="st-${c}"><option>todo</option><option ${s.status==='en cours'?'selected':''}>en cours</option><option ${s.status==='validé'?'selected':''}>validé</option></select><input class="v74-input" id="cf-${c}" value="${num(s.confidence)}" placeholder="confiance %"><textarea class="v74-area" id="nx-${c}" placeholder="prochaine preuve">${esc(s.next||'')}</textarea><button class="v74-btn primary" data-act="proof" data-code="${c}">Sauver</button></div>`}).join('')+'</div>'}
-function saveProof(c){const p=Store.get('epfc_proofs_v1',{});p[c]={status:$('#st-'+c).value,confidence:num($('#cf-'+c).value),next:$('#nx-'+c).value,updatedAt:new Date().toISOString()};Store.set('epfc_proofs_v1',p);toast(c+' sauvé');epfc()}
-function vinted(){const a=Store.get('vinted_items_v1',[]);$('#v74-body').innerHTML='<div class="v74-card"><h4>🛍️ Vinted Profit</h4><div class="v74-grid"><input id="vn" class="v74-input" placeholder="article"><input id="vc" class="v74-input" placeholder="catégorie"><input id="vco" class="v74-input" type="number" placeholder="coût"><input id="vs" class="v74-input" type="number" placeholder="frais"><input id="vb" class="v74-input" type="number" placeholder="boost"><input id="vp" class="v74-input" type="number" placeholder="prix"></div><button class="v74-btn primary" data-act="vadd">Ajouter</button></div>'+a.map(vItem).join('')}
-function vItem(x){const cost=num(x.cost)+num(x.ship)+num(x.boost),m=num(x.price)-cost,roi=cost?Math.round(m/cost*100):0;return `<div class="v74-card"><div class="v74-row"><b>${esc(x.name)}</b><span class="v74-pill">${esc(x.status)}</span></div><div class="v74-sub">coût ${cost.toFixed(2)}€ · prix ${num(x.price).toFixed(2)}€ · marge <b class="${m>=0?'v74-ok':'v74-bad'}">${m.toFixed(2)}€</b> · ROI ${roi}%</div><button class="v74-btn" data-act="vsold" data-id="${x.id}">Vendu</button> <button class="v74-btn" data-act="vdel" data-id="${x.id}">Suppr</button></div>`}
-function addVinted(){const a=Store.get('vinted_items_v1',[]);a.unshift({id:id(),name:$('#vn').value,cat:$('#vc').value,cost:num($('#vco').value),ship:num($('#vs').value),boost:num($('#vb').value),price:num($('#vp').value),status:'listé',createdAt:new Date().toISOString()});Store.set('vinted_items_v1',a);vinted()}
-function vStatus(i,s){Store.set('vinted_items_v1',Store.get('vinted_items_v1',[]).map(x=>x.id===i?{...x,status:s}:x));vinted()}function vDel(i){Store.set('vinted_items_v1',Store.get('vinted_items_v1',[]).filter(x=>x.id!==i));vinted()}
-function finance(){const f=Store.get('finance_cashflow_v1',{income:2300,rent:665,energy:100,internet:70,phone:15,gym:30,insurance:115,contribution:500,target:20,goal:30000});$('#v74-body').innerHTML='<div class="v74-card"><h4>💰 Cashflow</h4>'+['income','rent','energy','internet','phone','gym','insurance','contribution','target','goal'].map(k=>`<input id="fin-${k}" class="v74-input" type="number" value="${num(f[k])}" placeholder="${k}">`).join('')+'<button class="v74-btn primary" data-act="fsave">Sauver</button><div id="fin-out" class="v74-card"></div></div>';financeCalc()}
-function financeForm(){const f={};['income','rent','energy','internet','phone','gym','insurance','contribution','target','goal'].forEach(k=>f[k]=num($('#fin-'+k)?.value));return f}function financeCalc(){const f=financeForm(),fix=f.rent+f.energy+f.internet+f.phone+f.gym+f.insurance+f.contribution,save=f.income*f.target/100,left=f.income-fix-save,mo=save?Math.ceil(f.goal/save):0;$('#fin-out').innerHTML=`<div class="v74-row"><span>Charges</span><b>${fix.toFixed(2)}€</b></div><div class="v74-row"><span>Épargne</span><b>${save.toFixed(2)}€</b></div><div class="v74-row"><span>Reste</span><b>${left.toFixed(2)}€</b></div><div class="v74-row"><span>Objectif apport</span><b>${mo} mois</b></div>`}function saveFinance(){Store.set('finance_cashflow_v1',financeForm());toast('Finance sauvée')}
-function weekly(){let ep=0,co=0;for(let i=0;i<7;i++){const l=Store.get('log_'+today(-i),{});ep+=num(l.epfc);co+=num(l.code)}const p=Store.get('epfc_proofs_v1',{}),v=Store.get('vinted_items_v1',[]);$('#v74-body').innerHTML=`<div class="v74-card"><h4>🧾 Weekly War Review</h4><div class="v74-row"><span>EPFC</span><b>${ep} min</b></div><div class="v74-row"><span>Code</span><b>${co} min</b></div><div class="v74-row"><span>Preuves validées</span><b>${Object.values(p).filter(x=>x.status==='validé').length}/11</b></div><div class="v74-row"><span>Vinted listés/vendus</span><b>${v.filter(x=>x.status==='listé').length}/${v.filter(x=>x.status==='vendu').length}</b></div><div class="v74-sub">Décision: ferme une preuve EPFC avant d’ouvrir un nouveau front.</div></div>`}
-function boot(){style();shell();render('voice');window.UDV74={render,Store,Router,version:'v74-compact'}}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+/* UD v74 · Ops Command Suite */
+(function () {
+  'use strict';
+
+  if (window.__UDV74Ops) return;
+  window.__UDV74Ops = true;
+
+  const NS = 'dashv2_';
+  const $ = (selector, root = document) => root.querySelector(selector);
+  const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
+
+  const EPFC = [
+    ['PRM3', 'Programmation', '20 exercices Python boucles/listes/fonctions'],
+    ['BDO1', 'SQL base', '20 requêtes SELECT/WHERE/JOIN'],
+    ['BDG4', 'SQL exploitation', 'mini base + GROUP BY/sous-requêtes'],
+    ['WEB1', 'Web', 'page responsive HTML/CSS/JS + DOM'],
+    ['BNE2', 'Réseaux', 'fiche OSI/TCP-IP + 10 Q/R'],
+    ['STO4', 'Structure ordinateur', 'binaire/hex + CPU/RAM/bus/ALU'],
+    ['SYS4', 'Systèmes', 'Windows/Linux : fichiers/process/droits'],
+    ['MAP4', 'Maths info', 'logique, ensembles, fonctions'],
+    ['STA1', 'Stats', 'moyenne/variance/proba'],
+    ['PAN2', 'Analyse', 'diagramme + besoins'],
+    ['ICO1', 'Communication', 'mail pro + synthèse']
+  ];
+
+  const financeKeys = [
+    'income',
+    'rent',
+    'energy',
+    'internet',
+    'phone',
+    'gym',
+    'insurance',
+    'contribution',
+    'target',
+    'goal'
+  ];
+
+  const Store = window.UDStore || {
+    get(key, fallback = null) {
+      try {
+        const raw = localStorage.getItem(NS + key);
+        return raw == null ? fallback : JSON.parse(raw);
+      } catch (_) {
+        return fallback;
+      }
+    },
+    set(key, value) {
+      try {
+        localStorage.setItem(NS + key, JSON.stringify(value));
+        return true;
+      } catch (_) {
+        return false;
+      }
+    },
+    del(key) {
+      try {
+        localStorage.removeItem(NS + key);
+        return true;
+      } catch (_) {
+        return false;
+      }
+    }
+  };
+
+  const Router = window.UDRouter || {
+    go(tab) {
+      try {
+        if (window.go) window.go(tab);
+      } catch (_) {}
+    }
+  };
+
+  function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, char => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    }[char]));
+  }
+
+  function pad(value) {
+    return String(value).padStart(2, '0');
+  }
+
+  function today(offset = 0) {
+    const date = new Date();
+    date.setDate(date.getDate() + offset);
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  }
+
+  function numberValue(value) {
+    return Number(String(value ?? '').replace(',', '.')) || 0;
+  }
+
+  function uid() {
+    return 'v74_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+  }
+
+  function toast(message) {
+    try {
+      if (window.showToast) window.showToast(message);
+      else console.log('[v74]', message);
+    } catch (_) {}
+  }
+
+  function loadCss() {
+    if ($('#ud-v74-css')) return;
+    const link = document.createElement('link');
+    link.id = 'ud-v74-css';
+    link.rel = 'stylesheet';
+    link.href = '/assets/styles/ops.css';
+    document.head.appendChild(link);
+  }
+
+  function buildShell() {
+    if ($('#ud-v74-fab')) return;
+
+    const button = document.createElement('button');
+    button.id = 'ud-v74-fab';
+    button.type = 'button';
+    button.textContent = '⚡ Ops';
+
+    const panel = document.createElement('section');
+    panel.id = 'ud-v74-panel';
+    panel.innerHTML = [
+      '<div class="v74-head">',
+      '<h3>⚡ Ops Command Suite</h3>',
+      '<button class="v74-x" type="button" data-x>×</button>',
+      '</div>',
+      '<div class="v74-tabs" id="v74-tabs"></div>',
+      '<div id="v74-body"></div>'
+    ].join('');
+
+    document.body.append(button, panel);
+    button.addEventListener('click', () => panel.classList.toggle('open'));
+    panel.addEventListener('click', handleClick);
+    panel.addEventListener('input', handleInput);
+  }
+
+  function renderTabs(active) {
+    const tabs = [
+      ['voice', 'Voice'],
+      ['brief', 'Briefing'],
+      ['epfc', 'EPFC'],
+      ['vinted', 'Vinted'],
+      ['finance', 'Finance'],
+      ['weekly', 'Weekly']
+    ];
+
+    $('#v74-tabs').innerHTML = tabs.map(([key, label]) => {
+      const cls = active === key ? 'active' : '';
+      return `<button type="button" data-tab="${key}" class="${cls}">${label}</button>`;
+    }).join('');
+  }
+
+  function render(tab = 'voice') {
+    renderTabs(tab);
+    const screens = { voice, brief, epfc, vinted, finance, weekly };
+    (screens[tab] || voice)();
+  }
+
+  function handleClick(event) {
+    if (event.target.closest('[data-x]')) {
+      $('#ud-v74-panel').classList.remove('open');
+      return;
+    }
+
+    const tab = event.target.closest('[data-tab]');
+    if (tab) {
+      render(tab.dataset.tab);
+      return;
+    }
+
+    const action = event.target.closest('[data-act]');
+    if (!action) return;
+
+    const key = action.dataset.act;
+    if (key === 'voice') applyVoice();
+    if (key === 'brief') generateBrief();
+    if (key === 'proof') saveProof(action.dataset.code);
+    if (key === 'vadd') addVinted();
+    if (key === 'vsold') setVintedStatus(action.dataset.id, 'vendu');
+    if (key === 'vdel') deleteVinted(action.dataset.id);
+    if (key === 'fsave') saveFinance();
+  }
+
+  function handleInput() {
+    if ($('#fin-income')) financeCalc();
+  }
+
+  function voice() {
+    $('#v74-body').innerHTML = [
+      '<div class="v74-card">',
+      '<h4>🎙️ Voice Command</h4>',
+      '<textarea id="voice-text" class="v74-area" ',
+      'placeholder="J’ai fait 45 minutes EPFC PRM3"></textarea>',
+      '<button class="v74-btn primary" type="button" data-act="voice">Appliquer</button>',
+      '<div class="v74-sub">Version locale : log session ou tâche rapide.</div>',
+      '</div>'
+    ].join('');
+  }
+
+  function applyVoice() {
+    const text = $('#voice-text').value.trim();
+    if (!text) return;
+
+    const minutesMatch = text.match(/(\d+)\s*(min|minutes)/i);
+    const minutes = minutesMatch ? numberValue(minutesMatch[1]) : 0;
+    const lower = text.toLowerCase();
+
+    if (minutes) {
+      const module = lower.includes('code') ? 'code'
+        : lower.includes('nl') ? 'nl'
+          : lower.includes('sport') ? 'sport'
+            : 'epfc';
+      const key = 'log_' + today();
+      const log = Store.get(key, {});
+      log[module] = numberValue(log[module]) + minutes;
+      Store.set(key, log);
+      toast(module + ' +' + minutes + ' min');
+      return;
+    }
+
+    const tasks = Store.get('tasks_' + today(), []);
+    tasks.push({
+      id: uid(),
+      title: text,
+      priority: 'medium',
+      done: false,
+      createdAt: new Date().toISOString()
+    });
+    Store.set('tasks_' + today(), tasks);
+    toast('Tâche ajoutée');
+  }
+
+  function brief() {
+    const stored = Store.get('v74_brief_' + today(), '');
+    $('#v74-body').innerHTML = [
+      '<div class="v74-card">',
+      '<h4>🧭 Briefing du jour</h4>',
+      '<button class="v74-btn primary" type="button" data-act="brief">Générer local</button>',
+      '<div id="brief-out" class="v74-sub">',
+      escapeHtml(stored || 'Pas encore généré.'),
+      '</div></div>'
+    ].join('');
+  }
+
+  function generateBrief() {
+    const log = Store.get('log_' + today(), {});
+    const proofs = Store.get('epfc_proofs_v1', {});
+    const next = EPFC.find(item => (proofs[item[0]] || {}).status !== 'validé');
+    const text = [
+      'Mission: ' + (next ? next[0] + ' ' + next[1] : 'révision générale'),
+      'EPFC aujourd’hui: ' + numberValue(log.epfc) + ' min',
+      'Code aujourd’hui: ' + numberValue(log.code) + ' min',
+      'Règle: une preuve avant tout nouveau front',
+      'Action: 35 min maintenant'
+    ].join('\n');
+
+    Store.set('v74_brief_' + today(), text);
+    $('#brief-out').innerHTML = escapeHtml(text).replace(/\n/g, '<br>');
+  }
+
+  function epfc() {
+    const proofs = Store.get('epfc_proofs_v1', {});
+    const rows = EPFC.map(([code, name, proof]) => proofRow(code, name, proof, proofs[code] || {}));
+    $('#v74-body').innerHTML = '<div class="v74-card"><h4>🎓 EPFC Proof Tracker</h4>'
+      + rows.join('') + '</div>';
+  }
+
+  function proofRow(code, name, proof, state) {
+    const status = state.status || 'todo';
+    return [
+      '<div class="v74-card">',
+      '<div class="v74-row">',
+      `<b>${code} · ${escapeHtml(name)}</b>`,
+      `<span class="v74-pill">${escapeHtml(status)}</span>`,
+      '</div>',
+      `<div class="v74-sub">${escapeHtml(proof)}</div>`,
+      `<select class="v74-select" id="st-${code}">`,
+      `<option ${status === 'todo' ? 'selected' : ''}>todo</option>`,
+      `<option ${status === 'en cours' ? 'selected' : ''}>en cours</option>`,
+      `<option ${status === 'validé' ? 'selected' : ''}>validé</option>`,
+      '</select>',
+      `<input class="v74-input" id="cf-${code}" value="${numberValue(state.confidence)}" `,
+      'placeholder="confiance %">',
+      `<textarea class="v74-area" id="nx-${code}" placeholder="prochaine preuve">`,
+      escapeHtml(state.next || ''),
+      '</textarea>',
+      `<button class="v74-btn primary" type="button" data-act="proof" data-code="${code}">`,
+      'Sauver</button></div>'
+    ].join('');
+  }
+
+  function saveProof(code) {
+    const proofs = Store.get('epfc_proofs_v1', {});
+    proofs[code] = {
+      status: $('#st-' + code).value,
+      confidence: numberValue($('#cf-' + code).value),
+      next: $('#nx-' + code).value,
+      updatedAt: new Date().toISOString()
+    };
+    Store.set('epfc_proofs_v1', proofs);
+    toast(code + ' sauvé');
+    epfc();
+  }
+
+  function vinted() {
+    const items = Store.get('vinted_items_v1', []);
+    $('#v74-body').innerHTML = vintedForm() + items.map(vintedItem).join('');
+  }
+
+  function vintedForm() {
+    return [
+      '<div class="v74-card"><h4>🛍️ Vinted Profit</h4><div class="v74-grid">',
+      '<input id="vn" class="v74-input" placeholder="article">',
+      '<input id="vc" class="v74-input" placeholder="catégorie">',
+      '<input id="vco" class="v74-input" type="number" placeholder="coût">',
+      '<input id="vs" class="v74-input" type="number" placeholder="frais">',
+      '<input id="vb" class="v74-input" type="number" placeholder="boost">',
+      '<input id="vp" class="v74-input" type="number" placeholder="prix">',
+      '</div><button class="v74-btn primary" type="button" data-act="vadd">Ajouter</button></div>'
+    ].join('');
+  }
+
+  function vintedItem(item) {
+    const cost = numberValue(item.cost) + numberValue(item.ship) + numberValue(item.boost);
+    const margin = numberValue(item.price) - cost;
+    const roi = cost ? Math.round((margin / cost) * 100) : 0;
+    const marginClass = margin >= 0 ? 'v74-ok' : 'v74-bad';
+
+    return [
+      '<div class="v74-card"><div class="v74-row">',
+      `<b>${escapeHtml(item.name)}</b>`,
+      `<span class="v74-pill">${escapeHtml(item.status)}</span>`,
+      '</div>',
+      '<div class="v74-sub">',
+      `coût ${cost.toFixed(2)}€ · prix ${numberValue(item.price).toFixed(2)}€ · `,
+      `marge <b class="${marginClass}">${margin.toFixed(2)}€</b> · ROI ${roi}%`,
+      '</div>',
+      `<button class="v74-btn" type="button" data-act="vsold" data-id="${item.id}">Vendu</button>`,
+      `<button class="v74-btn danger" type="button" data-act="vdel" data-id="${item.id}">Suppr</button>`,
+      '</div>'
+    ].join('');
+  }
+
+  function addVinted() {
+    const items = Store.get('vinted_items_v1', []);
+    items.unshift({
+      id: uid(),
+      name: $('#vn').value,
+      cat: $('#vc').value,
+      cost: numberValue($('#vco').value),
+      ship: numberValue($('#vs').value),
+      boost: numberValue($('#vb').value),
+      price: numberValue($('#vp').value),
+      status: 'listé',
+      createdAt: new Date().toISOString()
+    });
+    Store.set('vinted_items_v1', items);
+    vinted();
+  }
+
+  function setVintedStatus(itemId, status) {
+    const items = Store.get('vinted_items_v1', []);
+    Store.set('vinted_items_v1', items.map(item => item.id === itemId ? { ...item, status } : item));
+    vinted();
+  }
+
+  function deleteVinted(itemId) {
+    const items = Store.get('vinted_items_v1', []);
+    Store.set('vinted_items_v1', items.filter(item => item.id !== itemId));
+    vinted();
+  }
+
+  function finance() {
+    const defaults = {
+      income: 2300,
+      rent: 665,
+      energy: 100,
+      internet: 70,
+      phone: 15,
+      gym: 30,
+      insurance: 115,
+      contribution: 500,
+      target: 20,
+      goal: 30000
+    };
+    const values = Store.get('finance_cashflow_v1', defaults);
+    const inputs = financeKeys.map(key => {
+      return `<input id="fin-${key}" class="v74-input" type="number" `
+        + `value="${numberValue(values[key])}" placeholder="${key}">`;
+    }).join('');
+
+    $('#v74-body').innerHTML = '<div class="v74-card"><h4>💰 Cashflow</h4>'
+      + inputs
+      + '<button class="v74-btn primary" type="button" data-act="fsave">Sauver</button>'
+      + '<div id="fin-out" class="v74-card"></div></div>';
+    financeCalc();
+  }
+
+  function financeForm() {
+    const values = {};
+    financeKeys.forEach(key => {
+      values[key] = numberValue($('#fin-' + key)?.value);
+    });
+    return values;
+  }
+
+  function financeCalc() {
+    const values = financeForm();
+    const fixed = values.rent + values.energy + values.internet + values.phone
+      + values.gym + values.insurance + values.contribution;
+    const savings = values.income * values.target / 100;
+    const left = values.income - fixed - savings;
+    const months = savings ? Math.ceil(values.goal / savings) : 0;
+
+    $('#fin-out').innerHTML = [
+      `<div class="v74-row"><span>Charges</span><b>${fixed.toFixed(2)}€</b></div>`,
+      `<div class="v74-row"><span>Épargne</span><b>${savings.toFixed(2)}€</b></div>`,
+      `<div class="v74-row"><span>Reste</span><b>${left.toFixed(2)}€</b></div>`,
+      `<div class="v74-row"><span>Objectif apport</span><b>${months} mois</b></div>`
+    ].join('');
+  }
+
+  function saveFinance() {
+    Store.set('finance_cashflow_v1', financeForm());
+    toast('Finance sauvée');
+  }
+
+  function weekly() {
+    let epfcMinutes = 0;
+    let codeMinutes = 0;
+    for (let offset = 0; offset < 7; offset++) {
+      const log = Store.get('log_' + today(-offset), {});
+      epfcMinutes += numberValue(log.epfc);
+      codeMinutes += numberValue(log.code);
+    }
+
+    const proofs = Store.get('epfc_proofs_v1', {});
+    const items = Store.get('vinted_items_v1', []);
+    const validated = Object.values(proofs).filter(item => item.status === 'validé').length;
+    const listed = items.filter(item => item.status === 'listé').length;
+    const sold = items.filter(item => item.status === 'vendu').length;
+
+    $('#v74-body').innerHTML = [
+      '<div class="v74-card"><h4>🧾 Weekly War Review</h4>',
+      `<div class="v74-row"><span>EPFC</span><b>${epfcMinutes} min</b></div>`,
+      `<div class="v74-row"><span>Code</span><b>${codeMinutes} min</b></div>`,
+      `<div class="v74-row"><span>Preuves validées</span><b>${validated}/11</b></div>`,
+      `<div class="v74-row"><span>Vinted listés/vendus</span><b>${listed}/${sold}</b></div>`,
+      '<div class="v74-sub">Décision: ferme une preuve EPFC avant d’ouvrir un nouveau front.</div>',
+      '</div>'
+    ].join('');
+  }
+
+  function boot() {
+    loadCss();
+    buildShell();
+    render('voice');
+    window.UDV74 = { render, Store, Router, version: 'v74-readable' };
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot, { once: true });
+  } else {
+    boot();
+  }
 })();
