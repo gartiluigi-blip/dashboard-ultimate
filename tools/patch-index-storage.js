@@ -8,13 +8,26 @@ const root = path.resolve(__dirname, '..');
 const file = path.join(root, 'index.html');
 let html = fs.readFileSync(file, 'utf8');
 
-const blockRe = /<script id="audit-localstorage-safe">[\s\S]*?<\/script>\n?/;
-if (!blockRe.test(html)) {
-  console.log('storage prototype block already absent');
-  process.exit(0);
+function ensureBeforeHeadEnd(markup) {
+  if (html.includes(markup)) return;
+  html = html.replace('</head>', markup + '\n</head>');
 }
 
-const replacement = '<script src="/assets/core/safe-storage.js"></script>\n';
-html = html.replace(blockRe, replacement);
+const storageBlockRe = /<script id="audit-localstorage-safe">[\s\S]*?<\/script>\n?/;
+const safeStorage = '<script src="/assets/core/safe-storage.js"></script>';
+const coreStore = '<script src="/assets/core/store.js"></script>';
+const coreRouter = '<script src="/assets/core/router.js"></script>';
+
+if (storageBlockRe.test(html)) {
+  html = html.replace(storageBlockRe, safeStorage + '\n');
+  console.log('removed storage prototype block from index.html');
+} else {
+  ensureBeforeHeadEnd(safeStorage);
+  console.log('storage prototype block already absent');
+}
+
+ensureBeforeHeadEnd(coreStore);
+ensureBeforeHeadEnd(coreRouter);
+
 fs.writeFileSync(file, html);
-console.log('removed storage prototype block from index.html');
+console.log('ensured core store/router scripts in index.html');
