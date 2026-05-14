@@ -4,11 +4,6 @@
   "version": "0.0.0",
   "description": "Personal dashboard static app validation scripts.",
   "scripts": {
-    "patch:index-storage": "node tools/patch-index-storage.js",
-    "patch:v73-core": "node tools/patch-v73-core.js",
-    "patch:v72-storage": "node tools/patch-v72-storage.js",
-    "patch:v75-focus": "node tools/patch-dead-code-v75-focus.js",
-    "patch:epfc-panels": "node tools/patch-epfc-dead-panels.js",
     "patch": "node tools/patch-all.js",
     "check": "node tools/check-all.js",
     "check:syntax": "node tools/check-syntax.js",
