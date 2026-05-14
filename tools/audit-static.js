@@ -20,8 +20,8 @@ function stripComments(src) {
 
 const v73Code = stripComments(v73);
 
-// v73 must not monkey patch window.go anymore. This regex detects assignment only.
-assert.equal(/window\.go\s*=/.test(v73Code), false, 'v73 must not assign window.go');
+// Block assignment like `window.go = fn`; allow comparison like `typeof window.go === 'function'`.
+assert.equal(/window\.go\s*=(?!=)/.test(v73Code), false, 'v73 must not assign window.go');
 assert.equal(/\bwrapGo\b/.test(v73Code), false, 'v73 wrapGo must stay removed');
 assert.match(v73, /window\.UDStore/, 'v73 must expose or use UDStore bridge');
 assert.match(v73, /window\.UDRouter/, 'v73 must expose or use UDRouter bridge');
