@@ -55,6 +55,38 @@
     catch (error) { fail(error); return false; }
   }
 
+  function keys(prefix = '') {
+    const out = [];
+    try {
+      for (let index = 0; index < window.localStorage.length; index++) {
+        const key = window.localStorage.key(index);
+        if (key && (!prefix || key.startsWith(prefix))) out.push(key);
+      }
+      ok();
+    } catch (error) {
+      fail(error);
+    }
+    return out;
+  }
+
+  function allJson(prefix = '') {
+    const out = {};
+    keys(prefix).forEach(key => {
+      out[key] = getJson(key, null);
+    });
+    return out;
+  }
+
   window.__storageStats = stats;
-  window.safeStorage = { stats, isAvailable, getRaw, setRaw, removeRaw, getJson, setJson };
+  window.safeStorage = {
+    stats,
+    isAvailable,
+    getRaw,
+    setRaw,
+    removeRaw,
+    getJson,
+    setJson,
+    keys,
+    allJson
+  };
 })();
