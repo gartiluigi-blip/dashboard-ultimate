@@ -31,6 +31,7 @@ const files = [
   'tools/audit-inline-css-report.js',
   'tools/audit-inline-script-report.js',
   'tools/audit-post-extraction-hardening.js',
+  'tools/audit-function-duplication-report.js',
   'tools/smoke-coach.js',
   'tools/audit-static.js',
   'tools/audit-v74.js',
