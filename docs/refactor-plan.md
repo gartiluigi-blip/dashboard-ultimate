@@ -41,6 +41,9 @@ La règle opérationnelle est simple : une PR = une cible = `npm run check` vert
 
 - `tools/audit-main-storage-report.js` génère `docs/main-storage-report.md`.
 - `tools/audit-dead-code-report.js` génère `docs/dead-code-report.md`.
+- `tools/audit-index-section-size-report.js` génère `docs/index-section-size-report.md`.
+- `tools/audit-inline-css-report.js` génère `docs/inline-css-report.md`.
+- `tools/audit-inline-script-report.js` génère `docs/inline-script-report.md`.
 
 ### Cleanup contrôlé
 
@@ -57,6 +60,7 @@ La règle opérationnelle est simple : une PR = une cible = `npm run check` vert
 ### Documentation
 
 - `docs/maintenance-playbook.md` ajouté.
+- `docs/refactor-plan.md` mis à jour après les rapports d'audit index/CSS/JS.
 
 ## Architecture de validation
 
@@ -84,6 +88,16 @@ npm run check:syntax
 
 Exécute `tools/check-syntax.js`.
 
+### Rapports manuels utiles
+
+```bash
+npm run audit:index-sections
+npm run audit:inline-css
+npm run audit:inline-script
+```
+
+Ces rapports ne sont pas tous encore appelés par `tools/check-all.js`. Ils sont disponibles et syntax-checkés. Les intégrer au runner principal uniquement avec une PR courte si le connecteur accepte la modification.
+
 ## Zones encore legacy
 
 ### `index.html`
@@ -110,37 +124,49 @@ Traitement autorisé :
 
 ## Prochaines PR recommandées
 
-### PR suivante : `audit/index-section-size-report`
+### PR suivante : `docs/index-extraction-plan`
 
-Objectif : générer un rapport par grandes sections de `index.html` pour savoir quoi extraire en premier.
+Objectif : transformer les rapports disponibles en ordre d'extraction concret.
 
-Livrables :
+Entrées :
 
-- `tools/audit-index-section-size-report.js`
 - `docs/index-section-size-report.md`
-- intégration dans `npm run check`
+- `docs/inline-css-report.md`
+- `docs/inline-script-report.md`
+- `docs/dead-code-report.md`
 
-### Ensuite : `audit/inline-css-report`
+Sortie :
 
-Objectif : cartographier les blocs CSS inline avant extraction.
+- `docs/index-extraction-plan.md`
+- classement des blocs à extraire ;
+- ordre CSS avant JS ;
+- exclusions à ne pas toucher ;
+- stratégie de rollback.
 
-Livrables :
+### Ensuite : `refactor/extract-small-inline-css-phase1`
 
-- rapport nombre de blocs `<style>` ;
-- taille par bloc ;
-- premières lignes ;
-- ordre d'extraction proposé.
+Objectif : extraire un seul petit bloc CSS isolé vers `assets/styles/`.
 
-### Ensuite : `audit/inline-script-report`
+Règles :
 
-Objectif : cartographier les scripts inline avant extraction.
+- un seul bloc ;
+- pas de global reset ;
+- selectors clairement scopés ;
+- patcher déterministe ;
+- `npm run check` vert ;
+- aucun changement visuel attendu.
 
-Livrables :
+### Ensuite : `refactor/extract-small-inline-script-phase1`
 
-- rapport nombre de scripts inline ;
-- taille par bloc ;
-- signaux dangereux ;
-- ordre d'extraction proposé.
+Objectif : extraire un petit script boot guard ou script isolé vers `assets/`.
+
+Règles :
+
+- pas de storage-heavy block ;
+- pas de gros DOM writer ;
+- pas de feature centrale ;
+- un seul script ;
+- `npm run check` vert.
 
 ### Ensuite : `cleanup/dead-code-phase2`
 
