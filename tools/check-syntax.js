@@ -21,6 +21,7 @@ const files = [
   'tools/patch-epfc-dead-panels.js',
   'tools/patch-index-css-phase1.js',
   'tools/patch-font-fallback-css.js',
+  'tools/patch-early-stub-script.js',
   'tools/audit-main-storage-report.js',
   'tools/audit-dead-code-report.js',
   'tools/audit-index-section-size-report.js',
