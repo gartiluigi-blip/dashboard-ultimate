@@ -10,8 +10,7 @@ const allowedFiles = new Set([
   'index.html',
   'assets/core/safe-storage.js',
   'assets/core/store.js',
-  'assets/core/router.js',
-  'assets/main.cfc54acb.js'
+  'assets/core/router.js'
 ]);
 
 const storageName = 'local' + 'Storage';
