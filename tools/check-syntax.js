@@ -24,6 +24,7 @@ const files = [
   'tools/patch-early-stub-script.js',
   'tools/patch-dead-code-phase2.js',
   'tools/patch-main-store-phase1.js',
+  'tools/patch-main-store.js',
   'tools/audit-main-storage-report.js',
   'tools/audit-dead-code-report.js',
   'tools/audit-index-section-size-report.js',
