@@ -5,6 +5,7 @@
   "description": "Personal dashboard static app validation scripts.",
   "scripts": {
     "patch": "node tools/patch-all.js",
+    "patch:main-store": "node tools/patch-main-store.js",
     "check": "node tools/check-all.js",
     "check:syntax": "node tools/check-syntax.js",
     "smoke:coach": "node tools/smoke-coach.js",
