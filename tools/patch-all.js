@@ -10,7 +10,8 @@ const patchers = [
   'tools/patch-dead-code-v75-focus.js',
   'tools/patch-epfc-dead-panels.js',
   'tools/patch-index-css-phase1.js',
-  'tools/patch-font-fallback-css.js'
+  'tools/patch-font-fallback-css.js',
+  'tools/patch-early-stub-script.js'
 ];
 
 for (const patcher of patchers) {
