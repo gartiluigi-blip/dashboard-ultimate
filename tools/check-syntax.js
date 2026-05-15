@@ -22,6 +22,7 @@ const files = [
   'tools/patch-index-css-phase1.js',
   'tools/patch-font-fallback-css.js',
   'tools/patch-early-stub-script.js',
+  'tools/patch-dead-code-phase2.js',
   'tools/audit-main-storage-report.js',
   'tools/audit-dead-code-report.js',
   'tools/audit-index-section-size-report.js',
