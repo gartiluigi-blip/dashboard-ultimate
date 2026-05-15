@@ -23,6 +23,7 @@ const files = [
   'tools/audit-dead-code-report.js',
   'tools/audit-index-section-size-report.js',
   'tools/audit-inline-css-report.js',
+  'tools/audit-inline-script-report.js',
   'tools/smoke-coach.js',
   'tools/audit-static.js',
   'tools/audit-v74.js',
