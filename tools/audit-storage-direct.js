@@ -12,12 +12,13 @@ const allowedFiles = new Set([
   'assets/core/store.js',
   'assets/core/router.js'
 ]);
-const allowedFindings = new Set([
-  'assets/main.cfc54acb.js:178:localStorage.getItem(',
-  'assets/main.cfc54acb.js:2873:localStorage.removeItem('
-]);
 
 const storageName = 'local' + 'Storage';
+const allowedFindings = new Set([
+  `assets/main.cfc54acb.js:178:${storageName}.getItem(`,
+  `assets/main.cfc54acb.js:2873:${storageName}.removeItem(`
+]);
+
 const globalStorage = '(?<![.$\\w])' + storageName;
 const patterns = [
   new RegExp(globalStorage + '\\.setItem\\(', 'g'),
