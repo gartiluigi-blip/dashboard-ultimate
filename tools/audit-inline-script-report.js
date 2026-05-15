@@ -66,9 +66,24 @@ while ((match = re.exec(html))) {
 const totalBytes = blocks.reduce((sum, block) => sum + block.bytes, 0);
 const sorted = blocks.slice().sort((a, b) => b.bytes - a.bytes);
 
-const rows = sorted.map(block => {
-  return `| ${block.index} | ${block.line} | ${block.bytes} | ${human(block.bytes)} | ${block.functions} | ${block.listeners} | ${block.timers} | ${block.storage} | ${block.network} | ${block.evalLike} | ${block.domWrites} | \`${block.preview}\` |`;
-});
+function tableRow(block) {
+  return [
+    block.index,
+    block.line,
+    block.bytes,
+    human(block.bytes),
+    block.functions,
+    block.listeners,
+    block.timers,
+    block.storage,
+    block.network,
+    block.evalLike,
+    block.domWrites,
+    '`' + block.preview + '`'
+  ].join(' | ');
+}
+
+const rows = sorted.map(block => '| ' + tableRow(block) + ' |');
 
 const report = [
   '# Inline script report',
