@@ -10,11 +10,15 @@ const allowedFiles = new Set([
   'index.html',
   'assets/core/safe-storage.js',
   'assets/core/store.js',
-  'assets/core/router.js',
-  'assets/main.cfc54acb.js'
+  'assets/core/router.js'
 ]);
 
 const storageName = 'local' + 'Storage';
+const allowedFindings = new Set([
+  `assets/main.cfc54acb.js:178:${storageName}.getItem(`,
+  `assets/main.cfc54acb.js:2873:${storageName}.removeItem(`
+]);
+
 const globalStorage = '(?<![.$\\w])' + storageName;
 const patterns = [
   new RegExp(globalStorage + '\\.setItem\\(', 'g'),
@@ -39,6 +43,10 @@ function lineOf(text, idx) {
   return text.slice(0, idx).split('\n').length;
 }
 
+function isAllowedFinding(rel, line, sample) {
+  return allowedFindings.has(`${rel}:${line}:${sample}`);
+}
+
 function scan(file) {
   const rel = path.relative(root, file).replace(/\\/g, '/');
   const text = fs.readFileSync(file, 'utf8');
@@ -46,8 +54,10 @@ function scan(file) {
     re.lastIndex = 0;
     let match;
     while ((match = re.exec(text))) {
-      if (!allowedFiles.has(rel)) {
-        findings.push({ file: rel, line: lineOf(text, match.index), sample: match[0] });
+      const line = lineOf(text, match.index);
+      const sample = match[0];
+      if (!allowedFiles.has(rel) && !isAllowedFinding(rel, line, sample)) {
+        findings.push({ file: rel, line, sample });
       }
     }
   }
