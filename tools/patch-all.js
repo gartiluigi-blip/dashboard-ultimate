@@ -11,7 +11,8 @@ const patchers = [
   'tools/patch-epfc-dead-panels.js',
   'tools/patch-index-css-phase1.js',
   'tools/patch-font-fallback-css.js',
-  'tools/patch-early-stub-script.js'
+  'tools/patch-early-stub-script.js',
+  'tools/patch-dead-code-phase2.js'
 ];
 
 for (const patcher of patchers) {
