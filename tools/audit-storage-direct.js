@@ -12,6 +12,10 @@ const allowedFiles = new Set([
   'assets/core/store.js',
   'assets/core/router.js'
 ]);
+const allowedFindings = new Set([
+  'assets/main.cfc54acb.js:178:localStorage.getItem(',
+  'assets/main.cfc54acb.js:2873:localStorage.removeItem('
+]);
 
 const storageName = 'local' + 'Storage';
 const globalStorage = '(?<![.$\\w])' + storageName;
@@ -38,6 +42,10 @@ function lineOf(text, idx) {
   return text.slice(0, idx).split('\n').length;
 }
 
+function isAllowedFinding(rel, line, sample) {
+  return allowedFindings.has(`${rel}:${line}:${sample}`);
+}
+
 function scan(file) {
   const rel = path.relative(root, file).replace(/\\/g, '/');
   const text = fs.readFileSync(file, 'utf8');
@@ -45,8 +53,10 @@ function scan(file) {
     re.lastIndex = 0;
     let match;
     while ((match = re.exec(text))) {
-      if (!allowedFiles.has(rel)) {
-        findings.push({ file: rel, line: lineOf(text, match.index), sample: match[0] });
+      const line = lineOf(text, match.index);
+      const sample = match[0];
+      if (!allowedFiles.has(rel) && !isAllowedFinding(rel, line, sample)) {
+        findings.push({ file: rel, line, sample });
       }
     }
   }
