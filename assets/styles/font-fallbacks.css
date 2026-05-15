@@ -1,0 +1,25 @@
+/* Fallback fonts with size-adjust — eliminates FOIT/FOUT layout shift while web fonts load.
+   Numbers tuned by visually matching Outfit/Fraunces against system equivalents. */
+@font-face {
+  font-family: 'Outfit Fallback';
+  src: local('Arial');
+  size-adjust: 97%;
+  ascent-override: 96%;
+  descent-override: 24%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: 'Fraunces Fallback';
+  src: local('Georgia');
+  size-adjust: 103%;
+  ascent-override: 88%;
+  descent-override: 22%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: 'JetBrains Fallback';
+  src: local('Menlo'), local('Consolas');
+  size-adjust: 96%;
+}
