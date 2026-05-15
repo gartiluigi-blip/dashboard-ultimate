@@ -22,6 +22,7 @@ const files = [
   'tools/patch-index-storage.js',
   'tools/patch-dom-core.js',
   'tools/patch-html-core.js',
+  'tools/patch-v73-dom-helper.js',
   'tools/patch-v73-core.js',
   'tools/patch-v72-storage.js',
   'tools/patch-dead-code-v75-focus.js',
