@@ -12,6 +12,7 @@
     "audit:dead-code": "node tools/audit-dead-code-report.js",
     "audit:index-sections": "node tools/audit-index-section-size-report.js",
     "audit:inline-css": "node tools/audit-inline-css-report.js",
+    "audit:inline-script": "node tools/audit-inline-script-report.js",
     "audit:static": "node tools/audit-static.js",
     "audit:prototypes": "node tools/audit-prototypes.js",
     "audit:storage": "node tools/audit-storage-direct.js",
