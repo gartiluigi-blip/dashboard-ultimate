@@ -17,7 +17,8 @@ const patchers = [
   'tools/patch-font-fallback-css.js',
   'tools/patch-early-stub-script.js',
   'tools/patch-dead-code-phase2.js',
-  'tools/patch-main-store-phase1.js'
+  'tools/patch-main-store-phase1.js',
+  'tools/patch-user-content-fixes.js'
 ];
 
 for (const patcher of patchers) {
