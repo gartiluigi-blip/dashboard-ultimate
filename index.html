@@ -1,17 +1,7 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<script id="early-stub">
-/* CRITICAL: stub Notification AVANT tout autre script.
-   Sans ça, Brave/Firefox privé crash à la ligne 6301
-   et l'app entière ne se charge pas. */
-window.__earlyStub = true;
-if (typeof window.Notification === 'undefined'){
-  window.Notification = function(){};
-  window.Notification.permission = 'default';
-  window.Notification.requestPermission = function(){ return Promise.resolve('denied'); };
-}
-</script>
+<script src="/assets/early-stub.js" id="early-stub" data-extracted="early-stub"></script>
 <script id="audit-private-mode-check">
 (function(){
   var ok = false;
@@ -30,43 +20,7 @@ if (typeof window.Notification === 'undefined'){
   }
 })();
 </script>
-<script id="audit-localstorage-safe">
-(function(){
-  var stats = { ok:0, errors:0, lastError:null };
-  var oG = Storage.prototype.getItem;
-  var oS = Storage.prototype.setItem;
-  var oR = Storage.prototype.removeItem;
-  Storage.prototype.getItem = function(k){
-    try { var v = oG.call(this,k); stats.ok++; return v; }
-    catch(e){ stats.errors++; stats.lastError = String(e); return null; }
-  };
-  Storage.prototype.setItem = function(k,v){
-    try { oS.call(this,k,v); stats.ok++; }
-    catch(e){
-      stats.errors++; stats.lastError = String(e);
-      if (e && /quota/i.test(String(e))){
-        try {
-          var keys = [];
-          for (var i = 0; i < this.length; i++){
-            var key = this.key(i);
-            if (key && /\d{4}-\d{2}-\d{2}/.test(key)) keys.push(key);
-          }
-          keys.sort();
-          for (var j = 0; j < Math.min(10, keys.length-5); j++){
-            try { oR.call(this, keys[j]); } catch(_){}
-          }
-          try { oS.call(this,k,v); stats.ok++; stats.errors--; } catch(e){ window.__warn && window.__warn('audit-catch', e); }
-        } catch(_){}
-      }
-    }
-  };
-  Storage.prototype.removeItem = function(k){
-    try { oR.call(this,k); stats.ok++; }
-    catch(e){ stats.errors++; stats.lastError = String(e); }
-  };
-  window.__storageStats = stats;
-})();
-</script>
+<script src="/assets/core/safe-storage.js"></script>
 <script id="audit-helpers">
 (function(){
   if (!window.escapeHTML){
@@ -200,53 +154,10 @@ if (typeof window.Notification === 'undefined'){
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500..700;1,500..700&family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500..700;1,500..700&family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" media="print" onload="this.media='all';this.onload=null">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500..700;1,500..700&family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet"></noscript>
-<style>
-  /* Fallback fonts with size-adjust — eliminates FOIT/FOUT layout shift while web fonts load.
-     Numbers tuned by visually matching Outfit/Fraunces against system equivalents. */
-  @font-face{
-    font-family:'Outfit Fallback';
-    src:local('Arial');
-    size-adjust:97%;
-    ascent-override:96%;
-    descent-override:24%;
-    line-gap-override:0%;
-  }
-  @font-face{
-    font-family:'Fraunces Fallback';
-    src:local('Georgia');
-    size-adjust:103%;
-    ascent-override:88%;
-    descent-override:22%;
-    line-gap-override:0%;
-  }
-  @font-face{
-    font-family:'JetBrains Fallback';
-    src:local('Menlo'), local('Consolas');
-    size-adjust:96%;
-  }
-</style>
+<link rel="stylesheet" href="/assets/styles/font-fallbacks.css" data-extracted="font-fallbacks">
 <link rel="stylesheet" href="/assets/main.b19fca0a.css">
 
-<style id="ud-performance-step1-style">
-@media (max-width: 640px){
-  body.ud-performance-mobile *{
-    animation-duration:.01ms!important;
-    animation-iteration-count:1!important;
-    transition-duration:.01ms!important;
-    scroll-behavior:auto!important;
-  }
-  body.ud-performance-mobile .masthead,
-  body.ud-performance-mobile .now-card,
-  body.ud-performance-mobile .hero,
-  body.ud-performance-mobile .card,
-  body.ud-performance-mobile .u20-panel,
-  body.ud-performance-mobile .u20-drawer-card{
-    backdrop-filter:none!important;
-    -webkit-backdrop-filter:none!important;
-    box-shadow:none!important;
-  }
-}
-</style>
+<link rel="stylesheet" href="/assets/styles/index-performance-mobile.css" data-extracted="ud-performance-step1-style">
 <script id="ud-performance-step1-boot">
 (() => {
   try {
@@ -312,14 +223,6 @@ body.ud-v54-clean .tl-desc{overflow-wrap:anywhere;word-break:normal;}
 .v75-pill{border-radius:999px;padding:3px 8px;background:rgba(15,23,42,.9);border:1px solid rgba(148,163,184,.24);font:900 11px var(--f-mono,monospace)}
 .v75-test-row.pass span:last-child{color:#22c55e}.v75-test-row.fail span:last-child{color:#ef4444}
 .v75-chart-fallback svg{width:100%;height:220px;display:block}
-.v75-fixed-focus{position:fixed;right:18px;bottom:18px;z-index:9999;border:1px solid rgba(251,146,60,.6);border-radius:999px;background:linear-gradient(135deg,#f97316,#7c2d12);color:white;box-shadow:0 16px 38px rgba(0,0,0,.35);font:950 13px var(--f-sans,system-ui);padding:12px 16px;cursor:pointer}
-.v75-focus-overlay{position:fixed;inset:0;z-index:10000;background:rgba(2,6,23,.82);display:none;align-items:center;justify-content:center;padding:20px}
-.v75-focus-overlay.open{display:flex}
-.v75-focus-box{width:min(420px,100%);border:1px solid rgba(251,146,60,.45);border-radius:24px;background:#08080d;color:white;padding:22px;text-align:center;box-shadow:0 30px 80px rgba(0,0,0,.5)}
-.v75-focus-time{font:950 62px/1 var(--f-mono,monospace);letter-spacing:-.06em;margin:12px 0;color:#fdba74}
-.v75-focus-task{font:900 15px var(--f-sans,system-ui);color:#e5e7eb;margin-bottom:14px}
-.v75-focus-actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
-.v75-focus-actions button{border:1px solid rgba(148,163,184,.24);border-radius:12px;background:rgba(15,23,42,.92);color:#fff;font:900 12px var(--f-sans,system-ui);padding:10px 12px;cursor:pointer}
 .v75-version-badge{display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(34,197,94,.35);background:rgba(6,78,59,.35);border-radius:999px;padding:5px 10px;color:#bbf7d0;font:900 11px var(--f-mono,monospace);margin:8px 0}
 @media(max-width:760px){
   .v75-force-grid,.v75-stats-grid{grid-template-columns:1fr}
@@ -960,6 +863,10 @@ body.ud-v54-clean .tl-desc{overflow-wrap:anywhere;word-break:normal;}
 }
 </style>
 
+<script src="/assets/core/store.js"></script>
+<script src="/assets/core/router.js"></script>
+<script src="/assets/core/dom.js"></script>
+<script src="/assets/core/html.js"></script>
 </head>
 <body>
 <div class="app">
