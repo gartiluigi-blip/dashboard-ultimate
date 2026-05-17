@@ -985,7 +985,7 @@ body.ud-v54-clean .tl-desc{overflow-wrap:anywhere;word-break:normal;}
 <div class="tab" data-tab="stats">📊 Stats</div>
 <div class="tab" data-tab="routine">📅 Routine</div>
 <div class="tab" data-tab="sport">💪 Sport</div>
-<div class="tab" data-tab="flex">🧘 Souplesse</div>
+<div class="tab" data-tab="flex" style="display:none">🧘 Souplesse</div>
 <div class="tab" data-tab="nutrition">🥩 Nutrition</div>
 <div class="tab" data-tab="epfc">🎓 EPFC</div>
 <div class="tab" data-tab="code">🧪 Exercices</div>
@@ -1960,7 +1960,7 @@ Si t'as de la fièvre, douleurs fortes, ou t'es vraiment KO : <strong>protocole 
 <div class="card-title"><h3>Dimanche · Repos actif</h3><span class="badge badge-ghost">70 min</span></div>
 <ul class="dlist">
 <li><span class="k">Marche ou vélo doux</span><span class="v">30 min</span></li>
-<li><span class="k">Stretch LONG full body (voir onglet Souplesse)</span><span class="v">25 min</span></li>
+<li><span class="k">Stretch LONG full body (voir section Mobilité · Souplesse)</span><span class="v">25 min</span></li>
 <li><span class="k">Foam roll + auto-massage</span><span class="v">15 min</span></li>
 </ul>
 </div>
@@ -1968,6 +1968,12 @@ Si t'as de la fièvre, douleurs fortes, ou t'es vraiment KO : <strong>protocole 
 
 <div class="callout callout-tip">
 <strong>Tracker intégré</strong> · chaque jour d'entraînement a désormais son propre tracker de sets/reps/poids. Les sessions précédentes sont rappelées en regard (↗ tu montes, ↘ tu baisses). La règle : <em>charge ou reps augmente d'une semaine à l'autre</em>. Si 3 semaines tu stagnes sur un exo = deload (50% poids, même séries). Puis relance. Hevy reste une alternative si tu veux pousser les analyses au-delà.
+</div>
+
+<h2 class="section-title violet">🧘 Mobilité · <em>Souplesse</em></h2>
+<div class="callout callout-note" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+  <span>Tracker de mesures, programme niveau 0→3, routines quotidiennes.</span>
+  <button type="button" onclick="(function(){var t=document.querySelector('.tab[data-tab=flex]');if(t){t.style.display='';t.click();}})()" style="min-height:38px;padding:8px 16px;border-radius:12px;border:1px solid rgba(167,139,250,.45);background:rgba(167,139,250,.15);color:#ddd6fe;font:900 12px system-ui;cursor:pointer;white-space:nowrap">Voir Souplesse →</button>
 </div>
 
 </section>
@@ -2166,90 +2172,105 @@ Si t'as de la fièvre, douleurs fortes, ou t'es vraiment KO : <strong>protocole 
 
 <section class="page" id="p-nutrition">
 <div class="page-kicker">Carburant</div>
-<h1 class="page-title">Nutrition · <em>€300/mois</em></h1>
-<p class="page-lead">Six repas par jour. 180g de protéines. 3L d'eau minimum. Supplémentation calibrée. Deux boissons signature — shot matin et élixir pendant la journée — qui font la différence sur 12 mois.</p>
+<h1 class="page-title">Nutrition · <em>Protéines + Eau</em></h1>
+<p class="page-lead">Deux métriques qui comptent : protéines et hydratation. Le reste, tu le sais déjà — mange bien, mange varié.</p>
 
-<div class="stats stats-4">
-<div class="stat"><div class="stat-v jade mono">2800</div><div class="stat-l">kcal</div></div>
-<div class="stat"><div class="stat-v flame mono">180g</div><div class="stat-l">Protéines</div></div>
-<div class="stat"><div class="stat-v blue mono">310g</div><div class="stat-l">Glucides</div></div>
-<div class="stat"><div class="stat-v amber mono">85g</div><div class="stat-l">Lipides</div></div>
+<div class="stats stats-2">
+<div class="stat"><div class="stat-v flame mono">180g</div><div class="stat-l">Protéines / jour</div></div>
+<div class="stat"><div class="stat-v blue mono">3L</div><div class="stat-l">Eau minimum</div></div>
 </div>
 
-<h2 class="section-title amber">Boissons <em>signature</em></h2>
-<div class="recipe">
-<span class="recipe-tag amber">Avant sport · à jeun</span>
-<div class="recipe-name">🔥 Shot Feu Intérieur</div>
-<div class="recipe-body">Eau tiède + ½ citron + miel + 5g gingembre + ½ c.à.c. curcuma + <strong>poivre noir</strong> + cayenne.<br><br>
-<strong>Pourquoi poivre noir</strong> — La pipérine augmente la biodisponibilité de la curcumine de <strong>2000 %</strong> (Shoba 1998, Planta Medica). Sans poivre, tu n'absorbes quasi rien de la curcumine.<br>
-<strong>Pourquoi cayenne</strong> — La capsaïcine active la thermogenèse → métabolisme + circulation.<br>
-<strong>Gingembre</strong> — anti-inflammatoire, anti-nausée, digestion (Mashhadi 2013, IJPM).
-</div>
-</div>
-
-<div class="recipe blue">
-<span class="recipe-tag pink">Gourde 1L · journée</span>
-<div class="recipe-name">🫀 Élixir Grenade-Betterave</div>
-<div class="recipe-body">250ml grenade + 250ml betterave (fraîche mixée = €0.50/L) + 400ml eau + ½ citron vert + gingembre + miel.<br><br>
-<strong>Betterave</strong> — riche en nitrates → oxyde nitrique (NO) → vasodilatation → <strong>+20 % endurance</strong> (Jones 2014, Sports Medicine).<br>
-<strong>Grenade</strong> — anthocyanines → antioxydant puissant, récupération musculaire, santé cardiovasculaire.
-</div>
-</div>
-
-<div class="callout callout-tip">
-<strong>🚰 Hydratation</strong> — objectif <strong>3L d'eau/jour minimum</strong> (eau + élixir + thé). Mesure : 1 gourde 1L d'élixir + 2 gourdes d'eau. Urine jaune pâle = bien hydraté. Urine foncée = boire plus. La déshydratation de 2% réduit les performances cognitives de 10-20% (Masento 2014, Nutrients).
-</div>
-
-<h2 class="section-title">Les <em>6 repas</em></h2>
+<h2 class="section-title flame">🥩 Protéines · <em>tracker quotidien</em></h2>
 <div class="card">
-<ul class="dlist">
-<li><span class="k"><strong>R1 post-sport</strong> · omelette 4 œufs + 2 blancs + avoine + banane + cacao</span><span class="v info">42g P · 640 kcal</span></li>
-<li><span class="k"><strong>R2</strong> · fromage blanc + amandes + pomme + graines de citrouille</span><span class="v info">22g P · 310</span></li>
-<li><span class="k"><strong>R3</strong> · 200g protéine + 200g glucide + 150g légumes (meal prep)</span><span class="v info">45g P · 550</span></li>
-<li><span class="k"><strong>R4</strong> · whey 30g + banane + 30g avoine</span><span class="v info">32g P · 380</span></li>
-<li><span class="k"><strong>R5</strong> · 200g protéine différente + 150g glucide + 200g légumes</span><span class="v info">42g P · 490</span></li>
-<li><span class="k"><strong>R6</strong> · fromage blanc 250g + beurre cacahuète + chia + baies</span><span class="v info">28g P · 280</span></li>
-</ul>
+<div class="subsection-title" style="margin-bottom:8px;color:var(--text-dim);font-size:12px">Objectif : 180g/j · note ton total du jour</div>
+<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+  <input type="number" id="nutr-prot-input" min="0" max="400" step="5" placeholder="g protéines aujourd'hui" inputmode="numeric"
+    style="flex:1;min-width:140px;min-height:44px;border-radius:12px;border:1px solid rgba(148,163,184,.35);background:#020617;color:#e5e7eb;padding:8px 12px;font:800 16px system-ui">
+  <button type="button" id="nutr-prot-save"
+    style="min-height:44px;padding:8px 18px;border-radius:12px;border:none;background:linear-gradient(135deg,#fb923c,#f59e0b);color:#0a0a10;font:900 13px system-ui;cursor:pointer">
+    Enregistrer
+  </button>
+</div>
+<div id="nutr-prot-bar-wrap" style="margin-top:12px;height:10px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.08)">
+  <div id="nutr-prot-bar" style="height:100%;border-radius:999px;background:linear-gradient(90deg,#fb923c,#f59e0b);transition:width .3s ease;width:0%"></div>
+</div>
+<div id="nutr-prot-label" style="margin-top:6px;font:800 12px var(--f-mono,monospace);color:#94a3b8">0 / 180g</div>
 </div>
 
-<h2 class="section-title">💊 Stack <em>compléments</em> · ~€50/mois</h2>
-
+<h2 class="section-title blue">🚰 Eau · <em>tracker quotidien</em></h2>
 <div class="card">
-<div class="subsection-title flame">🏋️ Performance & Muscle</div>
-<ul class="dlist">
-<li><span class="k">Whey protéine 30g</span><span class="v">Post-training</span><div class="note">Récupération musculaire. Isolate si intolérant lactose.</div></li>
-<li><span class="k">Créatine monohydrate 5g/j</span><span class="v">N'importe quand</span><div class="note">+8-14% force. Aussi prouvé pour la mémoire et la cognition (Rae 2003, Psychopharmacology).</div></li>
-<li><span class="k">Caféine 100-200mg (café OU pilule)</span><span class="v">Avant sport ou étude matin</span><div class="note">Dernière dose avant 14h. Pas de café après. Demi-vie = 5h.</div></li>
-</ul>
-
-<div class="subsection-title blue" style="margin-top:10px">🧠 Concentration & Énergie mentale</div>
-<ul class="dlist">
-<li><span class="k">L-Théanine 200mg</span><span class="v">Avec le café</span><div class="note">Acide aminé du thé vert. Élimine le jitter de la caféine → focus calme. Combo caféine + L-théanine = nootropique le plus prouvé (Einöther 2010). €10/mois.</div></li>
-<li><span class="k">Oméga 3 · DHA 1000mg + EPA 500mg</span><span class="v">Dîner</span><div class="note">DHA = 60% du cerveau. Mémoire, concentration, humeur. Prendre avec repas gras. Min 1000mg DHA/j. €15/mois.</div></li>
-<li><span class="k">Créatine (déjà listée)</span><span class="v">—</span><div class="note">Boost cognitif prouvé : +13% mémoire de travail chez les non-mangeurs de viande. Tu manges de la viande mais le boost existe sous stress/fatigue.</div></li>
-</ul>
-
-<div class="subsection-title violet" style="margin-top:10px">😴 Sommeil & Récupération</div>
-<ul class="dlist">
-<li><span class="k">Magnésium bisglycinate 400mg</span><span class="v">Soir</span><div class="note">Sommeil profond + récupération + testostérone. Bisglycinate &gt; oxide pour absorption.</div></li>
-<li><span class="k">Zinc bisglycinate 25mg</span><span class="v">Soir</span><div class="note">Immunité + testostérone. Pas en même temps que café (inhibe absorption).</div></li>
-<li><span class="k">Ashwagandha KSM-66 600mg</span><span class="v">Soir</span><div class="note">Adaptogène. Cortisol -22%, testo +14.7%, anxiété -44% (méta-analyse Bonilla 2022). 6-8 sem pour effet. Cycler 8 on / 2 off.</div></li>
-</ul>
-
-<div class="subsection-title amber" style="margin-top:10px">☀️ Santé générale</div>
-<ul class="dlist">
-<li><span class="k">Vitamine D3 4000 UI/j</span><span class="v">Repas gras</span><div class="note">Belgique = peu de soleil. 70% des Belges sont déficients. Essentiel pour immunité, humeur, testo, absorption calcium.</div></li>
-<li><span class="k">Vitamine K2 MK-7 100mcg</span><span class="v">Avec la D3</span><div class="note">Synergie avec D3 : dirige le calcium vers les os (pas les artères). <strong>Toujours combiner D3+K2.</strong></div></li>
-<li><span class="k">Rhodiola Rosea 300mg (optionnel)</span><span class="v">Matin, jours d'étude intense</span><div class="note">Adaptogène anti-fatigue. Performance cognitive sous stress (Shevtsov 2003). Ne pas combiner avec ashwagandha le même jour.</div></li>
-</ul>
+<div class="subsection-title" style="margin-bottom:8px;color:var(--text-dim);font-size:12px">Objectif : 3L minimum · chaque bouton = 250ml</div>
+<div id="nutr-water-cups" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px"></div>
+<div id="nutr-water-bar-wrap" style="height:10px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.08)">
+  <div id="nutr-water-bar" style="height:100%;border-radius:999px;background:linear-gradient(90deg,#38bdf8,#818cf8);transition:width .3s ease;width:0%"></div>
+</div>
+<div id="nutr-water-label" style="margin-top:6px;font:800 12px var(--f-mono,monospace);color:#94a3b8">0 / 12 verres (3L)</div>
 </div>
 
-<div class="callout callout-tip">
-<strong>Timing compléments · résumé</strong><br><br>
-<strong>Matin (petit-déj)</strong> · café + L-théanine 200mg + D3 4000UI + K2 100mcg + créatine 5g. Rhodiola 300mg les jours d'étude intense.<br>
-<strong>Soir (dîner ou caséine)</strong> · Oméga 3 (1000mg DHA) + magnésium 400mg + zinc 25mg + ashwagandha 600mg (pas les soirs de rhodiola).<br><br>
-<strong>Budget</strong> · whey ~€20/mois + compléments ~€30/mois = <strong>~€50/mois total</strong>. MyProtein.be ou iHerb.
-</div>
+<script>
+(function(){
+  if (window.__nutrTrackerBound) return;
+  window.__nutrTrackerBound = true;
+  const todayKey = () => new Date().toISOString().slice(0,10);
+  const NS = 'dashv2_nutr_';
+  const getD = () => JSON.parse(localStorage.getItem(NS + todayKey()) || '{"prot":0,"water":0}');
+  const saveD = d => localStorage.setItem(NS + todayKey(), JSON.stringify(d));
+
+  function renderProt(d){
+    const pct = Math.min(100, Math.round(d.prot / 180 * 100));
+    const bar = document.getElementById('nutr-prot-bar');
+    const lbl = document.getElementById('nutr-prot-label');
+    const inp = document.getElementById('nutr-prot-input');
+    if (bar) bar.style.width = pct + '%';
+    if (lbl) lbl.textContent = d.prot + ' / 180g (' + pct + '%)';
+    if (inp) inp.value = d.prot || '';
+  }
+
+  function renderWater(d){
+    const cups = d.water;
+    const target = 12;
+    const pct = Math.min(100, Math.round(cups / target * 100));
+    const bar = document.getElementById('nutr-water-bar');
+    const lbl = document.getElementById('nutr-water-label');
+    const wrap = document.getElementById('nutr-water-cups');
+    if (bar) bar.style.width = pct + '%';
+    if (lbl) lbl.textContent = cups + ' / ' + target + ' verres (' + (cups * 250 / 1000).toFixed(2) + 'L)';
+    if (wrap){
+      wrap.innerHTML = '';
+      for (let i = 0; i < target; i++){
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = i < cups ? '💧' : '○';
+        btn.title = (i+1) * 250 + 'ml';
+        btn.style.cssText = 'width:38px;height:38px;border-radius:10px;border:1px solid rgba(56,189,248,' + (i < cups ? '.5' : '.2') + ');background:rgba(56,189,248,' + (i < cups ? '.18' : '.04') + ');font-size:18px;cursor:pointer;';
+        btn.onclick = () => { const nd = getD(); nd.water = i < cups ? i : i + 1; saveD(nd); renderWater(nd); };
+        wrap.appendChild(btn);
+      }
+    }
+  }
+
+  function init(){
+    const d = getD();
+    renderProt(d);
+    renderWater(d);
+    const saveBtn = document.getElementById('nutr-prot-save');
+    if (saveBtn && !saveBtn.dataset.b){
+      saveBtn.dataset.b = '1';
+      saveBtn.addEventListener('click', () => {
+        const inp = document.getElementById('nutr-prot-input');
+        const val = parseInt(inp ? inp.value : 0) || 0;
+        const nd = getD(); nd.prot = val; saveD(nd); renderProt(nd);
+      });
+    }
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+  document.addEventListener('click', e => {
+    if (e.target && e.target.closest && e.target.closest('[data-tab="nutrition"]')) setTimeout(init, 80);
+  });
+})();
+</script>
 
 </section>
 
@@ -2520,9 +2541,6 @@ Si t'as de la fièvre, douleurs fortes, ou t'es vraiment KO : <strong>protocole 
 
 <div class="callout callout-focus"><strong>Résumé 10 ans · chiffres réalistes :</strong> an 1 crédit à 0, an 3 début ETF, an 7 apport maison réuni, an 10 patrimoine net <em>€60-90k</em> liquide + résidence principale. Rien d'héroïque. Juste de la régularité.</div>
 
-<h2 class="section-title coral">Rappels <em>admin BE</em></h2>
-<p class="page-lead" style="margin-top:-4px">Les dates belges à ne pas louper. Les échéances urgentes passent en rouge.</p>
-<div class="admin-list" id="admin-list"></div>
 
 </section>
 
@@ -15276,6 +15294,7 @@ function inferLevel(el, idx){
 
 /* ───────────────────── Priorités niveau + code couleur ───────────────────── */
 function ensurePrioCommand(){
+  return; /* P1_03: priority legend removed from Home */
   const list = $('#prio-list');
   if (!list) return;
   if (!$('#v77-prio-command')){
