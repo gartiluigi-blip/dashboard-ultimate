@@ -8,10 +8,10 @@ const file = path.resolve(__dirname, '..', 'assets', 'main.cfc54acb.js');
 let js = fs.readFileSync(file, 'utf8');
 
 const beforeSeed = 'try { ls[key.slice(K.length)] = JSON.parse(localStorage.getItem(key)); } catch(_){}';
-const afterSeed = 'try { ls[key.slice(K.length)] = window.safeStorage ? window.safeStorage.getJson(key, null) : JSON.parse(window.localStorage.getItem(key)); } catch(_){}';
+const afterSeed = 'try { ls[key.slice(K.length)] = window.safeStorage ? window.safeStorage.getJson(key, null) : null; } catch(_){}';
 
 const beforeRemove = 'keys.forEach(k => localStorage.removeItem(k));';
-const afterRemove = 'keys.forEach(k => window.safeStorage ? window.safeStorage.removeRaw(k) : window.localStorage.removeItem(k));';
+const afterRemove = 'keys.forEach(k => { if (window.safeStorage) window.safeStorage.removeRaw(k); });';
 
 let changes = 0;
 if (js.includes(beforeSeed)) {
