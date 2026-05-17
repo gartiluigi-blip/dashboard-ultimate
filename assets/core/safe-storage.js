@@ -43,6 +43,20 @@
     return call('removeItem', [key], false) === true;
   }
 
+  function keys(prefix = '') {
+    const out = [];
+    try {
+      for (let index = 0; index < window.localStorage.length; index++) {
+        const key = window.localStorage.key(index);
+        if (key && (!prefix || key.startsWith(prefix))) out.push(key);
+      }
+      ok();
+    } catch (error) {
+      fail(error);
+    }
+    return out;
+  }
+
   function getJson(key, fallback = null) {
     const raw = getRaw(key, null);
     if (raw == null) return fallback;
@@ -56,5 +70,5 @@
   }
 
   window.__storageStats = stats;
-  window.safeStorage = { stats, isAvailable, getRaw, setRaw, removeRaw, getJson, setJson };
+  window.safeStorage = { stats, isAvailable, getRaw, setRaw, removeRaw, keys, getJson, setJson };
 })();
