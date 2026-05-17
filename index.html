@@ -1285,22 +1285,6 @@ Bachelor dev en septembre. Bilingue NL+FR d'ici 2 ans. Corps robuste malgré la 
 
 </div><!-- /.log-grid -->
 
-<div class="log-meals">
-<div class="log-meals-title">🥩 Repas & compléments du jour</div>
-<div class="meal-row" id="meal-row-meals" role="group" aria-label="Repas">
-<button type="button" class="meal-chip" data-meal="r1">R1</button>
-<button type="button" class="meal-chip" data-meal="r2">R2</button>
-<button type="button" class="meal-chip" data-meal="r3">R3</button>
-<button type="button" class="meal-chip" data-meal="r4">R4</button>
-<button type="button" class="meal-chip" data-meal="r5">R5</button>
-<button type="button" class="meal-chip" data-meal="r6">R6</button>
-</div>
-<div class="meal-row" id="meal-row-supp" role="group" aria-label="Compléments" style="margin-top:6px">
-<button type="button" class="meal-chip supp" data-meal="water3l">3L eau</button>
-<button type="button" class="meal-chip supp" data-meal="shotm">🔥 Shot matin</button>
-<button type="button" class="meal-chip supp" data-meal="supp">Stack compléments</button>
-</div>
-</div>
 
 <div class="log-mood" role="group" aria-label="Humeur du jour">
 <button class="log-mood-btn" data-mood="1">😵<span class="log-mood-lbl">Cramé</span></button>
@@ -2276,7 +2260,6 @@ Si t'as de la fièvre, douleurs fortes, ou t'es vraiment KO : <strong>protocole 
 <p class="page-lead">Objectif : prendre de l'avance sur le <strong>niveau 1</strong>, pas avaler tout le bachelor. Chaque matière a maintenant : objectif, ressource O’Reilly, exercice pratique et preuve à produire.</p>
 
 <div class="callout callout-focus"><strong>Règle anti-stack :</strong> une seule matière active par bloc. Niveau 2/3, IA, IoT, cloud, SAP, Scrum, Java avancé = parking tant que le socle niveau 1 n’est pas solide.</div>
-<div class="callout callout-info"><strong>Langue appliquée retirée :</strong> 2GB5 n’est plus dans les matières actives, ni dans la mission automatique. Statut : niveau suffisant / entretien personnel uniquement.</div>
 
 <div class="gm-plan-grid">
   <div class="card"><h3>Mission actuelle</h3><p class="page-lead"><strong>Avance 1re année.</strong><br>Priorité : PRM3 → BDO1/BDG4 → WEB1 → BNE2 → STO4/SYS4 → MAP4/STA1 → PAN2/ICO1.</p></div>
@@ -2558,7 +2541,6 @@ Si t'as de la fièvre, douleurs fortes, ou t'es vraiment KO : <strong>protocole 
 <p class="page-sub">Salle de commandement. Pas 10 certifs actives en même temps : une active, une suivante, le reste en parking. Chaque certif doit servir une matière EPFC, un projet ou l’employabilité.</p>
 </div>
 
-<div class="callout callout-focus"><strong>Décision :</strong> Trading est retiré du noyau jusqu’à septembre. Le temps récupéré va vers PCEP, SQL, Linux/réseaux et Élec/IoT.</div>
 
 <h2 class="section-title jade">Certif active</h2>
 <div class="card"><ul class="dlist">
@@ -2609,6 +2591,11 @@ Si t'as de la fièvre, douleurs fortes, ou t'es vraiment KO : <strong>protocole 
 <li><span class="k">Algo/structures</span><span class="v pos">priorité longue</span><div class="note">Listes, dictionnaires, tri, recherche, complexité simple. Casse-têtes courts chaque semaine.</div></li>
 <li><span class="k">Projets GitHub</span><span class="v info">preuve recruteur</span><div class="note">Vinted Tracker + Smart Room Dashboard + README propre + captures + démo.</div></li>
 </ul></div>
+
+<h2 class="section-title sapphire">Ressources · <em>suivi progression</em></h2>
+<div id="study-resources-host">
+  <div style="padding:12px;text-align:center;color:var(--text-faint,#888);font-size:13px">Chargement du tracker…</div>
+</div>
 </section>
 
 <!-- UD GODMODE V42 CLEAN: missing operational tabs -->
@@ -6440,100 +6427,8 @@ const loaded = { trading: false, settings: false };
 
 function loadTrading(){
   if (loaded.trading) return;
-  const host = document.getElementById('trading-content-host');
-  if (!host) return;
   loaded.trading = true;
-  host.innerHTML = `
-    <div style="background:var(--surface,#1f1f2e);border:1px solid var(--border,#333);border-radius:12px;padding:14px;margin:12px 0">
-      <h3 style="font:700 13px sans-serif;color:#fff;margin-bottom:10px;text-transform:uppercase;letter-spacing:.04em">📔 Journal trade rapide</h3>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
-        <input id="trd-instr" type="text" placeholder="Instrument (MNQ, EURUSD…)" style="padding:10px;background:#2a2a3a;border:1px solid #444;border-radius:6px;color:#fff;font-size:13px;min-height:44px">
-        <select id="trd-res" style="padding:10px;background:#2a2a3a;border:1px solid #444;border-radius:6px;color:#fff;font-size:13px;min-height:44px">
-          <option value="W">Win</option><option value="L">Loss</option><option value="BE">BE</option><option value="SKIP">Skip</option>
-        </select>
-        <input id="trd-pnl" type="number" placeholder="P&L $" step="0.01" style="padding:10px;background:#2a2a3a;border:1px solid #444;border-radius:6px;color:#fff;font-size:13px;min-height:44px">
-        <input id="trd-r" type="number" placeholder="R multiple" step="0.1" style="padding:10px;background:#2a2a3a;border:1px solid #444;border-radius:6px;color:#fff;font-size:13px;min-height:44px">
-      </div>
-      <textarea id="trd-notes" placeholder="Notes (émotion, contexte, règles respectées)" style="width:100%;padding:10px;background:#2a2a3a;border:1px solid #444;border-radius:6px;color:#fff;font-size:13px;min-height:60px;margin-bottom:10px"></textarea>
-      <button id="trd-save" style="background:linear-gradient(135deg,#fb923c,#f97316);color:#0a0a10;border:none;border-radius:8px;padding:12px 18px;font:700 12px sans-serif;cursor:pointer;width:100%;min-height:48px;text-transform:uppercase;letter-spacing:.04em;touch-action:manipulation">Sauvegarder trade</button>
-      <div id="trd-saved" style="margin-top:10px;font:12px monospace;color:#34d399"></div>
-    </div>
-
-    <div style="background:var(--surface,#1f1f2e);border:1px solid var(--border,#333);border-radius:12px;padding:14px;margin:12px 0">
-      <h3 style="font:700 13px sans-serif;color:#fff;margin-bottom:10px;text-transform:uppercase;letter-spacing:.04em">⚖️ Règles non négociables</h3>
-      <ul style="list-style:none;padding:0;margin:0">
-        <li style="padding:8px 0 8px 24px;position:relative;font:400 13px/1.5 sans-serif;color:#aaa;border-bottom:1px solid #2a2a3a">
-          <span style="position:absolute;left:6px;color:#fb923c;font-weight:900">▸</span>
-          Risk max <b style="color:#fff">0.5%</b> par trade. Jamais plus.
-        </li>
-        <li style="padding:8px 0 8px 24px;position:relative;font:400 13px/1.5 sans-serif;color:#aaa;border-bottom:1px solid #2a2a3a">
-          <span style="position:absolute;left:6px;color:#fb923c;font-weight:900">▸</span>
-          Max 2 pertes consécutives → STOP de la journée.
-        </li>
-        <li style="padding:8px 0 8px 24px;position:relative;font:400 13px/1.5 sans-serif;color:#aaa;border-bottom:1px solid #2a2a3a">
-          <span style="position:absolute;left:6px;color:#fb923c;font-weight:900">▸</span>
-          Stop placé <b style="color:#fff">avant</b> l'entrée. Sinon pas de trade.
-        </li>
-        <li style="padding:8px 0 8px 24px;position:relative;font:400 13px/1.5 sans-serif;color:#aaa;border-bottom:1px solid #2a2a3a">
-          <span style="position:absolute;left:6px;color:#fb923c;font-weight:900">▸</span>
-          Pas de trade dans les 30 min après réveil ou shift fatigant.
-        </li>
-        <li style="padding:8px 0 8px 24px;position:relative;font:400 13px/1.5 sans-serif;color:#aaa">
-          <span style="position:absolute;left:6px;color:#fb923c;font-weight:900">▸</span>
-          Revenge trading = sortie immédiate, screen off 30 min.
-        </li>
-      </ul>
-    </div>
-
-    <div id="trd-history" style="background:var(--surface,#1f1f2e);border:1px solid var(--border,#333);border-radius:12px;padding:14px;margin:12px 0">
-      <h3 style="font:700 13px sans-serif;color:#fff;margin-bottom:10px;text-transform:uppercase;letter-spacing:.04em">📊 Historique récent</h3>
-      <div id="trd-list" style="font:12px monospace;color:#aaa;max-height:200px;overflow-y:auto"></div>
-    </div>
-  `;
-
-  // Bind save
-  const saveBtn = document.getElementById('trd-save');
-  if (saveBtn){
-    saveBtn.addEventListener('click', () => {
-      const trade = {
-        ts: new Date().toISOString(),
-        instr: document.getElementById('trd-instr').value.trim(),
-        res: document.getElementById('trd-res').value,
-        pnl: parseFloat(document.getElementById('trd-pnl').value) || 0,
-        r: parseFloat(document.getElementById('trd-r').value) || 0,
-        notes: document.getElementById('trd-notes').value.trim()
-      };
-      if (!trade.instr){ showToast('⚠️ Instrument requis'); return; }
-      try {
-        const arr = JSON.parse(localStorage.getItem('dashv2_trades_simple') || '[]');
-        arr.unshift(trade);
-        localStorage.setItem('dashv2_trades_simple', JSON.stringify(arr.slice(0, 200)));
-        document.getElementById('trd-saved').textContent = '✓ Sauvegardé';
-        ['trd-instr','trd-pnl','trd-r','trd-notes'].forEach(id => {
-          const e = document.getElementById(id); if (e) e.value = '';
-        });
-        renderTrdHistory();
-        setTimeout(() => { document.getElementById('trd-saved').textContent = ''; }, 2000);
-      } catch(e){ showToast('Erreur sauvegarde: ' + e.message); }
-    });
-  }
-
-  function renderTrdHistory(){
-    try {
-      const arr = JSON.parse(localStorage.getItem('dashv2_trades_simple') || '[]');
-      const list = document.getElementById('trd-list');
-      if (!list) return;
-      if (!arr.length){ list.textContent = 'Aucun trade enregistré.'; return; }
-      list.innerHTML = arr.slice(0, 10).map(t => {
-        const d = new Date(t.ts).toLocaleDateString('fr-FR');
-        const color = t.res === 'W' ? '#34d399' : (t.res === 'L' ? '#f87171' : '#fbbf24');
-        return `<div style="padding:6px 0;border-bottom:1px dashed #333">
-          <span style="color:${color};font-weight:700">${t.res}</span> · ${d} · ${t.instr} · ${t.r}R · $${t.pnl}
-        </div>`;
-      }).join('');
-    } catch(_){}
-  }
-  renderTrdHistory();
+  // Élec/IoT content is in the static p-trading section, no injection needed
 }
 
 function loadSettings(){
@@ -10122,10 +10017,12 @@ window.__UD_ROUTINE_CHECKIN_ENGINE_V1__ = true;
 
   function defaultEpfcExam(){
     const obj = { courses:[
-      { name:"Math financières", score:40, next:"annuités + intérêts composés" },
-      { name:"Droit civil", score:50, next:"responsabilité + obligations" },
-      { name:"Responsabilité civile", score:45, next:"cas pratiques" },
-      { name:"Assurances", score:35, next:"terminologie + définitions" }
+      { name:"MAP4 Mathématiques", score:0, next:"algèbre + fonctions + probabilités" },
+      { name:"BNE2 Réseau", score:0, next:"modèle OSI, TCP/IP, adressage IP" },
+      { name:"BDO1 Base de données", score:0, next:"modèle relationnel, SQL SELECT" },
+      { name:"WEB1 Web", score:0, next:"HTML5, CSS3, formulaires" },
+      { name:"SYS4 Systèmes", score:0, next:"Linux, commandes shell, processus" },
+      { name:"PAN2 Programmation", score:0, next:"Python fonctions, POO bases" }
     ]};
     set(EPFC_EXAM_KEY, obj);
     return obj;
@@ -10966,7 +10863,7 @@ window.__UD_ROUTINE_CHECKIN_ENGINE_V1__ = true;
     { key:'rest_a', short:'OFF A', label:'Repos actif + souplesse longue', tag:'OFF', minutes:55, type:'rest', desc:'Marche + mobilité. Tu construis les amplitudes sans flinguer la récup.', exercises:[] },
     { key:'legs_a', short:'Legs A', label:'Quads + mollets + core', tag:'ON 1', minutes:80, type:'sport', desc:'Jambes esthétiques et solides. Pas de squat nuque. Presses/machines propres.', exercises:[
       ['Leg press pieds moyens', 'Quads', 4, '8-12', '2:00', 'Amplitude contrôlée, bassin stable.'],
-      ['Split squat bulgare', 'Quads/fessiers', 3, '8-10/jambe', '1:45', 'Torse légèrement incliné, genou contrôlé.'],
+      ['Split squat bulgare · haltères uniquement', 'Quads/fessiers', 3, '8-10/jambe', '1:45', 'Haltères seulement — pas de barre. Torse légèrement incliné, genou contrôlé. Stop si douleur C7 ou bras.'],
       ['Leg extension', 'Quads finition', 3, '12-15', '1:00', 'Pause en haut, brûlure propre.'],
       ['Leg curl assis', 'Ischios', 3, '10-15', '1:15', 'Contrôle l’excentrique.'],
       ['Mollets presse ou debout', 'Mollets', 4, '10-15', '1:00', 'Étirement en bas + pause en haut.'],
@@ -15905,8 +15802,8 @@ function renderEpfcV80(){
       <div>
         <h2 class="v80-epfc-title">EPFC · Informatique — Développement d’applications</h2>
         <div class="v80-epfc-sub">
-          Priorité actuelle : <b>niveau 1 / première année</b>. Aucun module assurance ici.
-          Tu valides par matière : cours compris → exercices → mode examen.
+          Priorité actuelle : <b>niveau 1 / première année</b>.
+          Tu valides par matière : cours compris → exercices → test blanc.
         </div>
       </div>
       <div class="v80-epfc-rank">
@@ -16034,6 +15931,304 @@ window.UDV80 = {
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, {once:true});
 else boot();
+})();
+</script>
+
+<style id="study-tracker-css">
+#study-resources-host{margin:0}
+.sr-add-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.sr-add-bar select,.sr-add-bar input{flex:1;min-width:80px;background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:8px;padding:8px 10px;font:13px var(--f-sans,sans-serif)}
+.sr-add-bar button{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;border-radius:8px;padding:8px 16px;font:700 12px sans-serif;cursor:pointer;white-space:nowrap;min-height:40px}
+.sr-card{background:#0f172a;border:1px solid #1e293b;border-radius:12px;padding:12px;margin:8px 0;position:relative}
+.sr-card.active{border-color:rgba(99,102,241,.4)}
+.sr-card.completed{border-color:rgba(34,197,94,.35);opacity:.7}
+.sr-card-head{display:flex;align-items:flex-start;gap:8px;margin-bottom:8px}
+.sr-card-icon{font-size:20px;flex-shrink:0}
+.sr-card-meta{flex:1;min-width:0}
+.sr-card-title{font:700 13px var(--f-sans,sans-serif);color:#e2e8f0;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sr-card-sub{font:11px var(--f-sans,sans-serif);color:#64748b}
+.sr-card-actions{display:flex;gap:4px;flex-shrink:0}
+.sr-btn{background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:6px;padding:4px 8px;font:600 11px sans-serif;cursor:pointer}
+.sr-btn.primary{background:#6366f1;color:#fff;border-color:#6366f1}
+.sr-btn.danger{background:#ef4444;color:#fff;border-color:#ef4444}
+.sr-progress-wrap{height:6px;background:#1e293b;border-radius:3px;overflow:hidden;margin:6px 0}
+.sr-progress-bar{height:100%;border-radius:3px;transition:width .3s;background:linear-gradient(90deg,#6366f1,#22d3ee)}
+.sr-progress-bar.done{background:#22c55e}
+.sr-progress-text{display:flex;justify-content:space-between;font:600 11px var(--f-mono,monospace);color:#64748b}
+.sr-validate-row{display:flex;gap:6px;margin-top:8px;align-items:center}
+.sr-validate-row input{flex:1;background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:6px;padding:6px 10px;font:13px var(--f-mono,monospace)}
+.sr-validate-row button{background:#22c55e;color:#000;border:none;border-radius:6px;padding:6px 12px;font:700 11px sans-serif;cursor:pointer;white-space:nowrap}
+.sr-badge{display:inline-block;font:700 9px var(--f-mono,monospace);padding:2px 6px;border-radius:4px;text-transform:uppercase;margin-left:4px}
+.sr-badge.p0{background:#ef4444;color:#fff}
+.sr-badge.p1{background:#f59e0b;color:#000}
+.sr-badge.p2{background:#6366f1;color:#fff}
+.sr-badge.p3{background:#6b7280;color:#fff}
+.sr-empty{padding:20px;text-align:center;color:#475569;font:13px sans-serif}
+#sr-modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:8000;align-items:center;justify-content:center}
+#sr-modal-bg.open{display:flex}
+#sr-modal{background:#0f172a;border:1px solid #334155;border-radius:16px;padding:20px;width:min(420px,94vw);max-height:85vh;overflow-y:auto}
+#sr-modal h3{font:700 15px sans-serif;color:#e2e8f0;margin-bottom:14px}
+#sr-modal label{display:block;font:600 11px sans-serif;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;margin-top:12px}
+#sr-modal select,#sr-modal input,#sr-modal textarea{width:100%;background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:8px;padding:8px 10px;font:13px var(--f-sans,sans-serif);box-sizing:border-box}
+#sr-modal textarea{min-height:60px;resize:vertical}
+#sr-modal .sr-modal-actions{display:flex;gap:8px;margin-top:16px;justify-content:flex-end}
+</style>
+
+<div id="sr-modal-bg" role="dialog" aria-modal="true">
+  <div id="sr-modal">
+    <h3 id="sr-modal-title">Ajouter une ressource</h3>
+    <label>Titre</label><input id="sr-f-title" type="text" placeholder="Python Crash Course 3rd Ed.">
+    <label>Domaine</label>
+    <select id="sr-f-domain">
+      <option value="EPFC">EPFC Informatique</option>
+      <option value="Code">Code / Exercices</option>
+      <option value="Cybersecurity">Cybersécurité</option>
+      <option value="ElectronicsRepair">Élec / IoT</option>
+      <option value="AI">IA</option>
+      <option value="Dutch">Néerlandais</option>
+      <option value="Chess">Échecs</option>
+      <option value="Other">Autre</option>
+    </select>
+    <label>Type</label>
+    <select id="sr-f-type">
+      <option value="book">Livre</option>
+      <option value="course">Cours / Formation</option>
+      <option value="lab_path">Labs / Parcours pratique</option>
+      <option value="video">Vidéo / Série</option>
+      <option value="exercise_set">Exercices</option>
+      <option value="article">Article / Doc</option>
+    </select>
+    <label>Fournisseur</label>
+    <select id="sr-f-provider">
+      <option value="OReilly">O'Reilly</option>
+      <option value="TryHackMe">TryHackMe</option>
+      <option value="PortSwigger">PortSwigger Web Academy</option>
+      <option value="HTB">HTB Academy</option>
+      <option value="OverTheWire">OverTheWire</option>
+      <option value="picoCTF">picoCTF</option>
+      <option value="EPFC">EPFC</option>
+      <option value="YouTube">YouTube</option>
+      <option value="Other">Autre</option>
+    </select>
+    <label>Total unités</label><input id="sr-f-total" type="number" min="1" placeholder="416">
+    <label>Type d'unité</label>
+    <select id="sr-f-unit">
+      <option value="pages">Pages</option>
+      <option value="minutes">Minutes</option>
+      <option value="labs">Labs</option>
+      <option value="chapters">Chapitres</option>
+      <option value="exercises">Exercices</option>
+    </select>
+    <label>Priorité</label>
+    <select id="sr-f-prio">
+      <option value="P1">P1 — Haute</option>
+      <option value="P2">P2 — Normale</option>
+      <option value="P3">P3 — Basse</option>
+      <option value="P0">P0 — Critique</option>
+    </select>
+    <label>Notes (optionnel)</label><textarea id="sr-f-notes" placeholder="Lien, contexte, prochain chapitre…"></textarea>
+    <div class="sr-modal-actions">
+      <button class="sr-btn" id="sr-modal-cancel">Annuler</button>
+      <button class="sr-btn primary" id="sr-modal-save">Sauvegarder</button>
+    </div>
+  </div>
+</div>
+
+<script id="study-tracker-script">
+(function(){
+'use strict';
+if (window.__studyTrackerV1) return;
+window.__studyTrackerV1 = true;
+
+const KEY = 'dashv2_study_resources';
+const SCHEMA_V = 1;
+
+function load(){ try{ return JSON.parse(localStorage.getItem(KEY)||'[]'); }catch(_){ return []; } }
+function save(arr){ try{ localStorage.setItem(KEY, JSON.stringify(arr)); }catch(_){} }
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+const DOMAIN_ICONS = { EPFC:'🎓', Code:'💻', Cybersecurity:'🔐', ElectronicsRepair:'🔌', AI:'🤖', Dutch:'🇳🇱', Chess:'♟', Other:'📚' };
+const TYPE_LABELS = { book:'Livre', course:'Cours', lab_path:'Labs', video:'Vidéo', exercise_set:'Exercices', article:'Article' };
+
+function pct(r){ return r.total_units ? Math.min(100, Math.round((r.completed_units/r.total_units)*100)) : 0; }
+function remaining(r){ return Math.max(0, (r.total_units||0) - (r.completed_units||0)); }
+
+function render(){
+  const host = document.getElementById('study-resources-host');
+  if (!host) return;
+  const resources = load();
+
+  // Sort: active first, then by priority P0→P3, then by pct
+  const pOrd = {P0:0,P1:1,P2:2,P3:3};
+  const sorted = [...resources].sort((a,b)=>{
+    if (a.status==='active' && b.status!=='active') return -1;
+    if (b.status==='active' && a.status!=='active') return 1;
+    const pa = pOrd[a.priority_level]??2, pb = pOrd[b.priority_level]??2;
+    if (pa !== pb) return pa - pb;
+    return pct(b) - pct(a);
+  });
+
+  const addBar = `
+    <div class="sr-add-bar">
+      <button id="sr-open-add">+ Ajouter une ressource</button>
+    </div>`;
+
+  if (!sorted.length){
+    host.innerHTML = addBar + '<div class="sr-empty">Aucune ressource. Ajoute des livres, labs ou cours pour suivre ta progression.</div>';
+  } else {
+    const cards = sorted.map(r => {
+      const p = pct(r);
+      const rem = remaining(r);
+      const icon = DOMAIN_ICONS[r.domain] || '📖';
+      const isDone = r.status === 'completed' || p >= 100;
+      const badge = `<span class="sr-badge ${(r.priority_level||'p2').toLowerCase()}">${r.priority_level||'P2'}</span>`;
+      return `
+        <div class="sr-card ${r.status==='active'?'active':''} ${isDone?'completed':''}" data-sr-id="${r.id}">
+          <div class="sr-card-head">
+            <div class="sr-card-icon">${icon}</div>
+            <div class="sr-card-meta">
+              <div class="sr-card-title">${esc(r.title||'?')}${badge}</div>
+              <div class="sr-card-sub">${esc(r.provider||'')} · ${esc(TYPE_LABELS[r.type]||r.type||'')} · ${r.total_units||'?'} ${r.unit_type||''}</div>
+            </div>
+            <div class="sr-card-actions">
+              <button class="sr-btn" data-sr-edit="${r.id}">✏️</button>
+              <button class="sr-btn danger" data-sr-del="${r.id}">🗑</button>
+            </div>
+          </div>
+          <div class="sr-progress-wrap"><div class="sr-progress-bar ${isDone?'done':''}" style="width:${p}%"></div></div>
+          <div class="sr-progress-text">
+            <span>${p}% · ${rem} ${r.unit_type||'unités'} restantes</span>
+            <span>${r.completed_units||0} / ${r.total_units||'?'}</span>
+          </div>
+          ${isDone ? '' : `
+          <div class="sr-validate-row">
+            <input type="number" min="1" max="${rem}" placeholder="+ unités complétées" data-sr-units="${r.id}" inputmode="numeric">
+            <button data-sr-validate="${r.id}">Valider</button>
+          </div>`}
+          ${r.notes ? `<div style="font:11px sans-serif;color:#475569;margin-top:6px;padding-top:6px;border-top:1px solid #1e293b">${esc(r.notes)}</div>` : ''}
+        </div>`;
+    }).join('');
+    host.innerHTML = addBar + cards;
+  }
+
+  // Bind events
+  document.getElementById('sr-open-add')?.addEventListener('click', () => openModal());
+
+  host.querySelectorAll('[data-sr-validate]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.srValidate;
+      const inp = host.querySelector(`[data-sr-units="${id}"]`);
+      const n = parseInt(inp?.value || '0', 10);
+      if (!n || n <= 0) return;
+      const arr = load();
+      const r = arr.find(x => x.id === id);
+      if (!r) return;
+      r.completed_units = Math.min((r.completed_units||0) + n, r.total_units||9999);
+      r.updated_at = new Date().toISOString();
+      r.last_session_at = new Date().toISOString();
+      if (r.completed_units >= (r.total_units||0) && r.total_units > 0) r.status = 'completed';
+      else if (r.status === 'not_started') r.status = 'active';
+      save(arr);
+      render();
+    });
+  });
+
+  host.querySelectorAll('[data-sr-del]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (!confirm('Supprimer cette ressource ?')) return;
+      const id = btn.dataset.srDel;
+      save(load().filter(x => x.id !== id));
+      render();
+    });
+  });
+
+  host.querySelectorAll('[data-sr-edit]').forEach(btn => {
+    const id = btn.dataset.srEdit;
+    btn.addEventListener('click', () => {
+      const r = load().find(x => x.id === id);
+      if (!r) return;
+      openModal(r);
+    });
+  });
+}
+
+let editingId = null;
+function openModal(r){
+  editingId = r ? r.id : null;
+  const bg = document.getElementById('sr-modal-bg');
+  if (!bg) return;
+  document.getElementById('sr-modal-title').textContent = r ? 'Modifier la ressource' : 'Ajouter une ressource';
+  document.getElementById('sr-f-title').value = r?.title || '';
+  document.getElementById('sr-f-domain').value = r?.domain || 'EPFC';
+  document.getElementById('sr-f-type').value = r?.type || 'book';
+  document.getElementById('sr-f-provider').value = r?.provider || 'OReilly';
+  document.getElementById('sr-f-total').value = r?.total_units || '';
+  document.getElementById('sr-f-unit').value = r?.unit_type || 'pages';
+  document.getElementById('sr-f-prio').value = r?.priority_level || 'P1';
+  document.getElementById('sr-f-notes').value = r?.notes || '';
+  bg.classList.add('open');
+}
+function closeModal(){ document.getElementById('sr-modal-bg')?.classList.remove('open'); editingId = null; }
+
+function saveModal(){
+  const title = document.getElementById('sr-f-title').value.trim();
+  if (!title){ alert('Titre requis'); return; }
+  const total = parseInt(document.getElementById('sr-f-total').value, 10);
+  if (!total || total < 1){ alert('Total unités requis (ex: 416)'); return; }
+  const arr = load();
+  const now = new Date().toISOString();
+  if (editingId){
+    const r = arr.find(x => x.id === editingId);
+    if (!r) return;
+    r.title = title;
+    r.domain = document.getElementById('sr-f-domain').value;
+    r.type = document.getElementById('sr-f-type').value;
+    r.provider = document.getElementById('sr-f-provider').value;
+    r.total_units = total;
+    r.unit_type = document.getElementById('sr-f-unit').value;
+    r.priority_level = document.getElementById('sr-f-prio').value;
+    r.notes = document.getElementById('sr-f-notes').value.trim();
+    r.updated_at = now;
+    r.schema_version = SCHEMA_V;
+  } else {
+    arr.push({
+      id: uid(), schema_version: SCHEMA_V,
+      title, domain: document.getElementById('sr-f-domain').value,
+      type: document.getElementById('sr-f-type').value,
+      provider: document.getElementById('sr-f-provider').value,
+      total_units: total,
+      unit_type: document.getElementById('sr-f-unit').value,
+      completed_units: 0,
+      status: 'not_started',
+      priority_level: document.getElementById('sr-f-prio').value,
+      notes: document.getElementById('sr-f-notes').value.trim(),
+      color: 'blue',
+      created_at: now, updated_at: now, last_session_at: null
+    });
+  }
+  save(arr);
+  closeModal();
+  render();
+}
+
+function esc(s){ const d=document.createElement('div');d.textContent=s||'';return d.innerHTML; }
+
+function boot(){
+  render();
+  document.getElementById('sr-modal-cancel')?.addEventListener('click', closeModal);
+  document.getElementById('sr-modal-save')?.addEventListener('click', saveModal);
+  document.getElementById('sr-modal-bg')?.addEventListener('click', e => { if (e.target.id==='sr-modal-bg') closeModal(); });
+  // Re-render when Plan tab opens
+  document.addEventListener('click', e => {
+    if (e.target.closest('.tab[data-tab="plan"],.bottom-nav-item[data-tab="plan"]'))
+      setTimeout(render, 150);
+  }, true);
+}
+
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, {once:true});
+else boot();
+
+window.__studyTracker = { render, load, save };
 })();
 </script>
 
