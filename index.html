@@ -5522,32 +5522,7 @@ function setupOffline(){
   window.addEventListener('offline', update);
   update();
 
-  // Service worker registration (le SW lui-même doit être servi à la racine — voir /sw.js)
-  // Pour l'instant on registe en inline via Blob URL — mode dégradé.
-  if ('serviceWorker' in navigator){
-    const swCode = `
-      const CACHE = 'ultimate-v3';
-      self.addEventListener('install', e => self.skipWaiting());
-      self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
-      self.addEventListener('fetch', e => {
-        if (e.request.method !== 'GET') return;
-        if (e.request.url.includes('/.netlify/functions/')) return;
-        e.respondWith(
-          caches.open(CACHE).then(cache =>
-            cache.match(e.request).then(hit => hit || fetch(e.request).then(res => {
-              try { cache.put(e.request, res.clone()); } catch(e){ window.__warn && window.__warn('audit-catch', e); }
-              return res;
-            }).catch(() => hit))
-          )
-        );
-      });
-    `;
-    try {
-      const blob = new Blob([swCode], { type: 'text/javascript' });
-      const url = URL.createObjectURL(blob);
-      navigator.serviceWorker.register(url).catch(e => log('SW register fail (normal en dev local)', e.message));
-    } catch(e){ window.__warn && window.__warn('audit-catch', e); }
-  }
+  // SW registration removed — was caching index.html and blocking all updates
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -5907,19 +5882,16 @@ if (typeof Notification === 'undefined'){
 }
 
 // ════════════════════════════════════════════════════════════
-// FIX 2 : Désactivation propre du Service Worker inline (blob://)
-// Le navigateur refuse les SW depuis blob URLs. Pour un SW réel,
-// il faudrait servir /sw.js depuis Netlify (action utilisateur).
-// On désactive juste l'erreur en attendant.
-// ════════════════════════════════════════════════════════════
+// Unregister ALL service workers + clear ALL caches so updates are always visible
 if ('serviceWorker' in navigator){
-  navigator.serviceWorker.getRegistrations().then(regs => {
-    regs.forEach(r => {
-      if (r.scope && r.scope.startsWith('blob:')){
-        r.unregister().catch(()=>{});
-      }
-    });
-  }).catch(()=>{});
+  navigator.serviceWorker.getRegistrations().then(function(regs){
+    regs.forEach(function(r){ r.unregister().catch(function(){}); });
+  }).catch(function(){});
+  if (window.caches){
+    caches.keys().then(function(keys){
+      keys.forEach(function(k){ caches.delete(k); });
+    }).catch(function(){});
+  }
 }
 
 // ════════════════════════════════════════════════════════════
