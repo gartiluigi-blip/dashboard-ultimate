@@ -1488,7 +1488,7 @@ Bachelor dev en septembre. Bilingue NL+FR d'ici 2 ans. Corps robuste malgré la 
 
 <div class="stats stats-3">
 <button aria-label="Action" class="stat" data-go="sport" style="cursor:pointer"><div class="stat-v flame" style="font-size:22px">💪</div><div class="stat-l">Séance du jour</div></button>
-<button aria-label="Action" class="stat" data-go="nutrition" style="cursor:pointer"><div class="stat-v amber" style="font-size:22px">🍳</div><div class="stat-l">Mes 6 repas</div></button>
+<button aria-label="Action" class="stat" data-go="nutrition" style="cursor:pointer"><div class="stat-v amber" style="font-size:22px">🥩</div><div class="stat-l">Nutrition</div></button>
 <button aria-label="Action" class="stat" data-go="stats" style="cursor:pointer"><div class="stat-v jade" style="font-size:22px">📊</div><div class="stat-l">Mes stats</div></button>
 </div>
 
@@ -1960,7 +1960,7 @@ Si t'as de la fièvre, douleurs fortes, ou t'es vraiment KO : <strong>protocole 
 <div class="card-title"><h3>Dimanche · Repos actif</h3><span class="badge badge-ghost">70 min</span></div>
 <ul class="dlist">
 <li><span class="k">Marche ou vélo doux</span><span class="v">30 min</span></li>
-<li><span class="k">Stretch LONG full body (voir section Mobilité · Souplesse)</span><span class="v">25 min</span></li>
+<li><span class="k">Stretch LONG full body (voir onglet Souplesse)</span><span class="v">25 min</span></li>
 <li><span class="k">Foam roll + auto-massage</span><span class="v">15 min</span></li>
 </ul>
 </div>
@@ -1973,7 +1973,7 @@ Si t'as de la fièvre, douleurs fortes, ou t'es vraiment KO : <strong>protocole 
 <h2 class="section-title violet">🧘 Mobilité · <em>Souplesse</em></h2>
 <div class="callout callout-note" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
   <span>Tracker de mesures, programme niveau 0→3, routines quotidiennes.</span>
-  <button type="button" onclick="(function(){var t=document.querySelector('.tab[data-tab=flex]');if(t){t.style.display='';t.click();}})()" style="min-height:38px;padding:8px 16px;border-radius:12px;border:1px solid rgba(167,139,250,.45);background:rgba(167,139,250,.15);color:#ddd6fe;font:900 12px system-ui;cursor:pointer;white-space:nowrap">Voir Souplesse →</button>
+  <button type="button" onclick="(function(){ var t=document.querySelector('.tab[data-tab=flex]'); if(t){ t.style.display=''; t.click(); } })()" style="min-height:38px;padding:8px 16px;border-radius:12px;border:1px solid rgba(167,139,250,.45);background:rgba(167,139,250,.15);color:#ddd6fe;font:900 12px system-ui;cursor:pointer;white-space:nowrap">Voir Souplesse →</button>
 </div>
 
 </section>
@@ -2173,7 +2173,7 @@ Si t'as de la fièvre, douleurs fortes, ou t'es vraiment KO : <strong>protocole 
 <section class="page" id="p-nutrition">
 <div class="page-kicker">Carburant</div>
 <h1 class="page-title">Nutrition · <em>Protéines + Eau</em></h1>
-<p class="page-lead">Deux métriques qui comptent : protéines et hydratation. Le reste, tu le sais déjà — mange bien, mange varié.</p>
+<p class="page-lead">Deux métriques qui comptent : protéines et hydratation. Le reste suit naturellement.</p>
 
 <div class="stats stats-2">
 <div class="stat"><div class="stat-v flame mono">180g</div><div class="stat-l">Protéines / jour</div></div>
@@ -2212,22 +2212,25 @@ Si t'as de la fièvre, douleurs fortes, ou t'es vraiment KO : <strong>protocole 
   if (window.__nutrTrackerBound) return;
   window.__nutrTrackerBound = true;
   const todayKey = () => new Date().toISOString().slice(0,10);
-  const NS = 'dashv2_nutr_';
-  const getD = () => JSON.parse(localStorage.getItem(NS + todayKey()) || '{"prot":0,"water":0}');
-  const saveD = d => localStorage.setItem(NS + todayKey(), JSON.stringify(d));
+  const NS2 = 'dashv2_nutr_';
+  const getD = () => { try { return JSON.parse(localStorage.getItem(NS2 + todayKey()) || '{}'); } catch(_){ return {}; } };
+  const saveD = d => { try { localStorage.setItem(NS2 + todayKey(), JSON.stringify(d)); } catch(_){} };
 
-  function renderProt(d){
-    const pct = Math.min(100, Math.round(d.prot / 180 * 100));
+  function renderProt(){
+    const d = getD();
+    const val = d.prot || 0;
+    const pct = Math.min(100, Math.round(val / 180 * 100));
     const bar = document.getElementById('nutr-prot-bar');
     const lbl = document.getElementById('nutr-prot-label');
     const inp = document.getElementById('nutr-prot-input');
     if (bar) bar.style.width = pct + '%';
-    if (lbl) lbl.textContent = d.prot + ' / 180g (' + pct + '%)';
-    if (inp) inp.value = d.prot || '';
+    if (lbl) lbl.textContent = val + ' / 180g (' + pct + '%)';
+    if (inp && document.activeElement !== inp) inp.value = val || '';
   }
 
-  function renderWater(d){
-    const cups = d.water;
+  function renderWater(){
+    const d = getD();
+    const cups = d.water || 0;
     const target = 12;
     const pct = Math.min(100, Math.round(cups / target * 100));
     const bar = document.getElementById('nutr-water-bar');
@@ -2235,40 +2238,52 @@ Si t'as de la fièvre, douleurs fortes, ou t'es vraiment KO : <strong>protocole 
     const wrap = document.getElementById('nutr-water-cups');
     if (bar) bar.style.width = pct + '%';
     if (lbl) lbl.textContent = cups + ' / ' + target + ' verres (' + (cups * 250 / 1000).toFixed(2) + 'L)';
-    if (wrap){
-      wrap.innerHTML = '';
-      for (let i = 0; i < target; i++){
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.textContent = i < cups ? '💧' : '○';
-        btn.title = (i+1) * 250 + 'ml';
-        btn.style.cssText = 'width:38px;height:38px;border-radius:10px;border:1px solid rgba(56,189,248,' + (i < cups ? '.5' : '.2') + ');background:rgba(56,189,248,' + (i < cups ? '.18' : '.04') + ');font-size:18px;cursor:pointer;';
-        btn.onclick = () => { const nd = getD(); nd.water = i < cups ? i : i + 1; saveD(nd); renderWater(nd); };
-        wrap.appendChild(btn);
+    if (wrap && !wrap._bound){
+      wrap._bound = true;
+      function buildCups(c){
+        wrap.innerHTML = '';
+        for (let i = 0; i < target; i++){
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.textContent = i < c ? '💧' : '○';
+          btn.title = (i+1) * 250 + 'ml';
+          btn.style.cssText = 'width:38px;height:38px;border-radius:10px;border:1px solid rgba(56,189,248,' + (i < c ? '.5' : '.2') + ');background:rgba(56,189,248,' + (i < c ? '.18' : '.04') + ');font-size:18px;cursor:pointer;';
+          (function(idx){ btn.onclick = function(){
+            var nd = getD(); nd.water = (idx < (nd.water||0)) ? idx : idx + 1;
+            saveD(nd); buildCups(nd.water || 0);
+            var b2 = document.getElementById('nutr-water-bar');
+            var l2 = document.getElementById('nutr-water-label');
+            var p2 = Math.min(100, Math.round((nd.water||0) / target * 100));
+            if(b2) b2.style.width = p2 + '%';
+            if(l2) l2.textContent = (nd.water||0) + ' / ' + target + ' verres (' + ((nd.water||0) * 250 / 1000).toFixed(2) + 'L)';
+          }; })(i);
+          wrap.appendChild(btn);
+        }
       }
+      buildCups(cups);
     }
   }
 
   function init(){
-    const d = getD();
-    renderProt(d);
-    renderWater(d);
+    renderProt();
+    renderWater();
     const saveBtn = document.getElementById('nutr-prot-save');
-    if (saveBtn && !saveBtn.dataset.b){
-      saveBtn.dataset.b = '1';
-      saveBtn.addEventListener('click', () => {
+    if (saveBtn && !saveBtn._bound){
+      saveBtn._bound = true;
+      saveBtn.addEventListener('click', function(){
         const inp = document.getElementById('nutr-prot-input');
         const val = parseInt(inp ? inp.value : 0) || 0;
-        const nd = getD(); nd.prot = val; saveD(nd); renderProt(nd);
+        const nd = getD(); nd.prot = val; saveD(nd); renderProt();
       });
     }
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
-  else init();
-  document.addEventListener('click', e => {
-    if (e.target && e.target.closest && e.target.closest('[data-tab="nutrition"]')) setTimeout(init, 80);
-  });
+  if (document.readyState !== 'loading') init();
+  else document.addEventListener('DOMContentLoaded', init);
+
+  document.addEventListener('click', function(e){
+    if (e.target && e.target.closest && e.target.closest('.tab[data-tab="nutrition"]')) setTimeout(function(){ window.__nutrTrackerBound = false; init(); }, 80);
+  }, true);
 })();
 </script>
 
@@ -9143,7 +9158,6 @@ window.__UD_ROUTINE_CHECKIN_ENGINE_V1__ = true;
         block({ id:'mal_ia', title:'IA / cours', start:'15:00', end:'15:40', module:'ia', objective:'concept + point de reprise' }),
         block({ id:'mal_vinted', title:'Vinted', start:'15:50', end:'16:35', module:'vinted', objective:'photos / listing / suivi' }),
         block({ id:'mal_lecture', title:'Lecture', start:'17:00', end:'17:35', module:'lecture', objective:'pages + idée clé' }),
-        block({ id:'mal_trading', title:'Trading light', start:'18:00', end:'18:30', module:'trading', objective:'lecture/replay/journal · pas de live', note:'30 min max' }),
         block({ id:'mal_r5', title:'Dîner', start:'18:30', end:'19:15', module:'nutrition', fixed:true, objective:'repas stable' })
       ],
       '5h30': [
@@ -9164,14 +9178,13 @@ window.__UD_ROUTINE_CHECKIN_ENGINE_V1__ = true;
         block({ id:'s7_epfc', title:'EPFC théorie', start:'08:30', end:'09:10', module:'epfc' }),
         block({ id:'s7_work', title:'Travail', start:'09:30', end:'18:00', module:'boulot', fixed:true }),
         block({ id:'s7_code', title:'Coding practice', start:'18:30', end:'19:10', module:'coding' }),
-        block({ id:'s7_trading', title:'Trading · backtest / journal', start:'19:45', end:'20:30', module:'trading', objective:'45 min max · NY close' }),
         block({ id:'s7_nl', title:'NL léger', start:'20:35', end:'21:00', module:'nl' }),
         block({ id:'s7_lecture', title:'Lecture', start:'21:00', end:'21:25', module:'lecture' })
       ],
       '11h': [
         block({ id:'s11_r1', title:'Réveil + R1', start:'07:30', end:'08:00', module:'nutrition', fixed:true }),
         block({ id:'s11_epfc', title:'EPFC deep', start:'08:00', end:'09:00', module:'epfc' }),
-        block({ id:'s11_trading', title:'Trading · backtest / replay', start:'09:30', end:'10:15', module:'trading', objective:'45 min max' }),
+        block({ id:'s11_code2', title:'Coding practice', start:'09:30', end:'10:15', module:'coding', objective:'exercice EPFC · Python / SQL / Web' }),
         block({ id:'s11_code', title:'Coding practice', start:'10:15', end:'10:55', module:'coding' }),
         block({ id:'s11_work', title:'Travail', start:'11:00', end:'19:30', module:'boulot', fixed:true }),
         block({ id:'s11_souplesse', title:'Souplesse courte', start:'19:45', end:'20:05', module:'souplesse' }),
@@ -9181,7 +9194,7 @@ window.__UD_ROUTINE_CHECKIN_ENGINE_V1__ = true;
       '13h30': [
         block({ id:'s13_r1', title:'Réveil + R1', start:'07:30', end:'08:00', module:'nutrition', fixed:true }),
         block({ id:'s13_epfc', title:'EPFC deep', start:'08:00', end:'09:00', module:'epfc' }),
-        block({ id:'s13_trading', title:'Trading · backtest / replay', start:'09:30', end:'10:30', module:'trading', objective:'60 min max' }),
+        block({ id:'s13_code2', title:'Coding practice', start:'09:30', end:'10:30', module:'coding', objective:'exercice EPFC · Python / SQL / Web' }),
         block({ id:'s13_code', title:'Coding practice', start:'10:35', end:'11:20', module:'coding' }),
         block({ id:'s13_nl', title:'NL', start:'11:25', end:'12:00', module:'nl' }),
         block({ id:'s13_r3', title:'Déjeuner', start:'12:00', end:'12:45', module:'nutrition', fixed:true }),
@@ -9196,7 +9209,6 @@ window.__UD_ROUTINE_CHECKIN_ENGINE_V1__ = true;
         block({ id:'we_souplesse', title:'Souplesse mesures', start:'13:00', end:'13:25', module:'souplesse', objective:'mesures si jour prévu' }),
         block({ id:'we_vinted', title:'Vinted batch', start:'15:00', end:'16:00', module:'vinted' }),
         block({ id:'we_nl', title:'NL', start:'16:15', end:'17:00', module:'nl' }),
-        block({ id:'we_trading', title:'Trading review · journal + backtest', start:'18:00', end:'19:00', module:'trading', objective:'review hebdo · pas de live' }),
         block({ id:'we_lecture', title:'Lecture', start:'19:30', end:'20:15', module:'lecture' })
       ]
     };
