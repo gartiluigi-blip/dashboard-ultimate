@@ -17,6 +17,15 @@ window.__V80EpfcDisplayFixInstalled = true;
 window.__V78GradeSystemInstalled = true;
 window.__V79FreezeGuardBypassedByFinal = true;
 
+/* KILL CHAIN: dashboard-final.js loads dashboard-clean.js which overwrites
+   the trading tab to combined "Réparation / IoT", rewrites #p-trading
+   innerHTML, and hides #p-nutrition. Stub both with disabled flags so they
+   no-op even if loaded by any other script. */
+window.DashboardFinal = { version: 'disabled-by-early-stub', run: function(){} };
+window.DashboardClean = { version: 'clean-3', run: function(){} };
+window.DashboardCleanStatus = { version: 'clean-3', status: { disabled: true }, runAt: new Date().toISOString() };
+window.DashboardFinalStatus = { version: 'disabled-by-early-stub', clean: false, runAt: new Date().toISOString() };
+
 (function(){
   'use strict';
   if (window.__DashboardFinalLoader) return;
@@ -91,13 +100,17 @@ window.__V79FreezeGuardBypassedByFinal = true;
   }
 
   function boot(){
-    window.UDFinalCleanup = { version:'disabled', run:function(){} };
+    /* Stubs use the EXACT version strings each legacy file checks in its
+       IIFE guard, so the guard triggers and the body never runs even if
+       the file is loaded from a stale PWA / SW cache. */
+    window.UDFinalCleanup = { version:'v1', run:function(){} };
     window.UDFinalCleanupV2 = { version:'disabled', run:function(){} };
     window.UDForceUIV3 = { version:'disabled', run:function(){} };
     window.UDForceUIV4 = { version:'disabled', run:function(){} };
-    window.UDEtudesTracker = { version:'disabled', render:function(){} };
+    window.UDEtudesTracker = { version:'epfc-study-v1', render:function(){} };
     loadScript('ud-core-html-runtime', '/assets/core/html.js?v=' + VERSION, 'html', runAll);
-    loadScript('dashboard-final-runtime', '/assets/core/dashboard-final.js?v=' + VERSION, 'dashboardFinal', runAll);
+    /* DISABLED: dashboard-final.js loads dashboard-clean.js which overrides UI.
+       loadScript('dashboard-final-runtime', '/assets/core/dashboard-final.js?v=' + VERSION, 'dashboardFinal', runAll); */
     setTimeout(runAll, 500);
     setTimeout(runAll, 1500);
     setTimeout(runAll, 3000);
