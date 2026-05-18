@@ -186,7 +186,7 @@
 <div class="brand-text">
 <div class="brand-title">Protocole <em class="serif">Ultimate</em></div>
 <div class="brand-sub" id="brand-sub">Chargement…</div>
-<div style="font:900 10px ui-monospace,monospace;color:#22c55e;margin-top:2px;letter-spacing:.04em">v2026-05-18-v7 · surgery-clean · ✓</div>
+<div style="font:900 10px ui-monospace,monospace;color:#22c55e;margin-top:2px;letter-spacing:.04em">v2026-05-18-v8 · purge-complete · ✓</div>
 </div>
 </div>
 <div class="masthead-meta" id="meta">
@@ -1180,11 +1180,6 @@ Si t'as de la fièvre, douleurs fortes, ou t'es vraiment KO : <strong>protocole 
 <strong>Tracker intégré</strong> · chaque jour d'entraînement a désormais son propre tracker de sets/reps/poids. Les sessions précédentes sont rappelées en regard (↗ tu montes, ↘ tu baisses). La règle : <em>charge ou reps augmente d'une semaine à l'autre</em>. Si 3 semaines tu stagnes sur un exo = deload (50% poids, même séries). Puis relance. Hevy reste une alternative si tu veux pousser les analyses au-delà.
 </div>
 
-<h2 class="section-title violet">🧘 Mobilité · <em>Souplesse</em></h2>
-<div class="callout callout-note" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
-  <span>Tracker de mesures, programme niveau 0→3, routines quotidiennes.</span>
-  <button type="button" onclick="(function(){ var t=document.querySelector('.tab[data-tab=flex]'); if(t){ t.style.display=''; t.click(); } })()" style="min-height:38px;padding:8px 16px;border-radius:12px;border:1px solid rgba(167,139,250,.45);background:rgba(167,139,250,.15);color:#ddd6fe;font:900 12px system-ui;cursor:pointer;white-space:nowrap">Voir Souplesse →</button>
-</div>
 
 </section>
 
@@ -1652,9 +1647,6 @@ Si t'as de la fièvre, douleurs fortes, ou t'es vraiment KO : <strong>protocole 
 
 <div class="callout callout-focus"><strong>Règle :</strong> chaque session produit une mesure réelle ou un composant identifié. Sans preuve physique, la session ne compte pas.</div>
 
-<h2 class="section-title flame">📚 Livres · <em>progression</em></h2>
-<div id="repair-books-host"></div>
-
 <h2 class="section-title jade">🧪 Labs REP0–REP3</h2>
 <div class="card"><ul class="dlist">
   <li><span class="k"><strong>REP0</strong> — Sécurité + matériel</span><span class="v pos">actif</span><div class="note">EPI, composants de base, identification résistances, condensateurs. 1 séance.</div></li>
@@ -1670,56 +1662,7 @@ Si t'as de la fièvre, douleurs fortes, ou t'es vraiment KO : <strong>protocole 
   <li><span class="k">Passive Components for Circuit Design</span><span class="v">Ian Hickman</span><div class="note">Résistances, condensateurs, inductances. Référence technique.</div></li>
 </ul></div>
 
-<script>
-(function(){
-  'use strict';
-  if (window.__repairBooksInit) return;
-  window.__repairBooksInit = true;
-  var NS = 'dashv2_repair_';
-  var BOOKS = [
-    { id:'geier', title:'How to Diagnose and Fix Everything Electronic', author:'Michael Jay Geier', total:416, unit:'pages' },
-    { id:'platt', title:'Make: Electronics', author:'Charles Platt', total:325, unit:'pages' },
-    { id:'davidson', title:'Troubleshooting Electronic Circuits', author:'Homer Davidson', total:384, unit:'pages' },
-    { id:'hickman', title:'Passive Components for Circuit Design', author:'Ian Hickman', total:300, unit:'pages' }
-  ];
-  function get(id){ try{ return parseInt(localStorage.getItem(NS+id)||'0',10)||0; }catch(e){ return 0; } }
-  function set(id,v){ try{ localStorage.setItem(NS+id,String(v)); }catch(e){} }
-  function pct(done,total){ return Math.min(100,Math.round(done/Math.max(1,total)*100)); }
-  function render(){
-    var host = document.getElementById('repair-books-host');
-    if (!host) return;
-    var html = '<div style="display:grid;gap:10px">';
-    BOOKS.forEach(function(b){
-      var done=get(b.id), p=pct(done,b.total);
-      html += '<div class="card" style="padding:12px">';
-      html += '<b style="display:block;margin-bottom:4px">'+b.title+'</b>';
-      html += '<span style="font:700 11px var(--f-mono,monospace);color:#94a3b8">'+b.author+' · '+b.unit+'</span>';
-      html += '<div style="height:7px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.08);margin:8px 0">';
-      html += '<div style="height:100%;border-radius:999px;background:linear-gradient(90deg,#fb923c,#f59e0b);width:'+p+'%"></div></div>';
-      html += '<span style="font:800 11px var(--f-mono,monospace);color:#94a3b8">'+done+' / '+b.total+' '+b.unit+' ('+p+'%)</span>';
-      html += ' <button type="button" data-repair-id="'+b.id+'" data-repair-step="10" style="margin-left:6px;padding:4px 10px;border-radius:8px;border:none;background:rgba(251,146,60,.18);color:#fb923c;font:900 11px system-ui;cursor:pointer">+10</button>';
-      html += ' <button type="button" data-repair-id="'+b.id+'" data-repair-step="25" style="margin-left:4px;padding:4px 10px;border-radius:8px;border:none;background:rgba(251,146,60,.18);color:#fb923c;font:900 11px system-ui;cursor:pointer">+25</button>';
-      html += '</div>';
-    });
-    html += '</div>';
-    host.innerHTML = html;
-  }
-  document.addEventListener('click', function(e){
-    var btn = e.target.closest('[data-repair-id]');
-    if (!btn) return;
-    e.preventDefault();
-    var id=btn.getAttribute('data-repair-id'), step=parseInt(btn.getAttribute('data-repair-step'),10)||10;
-    var book=BOOKS.find(function(b){ return b.id===id; });
-    if (!book) return;
-    var done=Math.min(book.total, get(id)+step);
-    set(id,done);
-    render();
-  }, true);
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',render,{once:true});
-  else render();
-  setTimeout(render,300);
-})();
-</script>
+
 </section>
 
 <section class="page" id="p-settings" data-page="settings">
