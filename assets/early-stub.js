@@ -1,6 +1,4 @@
-/* CRITICAL: stub Notification AVANT tout autre script.
-   Sans ça, Brave/Firefox privé crash à la ligne 6301
-   et l'app entière ne se charge pas. */
+/* CRITICAL: stub Notification AVANT tout autre script. */
 window.__earlyStub = true;
 if (typeof window.Notification === 'undefined') {
   window.Notification = function(){};
@@ -10,53 +8,44 @@ if (typeof window.Notification === 'undefined') {
 
 (function(){
   'use strict';
-  if (window.__UDRuntimePatchLoader) return;
-  window.__UDRuntimePatchLoader = true;
+  if (window.__DashboardFinalLoader) return;
+  window.__DashboardFinalLoader = true;
 
-  var VERSION = '20260518-10';
+  var VERSION = '20260518-final-2';
   var debugMode = /[?&]uddebug=1\b/.test(location.search);
   var loadStatus = {};
 
   function loadScript(id, src, key, onload){
-    var existing = document.getElementById(id);
-    if (existing) {
-      loadStatus[key] = 'existing';
-      return;
-    }
+    if (document.getElementById(id)) { loadStatus[key] = 'existing'; return; }
     var script = document.createElement('script');
     script.id = id;
     script.src = src;
     script.defer = true;
     script.onload = function(){ loadStatus[key] = 'loaded'; if (onload) onload(); renderDebug(); };
-    script.onerror = function(){ loadStatus[key] = 'error'; console.warn('[UDRuntimePatchLoader] failed:', src); renderDebug(); };
+    script.onerror = function(){ loadStatus[key] = 'error'; renderDebug(); };
     loadStatus[key] = 'loading';
     (document.head || document.documentElement).appendChild(script);
   }
 
-  function runtimeSnapshot(){
+  function snapshot(){
     return {
-      version: 'early-loader-' + VERSION,
-      htmlJsLoaded: !!window.UDHtml,
-      etudes: !!window.UDEtudesTracker,
-      etudesVersion: window.UDEtudesTracker && window.UDEtudesTracker.version,
-      cleanup: !!window.UDFinalCleanup,
-      cleanupV2: !!window.UDFinalCleanupV2,
-      forceV3: !!window.UDForceUIV3,
-      forceV3Status: window.UDForceUIV3Status || null,
-      forceV4: !!window.UDForceUIV4,
-      forceV4Status: window.UDForceUIV4Status || null,
-      study: !!window.__studyTracker,
+      version: 'final-loader-' + VERSION,
+      htmlHelper: !!window.UDHtml,
+      dashboardFinal: !!window.DashboardFinal,
+      dashboardFinalStatus: window.DashboardFinalStatus || null,
+      disabledLegacy: true,
+      loadStatus: loadStatus,
       pages: {
         home: !!document.getElementById('p-home'),
         routine: !!document.getElementById('p-routine'),
         epfc: !!document.getElementById('p-epfc'),
+        plan: !!document.getElementById('p-plan'),
         code: !!document.getElementById('p-code'),
+        repair: !!document.getElementById('p-trading'),
         nl: !!document.getElementById('p-nl'),
         sport: !!document.getElementById('p-sport'),
-        chess: !!document.getElementById('p-chess'),
-        repair: !!(document.getElementById('p-trading') || document.querySelector('[data-page="trading"]'))
+        chess: !!document.getElementById('p-chess')
       },
-      loadStatus: loadStatus,
       runAt: new Date().toISOString()
     };
   }
@@ -70,46 +59,32 @@ if (typeof window.Notification === 'undefined') {
       panel.style.cssText = 'position:fixed;left:8px;right:8px;bottom:8px;z-index:999999;max-height:45vh;overflow:auto;background:#020617;color:#bbf7d0;border:1px solid #22c55e;border-radius:12px;padding:10px;font:11px ui-monospace,monospace;white-space:pre-wrap;box-shadow:0 10px 30px rgba(0,0,0,.45)';
       document.body.appendChild(panel);
     }
-    try { panel.textContent = JSON.stringify(runtimeSnapshot(), null, 2); }
-    catch (_) { panel.textContent = 'debug snapshot failed'; }
+    panel.textContent = JSON.stringify(snapshot(), null, 2);
   }
 
   function runAll(){
-    try {
-      if (window.__studyTracker && window.__studyTracker.render) window.__studyTracker.render();
-      if (window.UDEtudesTracker && window.UDEtudesTracker.render) window.UDEtudesTracker.render();
-      if (window.UDFinalCleanup && window.UDFinalCleanup.run) window.UDFinalCleanup.run();
-      if (window.UDFinalCleanupV2 && window.UDFinalCleanupV2.run) window.UDFinalCleanupV2.run();
-      if (window.UDForceUIV3 && window.UDForceUIV3.run) window.UDForceUIV3.run();
-      if (window.UDForceUIV4 && window.UDForceUIV4.run) window.UDForceUIV4.run();
-      window.UDRuntimeLoaded = runtimeSnapshot();
-      renderDebug();
-    } catch (error) {
-      console.warn('[UDRuntimePatchLoader] runAll failed', error);
-      loadStatus.runAll = 'error: ' + (error && error.message ? error.message : error);
-      renderDebug();
-    }
+    if (window.DashboardFinal && window.DashboardFinal.run) window.DashboardFinal.run();
+    window.UDRuntimeLoaded = snapshot();
+    renderDebug();
   }
 
   function boot(){
+    window.UDFinalCleanup = { version:'disabled', run:function(){} };
+    window.UDFinalCleanupV2 = { version:'disabled', run:function(){} };
+    window.UDForceUIV3 = { version:'disabled', run:function(){} };
+    window.UDForceUIV4 = { version:'disabled', run:function(){} };
+    window.UDEtudesTracker = { version:'disabled', render:function(){} };
     loadScript('ud-core-html-runtime', '/assets/core/html.js?v=' + VERSION, 'html', runAll);
-    loadScript('ud-etudes-v2-direct', '/assets/core/etudes-tracker-v2.js?v=' + VERSION, 'etudesV2', runAll);
-    loadScript('ud-final-cleanup-direct', '/assets/core/final-cleanup.js?v=' + VERSION, 'cleanupV1', runAll);
-    loadScript('ud-final-cleanup-v2-direct', '/assets/core/final-cleanup-v2.js?v=' + VERSION, 'cleanupV2', runAll);
-    loadScript('ud-force-ui-v3-direct', '/assets/core/force-ui-v3.js?v=' + VERSION, 'forceV3', runAll);
-    loadScript('ud-force-ui-v4-direct', '/assets/core/force-ui-v4.js?v=' + VERSION, 'forceV4', runAll);
+    loadScript('dashboard-final-runtime', '/assets/core/dashboard-final.js?v=' + VERSION, 'dashboardFinal', runAll);
     setTimeout(runAll, 500);
     setTimeout(runAll, 1500);
     setTimeout(runAll, 3000);
-    setTimeout(renderDebug, 3500);
-    document.addEventListener('click', function(event){
-      if (event.target && event.target.closest && event.target.closest('.tab,[data-tab],[data-go],button,a')) {
-        setTimeout(runAll, 180);
-      }
+    document.addEventListener('click', function(e){
+      if (e.target && e.target.closest && e.target.closest('.tab,[data-tab],[data-go],button,a')) setTimeout(runAll, 180);
     }, true);
     document.addEventListener('change', function(){ setTimeout(runAll, 180); }, true);
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once:true });
   else boot();
 })();
