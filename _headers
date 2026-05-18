@@ -5,18 +5,29 @@
   X-Robots-Tag: noindex, nofollow, noarchive, noimageindex
   Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), bluetooth=()
   Content-Security-Policy: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; connect-src 'self' https://api.anthropic.com https://api.github.com; img-src 'self' data: blob:; manifest-src 'self' data:; worker-src 'self' blob:; upgrade-insecure-requests
-
-/robots.txt
-  Cache-Control: no-store, no-cache, must-revalidate
-
-/assets/*
-  Cache-Control: no-store, no-cache, must-revalidate
-  Clear-Site-Data: "cache"
-
-/*.html
-  Cache-Control: no-store, no-cache, must-revalidate
-  Clear-Site-Data: "cache"
+  Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0, s-maxage=0
+  Pragma: no-cache
+  Expires: 0
 
 /
-  Cache-Control: no-store, no-cache, must-revalidate
-  Clear-Site-Data: "cache"
+  Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0, s-maxage=0
+  Pragma: no-cache
+  Expires: 0
+
+/index.html
+  Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0, s-maxage=0
+  Pragma: no-cache
+  Expires: 0
+
+/*.html
+  Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0, s-maxage=0
+  Pragma: no-cache
+  Expires: 0
+
+/assets/*
+  Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0, s-maxage=0
+  Pragma: no-cache
+  Expires: 0
+
+/robots.txt
+  Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0, s-maxage=0
