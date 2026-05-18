@@ -217,7 +217,7 @@ body.ud-v54-clean .tl-desc{overflow-wrap:anywhere;word-break:normal;}
 <div class="brand-text">
 <div class="brand-title">Protocole <em class="serif">Ultimate</em></div>
 <div class="brand-sub" id="brand-sub">Chargement…</div>
-<div style="font:900 10px ui-monospace,monospace;color:#22c55e;margin-top:2px;letter-spacing:.04em">v2026-05-18-v4 · surgical-cleanup · ✓</div>
+<div style="font:900 10px ui-monospace,monospace;color:#22c55e;margin-top:2px;letter-spacing:.04em">v2026-05-18-v5 · etudes-unified · ✓</div>
 </div>
 </div>
 <div class="masthead-meta" id="meta">
@@ -327,14 +327,6 @@ body.ud-v54-clean .tl-desc{overflow-wrap:anywhere;word-break:normal;}
   <div class="xp-breakdown" id="xp-breakdown"></div>
 </div>
 
-<h2 class="section-title">Priorités du <em>jour</em></h2>
-<p class="page-lead" style="margin-top:-4px">Les choses à ne pas rater. Coche dès que c'est fait. Tu peux <em>éditer</em> (clic sur le texte), <em>supprimer</em> (✕), ou <em>ajouter</em> en bas.</p>
-
-<div id="prio-list" data-hydrate></div>
-<div class="prio-add">
-<input type="text" id="prio-new-input" placeholder="Nouvelle priorité…" maxlength="120" autocomplete="off">
-<button id="prio-new-btn" type="button">+ Ajouter</button>
-</div>
 
 <h2 class="section-title blue">Pourquoi <em>tu fais ça</em></h2>
 <div class="card card-elevated">
@@ -887,6 +879,62 @@ Bachelor dev en septembre. Bilingue NL+FR d'ici 2 ans. Corps robuste malgré la 
 <button class="shift-chip" data-shift="sw">Weekend</button>
 </div>
 
+<style id="routine-prio-style">
+.rp-grid{display:grid;gap:8px;margin:14px 0}
+.rp-block{border-radius:14px;border:1px solid rgba(148,163,184,.2);background:rgba(15,23,42,.7);padding:12px 14px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:opacity .2s}
+.rp-block.done{opacity:.45;filter:grayscale(.3)}
+.rp-block[data-prio="P0"]{border-color:rgba(239,68,68,.5);background:rgba(239,68,68,.07)}
+.rp-block[data-prio="P1"]{border-color:rgba(249,115,22,.5);background:rgba(249,115,22,.07)}
+.rp-block[data-prio="P2"]{border-color:rgba(59,130,246,.5);background:rgba(59,130,246,.07)}
+.rp-block[data-prio="P3"]{border-color:rgba(34,197,94,.5);background:rgba(34,197,94,.07)}
+.rp-check{width:26px;height:26px;border-radius:8px;border:2px solid rgba(148,163,184,.4);background:transparent;display:grid;place-items:center;font-size:14px;flex-shrink:0;transition:all .15s}
+.rp-block.done .rp-check{background:rgba(34,197,94,.3);border-color:#22c55e;color:#22c55e}
+.rp-tag{font:900 10px system-ui;letter-spacing:.08em;padding:2px 7px;border-radius:99px;flex-shrink:0}
+.rp-block[data-prio="P0"] .rp-tag{background:rgba(239,68,68,.25);color:#fca5a5}
+.rp-block[data-prio="P1"] .rp-tag{background:rgba(249,115,22,.25);color:#fdba74}
+.rp-block[data-prio="P2"] .rp-tag{background:rgba(59,130,246,.25);color:#93c5fd}
+.rp-block[data-prio="P3"] .rp-tag{background:rgba(34,197,94,.25);color:#86efac}
+.rp-text b{display:block;color:#f1f5f9;font:800 14px system-ui}
+.rp-text span{color:#94a3b8;font:600 11px system-ui}
+</style>
+
+<h2 class="section-title" style="margin-top:20px">Blocs <em>priorités · aujourd'hui</em></h2>
+<div class="rp-grid" id="routine-prio-grid">
+  <div class="rp-block" data-prio="P0" data-rp-id="p0_repair"><div class="rp-check">✓</div><span class="rp-tag">P0</span><div class="rp-text"><b>🔧 Réparation / IoT</b><span>Avancer dans le livre ou compléter un lab REP/IOT.</span></div></div>
+  <div class="rp-block" data-prio="P1" data-rp-id="p1_epfc"><div class="rp-check">✓</div><span class="rp-tag">P1</span><div class="rp-text"><b>🎓 EPFC</b><span>Bloc matière du jour · Pomodoro 25/5.</span></div></div>
+  <div class="rp-block" data-prio="P1" data-rp-id="p1_sport"><div class="rp-check">✓</div><span class="rp-tag">P1</span><div class="rp-text"><b>💪 Sport</b><span>Séance PPL ou mobilité selon le cycle.</span></div></div>
+  <div class="rp-block" data-prio="P2" data-rp-id="p2_nl"><div class="rp-check">✓</div><span class="rp-tag">P2</span><div class="rp-text"><b>🇳🇱 Néerlandais</b><span>B2/C1 · Brulingua + Vanzelfsprekend + Anki.</span></div></div>
+  <div class="rp-block" data-prio="P3" data-rp-id="p3_admin"><div class="rp-check">✓</div><span class="rp-tag">P3</span><div class="rp-text"><b>🛍️ Vinted / Admin</b><span>Seulement si P0–P2 sont faits.</span></div></div>
+</div>
+<script>
+(function(){
+  if (window.__rpBlocksInit) return;
+  window.__rpBlocksInit = true;
+  var KEY = 'dashv2_rp_';
+  function todayKey(){ return new Date().toISOString().slice(0,10); }
+  function getD(){ try{ return JSON.parse(localStorage.getItem(KEY+todayKey())||'{}'); }catch(e){ return {}; } }
+  function setD(d){ try{ localStorage.setItem(KEY+todayKey(), JSON.stringify(d)); }catch(e){} }
+  function render(){
+    var d = getD();
+    document.querySelectorAll('[data-rp-id]').forEach(function(el){
+      var id = el.getAttribute('data-rp-id'), done = !!d[id];
+      el.classList.toggle('done', done);
+    });
+  }
+  document.addEventListener('click', function(e){
+    var block = e.target.closest('[data-rp-id]');
+    if (!block) return;
+    var id = block.getAttribute('data-rp-id'), d = getD();
+    d[id] = !d[id];
+    setD(d);
+    render();
+  }, true);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', render, {once:true});
+  else render();
+  setInterval(render, 3000);
+})();
+</script>
+
 <!-- SHIFT MALADIE (défaut actuel) -->
 <div class="shift-view" id="view-sm">
 <div class="callout callout-warn">
@@ -1035,61 +1083,6 @@ Si t'as de la fièvre, douleurs fortes, ou t'es vraiment KO : <strong>protocole 
 <div class="callout callout-rule"><span class="ruletag">Réveil</span>Pas de snooze. Alarme → pieds au sol. Tâche la plus dure en premier. <strong>Jamais 2 jours ratés d'affilée.</strong></div>
 <div class="callout callout-rule"><span class="ruletag">Journal</span>Soir 2 min : 3 wins + 1 amélioration. <strong>Weekly review dim 15 min.</strong> Zéro alcool en semaine.</div>
 
-
-<div class="card" style="margin-top:20px">
-<h2 class="section-title flame" style="margin-bottom:12px">🥩 Protéines + 🚰 Eau · <em>tracker du jour</em></h2>
-<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">
-  <input type="number" id="nutr-prot-input" min="0" max="400" step="5" placeholder="g protéines" inputmode="numeric"
-    style="flex:1;min-width:130px;min-height:44px;border-radius:12px;border:1px solid rgba(148,163,184,.35);background:#020617;color:#e5e7eb;padding:8px 12px;font:800 14px system-ui">
-  <button type="button" id="nutr-prot-save"
-    style="min-height:44px;padding:8px 16px;border-radius:12px;border:none;background:linear-gradient(135deg,#fb923c,#f59e0b);color:#0a0a10;font:900 13px system-ui;cursor:pointer">Enregistrer</button>
-</div>
-<div id="nutr-prot-bar-wrap" style="height:8px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.08);margin-bottom:4px">
-  <div id="nutr-prot-bar" style="height:100%;border-radius:999px;background:linear-gradient(90deg,#fb923c,#f59e0b);transition:width .3s;width:0%"></div>
-</div>
-<div id="nutr-prot-label" style="font:800 11px var(--f-mono,monospace);color:#94a3b8;margin-bottom:12px">0 / 180g</div>
-<div id="nutr-water-cups" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px"></div>
-<div id="nutr-water-bar-wrap" style="height:8px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.08);margin-bottom:4px">
-  <div id="nutr-water-bar" style="height:100%;border-radius:999px;background:linear-gradient(90deg,#38bdf8,#818cf8);transition:width .3s;width:0%"></div>
-</div>
-<div id="nutr-water-label" style="font:800 11px var(--f-mono,monospace);color:#94a3b8">0 / 12 verres (3L)</div>
-</div>
-<script>
-(function(){
-  if (window.__nutrTrackerBound) return;
-  window.__nutrTrackerBound = true;
-  const todayKey = () => new Date().toISOString().slice(0,10);
-  const NS2 = 'dashv2_nutr_';
-  const getD = () => { try { return JSON.parse(localStorage.getItem(NS2 + todayKey()) || '{}'); } catch(_){ return {}; } };
-  const saveD = d => { try { localStorage.setItem(NS2 + todayKey(), JSON.stringify(d)); } catch(_){} };
-  function renderProt(){
-    const d = getD(), val = d.prot || 0, pct = Math.min(100, Math.round(val/180*100));
-    const bar = document.getElementById('nutr-prot-bar'), lbl = document.getElementById('nutr-prot-label'), inp = document.getElementById('nutr-prot-input');
-    if (bar) bar.style.width = pct + '%';
-    if (lbl) lbl.textContent = val + ' / 180g (' + pct + '%)';
-    if (inp && document.activeElement !== inp) inp.value = val || '';
-  }
-  function renderWater(){
-    const d = getD(), cups = d.water || 0, pct = Math.min(100, Math.round(cups/12*100));
-    const wrap = document.getElementById('nutr-water-cups'), bar = document.getElementById('nutr-water-bar'), lbl = document.getElementById('nutr-water-label');
-    if (wrap){ wrap.innerHTML = '';
-      for(let i=0;i<12;i++){const b=document.createElement('button');b.type='button';b.textContent='💧';b.style.cssText='min-width:36px;min-height:36px;border-radius:10px;border:1px solid '+(i<cups?'rgba(56,189,248,.6)':'rgba(148,163,184,.2)')+';background:'+(i<cups?'rgba(56,189,248,.12)':'transparent')+';font-size:16px;cursor:pointer';b.dataset.cup=i+1;wrap.appendChild(b);}
-    }
-    if (bar) bar.style.width = pct + '%';
-    if (lbl) lbl.textContent = cups + ' / 12 verres (3L)';
-  }
-  function init(){ renderProt(); renderWater(); }
-  document.addEventListener('click', e => {
-    const save = e.target.closest('#nutr-prot-save');
-    if(save){ const d=getD(); const inp=document.getElementById('nutr-prot-input'); d.prot=parseInt(inp&&inp.value)||0; saveD(d); renderProt(); return; }
-    const cup = e.target.closest('[data-cup]');
-    if(cup){ const d=getD(); d.water=parseInt(cup.dataset.cup); saveD(d); renderWater(); }
-  }, true);
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init, {once:true});
-  else init();
-  setTimeout(init, 600);
-})();
-</script>
 </section>
 
 
@@ -5208,7 +5201,7 @@ const Cmd = {
   try { localStorage.removeItem('dashv2_hidden_tabs'); } catch(_){}
   document.querySelectorAll('.tab[data-tab]').forEach(t => { t.style.removeProperty('display'); });
 })();
-window.__DEPLOY_MARKER = '2026-05-18-v4-surgical-cleanup';
+window.__DEPLOY_MARKER = '2026-05-18-v5-etudes-unified';
 
 // ════════════════════════════════════════════════════════════
 // FIX 5 : Patcher Quick Capture pour gérer les commandes vocales
@@ -13835,44 +13828,130 @@ else boot();
 
 
 <style id="study-tracker-css">
-#study-resources-host{margin:0}
-.sr-add-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
-.sr-add-bar select,.sr-add-bar input{flex:1;min-width:80px;background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:8px;padding:8px 10px;font:13px var(--f-sans,sans-serif)}
-.sr-add-bar button{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;border-radius:8px;padding:8px 16px;font:700 12px sans-serif;cursor:pointer;white-space:nowrap;min-height:40px}
-.sr-card{background:#0f172a;border:1px solid #1e293b;border-radius:12px;padding:12px;margin:8px 0;position:relative}
-.sr-card.active{border-color:rgba(99,102,241,.4)}
-.sr-card.completed{border-color:rgba(34,197,94,.35);opacity:.7}
-.sr-card-head{display:flex;align-items:flex-start;gap:8px;margin-bottom:8px}
-.sr-card-icon{font-size:20px;flex-shrink:0}
-.sr-card-meta{flex:1;min-width:0}
-.sr-card-title{font:700 13px var(--f-sans,sans-serif);color:#e2e8f0;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.sr-card-sub{font:11px var(--f-sans,sans-serif);color:#64748b}
-.sr-card-actions{display:flex;gap:4px;flex-shrink:0}
-.sr-btn{background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:6px;padding:4px 8px;font:600 11px sans-serif;cursor:pointer}
-.sr-btn.primary{background:#6366f1;color:#fff;border-color:#6366f1}
-.sr-btn.danger{background:#ef4444;color:#fff;border-color:#ef4444}
-.sr-progress-wrap{height:6px;background:#1e293b;border-radius:3px;overflow:hidden;margin:6px 0}
-.sr-progress-bar{height:100%;border-radius:3px;transition:width .3s;background:linear-gradient(90deg,#6366f1,#22d3ee)}
-.sr-progress-bar.done{background:#22c55e}
-.sr-progress-text{display:flex;justify-content:space-between;font:600 11px var(--f-mono,monospace);color:#64748b}
-.sr-validate-row{display:flex;gap:6px;margin-top:8px;align-items:center}
-.sr-validate-row input{flex:1;background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:6px;padding:6px 10px;font:13px var(--f-mono,monospace)}
-.sr-validate-row button{background:#22c55e;color:#000;border:none;border-radius:6px;padding:6px 12px;font:700 11px sans-serif;cursor:pointer;white-space:nowrap}
-.sr-badge{display:inline-block;font:700 9px var(--f-mono,monospace);padding:2px 6px;border-radius:4px;text-transform:uppercase;margin-left:4px}
-.sr-badge.p0{background:#ef4444;color:#fff}
-.sr-badge.p1{background:#f59e0b;color:#000}
-.sr-badge.p2{background:#6366f1;color:#fff}
-.sr-badge.p3{background:#6b7280;color:#fff}
-.sr-empty{padding:20px;text-align:center;color:#475569;font:13px sans-serif}
-#sr-modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:8000;align-items:center;justify-content:center}
-#sr-modal-bg.open{display:flex}
-#sr-modal{background:#0f172a;border:1px solid #334155;border-radius:16px;padding:20px;width:min(420px,94vw);max-height:85vh;overflow-y:auto}
-#sr-modal h3{font:700 15px sans-serif;color:#e2e8f0;margin-bottom:14px}
-#sr-modal label{display:block;font:600 11px sans-serif;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;margin-top:12px}
-#sr-modal select,#sr-modal input,#sr-modal textarea{width:100%;background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:8px;padding:8px 10px;font:13px var(--f-sans,sans-serif);box-sizing:border-box}
-#sr-modal textarea{min-height:60px;resize:vertical}
-#sr-modal .sr-modal-actions{display:flex;gap:8px;margin-top:16px;justify-content:flex-end}
+.stk-section{margin:20px 0}
+.stk-section-title{font:900 13px system-ui;letter-spacing:.06em;text-transform:uppercase;margin:0 0 10px;padding:6px 10px;border-radius:10px;display:flex;align-items:center;gap:8px}
+.stk-grid{display:grid;gap:8px}
+.stk-book{background:#0f172a;border:1px solid rgba(148,163,184,.18);border-radius:13px;padding:11px 13px}
+.stk-book b{display:block;color:#f1f5f9;font:800 13px system-ui;margin-bottom:2px}
+.stk-book small{color:#64748b;font:600 10px system-ui}
+.stk-bar{height:6px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.07);margin:7px 0}
+.stk-bar i{display:block;height:100%;border-radius:999px;transition:width .3s}
+.stk-meta{font:800 11px var(--f-mono,monospace);color:#94a3b8}
+.stk-btns{margin-top:6px;display:flex;gap:6px;flex-wrap:wrap}
+.stk-btn{padding:4px 11px;border-radius:8px;border:none;font:900 11px system-ui;cursor:pointer}
+.stk-reset{padding:3px 8px;border-radius:7px;border:1px solid rgba(148,163,184,.2);background:transparent;color:#64748b;font:700 10px system-ui;cursor:pointer;margin-left:auto}
 </style>
+<script id="study-tracker-script">
+(function(){
+'use strict';
+if (window.__studyTrackerV2) return;
+window.__studyTrackerV2 = true;
+
+/* ── CATALOGUE ─────────────────────────────────────────────── */
+/* ns = localStorage namespace prefix, id = unique key        */
+var SUBJECTS = [
+  { key:'epfc', label:'🎓 EPFC · O\'Reilly', color:'#22c55e', barColor:'linear-gradient(90deg,#22c55e,#10b981)',
+    books:[
+      { ns:'dashv2_study_', id:'epfc_pcc',  title:'Python Crash Course 3e',                   author:'Eric Matthes',         total:552, unit:'pages' },
+      { ns:'dashv2_study_', id:'epfc_sql',  title:'Learning SQL 3e',                           author:'Alan Beaulieu',        total:376, unit:'pages' },
+      { ns:'dashv2_study_', id:'epfc_hf',   title:'Head First HTML and CSS',                   author:'Freeman & Robson',     total:704, unit:'pages' },
+      { ns:'dashv2_study_', id:'epfc_net',  title:'Network Warrior',                           author:'Gary Donahue',         total:720, unit:'pages' },
+      { ns:'dashv2_study_', id:'epfc_lin',  title:'Linux Pocket Guide',                        author:'Daniel Barrett',       total:320, unit:'pages' },
+      { ns:'dashv2_study_', id:'epfc_map',  title:'Math for Programmers',                      author:'Paul Orland',          total:384, unit:'pages' },
+      { ns:'dashv2_study_', id:'epfc_sta',  title:'Practical Statistics for Data Scientists',  author:'Bruce & Gedeck',       total:368, unit:'pages' },
+    ]
+  },
+  { key:'repair', label:'🔧 Réparation électronique', color:'#fb923c', barColor:'linear-gradient(90deg,#fb923c,#f59e0b)',
+    books:[
+      { ns:'dashv2_repair_', id:'geier',    title:'How to Diagnose and Fix Everything Electronic', author:'Michael Jay Geier', total:416, unit:'pages' },
+      { ns:'dashv2_repair_', id:'platt',    title:'Make: Electronics',                             author:'Charles Platt',     total:325, unit:'pages' },
+      { ns:'dashv2_repair_', id:'davidson', title:'Troubleshooting Electronic Circuits',           author:'Homer Davidson',    total:384, unit:'pages' },
+      { ns:'dashv2_repair_', id:'hickman',  title:'Passive Components for Circuit Design',         author:'Ian Hickman',       total:300, unit:'pages' },
+    ]
+  },
+  { key:'iot', label:'🔌 IoT · Labs', color:'#38bdf8', barColor:'linear-gradient(90deg,#38bdf8,#818cf8)',
+    books:[
+      { ns:'dashv2_iot_', id:'iot_iot0', title:'IOT0 — Électronique de base',    author:'Lab hands-on', total:5,  unit:'labs' },
+      { ns:'dashv2_iot_', id:'iot_iot1', title:'IOT1 — Arduino / microcontrôleur', author:'Lab hands-on', total:8,  unit:'labs' },
+      { ns:'dashv2_iot_', id:'iot_iot2', title:'IOT2 — Capteurs & actionneurs', author:'Lab hands-on', total:8,  unit:'labs' },
+      { ns:'dashv2_iot_', id:'iot_iot3', title:'IOT3 — ESP32 / MQTT / cloud',   author:'Lab hands-on', total:10, unit:'labs' },
+      { ns:'dashv2_iot_', id:'iot_iot4', title:'IOT4 — Raspberry Pi / Node-RED',author:'Lab hands-on', total:10, unit:'labs' },
+    ]
+  },
+  { key:'nl', label:'🇳🇱 Néerlandais B2/C1', color:'#a78bfa', barColor:'linear-gradient(90deg,#a78bfa,#818cf8)',
+    books:[
+      { ns:'dashv2_study_', id:'nl_vanz',  title:'Vanzelfsprekend',                      author:'Coutinho', total:600, unit:'min' },
+      { ns:'dashv2_study_', id:'nl_nn',    title:'Nederlands op niveau',                 author:'Coutinho', total:100, unit:'unités' },
+      { ns:'dashv2_study_', id:'nl_nnp',   title:'Nederlands naar perfectie',            author:'Coutinho', total:100, unit:'unités' },
+      { ns:'dashv2_study_', id:'nl_nbox',  title:'NedBox (fiches)',                      author:'—',        total:300, unit:'min' },
+      { ns:'dashv2_study_', id:'nl_bruli', title:'Brulingua',                            author:'—',        total:600, unit:'min' },
+      { ns:'dashv2_study_', id:'nl_gram',  title:'Grammaire de l\'etudiant neerlandais', author:'—',        total:100, unit:'unités' },
+    ]
+  },
+];
+
+/* ── STORAGE ────────────────────────────────────────────────── */
+function getVal(b){ try{ return parseInt(localStorage.getItem(b.ns+b.id)||'0',10)||0; }catch(e){ return 0; } }
+function setVal(b,v){ try{ localStorage.setItem(b.ns+b.id,String(v)); }catch(e){} }
+function pct(done,total){ return Math.min(100,Math.round(done/Math.max(1,total)*100)); }
+
+/* ── RENDER ─────────────────────────────────────────────────── */
+function renderAll(){
+  var host = document.getElementById('study-resources-host');
+  if (!host) return;
+  var html = '';
+  SUBJECTS.forEach(function(subj){
+    html += '<div class="stk-section">';
+    html += '<div class="stk-section-title" style="background:rgba(0,0,0,.25);color:'+subj.color+'">'+subj.label+'</div>';
+    html += '<div class="stk-grid">';
+    subj.books.forEach(function(b){
+      var done = getVal(b), p = pct(done, b.total), rem = Math.max(0, b.total - done);
+      var step = b.unit==='pages' ? 10 : b.unit==='min' ? 15 : 1;
+      html += '<div class="stk-book">';
+      html += '<b>'+b.title+'</b>';
+      html += '<small>'+b.author+' · '+b.unit+'</small>';
+      html += '<div class="stk-bar"><i style="width:'+p+'%;'+subj.barColor.replace('linear-gradient','background:linear-gradient')+'"></i></div>';
+      html += '<div style="display:flex;align-items:center;gap:8px">';
+      html += '<span class="stk-meta">'+done+' / '+b.total+' '+b.unit+' · '+p+'% · '+rem+' restants</span>';
+      html += '<button class="stk-reset" data-stk-ns="'+b.ns+'" data-stk-id="'+b.id+'" data-stk-action="reset">↺</button>';
+      html += '</div>';
+      html += '<div class="stk-btns">';
+      html += '<button class="stk-btn" data-stk-ns="'+b.ns+'" data-stk-id="'+b.id+'" data-stk-step="'+step+'" style="background:'+subj.color+'22;color:'+subj.color+'">+'+step+' '+b.unit+'</button>';
+      if (b.unit !== 'labs') {
+        html += '<button class="stk-btn" data-stk-ns="'+b.ns+'" data-stk-id="'+b.id+'" data-stk-step="'+(step*3)+'" style="background:'+subj.color+'22;color:'+subj.color+'">+'+(step*3)+' '+b.unit+'</button>';
+      }
+      html += '</div>';
+      html += '</div>';
+    });
+    html += '</div></div>';
+  });
+  host.innerHTML = html;
+}
+
+/* ── EVENTS ─────────────────────────────────────────────────── */
+document.addEventListener('click', function(e){
+  var btn = e.target.closest('[data-stk-id]');
+  if (!btn) return;
+  e.preventDefault();
+  var ns = btn.getAttribute('data-stk-ns'), id = btn.getAttribute('data-stk-id');
+  var subj, book;
+  SUBJECTS.forEach(function(s){ s.books.forEach(function(b){ if(b.ns===ns && b.id===id){ subj=s; book=b; } }); });
+  if (!book) return;
+  var action = btn.getAttribute('data-stk-action');
+  if (action === 'reset'){ if(confirm('Remettre à zéro ?')){ setVal(book,0); renderAll(); } return; }
+  var step = parseInt(btn.getAttribute('data-stk-step'),10)||1;
+  setVal(book, Math.min(book.total, getVal(book)+step));
+  renderAll();
+}, true);
+
+/* ── BOOT ───────────────────────────────────────────────────── */
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', renderAll, {once:true});
+else renderAll();
+document.addEventListener('click', function(e){
+  if (e.target.closest('.tab[data-tab="plan"]')) setTimeout(renderAll, 80);
+}, true);
+})();
+</script>
 
 <div id="sr-modal-bg" role="dialog" aria-modal="true">
   <div id="sr-modal">
@@ -13934,203 +14013,6 @@ else boot();
   </div>
 </div>
 
-<script id="study-tracker-script">
-(function(){
-'use strict';
-if (window.__studyTrackerV1) return;
-window.__studyTrackerV1 = true;
-
-const KEY = 'dashv2_study_resources';
-const SCHEMA_V = 1;
-
-function load(){ try{ return JSON.parse(localStorage.getItem(KEY)||'[]'); }catch(_){ return []; } }
-function save(arr){ try{ localStorage.setItem(KEY, JSON.stringify(arr)); }catch(_){} }
-function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
-
-const DOMAIN_ICONS = { EPFC:'🎓', Code:'💻', Cybersecurity:'🔐', ElectronicsRepair:'🔌', AI:'🤖', Dutch:'🇳🇱', Chess:'♟', Other:'📚' };
-const TYPE_LABELS = { book:'Livre', course:'Cours', lab_path:'Labs', video:'Vidéo', exercise_set:'Exercices', article:'Article' };
-
-function pct(r){ return r.total_units ? Math.min(100, Math.round((r.completed_units/r.total_units)*100)) : 0; }
-function remaining(r){ return Math.max(0, (r.total_units||0) - (r.completed_units||0)); }
-
-function render(){
-  const host = document.getElementById('study-resources-host');
-  if (!host) return;
-  const resources = load();
-
-  // Sort: active first, then by priority P0→P3, then by pct
-  const pOrd = {P0:0,P1:1,P2:2,P3:3};
-  const sorted = [...resources].sort((a,b)=>{
-    if (a.status==='active' && b.status!=='active') return -1;
-    if (b.status==='active' && a.status!=='active') return 1;
-    const pa = pOrd[a.priority_level]??2, pb = pOrd[b.priority_level]??2;
-    if (pa !== pb) return pa - pb;
-    return pct(b) - pct(a);
-  });
-
-  const addBar = `
-    <div class="sr-add-bar">
-      <button id="sr-open-add">+ Ajouter une ressource</button>
-    </div>`;
-
-  if (!sorted.length){
-    host.innerHTML = addBar + '<div class="sr-empty">Aucune ressource. Ajoute des livres, labs ou cours pour suivre ta progression.</div>';
-  } else {
-    const cards = sorted.map(r => {
-      const p = pct(r);
-      const rem = remaining(r);
-      const icon = DOMAIN_ICONS[r.domain] || '📖';
-      const isDone = r.status === 'completed' || p >= 100;
-      const badge = `<span class="sr-badge ${(r.priority_level||'p2').toLowerCase()}">${r.priority_level||'P2'}</span>`;
-      return `
-        <div class="sr-card ${r.status==='active'?'active':''} ${isDone?'completed':''}" data-sr-id="${r.id}">
-          <div class="sr-card-head">
-            <div class="sr-card-icon">${icon}</div>
-            <div class="sr-card-meta">
-              <div class="sr-card-title">${esc(r.title||'?')}${badge}</div>
-              <div class="sr-card-sub">${esc(r.provider||'')} · ${esc(TYPE_LABELS[r.type]||r.type||'')} · ${r.total_units||'?'} ${r.unit_type||''}</div>
-            </div>
-            <div class="sr-card-actions">
-              <button class="sr-btn" data-sr-edit="${r.id}">✏️</button>
-              <button class="sr-btn danger" data-sr-del="${r.id}">🗑</button>
-            </div>
-          </div>
-          <div class="sr-progress-wrap"><div class="sr-progress-bar ${isDone?'done':''}" style="width:${p}%"></div></div>
-          <div class="sr-progress-text">
-            <span>${p}% · ${rem} ${r.unit_type||'unités'} restantes</span>
-            <span>${r.completed_units||0} / ${r.total_units||'?'}</span>
-          </div>
-          ${isDone ? '' : `
-          <div class="sr-validate-row">
-            <input type="number" min="1" max="${rem}" placeholder="+ unités complétées" data-sr-units="${r.id}" inputmode="numeric">
-            <button data-sr-validate="${r.id}">Valider</button>
-          </div>`}
-          ${r.notes ? `<div style="font:11px sans-serif;color:#475569;margin-top:6px;padding-top:6px;border-top:1px solid #1e293b">${esc(r.notes)}</div>` : ''}
-        </div>`;
-    }).join('');
-    host.innerHTML = addBar + cards;
-  }
-
-  // Bind events
-  document.getElementById('sr-open-add')?.addEventListener('click', () => openModal());
-
-  host.querySelectorAll('[data-sr-validate]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const id = btn.dataset.srValidate;
-      const inp = host.querySelector(`[data-sr-units="${id}"]`);
-      const n = parseInt(inp?.value || '0', 10);
-      if (!n || n <= 0) return;
-      const arr = load();
-      const r = arr.find(x => x.id === id);
-      if (!r) return;
-      r.completed_units = Math.min((r.completed_units||0) + n, r.total_units||9999);
-      r.updated_at = new Date().toISOString();
-      r.last_session_at = new Date().toISOString();
-      if (r.completed_units >= (r.total_units||0) && r.total_units > 0) r.status = 'completed';
-      else if (r.status === 'not_started') r.status = 'active';
-      save(arr);
-      render();
-    });
-  });
-
-  host.querySelectorAll('[data-sr-del]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      if (!confirm('Supprimer cette ressource ?')) return;
-      const id = btn.dataset.srDel;
-      save(load().filter(x => x.id !== id));
-      render();
-    });
-  });
-
-  host.querySelectorAll('[data-sr-edit]').forEach(btn => {
-    const id = btn.dataset.srEdit;
-    btn.addEventListener('click', () => {
-      const r = load().find(x => x.id === id);
-      if (!r) return;
-      openModal(r);
-    });
-  });
-}
-
-let editingId = null;
-function openModal(r){
-  editingId = r ? r.id : null;
-  const bg = document.getElementById('sr-modal-bg');
-  if (!bg) return;
-  document.getElementById('sr-modal-title').textContent = r ? 'Modifier la ressource' : 'Ajouter une ressource';
-  document.getElementById('sr-f-title').value = r?.title || '';
-  document.getElementById('sr-f-domain').value = r?.domain || 'EPFC';
-  document.getElementById('sr-f-type').value = r?.type || 'book';
-  document.getElementById('sr-f-provider').value = r?.provider || 'OReilly';
-  document.getElementById('sr-f-total').value = r?.total_units || '';
-  document.getElementById('sr-f-unit').value = r?.unit_type || 'pages';
-  document.getElementById('sr-f-prio').value = r?.priority_level || 'P1';
-  document.getElementById('sr-f-notes').value = r?.notes || '';
-  bg.classList.add('open');
-}
-function closeModal(){ document.getElementById('sr-modal-bg')?.classList.remove('open'); editingId = null; }
-
-function saveModal(){
-  const title = document.getElementById('sr-f-title').value.trim();
-  if (!title){ alert('Titre requis'); return; }
-  const total = parseInt(document.getElementById('sr-f-total').value, 10);
-  if (!total || total < 1){ alert('Total unités requis (ex: 416)'); return; }
-  const arr = load();
-  const now = new Date().toISOString();
-  if (editingId){
-    const r = arr.find(x => x.id === editingId);
-    if (!r) return;
-    r.title = title;
-    r.domain = document.getElementById('sr-f-domain').value;
-    r.type = document.getElementById('sr-f-type').value;
-    r.provider = document.getElementById('sr-f-provider').value;
-    r.total_units = total;
-    r.unit_type = document.getElementById('sr-f-unit').value;
-    r.priority_level = document.getElementById('sr-f-prio').value;
-    r.notes = document.getElementById('sr-f-notes').value.trim();
-    r.updated_at = now;
-    r.schema_version = SCHEMA_V;
-  } else {
-    arr.push({
-      id: uid(), schema_version: SCHEMA_V,
-      title, domain: document.getElementById('sr-f-domain').value,
-      type: document.getElementById('sr-f-type').value,
-      provider: document.getElementById('sr-f-provider').value,
-      total_units: total,
-      unit_type: document.getElementById('sr-f-unit').value,
-      completed_units: 0,
-      status: 'not_started',
-      priority_level: document.getElementById('sr-f-prio').value,
-      notes: document.getElementById('sr-f-notes').value.trim(),
-      color: 'blue',
-      created_at: now, updated_at: now, last_session_at: null
-    });
-  }
-  save(arr);
-  closeModal();
-  render();
-}
-
-function esc(s){ const d=document.createElement('div');d.textContent=s||'';return d.innerHTML; }
-
-function boot(){
-  render();
-  document.getElementById('sr-modal-cancel')?.addEventListener('click', closeModal);
-  document.getElementById('sr-modal-save')?.addEventListener('click', saveModal);
-  document.getElementById('sr-modal-bg')?.addEventListener('click', e => { if (e.target.id==='sr-modal-bg') closeModal(); });
-  // Re-render when Plan tab opens
-  document.addEventListener('click', e => {
-    if (e.target.closest('.tab[data-tab="plan"],.bottom-nav-item[data-tab="plan"]'))
-      setTimeout(render, 150);
-  }, true);
-}
-
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, {once:true});
-else boot();
-
-window.__studyTracker = { render, load, save };
-})();
-</script>
 
 </body>
 </html>
