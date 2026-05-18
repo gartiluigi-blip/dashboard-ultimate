@@ -274,6 +274,28 @@ body .ud-hide-final {
   display: none !important;
 }
 
+/* HARD REMOVE: patch-created Reprendre blocks for Réparation / IoT */
+#ud-bookwrap,
+#ud-final-bookmarks,
+#ud-v17-bookmarks,
+#ud-v18-books,
+[data-ud-book],
+[data-final-bookmark],
+.ud-book,
+.ud-final-bookmark,
+.ud-v18-book,
+.ud-v17-bookmark {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  max-height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: 0 !important;
+  overflow: hidden !important;
+}
+
 @media (max-width: 640px) {
   body.ud-performance-mobile * {
     animation-duration: .01ms !important;
