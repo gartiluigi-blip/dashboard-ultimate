@@ -246,49 +246,38 @@ header, .masthead, [class*="masthead"], .app-header, #app-header {
 }
 
 /* 4. TAB BAR */
-#tabs, [role="tablist"], .tab-bar, nav.tabs {
+.tabs-wrap { background: #000 !important; }
+nav.tabs, #tabs {
   background: #000 !important;
-  border-bottom: 2px solid var(--flame) !important;
+  border-bottom: 2px solid #1a1a1a !important;
   overflow-x: auto !important;
   overflow-y: hidden !important;
   scrollbar-width: none !important;
-  white-space: nowrap !important;
+  -ms-overflow-style: none !important;
 }
-#tabs::-webkit-scrollbar,
-[role="tablist"]::-webkit-scrollbar,
-.tab-bar::-webkit-scrollbar {
-  display: none !important;
-}
-#tabs button, #tabs [role="tab"],
-[role="tablist"] button, [role="tablist"] [role="tab"],
-.tab-bar button, .tab-bar [role="tab"] {
+nav.tabs::-webkit-scrollbar, #tabs::-webkit-scrollbar { display: none !important; }
+#tabs .tab, nav.tabs .tab {
   font-family: var(--f-sans, 'Outfit', sans-serif) !important;
   text-transform: uppercase !important;
   font-weight: 800 !important;
-  letter-spacing: .08em !important;
+  letter-spacing: .06em !important;
   font-size: 10px !important;
-  color: #666 !important;
+  color: #555 !important;
   background: transparent !important;
   border: none !important;
   position: relative !important;
-  padding-bottom: 4px !important;
+  padding-bottom: 12px !important;
+  white-space: nowrap !important;
 }
-#tabs button.active, #tabs [role="tab"][aria-selected="true"],
-#tabs button[class*="active"], #tabs [aria-selected="true"],
-[role="tablist"] button.active, [role="tablist"] [aria-selected="true"],
-.tab-bar button.active {
+#tabs .tab.active, nav.tabs .tab.active {
   color: var(--flame) !important;
-  background: transparent !important;
-  border: none !important;
 }
-#tabs button.active::after, #tabs [aria-selected="true"]::after,
-#tabs button[class*="active"]::after,
-[role="tablist"] button.active::after, [role="tablist"] [aria-selected="true"]::after {
+#tabs .tab.active::after, nav.tabs .tab.active::after {
   content: '' !important;
   position: absolute !important;
-  bottom: -2px !important;
-  left: 0 !important;
-  right: 0 !important;
+  bottom: 0 !important;
+  left: 8px !important;
+  right: 8px !important;
   height: 2px !important;
   background: var(--flame) !important;
   display: block !important;
@@ -393,23 +382,35 @@ header, .masthead, [class*="masthead"], .app-header, #app-header {
 }
 
 /* 12. STATS CARDS */
-.stats-card, [class*="stats-card"] {
-  background: #000 !important;
-  border: none !important;
+.stats-card {
+  background: #080808 !important;
+  border: 1px solid rgba(255,255,255,.06) !important;
   border-top: 3px solid var(--flame) !important;
   border-radius: 0 !important;
 }
-.stats-card .value, [class*="stats-card"] .value,
-.stats-card [class*="value"] {
-  font-size: 32px !important;
+.stats-card.jade  { border-top-color: var(--jade)    !important; }
+.stats-card.gold  { border-top-color: var(--gold)    !important; }
+.stats-card.accent{ border-top-color: var(--flame)   !important; }
+.stats-card.coral { border-top-color: var(--coral)   !important; }
+.stats-card.blue  { border-top-color: var(--sapphire)!important; }
+.stats-card-val {
+  font-size: 28px !important;
   font-weight: 900 !important;
+  line-height: 1 !important;
+  color: #fff !important;
 }
-.stats-card .label, [class*="stats-card"] .label,
-.stats-card [class*="label"] {
+.stats-card-lbl {
   text-transform: uppercase !important;
   font-size: 9px !important;
   font-weight: 700 !important;
   letter-spacing: .1em !important;
+  color: var(--text-faint) !important;
+}
+.stats-card-sub {
+  font-size: 9px !important;
+  color: var(--text-ghost) !important;
+  text-transform: uppercase !important;
+  letter-spacing: .06em !important;
 }
 
 /* 13. HEATMAP */
@@ -466,6 +467,105 @@ hr, .divider, [class*="divider"] {
   height: 1px !important;
   background: linear-gradient(90deg, var(--flame) 0%, transparent 100%) !important;
   opacity: .3 !important;
+}
+
+/* 20. RING VALUES — oversized punch */
+.ring-val {
+  font-weight: 900 !important;
+  font-size: 11px !important;
+  color: #fff !important;
+}
+
+/* 21. CALLOUT RULE (non-negotiable rules) — blood red urgent */
+.callout-rule {
+  background: rgba(255,34,68,.05) !important;
+  border-left-color: var(--coral) !important;
+}
+.callout-rule .ruletag {
+  color: var(--coral) !important;
+  font-weight: 900 !important;
+  font-size: 9px !important;
+  letter-spacing: .1em !important;
+  text-transform: uppercase !important;
+}
+
+/* 22. BRAND / MASTHEAD — championship feel */
+.brand { color: #fff !important; font-weight: 900 !important; text-transform: uppercase !important; letter-spacing: .1em !important; }
+.masthead { background: #000 !important; border-bottom: 2px solid var(--flame) !important; }
+
+/* 23. LOG MOOD BUTTONS — sharper */
+.log-mood { gap: 4px !important; }
+.log-mood-btn {
+  border-radius: 2px !important;
+  border: 1px solid rgba(255,255,255,.15) !important;
+  background: transparent !important;
+  transition: border-color .1s, background .1s !important;
+}
+.log-mood-btn:hover, .log-mood-btn.active, .log-mood-btn[data-active] {
+  border-color: var(--flame) !important;
+  background: rgba(255,69,0,.1) !important;
+}
+
+/* 24. NEXT-ACTION CARD — impact style */
+.next-action, #next-action {
+  background: #0c0c10 !important;
+  border-left: 4px solid var(--flame) !important;
+  border-radius: 2px !important;
+}
+
+/* 25. SECTION TITLE COLORS override */
+.section-title.jade   { color: var(--jade)    !important; }
+.section-title.gold   { color: var(--gold)    !important; }
+.section-title.violet { color: var(--violet)  !important; }
+.section-title.coral  { color: var(--coral)   !important; }
+.section-title.amber  { color: var(--amber)   !important; }
+
+/* 26. QUICK-ROW left accent by type */
+.quick-row:nth-child(2) { border-left-color: var(--sapphire) !important; }
+.quick-row:nth-child(3) { border-left-color: var(--gold)     !important; }
+
+/* 27. REVIEW CARDS */
+.review-card, .m-review {
+  background: #0a0a10 !important;
+  border-left: 3px solid var(--gold) !important;
+  border-radius: 2px !important;
+  padding: 14px 14px 10px !important;
+}
+.review-stat {
+  border-bottom: 1px solid rgba(255,255,255,.04) !important;
+}
+.review-stat b { color: var(--gold) !important; font-weight: 900 !important; }
+
+/* 28. ACHIEVEMENT / XP BADGE */
+.xp-badge { background: var(--flame) !important; color: #000 !important; font-weight: 900 !important; }
+
+/* 29. POMO CHIP / SESSION CHIPS */
+.pomo-session-chip {
+  border-radius: 2px !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  letter-spacing: .06em !important;
+}
+
+/* 30. LOG INPUT ROWS — fight card style */
+.log-row-label b {
+  font-weight: 900 !important;
+  font-size: 13px !important;
+  text-transform: uppercase !important;
+  letter-spacing: .04em !important;
+}
+.log-row-label em {
+  font-style: normal !important;
+  font-size: 10px !important;
+  color: var(--text-faint) !important;
+  letter-spacing: .06em !important;
+}
+.log-input {
+  font-weight: 900 !important;
+  font-size: 16px !important;
+  text-align: right !important;
+  color: var(--flame) !important;
+  width: 60px !important;
 }
 </style>
 
