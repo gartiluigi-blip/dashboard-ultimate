@@ -45,44 +45,59 @@
 (function(){
   'use strict';
 
+  function loadScriptOnce(id, src, onload){
+    if (document.getElementById(id)) return;
+    var s = document.createElement('script');
+    s.id = id;
+    s.src = src;
+    s.defer = true;
+    if (onload) s.onload = onload;
+    s.onerror = function(){ console.warn('[runtime] failed to load ' + src); };
+    document.head.appendChild(s);
+  }
+
   function loadEtudesTracker(){
     if (window.UDEtudesTracker && window.UDEtudesTracker.version === 'v2-oreilly-code') return;
-    if (document.getElementById('ud-etudes-tracker-runtime-v2')) return;
     var old = document.getElementById('ud-etudes-tracker-runtime');
     if (old && old.parentNode) old.parentNode.removeChild(old);
-    var s = document.createElement('script');
-    s.id = 'ud-etudes-tracker-runtime-v2';
-    s.src = '/assets/core/etudes-tracker-v2.js?v=20260518-2';
-    s.defer = true;
-    s.onload = function(){
+    loadScriptOnce('ud-etudes-tracker-runtime-v2','/assets/core/etudes-tracker-v2.js?v=20260518-2',function(){
       if (window.UDEtudesTracker && window.UDEtudesTracker.render) window.UDEtudesTracker.render();
-    };
-    s.onerror = function(){ console.warn('[UDEtudesTracker] failed to load v2 runtime'); };
-    document.head.appendChild(s);
+    });
+  }
+
+  function loadFinalCleanup(){
+    loadScriptOnce('ud-final-cleanup-runtime','/assets/core/final-cleanup.js?v=20260518-1',function(){
+      if (window.UDFinalCleanup && window.UDFinalCleanup.run) window.UDFinalCleanup.run();
+    });
   }
 
   function boot(){
     try {
       loadEtudesTracker();
+      loadFinalCleanup();
       window.UDRuntimeDiag = {
-        version: 'diag-2026-05-18-3',
+        version: 'diag-2026-05-18-4',
         host: !!document.getElementById('study-resources-host'),
         study: !!(window.__studyTracker && window.__studyTracker.render),
         etudes: !!(window.UDEtudesTracker && window.UDEtudesTracker.render),
         etudesVersion: window.UDEtudesTracker && window.UDEtudesTracker.version,
+        cleanup: !!(window.UDFinalCleanup && window.UDFinalCleanup.run),
         plan: !!document.getElementById('p-plan'),
         epfc: !!document.getElementById('p-epfc'),
         code: !!document.getElementById('p-code')
       };
       if (window.__studyTracker && window.__studyTracker.render) window.__studyTracker.render();
       if (window.UDEtudesTracker && window.UDEtudesTracker.render) window.UDEtudesTracker.render();
+      if (window.UDFinalCleanup && window.UDFinalCleanup.run) window.UDFinalCleanup.run();
       document.addEventListener('click', function(e){
-        var target = e.target && e.target.closest && e.target.closest('.tab,[data-tab],[data-go]');
+        var target = e.target && e.target.closest && e.target.closest('.tab,[data-tab],[data-go],button,a');
         if (!target) return;
         setTimeout(function(){
           loadEtudesTracker();
+          loadFinalCleanup();
           if (window.__studyTracker && window.__studyTracker.render) window.__studyTracker.render();
           if (window.UDEtudesTracker && window.UDEtudesTracker.render) window.UDEtudesTracker.render();
+          if (window.UDFinalCleanup && window.UDFinalCleanup.run) window.UDFinalCleanup.run();
         }, 150);
       }, true);
     } catch (error) {
