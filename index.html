@@ -902,7 +902,8 @@ body.ud-v54-clean .tl-desc{overflow-wrap:anywhere;word-break:normal;}
 <div class="tab" data-tab="chess">♟️ Échecs</div>
 <div class="tab" data-tab="finance">💰 Finance</div>
 <div class="tab" data-tab="plan">📋 Plan</div>
-<div class="tab" data-tab="trading">🔌 Élec/IoT</div>
+<div class="tab" data-tab="repair">🔧 Réparation</div>
+<div class="tab" data-tab="trading">🔌 IoT</div>
 <div class="tab" data-tab="settings">⚙️</div>
 </nav>
 </div>
@@ -2648,7 +2649,7 @@ Si t'as de la fièvre, douleurs fortes, ou t'es vraiment KO : <strong>protocole 
 
 <section class="page" id="p-trading" data-page="trading">
 <div class="page-kicker">IoT Lab · bonus contrôlé</div>
-<h1 class="page-title">Élec / IoT · <em>matières + labs</em></h1>
+<h1 class="page-title">IoT · <em>labs progressifs</em></h1>
 <p class="page-lead">IoT = application de STO4, SYS4, BNE2, WEB1 et BDD. Ce n’est pas un nouveau front prioritaire. Tu avances par lab : ressource, exercice, preuve.</p>
 
 <div class="callout callout-focus"><strong>Règle :</strong> chaque session IoT doit produire une preuve : schéma, simulation, mesure, code, câblage testé, message MQTT/HTTP, donnée affichée ou blocage précis.</div>
@@ -2676,6 +2677,66 @@ Si t'as de la fièvre, douleurs fortes, ou t'es vraiment KO : <strong>protocole 
   <li><span class="k">Ordre</span><span class="v pos">IOT0 → IOT1 → IOT2</span><div class="note">ESP32/MQTT/Raspberry/TinyML restent parking tant que les bases ne sont pas testées.</div></li>
   <li><span class="k">Preuve standard</span><span class="v info">schéma → code → test → capture</span><div class="note">Sans preuve, la session ne compte pas.</div></li>
 </ul></div>
+</section>
+
+<section class="page" id="p-repair" data-page="repair">
+<div class="page-kicker">Électronique · diagnostic</div>
+<h1 class="page-title">Réparation · <em>diagnostic électronique</em></h1>
+<p class="page-lead">Compétence pratique : diagnostiquer et réparer le matériel électronique. Un livre principal, des labs progressifs, une preuve par session.</p>
+
+<div class="callout callout-focus"><strong>Règle :</strong> chaque session produit une preuve — composant testé, panne identifiée, réparation documentée ou blocage précis noté.</div>
+
+<h2 class="section-title flame">Livre principal · <em>actif</em></h2>
+<div class="card"><ul class="dlist">
+<li><span class="k"><strong>How to Diagnose and Fix Everything Electronic</strong></span><span class="v pos">actif</span><div class="note"><strong>Auteur :</strong> Michael Jay Geier · 2e édition. <strong>Sujet :</strong> méthodologie de diagnostic systématique, outils (multimètre, oscilloscope), composants passifs/actifs, alimentations, circuits imprimés, dépannage audio/vidéo/numérique.<br>
+<div style="margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+<input type="number" id="rep-g-pages" min="0" max="350" placeholder="Pages lues" inputmode="numeric" style="width:90px;min-height:38px;border-radius:10px;border:1px solid rgba(148,163,184,.35);background:#020617;color:#e5e7eb;padding:6px 10px;font:800 13px system-ui">
+<span style="color:#94a3b8;font:700 12px system-ui">/ 350 pages</span>
+<button type="button" id="rep-g-save" style="min-height:38px;padding:6px 16px;border-radius:10px;border:none;background:linear-gradient(135deg,#fb923c,#f59e0b);color:#0a0a10;font:900 12px system-ui;cursor:pointer">Sauver</button>
+</div>
+<div id="rep-g-bar-wrap" style="margin-top:8px;height:8px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.08)"><div id="rep-g-bar" style="height:100%;border-radius:999px;background:linear-gradient(90deg,#fb923c,#f59e0b);transition:width .3s;width:0%"></div></div>
+<div id="rep-g-label" style="margin-top:4px;font:700 11px var(--f-mono,monospace);color:#94a3b8">0 / 350 (0%)</div>
+</div></li>
+</ul></div>
+
+<h2 class="section-title sapphire">Livres O'Reilly complémentaires</h2>
+<div class="card"><ul class="dlist">
+<li><span class="k"><strong>Make: Electronics</strong></span><span class="v warn">parking</span><div class="note">Charles Platt. Composants discrets, circuits, projets pratiques débutant → intermédiaire. Complémente Geier sur la pratique hands-on.</div></li>
+<li><span class="k"><strong>Electronics Cookbook</strong></span><span class="v warn">parking</span><div class="note">Simon Monk. Recettes pratiques : composants, montages, PCB. Utile croisé avec Geier et IOT0.</div></li>
+<li><span class="k"><strong>Code: The Hidden Language of Computer Hardware and Software</strong></span><span class="v warn">parking</span><div class="note">Charles Petzold. Compréhension profonde du matériel, des signaux, de la logique numérique. Lié directement à STO4 et diagnostic système.</div></li>
+<li><span class="k"><strong>Practical Electronics for Inventors</strong></span><span class="v warn">parking fort</span><div class="note">Scherz & Monk. Référence complète composants, circuits, microcontrôleurs, PCB design. Après Geier si besoin d'aller plus loin.</div></li>
+</ul></div>
+
+<h2 class="section-title jade">Labs progressifs</h2>
+<div class="card"><ul class="dlist">
+<li><span class="k"><strong>REP0</strong> — Outils et sécurité</span><span class="v pos">début</span><div class="note">Multimètre : tension, courant, résistance, continuité. Précautions ESD, anti-statique. Identification composants passifs. <strong>Preuve :</strong> mesures sur circuit alimenté, tableau résultats + photo setup.</div></li>
+<li><span class="k"><strong>REP1</strong> — Alimentations</span><span class="v pos">actif</span><div class="note">Régulateurs 7805/LM317, condensateurs de filtrage, détection panne alimentation. <strong>Preuve :</strong> alim testée + mesure tension sortie + schéma.</div></li>
+<li><span class="k"><strong>REP2</strong> — Circuits imprimés</span><span class="v warn">parking</span><div class="note">Lecture schéma, identification traces, reprise de soudure, remplacement composant traversant et CMS basique. <strong>Preuve :</strong> composant remplacé + test avant/après + note.</div></li>
+<li><span class="k"><strong>REP3</strong> — Diagnostic système</span><span class="v warn">parking</span><div class="note">Méthode half-split, isolation de défaut, POST codes, BIOS/UEFI, dépannage séquence démarrage. <strong>Preuve :</strong> dépannage documenté étape par étape.</div></li>
+</ul></div>
+
+<script>
+(function(){
+  if (window.__repTrackerBound) return;
+  window.__repTrackerBound = true;
+  var KEY = 'dashv2_rep_geier_pages';
+  function load(){ try { return parseInt(localStorage.getItem(KEY)||'0',10)||0; } catch(_){ return 0; } }
+  function save(v){ try { localStorage.setItem(KEY,String(v)); } catch(_){} }
+  function render(){
+    var v=load(), pct=Math.min(100,Math.round(v/350*100));
+    var inp=document.getElementById('rep-g-pages'),bar=document.getElementById('rep-g-bar'),lbl=document.getElementById('rep-g-label');
+    if(inp&&document.activeElement!==inp) inp.value=v||'';
+    if(bar) bar.style.width=pct+'%';
+    if(lbl) lbl.textContent=v+' / 350 ('+pct+'%)';
+  }
+  function bind(){
+    var btn=document.getElementById('rep-g-save');
+    if(btn&&!btn._bound){ btn._bound=true; btn.onclick=function(){ var inp=document.getElementById('rep-g-pages'); save(Math.max(0,Math.min(350,parseInt((inp&&inp.value)||'0',10)||0))); render(); }; }
+  }
+  render(); bind();
+  document.addEventListener('click',function(e){ if(e.target.closest('[data-tab="repair"]')) setTimeout(function(){ render(); bind(); },80); },true);
+})();
+</script>
 </section>
 
 <section class="page" id="p-settings" data-page="settings">
@@ -5686,7 +5747,7 @@ function fixTabsAndSections(){
       t.setAttribute('role','tab');
       t.setAttribute('tabindex','0');
       t.setAttribute('aria-selected','false');
-      t.innerHTML = '📈 Trading';
+      t.innerHTML = '🔌 IoT';
       tabsNav.appendChild(t);
       log('tab trading recréé');
     }
@@ -5812,7 +5873,7 @@ function ensurePagesVisible(){
   // elles ne sont pas dans pageEls. Solution : on observe le clic et on
   // force la visibilité manuellement.
   document.addEventListener('click', e => {
-    const tab = e.target.closest('.tab[data-tab="trading"], .tab[data-tab="settings"]');
+    const tab = e.target.closest('.tab[data-tab="trading"], .tab[data-tab="settings"], .tab[data-tab="repair"]');
     if (!tab) return;
     const target = tab.dataset.tab;
     // Cache toutes les .page
@@ -6340,7 +6401,7 @@ const loaded = { trading: false, settings: false };
 function loadTrading(){
   if (loaded.trading) return;
   loaded.trading = true;
-  // Élec/IoT content is in the static p-trading section, no injection needed
+  // IoT content is in the static p-trading section, no injection needed
 }
 
 function loadSettings(){
@@ -8097,7 +8158,7 @@ function ensureCriticalTabs(){
   if (!tabs) return;
   if (!document.querySelector('.tab[data-tab="trading"]')){
     const t = document.createElement('div');
-    t.className = 'tab'; t.dataset.tab = 'trading'; t.setAttribute('role','tab'); t.tabIndex = 0; t.textContent = '📈 Trading'; tabs.appendChild(t);
+    t.className = 'tab'; t.dataset.tab = 'trading'; t.setAttribute('role','tab'); t.tabIndex = 0; t.textContent = '🔌 IoT'; tabs.appendChild(t);
   }
   if (!document.querySelector('.tab[data-tab="settings"]')){
     const t = document.createElement('div');
@@ -9156,7 +9217,7 @@ window.__UD_ROUTINE_CHECKIN_ENGINE_V1__ = true;
     return { day, shift, done, conflicts, unscheduled, blocks: placed.sort((a,b) => a.startMin - b.startMin).map(b => ({ ...b, done: done.has(b.id) })) };
   }
 
-  const MODULE_LABELS = { epfc:'EPFC', coding:'Coding', nl:'NL', trading:'Trading', souplesse:'Souplesse', muscu:'Muscu', lecture:'Lecture', vinted:'Vinted', ia:'IA', nutrition:'Nutrition', sante:'Santé', boulot:'Boulot', tache:'Tâche' };
+  const MODULE_LABELS = { epfc:'EPFC', coding:'Coding', nl:'NL', trading:'IoT', souplesse:'Souplesse', muscu:'Muscu', lecture:'Lecture', vinted:'Vinted', ia:'IA', nutrition:'Nutrition', sante:'Santé', boulot:'Boulot', tache:'Tâche' };
   function formSpec(module) {
     const commonEnd = { name:'endPoint', label:'Où reprendre', type:'text', ph:'Ex: slide 25 / exercice 4 / page 80' };
     const specs = {
@@ -9202,8 +9263,8 @@ window.__UD_ROUTINE_CHECKIN_ENGINE_V1__ = true;
   function render() {
     ensureStyles(); const page = routinePage(); if (!page) return; let panel = document.getElementById(PANEL_ID); if (!panel) { panel = document.createElement('div'); panel.id = PANEL_ID; const h = page.querySelector('h1,h2,h3'); if (h && h.parentNode) h.parentNode.insertBefore(panel, h.nextSibling); else page.prepend(panel); }
     const prevDay = document.getElementById('udrci-date')?.value || dateKey(0); const prevShift = normalizeShift(document.getElementById('udrci-shift')?.value || detectedShift()); localStorage.setItem(NS + 'routine_engine_shift', prevShift); const schedule = buildSchedule(prevDay, prevShift); window.__UD_ROUTINE_CHECKIN_CURRENT_SCHEDULE__ = schedule;
-    const tradingOK = schedule.blocks.some(b => b.module === 'trading'); const conflictsHTML = schedule.conflicts.length ? `<div class="udrci-warn">⚠️ Conflit entre obligations fixes. Corrige l'heure d'une tâche.</div>` : ''; const tradingHTML = tradingOK ? '' : `<div class="udrci-warn">Trading OFF sur ce shift. Normal uniquement pour 5h30.</div>`; const unscheduledHTML = schedule.unscheduled.length ? `<div class="udrci-warn"><b>À replanifier</b><br>${schedule.unscheduled.map(b => `• ${escapeHTML(b.title)} (${b.duration} min)`).join('<br>')}</div>` : '';
-    panel.innerHTML = `<div class="udrci-title">Routine OS · planning + validation + suivi</div><div class="udrci-sub">Moteur central : tâches horaires fixes, blocs Trading intégrés, anti-chevauchement, validation par domaine, reprise automatique au dernier point.</div><div class="udrci-grid2"><select id="udrci-shift">${['maladie','5h30','7h','11h','13h30','weekend'].map(s => `<option value="${s}"${prevShift===s?' selected':''}>${s === 'maladie' ? 'Maladie' : s === 'weekend' ? 'Weekend' : 'Shift '+s}</option>`).join('')}</select><select id="udrci-date"><option value="${dateKey(0)}"${prevDay===dateKey(0)?' selected':''}>Aujourd'hui</option><option value="${dateKey(1)}"${prevDay===dateKey(1)?' selected':''}>Demain</option></select><button class="secondary" id="udrci-refresh">Recalculer</button></div><div class="udrci-grid"><input id="udrci-natural" placeholder="Ex: aujourd'hui 10h à 11h30 coiffeur"><button id="udrci-parse">Parser</button><button id="udrci-add-natural">Ajouter</button></div><div class="udrci-grid"><input id="udrci-title" placeholder="Titre ex: Coiffeur"><input id="udrci-start" type="time"><input id="udrci-end" type="time"></div><div class="udrci-grid2"><select id="udrci-cat"><option>Perso</option><option>Admin</option><option>Maison</option><option>Santé</option><option>Études</option><option>Boulot</option></select><button id="udrci-add-manual">Ajouter tâche horaire</button><button class="secondary" id="udrci-clear">Vider</button></div><div class="udrci-status">Shift : ${escapeHTML(schedule.shift)} · Date : ${escapeHTML(schedule.day)} · Trading : ${tradingOK ? 'OK' : 'OFF'} · Check-ins : ${checkins(schedule.day).length}</div>${conflictsHTML}${tradingHTML}<div>${schedule.blocks.map(renderBlock).join('')}</div>${unscheduledHTML}`;
+    const tradingOK = schedule.blocks.some(b => b.module === 'trading'); const conflictsHTML = schedule.conflicts.length ? `<div class="udrci-warn">⚠️ Conflit entre obligations fixes. Corrige l'heure d'une tâche.</div>` : ''; const tradingHTML = ''; const unscheduledHTML = schedule.unscheduled.length ? `<div class="udrci-warn"><b>À replanifier</b><br>${schedule.unscheduled.map(b => `• ${escapeHTML(b.title)} (${b.duration} min)`).join('<br>')}</div>` : '';
+    panel.innerHTML = `<div class="udrci-title">Routine OS · planning + validation + suivi</div><div class="udrci-sub">Moteur central : tâches horaires fixes, blocs planifiés, anti-chevauchement, validation par domaine, reprise automatique au dernier point.</div><div class="udrci-grid2"><select id="udrci-shift">${['maladie','5h30','7h','11h','13h30','weekend'].map(s => `<option value="${s}"${prevShift===s?' selected':''}>${s === 'maladie' ? 'Maladie' : s === 'weekend' ? 'Weekend' : 'Shift '+s}</option>`).join('')}</select><select id="udrci-date"><option value="${dateKey(0)}"${prevDay===dateKey(0)?' selected':''}>Aujourd'hui</option><option value="${dateKey(1)}"${prevDay===dateKey(1)?' selected':''}>Demain</option></select><button class="secondary" id="udrci-refresh">Recalculer</button></div><div class="udrci-grid"><input id="udrci-natural" placeholder="Ex: aujourd'hui 10h à 11h30 coiffeur"><button id="udrci-parse">Parser</button><button id="udrci-add-natural">Ajouter</button></div><div class="udrci-grid"><input id="udrci-title" placeholder="Titre ex: Coiffeur"><input id="udrci-start" type="time"><input id="udrci-end" type="time"></div><div class="udrci-grid2"><select id="udrci-cat"><option>Perso</option><option>Admin</option><option>Maison</option><option>Santé</option><option>Études</option><option>Boulot</option></select><button id="udrci-add-manual">Ajouter tâche horaire</button><button class="secondary" id="udrci-clear">Vider</button></div><div class="udrci-status">Shift : ${escapeHTML(schedule.shift)} · Date : ${escapeHTML(schedule.day)} · Check-ins : ${checkins(schedule.day).length}</div>${conflictsHTML}${tradingHTML}<div>${schedule.blocks.map(renderBlock).join('')}</div>${unscheduledHTML}`;
     panel.querySelector('#udrci-refresh').onclick = render; panel.querySelector('#udrci-shift').onchange = render; panel.querySelector('#udrci-date').onchange = render; panel.querySelector('#udrci-clear').onclick = () => ['udrci-natural','udrci-title','udrci-start','udrci-end'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; }); panel.querySelector('#udrci-parse').onclick = () => { const p = parseNatural(panel.querySelector('#udrci-natural').value); if (!p) return toast("Format non reconnu. Ex: aujourd'hui 10h à 11h30 coiffeur"); panel.querySelector('#udrci-title').value = p.title; panel.querySelector('#udrci-start').value = p.start; panel.querySelector('#udrci-end').value = p.end; panel.querySelector('#udrci-date').value = p.day; toast('Parsé. Vérifie puis ajoute.'); }; panel.querySelector('#udrci-add-natural').onclick = () => { const p = parseNatural(panel.querySelector('#udrci-natural').value); if (!p) return toast('Format non reconnu.'); addTimedTask({ day:p.day, title:p.title, start:p.start, end:p.end, category:'Perso' }); }; panel.querySelector('#udrci-add-manual').onclick = () => addTimedTask({ day: panel.querySelector('#udrci-date').value, title: panel.querySelector('#udrci-title').value, start: panel.querySelector('#udrci-start').value, end: panel.querySelector('#udrci-end').value, category: panel.querySelector('#udrci-cat').value }); panel.querySelectorAll('[data-validate]').forEach(btn => { btn.onclick = () => { const schedule = window.__UD_ROUTINE_CHECKIN_CURRENT_SCHEDULE__; const b = schedule?.blocks?.find(x => x.id === btn.dataset.validate); if (b) openCheckin(b, schedule.day); }; });
   }
   function refreshModuleProgressBoxes() {
@@ -9234,7 +9295,7 @@ window.__UD_ROUTINE_CHECKIN_ENGINE_V1__ = true;
     nl: { label:"Néerlandais", icon:"🇳🇱", goalMin:180, tab:"nl", color:"#22d3ee" },
     sport: { label:"Muscu/Sport", icon:"💪", goalSessions:3, tab:"sport", color:"#f97316" },
     souplesse: { label:"Souplesse", icon:"🧘", goalSessions:5, tab:"flex", color:"#a78bfa" },
-    trading: { label:"Trading", icon:"📈", goalSessions:4, maxSessions:4, tab:"trading", color:"#f59e0b" },
+    trading: { label:"IoT", icon:"🔌", goalSessions:4, maxSessions:4, tab:"trading", color:"#0ea5e9" },
     lecture: { label:"Lecture", icon:"📚", goalPages:150, tab:"plan", color:"#818cf8" },
     vinted: { label:"Vinted", icon:"🛍️", goalListings:10, tab:"vinted", color:"#ec4899" },
     ia: { label:"IA", icon:"🤖", goalMin:120, tab:"ia", color:"#c084fc" },
@@ -9792,7 +9853,7 @@ window.__UD_ROUTINE_CHECKIN_ENGINE_V1__ = true;
         <div class="u20-grid">
           <div><b>Dette</b><span>${debt.slice(0,3).map(d=>esc(d.label)).join("<br>") || "Aucune dette critique"}</span></div>
           <div><b>Demain</b><span>${overload.impossible ? `Impossible : ${overload.total}/${overload.max} min · réduire ${overload.reduce} min` : `OK : ${overload.total}/${overload.max} min`}</span></div>
-          <div><b>Trading</b><span>${esc(lock.reason)}</span></div>
+          <div><b>Discipline</b><span>${esc(lock.reason)}</span></div>
           <div><b>Anti-abandon</b><span>${anti.map(a=>esc(a.label)).join("<br>") || "Aucun abandon détecté"}</span></div>
         </div>
         <div class="u20-command">
@@ -9849,7 +9910,7 @@ window.__UD_ROUTINE_CHECKIN_ENGINE_V1__ = true;
         </div>
 
         <div class="u20-section">
-          <h3>7 · Verrou trading discipline</h3>
+          <h3>7 · Discipline études</h3>
           <div class="${tradingLock().unlocked ? "u20-ok" : "u20-warn"}">${esc(tradingLock().reason)}</div>
         </div>
 
@@ -9914,8 +9975,8 @@ window.__UD_ROUTINE_CHECKIN_ENGINE_V1__ = true;
 
   function defaultRules(){
     const arr = [
-      "EPFC passe avant IA et trading si retard hebdo.",
-      "Pas de trading live si discipline < 8/10.",
+      "EPFC passe avant IA et IoT si retard hebdo.",
+      "Pas de session IoT si EPFC a du retard cette semaine.",
       "Sport jamais supprimé deux jours de suite.",
       "NL minimum 10 min même journée chargée.",
       "Si journée impossible, activer minimum vital."
@@ -10760,7 +10821,8 @@ window.__UD_ROUTINE_CHECKIN_ENGINE_V1__ = true;
       ['Scapular push-up', 'Serratus/posture', 2, '12-15', '0:45', 'Bras tendus, omoplates seulement. Excellent pour épaules stables.']
     ]},
     { key:'pull_a', short:'Pull A', label:'Dos large + biceps + posture', tag:'ON 2', minutes:80, type:'sport', desc:'Objectif V-taper : grand dorsal, deltoïdes arrière, biceps. Prises neutres prioritaires.', exercises:[
-      ['Tirage vertical prise neutre', 'Dos largeur', 4, '8-12', '2:00', 'Tire les coudes vers les hanches, pas derrière la nuque.'],
+      ['Tractions assistées (machine) ou tractions', 'Dos largeur · poids du corps', 4, '5-10', '2:00', 'Obligatoires ce jour. Prise neutre ou supinée. Assistées si besoin. Corps gainé, nuque neutre, pas de projection de tête.'],
+      ['Tirage vertical prise neutre', 'Dos largeur', 3, '8-12', '1:45', 'Tire les coudes vers les hanches, pas derrière la nuque.'],
       ['Rowing chest-supported', 'Dos épaisseur', 4, '8-12', '2:00', 'Poitrine collée au support, cervicales neutres.'],
       ['Rowing poulie prise neutre', 'Milieu dos', 3, '10-12', '1:30', 'Pause 1 sec en contraction.'],
       ['Reverse pec deck', 'Delts arrière', 3, '12-20', '1:00', 'Épaules basses, pas de trapèzes.'],
@@ -10772,7 +10834,7 @@ window.__UD_ROUTINE_CHECKIN_ENGINE_V1__ = true;
     { key:'rest_a', short:'OFF A', label:'Repos actif + souplesse longue', tag:'OFF', minutes:55, type:'rest', desc:'Marche + mobilité. Tu construis les amplitudes sans flinguer la récup.', exercises:[] },
     { key:'legs_a', short:'Legs A', label:'Quads + mollets + core', tag:'ON 1', minutes:80, type:'sport', desc:'Jambes esthétiques et solides. Pas de squat nuque. Presses/machines propres.', exercises:[
       ['Leg press pieds moyens', 'Quads', 4, '8-12', '2:00', 'Amplitude contrôlée, bassin stable.'],
-      ['Split squat bulgare · haltères uniquement', 'Quads/fessiers', 3, '8-10/jambe', '1:45', 'Haltères seulement — pas de barre. Torse légèrement incliné, genou contrôlé. Stop si douleur C7 ou bras.'],
+      ['Step-up contrôlé sur banc bas', 'Quads/fessiers', 3, '10-12/jambe', '1:30', 'Pousser avec la jambe haute, genou stable, torse droit. Haltères optionnels. Unilatéral = stabilité bassin sans compression cervicale.'],
       ['Leg extension', 'Quads finition', 3, '12-15', '1:00', 'Pause en haut, brûlure propre.'],
       ['Leg curl assis', 'Ischios', 3, '10-15', '1:15', 'Contrôle l’excentrique.'],
       ['Mollets presse ou debout', 'Mollets', 4, '10-15', '1:00', 'Étirement en bas + pause en haut.'],
@@ -10799,10 +10861,12 @@ window.__UD_ROUTINE_CHECKIN_ENGINE_V1__ = true;
       ['Mollets assis', 'Soléaire', 4, '12-20', '1:00', 'Amplitude maximale.'],
       ['McGill Big 3', 'Core dos safe', 3, 'qualité', '0:45', 'Curl-up modifié, side plank, bird dog.'],
       ['Glute bridge une jambe', 'Poids du corps · fessiers', 3, '10-12/jambe', '0:45', 'Bassin stable, contraction 1 sec en haut.'],
-      ['Hamstring walkouts', 'Poids du corps · ischios', 2, '6-10', '0:45', 'Lent. Stop si crampe violente.']
+      ['Hamstring walkouts', 'Poids du corps · ischios', 2, '6-10', '0:45', 'Lent. Stop si crampe violente.'],
+      ['Cardio finition · vélo stationnaire ou marche rapide inclinée', 'Zone 2', 1, '20-35 min', '0:00', 'Fin de séance. Zone 2 (conversation possible). Thermogenèse + récupération active. Obligatoire ce jour-là.']
     ]},
     { key:'pull_b', short:'Pull B', label:'Dos épaisseur + delts arrière + bras', tag:'ON 2', minutes:80, type:'sport', desc:'Épaisseur du dos, posture, biceps. Aucun shrug lourd.', exercises:[
-      ['Tirage vertical neutre', 'Dos largeur', 3, '8-12', '2:00', 'Cervicales neutres.'],
+      ['Tractions assistées (machine) ou tractions', 'Dos largeur · poids du corps', 3, '5-10', '2:00', 'Obligatoires. Prise neutre. Assistées si besoin. Nuque neutre, corps gainé.'],
+      ['Tirage vertical neutre', 'Dos largeur', 3, '8-12', '1:45', 'Cervicales neutres.'],
       ['Rowing machine unilatéral', 'Dos épaisseur', 4, '8-12/côté', '1:45', 'Même amplitude gauche/droite.'],
       ['Pullover poulie', 'Grand dorsal', 3, '12-15', '1:15', 'Bras quasi tendus, sentir les dorsaux.'],
       ['Reverse pec deck', 'Delts arrière', 4, '15-20', '1:00', 'Volume postural prioritaire.'],
@@ -11123,6 +11187,7 @@ window.__UD_ROUTINE_CHECKIN_ENGINE_V1__ = true;
   }
 
   function renderNutrition(){
+    return; /* nutrition simplifiée — tracker protéines + eau dans HTML statique */
     const page = $('#p-nutrition'); if (!page) return;
     page.innerHTML = `
       <div class="page-kicker">Nutrition · cut intelligent · énergie stable</div>
@@ -11569,8 +11634,8 @@ window.__UD_ROUTINE_CHECKIN_ENGINE_V1__ = true;
       if (!p) return;
       item.dataset.topicKey = p.topicKey;
       item.dataset.topicLabel = p.topicLabel;
-      const icon = module === 'epfc' ? '🎓' : module === 'coding' ? '💻' : module === 'ia' ? '🤖' : module === 'nl' ? '🇳🇱' : module === 'trading' ? '📈' : '';
-      const label = module === 'epfc' ? 'EPFC' : module === 'coding' ? 'Coding' : module === 'ia' ? 'IA' : module === 'nl' ? 'NL' : 'Trading';
+      const icon = module === 'epfc' ? '🎓' : module === 'coding' ? '💻' : module === 'ia' ? '🤖' : module === 'nl' ? '🇳🇱' : module === 'trading' ? '🔌' : '';
+      const label = module === 'epfc' ? 'EPFC' : module === 'coding' ? 'Coding' : module === 'ia' ? 'IA' : module === 'nl' ? 'NL' : 'Études';
       setText(name, `${icon} ${label} · ${p.t}${durationSuffix(originalTitle)}`);
       setText(desc, p.o);
     });
@@ -12096,7 +12161,7 @@ window.__UD_ROUTINE_CHECKIN_ENGINE_V1__ = true;
         '<div class="ud-v54-ops-sub">Accueil = exécution du jour. Les rapports longs, backups, règles et bilans sont retirés de cette page pour ne plus répéter partout.</div>'+
         '<div class="ud-v54-ops-grid">'+
           '<button type="button" class="ud-v54-ops-btn" data-go="stats">📊 Stats détaillées</button>'+
-          '<button type="button" class="ud-v54-ops-btn" data-go="trading">🔌 Élec/IoT</button>'+
+          '<button type="button" class="ud-v54-ops-btn" data-go="trading">🔌 IoT</button>'+
           '<button type="button" class="ud-v54-ops-btn" data-go="settings">⚙️ Données / backup</button>'+
         '</div>';
       const anchor = $('#log-widget', home) || $('.log-widget', home) || $('#goal-list', home) || $('#prio-list', home);
@@ -12839,7 +12904,7 @@ body.ud-v59-routine-clean #p-routine .tl-badge-adaptive{
     return [
       { id: slug(vid + '|supp-hydratation|' + todayISO()), type:'supplement', time:addTime(base, 0), title:'💧 Suppléments · hydratation / électrolytes', desc:'Niveau 1. Eau + électrolytes si fatigue, transpiration ou journée longue. Base énergie/focus, sans charger la routine repas.' },
       { id: slug(vid + '|supp-fondation|' + todayISO()), type:'supplement', time:addTime(base, 30), title:'🧠 Suppléments · fondation cerveau/énergie', desc:'Créatine + oméga-3 + vitamine D/K2 avec ton premier vrai repas dans le tracker protéines. Pas de mégadose.' },
-      { id: slug(vid + '|supp-focus|' + todayISO()), type:'supplement', time:caffeineTime, title:'⚡ Suppléments · focus pré-bloc', desc: useCaffeine ? 'Caféine + L-théanine si tu tolères. Objectif : EPFC / IA / Élec/IoT net. Stop caféine après 15h.' : 'Réveil tardif : évite caféine forte. Prends plutôt eau, lumière, marche courte, respiration, puis focus.' },
+      { id: slug(vid + '|supp-focus|' + todayISO()), type:'supplement', time:caffeineTime, title:'⚡ Suppléments · focus pré-bloc', desc: useCaffeine ? 'Caféine + L-théanine si tu tolères. Objectif : EPFC / IA / IoT net. Stop caféine après 15h.' : 'Réveil tardif : évite caféine forte. Prends plutôt eau, lumière, marche courte, respiration, puis focus.' },
       { id: slug(vid + '|supp-soir|' + todayISO()), type:'supplement', time:'Soir', title:'🌙 Suppléments · sommeil / libido base', desc:'Magnésium le soir. Zinc seulement si utile/toléré. Sommeil solide = libido, testostérone naturelle, mémoire et focus.' }
     ];
   }
@@ -13019,10 +13084,10 @@ body.ud-v59-routine-clean #p-routine .tl-badge-adaptive{
   'use strict';
   if(window.__udV71MatiereFix) return; window.__udV71MatiereFix=true;
   function clean(){
-    document.querySelectorAll('.tab[data-tab="trading"]').forEach(t=>{t.innerHTML='🔌 Élec/IoT';});
+    document.querySelectorAll('.tab[data-tab="trading"]').forEach(t=>{t.innerHTML='🔌 IoT';});
     document.querySelectorAll('#p-routine .ud-v63-card[data-type="lab"] .ud-v63-title').forEach(el=>{
       el.innerHTML=(el.innerHTML||'').replace(/Lab IA\/?IoT|Lab IA-IoT|Projet Lab|Smart Room capteur|Vinted Tracker technique|Projet web|Build IA/g,function(m){
-        return ({'Lab IA/IoT':'Élec/IoT','Lab IAIoT':'Élec/IoT','Lab IA-IoT':'Élec/IoT','Projet Lab':'Élec/IoT','Smart Room capteur':'Capteurs & mesures','Vinted Tracker technique':'API / BDD / Dashboard IoT','Projet web':'JavaScript/Web DOM','Build IA':'Évaluation modèle'})[m]||m;
+        return ({'Lab IA/IoT':'IoT','Lab IAIoT':'IoT','Lab IA-IoT':'IoT','Projet Lab':'IoT','Smart Room capteur':'Capteurs & mesures','Vinted Tracker technique':'API / BDD / Dashboard IoT','Projet web':'JavaScript/Web DOM','Build IA':'Évaluation modèle'})[m]||m;
       });
     });
   }
@@ -13470,7 +13535,7 @@ body.ud-v62-routine #p-routine [data-action="routine-reset"]{
     return [
       {id:slug(vid+'|v62|supp-hydratation|'+todayISO()), type:'supplement', time:addTime(base,0), title:'💧 Suppléments · hydratation / électrolytes', desc:'Niveau 1. Eau + électrolytes si grosse fatigue, transpiration ou journée longue. Base énergie/focus.'},
       {id:slug(vid+'|v62|supp-fondation|'+todayISO()), type:'supplement', time:addTime(base,30), title:'🧠 Suppléments · cerveau / énergie', desc:'Créatine + oméga-3 + vitamine D/K2 avec ton premier vrai repas du tracker protéines. Objectif mémoire, énergie stable, récupération.'},
-      {id:slug(vid+'|v62|supp-focus|'+todayISO()), type:'supplement', time:focusTime, title:'⚡ Suppléments · focus pré-bloc', desc:caffeineOk ? 'Caféine + L-théanine si toléré. À réserver pour EPFC / IA / Élec/IoT. Stop caféine après 15h.' : 'Réveil tardif : pas de caféine forte. Eau, lumière, marche courte, respiration, puis focus.'},
+      {id:slug(vid+'|v62|supp-focus|'+todayISO()), type:'supplement', time:focusTime, title:'⚡ Suppléments · focus pré-bloc', desc:caffeineOk ? 'Caféine + L-théanine si toléré. À réserver pour EPFC / IA / IoT. Stop caféine après 15h.' : 'Réveil tardif : pas de caféine forte. Eau, lumière, marche courte, respiration, puis focus.'},
       {id:slug(vid+'|v62|supp-soir|'+todayISO()), type:'supplement', time:'Soir', title:'🌙 Suppléments · sommeil / libido base', desc:'Magnésium le soir. Zinc seulement si utile/toléré. Priorité réelle : sommeil, nutrition, sport dosé, stress bas.'}
     ];
   }
@@ -13707,7 +13772,7 @@ body.ud-v63-routine #p-routine .ud-hide-v63{
     const coding=[['Dimanche','Git/GitHub + revue code','commit propre, README, diff, dette technique'],['Lundi','Python · fonctions','fonctions, paramètres, retours, listes, dictionnaires, fichiers'],['Mardi','SQL · requêtes','SELECT, WHERE, JOIN, GROUP BY, HAVING, sous-requêtes'],['Mercredi','Linux/CLI · réseau','bash, fichiers, permissions, ping, curl, ports, logs'],['Jeudi','JavaScript/Web DOM','événements, formulaires, fetch, localStorage, DOM'],['Vendredi','Algorithmique','boucles, tableaux, recherche, tri simple, complexité de base'],['Samedi','Java/POO','classes, objets, méthodes, encapsulation, exceptions']][d];
     const ia=[['Dimanche','Révision IA/Data','nettoyer notebook, résumer métriques, prochaine expérience'],['Lundi','Python Data · Pandas','Series/DataFrame, import CSV, nettoyage, filtres'],['Mardi','Statistiques appliquées','moyenne, médiane, variance, corrélation, distributions'],['Mercredi','Visualisation données','Matplotlib, graphiques propres, interprétation'],['Jeudi','ML supervisé · régression','features, train/test, erreur, baseline'],['Vendredi','ML supervisé · classification','classes, précision, rappel, matrice confusion'],['Samedi','Évaluation modèle','overfitting, validation, métriques, comparaison de modèles']][d];
     const nl=[['Conversation libre','10 phrases dites à voix haute'],['Anki + base','mots utiles quotidien'],['Grammaire','phrases simples + correction'],['Écoute','NedBox / podcast court'],['Oral','shadowing 15 min'],['Écriture','10 phrases sur ta journée'],['Révision','cartes difficiles + lecture']][d];
-    const lab=[['Dimanche','Révision Élec/IoT','schéma, câblage, journal de tests, prochaine manip'],['Lundi','Électronique fondamentale','tension, courant, résistance, breadboard, multimètre'],['Mardi','Microcontrôleurs','ESP32/Raspberry, GPIO, pinout, flash, lecture entrée'],['Mercredi','Capteurs & mesures','DHT22/BME280/PIR, calibration, fréquence de mesure'],['Jeudi','Réseaux IoT','HTTP, MQTT, broker, topic, payload, ports'],['Vendredi','Linux embarqué','Raspberry Pi OS, services, scripts Python, logs'],['Samedi','Données IoT & dashboard','API, SQLite/PostgreSQL, graphiques, alertes simples']][d];
+    const lab=[['Dimanche','Révision IoT','schéma, câblage, journal de tests, prochaine manip'],['Lundi','Électronique fondamentale','tension, courant, résistance, breadboard, multimètre'],['Mardi','Microcontrôleurs','ESP32/Raspberry, GPIO, pinout, flash, lecture entrée'],['Mercredi','Capteurs & mesures','DHT22/BME280/PIR, calibration, fréquence de mesure'],['Jeudi','Réseaux IoT','HTTP, MQTT, broker, topic, payload, ports'],['Vendredi','Linux embarqué','Raspberry Pi OS, services, scripts Python, logs'],['Samedi','Données IoT & dashboard','API, SQLite/PostgreSQL, graphiques, alertes simples']][d];
     return {epfc,coding,ia,nl,lab};
   }
   function labelFor(type){return ({supplement:'N1 SUPP', routine:'N1', epfc:'N2 EPFC', coding:'N2 CODE', nl:'N2 NL', ia:'N2 IA', lab:'N2 LAB', sport:'N2 SPORT', vinted:'BONUS', chess:'BONUS', read:'BONUS'})[type]||'';}
@@ -13719,7 +13784,7 @@ body.ud-v63-routine #p-routine .ud-hide-v63{
     push(cards,minToHHMM(t),'supplement','💧 Suppléments · hydratation / électrolytes','Eau + électrolytes si fatigue, chaleur, sport ou grosse journée. Base énergie/focus.',5);
     push(cards,minToHHMM(t+10),'routine','🎯 Plan de guerre 3 min','Choisis 1 objectif principal. Zéro navigation inutile.',5);
     push(cards,minToHHMM(t+30),'supplement','🧠 Suppléments · cerveau / énergie','Créatine + oméga‑3 + vitamine D/K2 avec ton premier vrai repas du tracker protéines.',5);
-    push(cards,minToHHMM(t+45),'supplement','⚡ Suppléments · focus pré-bloc',caffeineOk?'Caféine + L‑théanine si toléré. Réservé EPFC / IA / Élec/IoT. Stop caféine après 15h.':'Réveil tardif : pas de caféine forte. Eau, lumière, marche courte, respiration.',5);
+    push(cards,minToHHMM(t+45),'supplement','⚡ Suppléments · focus pré-bloc',caffeineOk?'Caféine + L‑théanine si toléré. Réservé EPFC / IA / IoT. Stop caféine après 15h.':'Réveil tardif : pas de caféine forte. Eau, lumière, marche courte, respiration.',5);
     let cur=t+55;
     const workStart=hhmmToMin(cfg.workStart), workEnd=hhmmToMin(cfg.workEnd);
     function avoidWork(min,dur){ if(workStart!=null && workEnd!=null && min < workEnd && min+dur > workStart) return workEnd+25; return min; }
@@ -13737,7 +13802,7 @@ body.ud-v63-routine #p-routine .ud-hide-v63{
       add('epfc','🎓 EPFC · '+f.epfc[1]+' (90 min)',f.epfc[2],90);
       add('coding','💻 Coding · '+f.coding[1]+' (60 min)',f.coding[2],60);
       add('ia','🤖 IA · '+f.ia[1]+' (60 min)',f.ia[2],60);
-      add('lab','🔌 Élec/IoT · '+f.lab[1]+' (60 min)',f.lab[2],60);
+      add('lab','🔌 IoT · '+f.lab[1]+' (60 min)',f.lab[2],60);
       add('nl','🇳🇱 NL · '+f.nl[1]+' (45 min)',f.nl[2],45);
       add('sport','💪 Sport · séance selon cycle (60 min)','Si jour OFF : mobilité + marche.',60);
       add('vinted','🛍️ Vinted · sourcing/listings (35 min)','Bonus business, pas si fatigue.',35);
@@ -13747,7 +13812,7 @@ body.ud-v63-routine #p-routine .ud-hide-v63{
       add('coding','💻 Coding · '+f.coding[1]+' (45 min)',f.coding[2],45);
       add('ia','🤖 IA · '+f.ia[1]+' (40 min)',f.ia[2],40);
       add('nl','🇳🇱 NL · '+f.nl[1]+' (30 min)',f.nl[2],30);
-      add('lab','🔌 Élec/IoT · '+f.lab[1]+' (30 min)',f.lab[2]+'. Preuve obligatoire : mesure, schéma, code ou blocage noté.',30);
+      add('lab','🔌 IoT · '+f.lab[1]+' (30 min)',f.lab[2]+'. Preuve obligatoire : mesure, schéma, code ou blocage noté.',30);
       add('sport','💪 Sport · selon cycle (40 min)','Si jour OFF : mobilité + marche seulement.',40);
       add('vinted','🛍️ Vinted · action unique (20 min)','1 listing, 1 sourcing ou 1 réponse. Pas plus si journée chargée.',20);
       add('chess','♟️ Échecs · tracker Elo (15 min)','Parties/puzzles. Validation = saisie Elo.',15);
@@ -13841,7 +13906,7 @@ body.ud-v63-routine #p-routine .ud-hide-v63{
   const logField=t=>({coding:'code',epfc:'epfc',nl:'nl',ia:'ia',lab:'lab',trading:'trading_min'})[t]||t;
   const moduleKey=t=>({coding:'coding',epfc:'epfc',nl:'nl',ia:'ia',lab:'lab',trading:'trading'})[t]||t;
   const bookmarkKey=t=>({coding:'code',epfc:'epfc',nl:'nl',ia:'ia',lab:'lab',trading:'trading'})[t]||t;
-  const label=t=>({epfc:'EPFC',coding:'Coding',nl:'Néerlandais',ia:'IA',lab:'Élec/IoT',trading:'Trading'})[t]||String(t||'Module').toUpperCase();
+  const label=t=>({epfc:'EPFC',coding:'Coding',nl:'Néerlandais',ia:'IA',lab:'IoT',trading:'IoT'})[t]||String(t||'Module').toUpperCase();
   let activeCard=null;
 
   function ensureModal(){
@@ -14081,7 +14146,7 @@ body.ud-v67-clean #p-routine [data-action="routine-reset"]{
     coding:[['Dimanche','Git/GitHub + revue code','commit propre, README, diff, dette technique'],['Lundi','Python · fonctions','fonctions, paramètres, retours, listes, dictionnaires, fichiers'],['Mardi','SQL · requêtes','SELECT, WHERE, JOIN, GROUP BY, HAVING, sous-requêtes'],['Mercredi','Linux/CLI · réseau','bash, fichiers, permissions, ping, curl, ports, logs'],['Jeudi','JavaScript/Web DOM','événements, formulaires, fetch, localStorage, DOM'],['Vendredi','Algorithmique','boucles, tableaux, recherche, tri simple, complexité de base'],['Samedi','Java/POO','classes, objets, méthodes, encapsulation, exceptions']][d],
     ia:[['Dimanche','Révision IA/Data','nettoyer notebook, résumer métriques, prochaine expérience'],['Lundi','Python Data · Pandas','Series/DataFrame, import CSV, nettoyage, filtres'],['Mardi','Statistiques appliquées','moyenne, médiane, variance, corrélation, distributions'],['Mercredi','Visualisation données','Matplotlib, graphiques propres, interprétation'],['Jeudi','ML supervisé · régression','features, train/test, erreur, baseline'],['Vendredi','ML supervisé · classification','classes, précision, rappel, matrice confusion'],['Samedi','Évaluation modèle','overfitting, validation, métriques, comparaison de modèles']][d],
     nl:[['Conversation','10 phrases à voix haute'],['Anki base','vocab quotidien'],['Grammaire','phrases corrigées'],['Écoute','NedBox / podcast'],['Écrit','mini texte NL'],['Oral','shadowing'],['Review NL','cartes + recap']][d],
-    lab:[['Dimanche','Révision Élec/IoT','schéma, câblage, journal de tests, prochaine manip'],['Lundi','Électronique fondamentale','tension, courant, résistance, breadboard, multimètre'],['Mardi','Microcontrôleurs','ESP32/Raspberry, GPIO, pinout, flash, lecture entrée'],['Mercredi','Capteurs & mesures','DHT22/BME280/PIR, calibration, fréquence de mesure'],['Jeudi','Réseaux IoT','HTTP, MQTT, broker, topic, payload, ports'],['Vendredi','Linux embarqué','Raspberry Pi OS, services, scripts Python, logs'],['Samedi','Données IoT & dashboard','API, SQLite/PostgreSQL, graphiques, alertes simples']][d]
+    lab:[['Dimanche','Révision IoT','schéma, câblage, journal de tests, prochaine manip'],['Lundi','Électronique fondamentale','tension, courant, résistance, breadboard, multimètre'],['Mardi','Microcontrôleurs','ESP32/Raspberry, GPIO, pinout, flash, lecture entrée'],['Mercredi','Capteurs & mesures','DHT22/BME280/PIR, calibration, fréquence de mesure'],['Jeudi','Réseaux IoT','HTTP, MQTT, broker, topic, payload, ports'],['Vendredi','Linux embarqué','Raspberry Pi OS, services, scripts Python, logs'],['Samedi','Données IoT & dashboard','API, SQLite/PostgreSQL, graphiques, alertes simples']][d]
   };}
   function level(type){if(type==='supplement'||type==='routine')return '1'; if(['epfc','coding','ia','nl','lab','sport'].includes(type))return '2'; return '3';}
   function label(type){return {supplement:'N1',routine:'N1',epfc:'N2 EPFC',coding:'N2 CODE',ia:'N2 IA',nl:'N2 NL',lab:'N2 LAB',sport:'N2 SPORT',lecture:'N3 LECTURE',vinted:'N3 VINTED',chess:'N3 ÉCHECS'}[type]||'';}
@@ -14102,11 +14167,11 @@ body.ud-v67-clean #p-routine [data-action="routine-reset"]{
     add('supplement','🧠 Suppléments · cerveau / énergie','Créatine + oméga‑3 + vitamine D/K2 avec ton premier vrai repas du tracker protéines.',5,{late:true});
     add('supplement','⚡ Suppléments · focus pré-bloc',cur<900?'Caféine + L‑théanine si toléré. Stop caféine après 15h.':'Réveil tardif : pas de caféine forte. Lumière + eau + marche courte.',5,{late:true});
     const low=c.mode==='court'||c.energy==='basse'||constrained, weekend=c.mode==='weekend'&&!constrained;
-    if(low){add('epfc','🎓 EPFC · '+f.epfc[0]+' (35 min)',f.epfc[1],35);add('coding','💻 Coding · minimum utile (20 min)',f.coding[1],20,{optional:true});add('ia','🤖 IA · '+f.ia[0]+' (20 min)',f.ia[1],20);add('nl','🇳🇱 NL minimum (15 min)',f.nl[1],15);add('lab','🔌 Élec/IoT · minimum utile (20 min)',f.lab[1],20,{optional:true});add('sport','🧘 Sport · mobilité / marche (15 min)','Jour contraint : entretien.',15,{optional:true});}
-    else if(weekend){add('epfc','🎓 EPFC · '+f.epfc[0]+' (90 min)',f.epfc[1],90);add('coding','💻 Coding · '+f.coding[0]+' (60 min)',f.coding[1],60);add('ia','🤖 IA · '+f.ia[0]+' (60 min)',f.ia[1],60);add('lab','🔌 Élec/IoT · '+f.lab[0]+' (75 min)',f.lab[1],75);add('nl','🇳🇱 NL · '+f.nl[0]+' (45 min)',f.nl[1],45);add('sport','💪 Sport · séance selon cycle (60 min)','Si jour OFF : mobilité + marche.',60,{optional:true});add('lecture','📖 Lecture · reprise (25 min)','Reprendre exactement page sauvegardée.',25,{optional:true});add('vinted','🛍️ Vinted · action business (35 min)','Action faite + prochaine action. Pas d’argent ici.',35,{optional:true});add('chess','♟️ Échecs · parties/puzzles (20 min)','Validation = Elo Chess.com.',20,{optional:true});}
-    else{add('epfc','🎓 EPFC · '+f.epfc[0]+' (75 min)',f.epfc[1],75);add('coding','💻 Coding · '+f.coding[0]+' (45 min)',f.coding[1],45);add('ia','🤖 IA · '+f.ia[0]+' (40 min)',f.ia[1],40);add('nl','🇳🇱 NL · '+f.nl[0]+' (30 min)',f.nl[1],30);add('lab','🔌 Élec/IoT · '+f.lab[0]+' (35 min)',f.lab[1]+'. Preuve obligatoire : mesure, schéma, code ou blocage noté.',35,{optional:true});add('sport','💪 Sport · selon cycle (40 min)','Si OFF : mobilité + marche.',40,{optional:true});add('lecture','📖 Lecture · reprise (20 min)','Reprendre livre/page sauvegardés.',20,{optional:true});add('vinted','🛍️ Vinted · action unique (20 min)','1 listing, 1 sourcing ou 1 réponse.',20,{optional:true});add('chess','♟️ Échecs · tracker Elo (15 min)','Parties/puzzles. Validation = Elo.',15,{optional:true});}
+    if(low){add('epfc','🎓 EPFC · '+f.epfc[0]+' (35 min)',f.epfc[1],35);add('coding','💻 Coding · minimum utile (20 min)',f.coding[1],20,{optional:true});add('ia','🤖 IA · '+f.ia[0]+' (20 min)',f.ia[1],20);add('nl','🇳🇱 NL minimum (15 min)',f.nl[1],15);add('lab','🔌 IoT · minimum utile (20 min)',f.lab[1],20,{optional:true});add('sport','🧘 Sport · mobilité / marche (15 min)','Jour contraint : entretien.',15,{optional:true});}
+    else if(weekend){add('epfc','🎓 EPFC · '+f.epfc[0]+' (90 min)',f.epfc[1],90);add('coding','💻 Coding · '+f.coding[0]+' (60 min)',f.coding[1],60);add('ia','🤖 IA · '+f.ia[0]+' (60 min)',f.ia[1],60);add('lab','🔌 IoT · '+f.lab[0]+' (75 min)',f.lab[1],75);add('nl','🇳🇱 NL · '+f.nl[0]+' (45 min)',f.nl[1],45);add('sport','💪 Sport · séance selon cycle (60 min)','Si jour OFF : mobilité + marche.',60,{optional:true});add('lecture','📖 Lecture · reprise (25 min)','Reprendre exactement page sauvegardée.',25,{optional:true});add('vinted','🛍️ Vinted · action business (35 min)','Action faite + prochaine action. Pas d’argent ici.',35,{optional:true});add('chess','♟️ Échecs · parties/puzzles (20 min)','Validation = Elo Chess.com.',20,{optional:true});}
+    else{add('epfc','🎓 EPFC · '+f.epfc[0]+' (75 min)',f.epfc[1],75);add('coding','💻 Coding · '+f.coding[0]+' (45 min)',f.coding[1],45);add('ia','🤖 IA · '+f.ia[0]+' (40 min)',f.ia[1],40);add('nl','🇳🇱 NL · '+f.nl[0]+' (30 min)',f.nl[1],30);add('lab','🔌 IoT · '+f.lab[0]+' (35 min)',f.lab[1]+'. Preuve obligatoire : mesure, schéma, code ou blocage noté.',35,{optional:true});add('sport','💪 Sport · selon cycle (40 min)','Si OFF : mobilité + marche.',40,{optional:true});add('lecture','📖 Lecture · reprise (20 min)','Reprendre livre/page sauvegardés.',20,{optional:true});add('vinted','🛍️ Vinted · action unique (20 min)','1 listing, 1 sourcing ou 1 réponse.',20,{optional:true});add('chess','♟️ Échecs · tracker Elo (15 min)','Parties/puzzles. Validation = Elo.',15,{optional:true});}
     add('supplement','🌙 Suppléments · sommeil / libido base','Magnésium le soir. Zinc seulement si utile/toléré. Base réelle : sommeil + stress bas.',5,{late:true});add('routine','📝 Log rapide','30 secondes : fait, sauté, prochaine action demain.',3,{late:true});return cards.sort((a,b)=>(a.start||0)-(b.start||0));}
-  function ensureRoutine(){const page=$('#p-routine');if(!page)return null;document.body.classList.add('ud-v67-clean');let root=$('#ud-v67-root');if(!root){root=document.createElement('div');root.id='ud-v67-root';root.innerHTML='<div class="ud-v67-panel"><div class="ud-v67-kicker">V68 Smart Routine</div><div class="ud-v67-title">Routine auto autour travail + cours</div><div class="ud-v67-sub">Entre les heures de travail et les heures de cours. La routine bloque ces créneaux et place EPFC/Coding/IA/NL/Élec/IoT autour. Repas retirés.</div><div class="ud-v67-modes"><button type="button" class="ud-v67-mode" data-mode="normal">Journée normale</button><button type="button" class="ud-v67-mode" data-mode="court">Courte / fatigué</button><button type="button" class="ud-v67-mode" data-mode="weekend">Weekend / libre</button></div><div class="ud-v67-form"><label class="ud-v67-field"><span>Travail début</span><input id="ud67-work-start" type="time"></label><label class="ud-v67-field"><span>Travail fin</span><input id="ud67-work-end" type="time"></label><label class="ud-v67-field"><span>Cours début</span><input id="ud67-course-start" type="time"></label><label class="ud-v67-field"><span>Cours fin</span><input id="ud67-course-end" type="time"></label><label class="ud-v67-field"><span>Énergie</span><select id="ud67-energy"><option value="normal">Normale</option><option value="basse">Basse</option><option value="haute">Haute</option></select></label></div></div><div class="ud-v67-banner" id="ud67-banner">—</div><div class="ud-v67-list" id="ud67-list"></div>';const wb=$('.wake-bar',page);if(wb)wb.insertAdjacentElement('afterend',root);else page.prepend(root);}return root;}
+  function ensureRoutine(){const page=$('#p-routine');if(!page)return null;document.body.classList.add('ud-v67-clean');let root=$('#ud-v67-root');if(!root){root=document.createElement('div');root.id='ud-v67-root';root.innerHTML='<div class="ud-v67-panel"><div class="ud-v67-kicker">V68 Smart Routine</div><div class="ud-v67-title">Routine auto autour travail + cours</div><div class="ud-v67-sub">Entre les heures de travail et les heures de cours. La routine bloque ces créneaux et place EPFC/Coding/IA/NL/IoT autour. Repas retirés.</div><div class="ud-v67-modes"><button type="button" class="ud-v67-mode" data-mode="normal">Journée normale</button><button type="button" class="ud-v67-mode" data-mode="court">Courte / fatigué</button><button type="button" class="ud-v67-mode" data-mode="weekend">Weekend / libre</button></div><div class="ud-v67-form"><label class="ud-v67-field"><span>Travail début</span><input id="ud67-work-start" type="time"></label><label class="ud-v67-field"><span>Travail fin</span><input id="ud67-work-end" type="time"></label><label class="ud-v67-field"><span>Cours début</span><input id="ud67-course-start" type="time"></label><label class="ud-v67-field"><span>Cours fin</span><input id="ud67-course-end" type="time"></label><label class="ud-v67-field"><span>Énergie</span><select id="ud67-energy"><option value="normal">Normale</option><option value="basse">Basse</option><option value="haute">Haute</option></select></label></div></div><div class="ud-v67-banner" id="ud67-banner">—</div><div class="ud-v67-list" id="ud67-list"></div>';const wb=$('.wake-bar',page);if(wb)wb.insertAdjacentElement('afterend',root);else page.prepend(root);}return root;}
   function loadCfgUI(){const c=cfg();$$('.ud-v67-mode').forEach(b=>b.classList.toggle('active',b.dataset.mode===c.mode));const ws=$('#ud67-work-start'),we=$('#ud67-work-end'),cs=$('#ud67-course-start'),ce=$('#ud67-course-end'),en=$('#ud67-energy');if(ws)ws.value=c.workStart||'';if(we)we.value=c.workEnd||'';if(cs)cs.value=c.courseStart||'';if(ce)ce.value=c.courseEnd||'';if(en)en.value=c.energy||'normal';}
   function routineDone(){const s=state();s.routineDone=s.routineDone||{};s.routineDone[today()]=s.routineDone[today()]||{};return s;}
   function renderRoutine(){ensureRoutine();loadCfgUI();const s=state();const done=(s.routineDone&&s.routineDone[today()])||{};const all=planner();const visible=all.filter(c=>!done[c.id]);const list=$('#ud67-list'),ban=$('#ud67-banner');if(!list||!ban)return;const count=all.length-visible.length,pct=all.length?Math.round(count/all.length*100):0;const top=$('#routine-progress');if(top)top.innerHTML=`Routine aujourd'hui : <b>${count}</b> / <b>${all.length}</b> blocs validés <span class="mono">(${pct}%)</span>`;ban.textContent=visible.length?`✓ ${count} terminé${count>1?'s':''} · ${visible.length} restant${visible.length>1?'s':''}`:'Routine terminée. Stop.';list.innerHTML=visible.length?visible.map(c=>`<div class="ud-v67-card" role="button" tabindex="0" data-id="${esc(c.id)}" data-type="${esc(c.type)}" data-level="${esc(level(c.type))}" data-title="${esc(c.title)}"><div class="ud-v67-check"></div><div class="ud-v67-time">${esc(c.time)}</div><div class="ud-v67-card-title">${esc(c.title)}<span class="ud-v67-kind">${esc(label(c.type))}</span></div><div class="ud-v67-desc">${esc(c.desc)}</div></div>`).join(''):'<div class="ud-v67-empty">Routine terminée. Rien à rajouter.</div>';}
@@ -14130,7 +14195,7 @@ body.ud-v67-clean #p-routine [data-action="routine-reset"]{
 </script>
 
 <style id="ud-v69-epfc-lab-style">
-/* V69 · EPFC + Élec/IoT · anti-doublon Trading */
+/* V69 · EPFC + IoT · anti-doublon Trading */
 .ud-v69-note{border:1px solid rgba(96,165,250,.24);border-radius:16px;background:rgba(15,23,42,.76);padding:12px;margin:10px 0;color:var(--text-dim,#aaa);font:700 12px/1.45 var(--f-sans,system-ui)}
 .ud-v69-pill{display:inline-flex;padding:3px 7px;border-radius:999px;background:rgba(52,211,153,.13);color:#86efac;font:900 10px/1 var(--f-mono,monospace);letter-spacing:.08em;text-transform:uppercase;margin-left:6px}
 </style>
@@ -14143,7 +14208,7 @@ body.ud-v67-clean #p-routine [data-action="routine-reset"]{
   function captureLab(){ const p=$('#p-trading'); if(p && /Lab IA \/ IoT|Smart Room Dashboard|Raspberry Pi Cookbook/.test(p.textContent||'')) labHTML=p.innerHTML; }
   captureLab();
   function relabel(){
-    document.querySelectorAll('.tab[data-tab="trading"]').forEach(t=>{t.innerHTML='🔌 Élec/IoT'; t.setAttribute('aria-label','Lab IA IoT');});
+    document.querySelectorAll('.tab[data-tab="trading"]').forEach(t=>{t.innerHTML='🔌 IoT'; t.setAttribute('aria-label','IoT Lab');});
     const page=$('#p-trading'); if(page){
       if(!/Lab IA \/ IoT|Smart Room Dashboard|Raspberry Pi Cookbook/.test(page.textContent||'') && labHTML){
         page.innerHTML = labHTML;
@@ -14153,7 +14218,7 @@ body.ud-v67-clean #p-routine [data-action="routine-reset"]{
     // Remove Trading as routine/prio text if any old patch re-injects it.
     document.querySelectorAll('#p-routine .ud-v67-card-title,#p-routine .ud-v67-desc,#prio-list *').forEach(el=>{
       if(/Trading|trading|propfirm|Backtest|Market structure/.test(el.textContent||'')){
-        el.textContent=(el.textContent||'').replace(/📈\s*Trading/g,'🔌 Élec/IoT').replace(/Trading|trading/g,'Élec/IoT').replace(/propfirm/gi,'portfolio').replace(/Market structure/gi,'Smart Room / Vinted Tracker').replace(/Backtest/gi,'Test capteur/API');
+        el.textContent=(el.textContent||'').replace(/📈\s*Trading/g,'🔌 IoT').replace(/Trading|trading/g,'IoT').replace(/propfirm/gi,'portfolio').replace(/Market structure/gi,'Smart Room / Vinted Tracker').replace(/Backtest/gi,'Test capteur/API');
       }
     });
   }
@@ -15533,7 +15598,7 @@ function active(days,fields){return range(days).reduce((a,r)=>a+(fields.some(f=>
 const CONFIG={
  epfc:{page:'p-epfc',title:'EPFC · grades de maîtrise',icon:'🎓',fields:['epfc'],actions:[['math','Maths financières'],['droit','Droit civil'],['rc','Responsabilité civile'],['assu','Assurance'],['exam','Mode examen']],grades:[[0,'N0 Recrue','Orientation','Comprendre le programme.'],[500,'N1 Base','Fondations','Notes propres.'],[1200,'N2 Opérationnel','Exercices','Refaire avec modèle.'],[2500,'N3 Autonome','Cas pratiques','Résoudre sans regarder.'],[4500,'N4 Examen','Performance','Chrono et séries.'],[7500,'N5 Avancé','Domination','Expliquer et maîtriser.']]},
  code:{page:'p-code',title:'Code · grades de compétence',icon:'🧪',fields:['code'],actions:[['python','Python base'],['functions','Fonctions'],['collections','Collections'],['debug','Debug'],['kata','10 exercices']],grades:[[0,'N0 Recrue','Syntaxe','Comprendre la base.'],[300,'N1 Débutant','Fondations','Conditions/boucles.'],[900,'N2 Junior','Fonctions','Découper proprement.'],[1800,'N3 Opérationnel','Problèmes','Katas faciles seul.'],[3600,'N4 Builder','Projet','Petit outil utile.'],[6500,'N5 Autonome','Qualité','Tester/refactoriser.']]},
- trading:{page:'p-trading',title:'Élec/IoT · grades techniques',icon:'🔌',fields:['iot','elec','trading'],actions:[['ohm','Loi d’Ohm'],['multimeter','Multimètre'],['arduino','Arduino/ESP'],['breadboard','Breadboard'],['project','Mini-projet']],grades:[[0,'N0 Recrue','Sécurité','Risques et composants.'],[3,'N1 Base','Mesure','Mesurer sans cramer.'],[8,'N2 Technicien','Montage','Circuit simple.'],[15,'N3 Opérationnel','Microcontrôleur','Capteur + sortie.'],[25,'N4 Maker','Projet','Boîtier + code.'],[40,'N5 Intégrateur','Système','Tester/fiabiliser.']]},
+ trading:{page:'p-trading',title:'IoT · grades techniques',icon:'🔌',fields:['iot','elec','trading'],actions:[['ohm','Loi d’Ohm'],['multimeter','Multimètre'],['arduino','Arduino/ESP'],['breadboard','Breadboard'],['project','Mini-projet']],grades:[[0,'N0 Recrue','Sécurité','Risques et composants.'],[3,'N1 Base','Mesure','Mesurer sans cramer.'],[8,'N2 Technicien','Montage','Circuit simple.'],[15,'N3 Opérationnel','Microcontrôleur','Capteur + sortie.'],[25,'N4 Maker','Projet','Boîtier + code.'],[40,'N5 Intégrateur','Système','Tester/fiabiliser.']]},
  nl:{page:'p-nl',title:'Néerlandais · grades CEFR',icon:'🇳🇱',fields:['nl','anki'],actions:[['anki','Anki régulier'],['grammar','Grammaire'],['listening','Écoute'],['speaking','Oral'],['writing','Écrit']],grades:[[0,'A0 Recrue','Survie','Mots isolés.'],[450,'A1 Stable','Base','Questions simples.'],[1200,'A2 Opérationnel','Vie courante','Tâches simples.'],[2600,'B1 Combat','Autonomie','Expliquer/raconter.'],[5200,'B2 Pro','Travail','Argumenter.'],[9000,'C1 Elite','Précision','Fluide/pro.']]}
 };
 const CHESS=[[0,'G0 Recrue','Pièces en prise','Ne plus donner de pièces.'],[800,'G1 Soldat','Tactiques','Fourchette/clouage.'],[1000,'G2 Caporal','Ouvertures','Développer/roquer.'],[1200,'G3 Sergent','Calcul','2-3 coups.'],[1400,'G4 Lieutenant','Plans','Plans par structure.'],[1600,'G5 Capitaine','Conversion','Transformer avantage.'],[1800,'G6 Commandant','Précision','Calcul + prophylaxie.'],[2000,'G7 Colonel','Club','Préparation/analyse.'],[2200,'G8 Elite','Expert','Répertoire + finales.']];
