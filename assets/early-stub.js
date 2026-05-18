@@ -1,4 +1,4 @@
-/* early-stub.js · minimal boot guard */
+/* early-stub.js · minimal boot guard + legacy purge */
 window.__earlyStub = true;
 
 if (typeof window.Notification === 'undefined') {
@@ -21,14 +21,57 @@ window.__V79FreezeGuardBypassedByFinal = true;
   if (window.__EarlyStubMinimal) return;
   window.__EarlyStubMinimal = true;
 
-  var VERSION = '20260518-minimal-boot';
+  var VERSION = '20260518-legacy-purge';
   var debugMode = /[?&]uddebug=1\b/.test(location.search);
   var loadStatus = {};
 
-  function page(id){ return document.getElementById('p-' + id); }
+  function $(sel, root){ return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+  function byId(id){ return document.getElementById(id); }
+  function page(id){ return byId('p-' + id); }
+
+  function removeNode(node){ if (node && node.parentNode) node.parentNode.removeChild(node); }
+
+  function purgeLegacyInlinePatches(){
+    var ids = [
+      'v75-forcefix-style','v76-visible-fix-style','v77-ops-fix-style','v78-grade-system-style',
+      'v75-home-modules','v75-focus-fab','v75-focus-overlay','v77-overdue-card','v77-chess-card',
+      'v77-prio-command','v77-chess-panel','v78-grade-panel','v79-freeze-panel','v80-epfc-display-fix'
+    ];
+    ids.forEach(function(id){ removeNode(byId(id)); });
+
+    $('[id^="v75-"], [id^="v76-"], [id^="v77-"], [id^="v78-"], [id^="v79-"], [id^="v80-"]').forEach(function(node){
+      if (node.id === 'v75-score-value' || node.id === 'v75-score-detail' || node.id === 'v75-morning-body') return;
+      removeNode(node);
+    });
+
+    $('script[id*="v75"],script[id*="v76"],script[id*="v77"],script[id*="v78"],script[id*="v79"],script[id*="v80"],style[id*="v75"],style[id*="v76"],style[id*="v77"],style[id*="v78"],style[id*="v79"],style[id*="v80"]').forEach(removeNode);
+
+    ['nutrition','souplesse','trading-old','legacy','cleanup','final'].forEach(function(tab){
+      $('[data-tab="' + tab + '"]').forEach(removeNode);
+      removeNode(page(tab));
+    });
+
+    // Nutrition/Flex legacy pages sometimes returned with old IDs/classes rather than tabs.
+    $('[id="p-nutrition"],[id="p-souplesse"],.nutrition-tab,.nutrition-page,.souplesse-tab,.souplesse-page').forEach(removeNode);
+  }
+
+  function disableServiceWorkers(){
+    try {
+      if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
+        navigator.serviceWorker.getRegistrations().then(function(regs){
+          regs.forEach(function(reg){ try { reg.unregister(); } catch(_){} });
+        }).catch(function(){});
+      }
+      if (window.caches && caches.keys) {
+        caches.keys().then(function(keys){
+          keys.forEach(function(k){ if (/dash|ultimate|dashboard|v\d+/i.test(k)) caches.delete(k); });
+        }).catch(function(){});
+      }
+    } catch(_){}
+  }
 
   function loadScript(id, src, key, onload){
-    if (document.getElementById(id)) { loadStatus[key] = 'existing'; return; }
+    if (byId(id)) { loadStatus[key] = 'existing'; return; }
     var script = document.createElement('script');
     script.id = id;
     script.src = src;
@@ -60,13 +103,14 @@ window.__V79FreezeGuardBypassedByFinal = true;
         vinted: !!page('vinted'),
         ia: !!page('ia')
       },
+      legacyLeft: $('[id^="v75-"], [id^="v76-"], [id^="v77-"], [id^="v78-"], [id^="v79-"], [id^="v80-"]').map(function(n){ return n.id; }).filter(Boolean),
       runAt: new Date().toISOString()
     };
   }
 
   function renderDebug(){
     if (!debugMode || !document.body) return;
-    var panel = document.getElementById('ud-runtime-debug-panel');
+    var panel = byId('ud-runtime-debug-panel');
     if (!panel) {
       panel = document.createElement('pre');
       panel.id = 'ud-runtime-debug-panel';
@@ -77,7 +121,15 @@ window.__V79FreezeGuardBypassedByFinal = true;
   }
 
   function boot(){
-    loadScript('ud-core-html-runtime', '/assets/core/html.js?v=' + VERSION, 'html', renderDebug);
+    purgeLegacyInlinePatches();
+    disableServiceWorkers();
+    loadScript('ud-core-html-runtime', '/assets/core/html.js?v=' + VERSION, 'html', function(){
+      purgeLegacyInlinePatches();
+      renderDebug();
+    });
+    setTimeout(purgeLegacyInlinePatches, 100);
+    setTimeout(purgeLegacyInlinePatches, 500);
+    setTimeout(purgeLegacyInlinePatches, 1500);
     setTimeout(renderDebug, 500);
     setTimeout(renderDebug, 1500);
     setTimeout(renderDebug, 3000);
