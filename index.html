@@ -186,7 +186,7 @@
 <div class="brand-text">
 <div class="brand-title">Protocole <em class="serif">Ultimate</em></div>
 <div class="brand-sub" id="brand-sub">Chargement…</div>
-<div style="font:900 10px ui-monospace,monospace;color:#22c55e;margin-top:2px;letter-spacing:.04em">v2026-05-18-v9 · flex-purge · ✓</div>
+<div style="font:900 10px ui-monospace,monospace;color:#22c55e;margin-top:2px;letter-spacing:.04em">v2026-05-18-v10 · deep-clean · ✓</div>
 </div>
 </div>
 <div class="masthead-meta" id="meta">
@@ -7158,7 +7158,6 @@ if (document.readyState === 'loading') {
     coding: { label:"Coding", icon:"💻", goalMin:300, tab:"code", color:"#34d399" },
     nl: { label:"Néerlandais", icon:"🇳🇱", goalMin:180, tab:"nl", color:"#22d3ee" },
     sport: { label:"Muscu/Sport", icon:"💪", goalSessions:3, tab:"sport", color:"#f97316" },
-    souplesse: { label:"Souplesse", icon:"🧘", goalSessions:5, tab:"flex", color:"#a78bfa" },
     trading: { label:"Trading", icon:"📈", goalSessions:4, maxSessions:4, tab:"trading", color:"#f59e0b" },
     lecture: { label:"Lecture", icon:"📚", goalPages:150, tab:"plan", color:"#818cf8" },
     vinted: { label:"Vinted", icon:"🛍️", goalListings:10, tab:"vinted", color:"#ec4899" },
@@ -8983,84 +8982,6 @@ if (document.readyState === 'loading') {
     items.forEach((item, idx) => { if (sportIds.includes('tl-'+idx)) { item.classList.add('done-early'); const b=item.querySelector('.tl-check'); if (b) { b.classList.add('checked'); b.innerHTML='✓'; } } });
   }
 
-  function renderFlex(){
-    const page = $('#p-flex'); if (!page) return;
-    const measures = [
-      ['fold','Forward fold','Distance doigts → sol','cm','Exemple : 12,5 si tes doigts sont 12,5 cm au-dessus du sol. 0 = tu touches. -5 = tu dépasses.'],
-      ['pike','Pike assis','Distance poitrine → cuisses','cm','Assis jambes tendues. Plus le chiffre descend, mieux c’est.'],
-      ['straddle','Straddle','Angle d’ouverture','°','Jambes ouvertes au sol. Mesure approximative OK.'],
-      ['splitD','Front split droit','Bassin → sol','cm','Jambe droite devant. Distance du bassin au sol.'],
-      ['splitG','Front split gauche','Bassin → sol','cm','Jambe gauche devant. Distance du bassin au sol.'],
-      ['middle','Middle split','Bassin → sol','cm','Distance bassin-sol en grand écart latéral.'],
-      ['squat','Deep squat','Temps propre','sec','Talons au sol, dos long, respiration calme.'],
-      ['bridge','Pont','Niveau','-1/0/1','-1 = pas encore. 0 = pont bras pliés. 1 = pont bras tendus propre.']
-    ];
-    page.innerHTML = `
-      <div class="page-kicker">Souplesse + mobilité + contrôle moteur</div>
-      <h1 class="page-title">Mobilité <em>élite réaliste</em></h1>
-      <p class="page-lead">Ici “souplesse” = <strong>mobilité complète</strong> : amplitude passive + force active en fin d’amplitude + contrôle poids du corps. Pas juste rester assis à tirer comme un mort.</p>
-      <div class="callout callout-warn"><strong>Règle sécurité</strong> — intensité 5-6/10. Jamais rebondir. Jamais douleur vive. Les OFF servent aux longues sessions, les jours sport au déverrouillage court post-training.</div>
-      <div class="stats stats-4"><div class="stat"><div class="stat-v violet mono">12'</div><div class="stat-l">minimum/jour</div></div><div class="stat"><div class="stat-v jade mono">45-60'</div><div class="stat-l">jours OFF</div></div><div class="stat"><div class="stat-v blue mono">PNF</div><div class="stat-l">contracte-relâche</div></div><div class="stat"><div class="stat-v amber mono">Actif</div><div class="stat-l">force amplitude</div></div></div>
-
-      <h2 class="section-title jade">Quotidien · <em>minimum vital 12 min</em></h2>
-      <div class="gm-flex-grid">
-        <div class="card"><h3>Hanches / chevilles</h3><ul class="dlist"><li><span class="k">90/90 hip switches</span><span class="v">2×10</span></li><li><span class="k">Deep squat hold</span><span class="v">2×60s</span></li><li><span class="k">Ankle rocks genou au mur</span><span class="v">2×12/jambe</span></li></ul></div>
-        <div class="card"><h3>Ischios / adducteurs</h3><ul class="dlist"><li><span class="k">Half split actif</span><span class="v">2×45s/jambe</span></li><li><span class="k">Cossack squat contrôlé</span><span class="v">2×6/jambe</span></li><li><span class="k">Pancake pulses légers</span><span class="v">2×10</span></li></ul></div>
-        <div class="card"><h3>Thorax / épaules</h3><ul class="dlist"><li><span class="k">Cat-cow + rotation thoracique</span><span class="v">10 reps</span></li><li><span class="k">Wall slides</span><span class="v">2×12</span></li><li><span class="k">Scapular push-up</span><span class="v">2×12</span></li></ul></div>
-      </div>
-
-      <h2 class="section-title violet">Jours OFF · <em>session élite 45-60 min</em></h2>
-      <div class="gm-flex-grid">
-        <div class="card"><h3>Front split</h3><ul class="dlist"><li><span class="k">Couch stretch</span><span class="v">2×60s/jambe</span></li><li><span class="k">Half split actif</span><span class="v">2×60s/jambe</span></li><li><span class="k">Lizard lunge</span><span class="v">2×45s/jambe</span></li><li><span class="k">PNF half split</span><span class="v info">5s contracte / 25s relâche ×3</span></li></ul></div>
-        <div class="card"><h3>Middle split</h3><ul class="dlist"><li><span class="k">Frog stretch</span><span class="v">3×60s</span></li><li><span class="k">Cossack squat</span><span class="v">3×8/jambe</span></li><li><span class="k">Pancake good morning léger</span><span class="v">3×10</span></li><li><span class="k">Middle split supporté</span><span class="v info">3×45-60s</span></li></ul></div>
-        <div class="card"><h3>Pont / épaules</h3><ul class="dlist"><li><span class="k">Extension thoracique foam roller</span><span class="v">2×10</span></li><li><span class="k">Wall slides + shoulder CARs</span><span class="v">2×8</span></li><li><span class="k">Bridge prep</span><span class="v">3×20-30s</span></li><li><span class="k">Pec doorway stretch</span><span class="v info">2×45s</span></li></ul></div>
-      </div>
-
-      <h2 class="section-title blue">Mesures mensuelles</h2>
-      <div class="gm-measure-card">
-        <h4>À faire le 1er du mois + photo. Les virgules sont acceptées.</h4>
-        <p>But : suivre les chiffres, pas deviner. Les labels ne doivent plus s’afficher lettre par lettre.</p>
-        <div class="gm-measure-list">${measures.map((m,i)=>`
-          <div class="gm-measure-row">
-            <div class="gm-measure-label"><b>${esc(m[1])}</b><span>${esc(m[2])} · ${esc(m[4])}</span></div>
-            <div class="gm-measure-input"><input type="text" inputmode="decimal" class="gm-flex-input" data-gm-flex="${esc(m[0])}" placeholder="—"><em>${esc(m[3])}</em></div>
-          </div>`).join('')}</div>
-      </div>
-
-      <div class="callout callout-tip"><strong>Progression attendue</strong> — 6 semaines : meilleure position de squat + doigts plus bas. 3-4 mois : paumes proches sol + deep squat stable. 8-12 mois : front split proche/complet. 12-18 mois : niveau rare si régularité réelle.</div>
-    `;
-    bindFlex(page);
-  }
-  function bindFlex(page){
-    const key = 'ud_gm_flex_measures_'+todayISO().slice(0,7);
-    const data = read(key, {});
-    $$('.gm-flex-input', page).forEach(inp => {
-      inp.value = data[inp.dataset.gmFlex] || '';
-      inp.addEventListener('input', () => {
-        inp.value = inp.value.replace(/[^0-9,.\-]/g,'');
-        data[inp.dataset.gmFlex] = inp.value;
-        write(key, data);
-      });
-    });
-  }
-
-  function renderNutrition(){
-    const page = $('#p-nutrition'); if (!page) return;
-    page.innerHTML = `
-      <div class="page-kicker">Nutrition · cut intelligent · énergie stable</div>
-      <h1 class="page-title">Nutrition <em>recomposition</em></h1>
-      <p class="page-lead">Données : 1m72 · 86,7 kg · gras abdominal visible. Ordre : perdre le gras sans tuer force, libido, études. Départ : 2200 kcal, ajustement toutes les 2 semaines.</p>
-      <div class="stats stats-4"><div class="stat"><div class="stat-v jade mono">2200</div><div class="stat-l">kcal départ</div></div><div class="stat"><div class="stat-v flame mono">170g</div><div class="stat-l">protéines</div></div><div class="stat"><div class="stat-v blue mono">200-230g</div><div class="stat-l">glucides</div></div><div class="stat"><div class="stat-v amber mono">60-70g</div><div class="stat-l">lipides</div></div></div>
-      <div class="callout callout-warn"><strong>Règle cut</strong> — moyenne poids 7 jours. Si après 14 jours ça ne descend pas : -150 kcal OU +2500 pas/jour. Ne coupe pas trop bas : libido/fatigue/études vont tomber.</div>
-      <h2 class="section-title amber">Structure simple · <em>4 prises + option faim</em></h2>
-      <div class="card"><ul class="dlist"><li><span class="k">Repas 1 · œufs ou skyr + avoine + fruit</span><span class="v info">35-45g P</span></li><li><span class="k">Repas 2 · poulet/dinde/thon/steak 5% + riz/pommes de terre + légumes</span><span class="v info">45-55g P</span></li><li><span class="k">Repas 3 · whey + fruit ou fromage blanc</span><span class="v info">25-35g P</span></li><li><span class="k">Repas 4 · poisson/viande/œufs + légumes + féculent contrôlé</span><span class="v info">45-55g P</span></li><li><span class="k">Option sommeil si faim · skyr/fromage blanc</span><span class="v">150-250 kcal</span></li></ul></div>
-      <h2 class="section-title jade">Suppléments · <em>stack propre</em></h2>
-      <div class="gm-plan-grid"><div class="card"><h3>Base utile</h3><ul class="dlist"><li><span class="k">Whey</span><span class="v">si protéines basses</span></li><li><span class="k">Créatine monohydrate</span><span class="v pos">3-5g/jour</span></li><li><span class="k">Caféine</span><span class="v">100-200mg avant 14h</span></li><li><span class="k">L-théanine</span><span class="v">200mg avec café si nervosité</span></li></ul></div><div class="card"><h3>Récupération</h3><ul class="dlist"><li><span class="k">Magnésium bisglycinate</span><span class="v">200-300mg soir</span></li><li><span class="k">Oméga-3</span><span class="v">si peu poisson gras</span></li><li><span class="k">Vitamine D3</span><span class="v info">selon bilan</span></li></ul></div><div class="card"><h3>À contrôler</h3><ul class="dlist"><li><span class="k">Zinc</span><span class="v warn">pas 25mg à vie</span></li><li><span class="k">Ashwagandha</span><span class="v warn">court terme seulement</span></li><li><span class="k">Fat burners / test boosters</span><span class="v neg">poubelle</span></li></ul></div></div>
-      <h2 class="section-title blue">Check fatigue/libido/études</h2>
-      <div class="card"><ul class="dlist"><li><span class="k">Sommeil</span><span class="v pos">7h30-8h30</span></li><li><span class="k">Pas quotidiens</span><span class="v info">8000-10000</span></li><li><span class="k">Fibres</span><span class="v">30-40g</span></li><li><span class="k">Eau</span><span class="v">2,5-3,5L</span></li><li><span class="k">Bilan médecin si fatigue/libido basse</span><span class="v warn">NFS, ferritine, TSH, HbA1c, D, B12, testo matin, SHBG, LH/FSH, prolactine</span></li></ul></div>
-    `;
-  }
-
   function ensureCSS(){
     if ($('#ud-godmode-sport-v40-css')) return;
     const st = document.createElement('style');
@@ -9078,7 +8999,7 @@ if (document.readyState === 'loading') {
     document.addEventListener('click', e => { if (e.target.closest('.tab[data-tab="sport"]')) setTimeout(renderSport, 80); }, true);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(init, 350)); else setTimeout(init, 350);
-  window.UD_GODMODE_V40 = { renderSport, renderFlex, renderNutrition, validateWorkout, getSession, PLAN, VERSION };
+  window.UD_GODMODE_V40 = { renderSport, validateWorkout, getSession, PLAN, VERSION };
   window.UD_GODMODE_V39 = window.UD_GODMODE_V40;
 })();
 
