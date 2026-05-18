@@ -111,7 +111,7 @@ window.Store = (function () {
     return checks;
   }
 
-  /* --- Routine notes (expand) --- */
+  /* --- Routine notes (expand) --- stored as routine_note_DATEINDEX e.g. "2026-01-01_2" --- */
   function getRoutineNote(dateIndex) { return get('routine_note_' + dateIndex, ''); }
 
   function setRoutineNote(dateIndex, text) { set('routine_note_' + dateIndex, text); }
@@ -127,6 +127,27 @@ window.Store = (function () {
   function getSportOff(date) { return get('sport_off_' + (date || today()), false); }
 
   function setSportOff(date, val) { set('sport_off_' + (date || today()), val); }
+
+  /* Mark sport done today — also marks routine sport block as completed */
+  function markSportDone(date) {
+    var d = date || today();
+    setSportLog(d, { sessionDone: true, sessionTs: Date.now() });
+    /* Sync log field */
+    setLog(d, { sport: '✓ Fait' });
+    /* Find sport block index in today's rotation and mark it */
+    if (window.D) {
+      var rotation = D.todayRotation ? D.todayRotation() : { tasks: [] };
+      rotation.tasks.forEach(function (task, idx) {
+        var lower = task.toLowerCase();
+        if (lower.indexOf('sport') >= 0 || lower.indexOf('push') >= 0 ||
+            lower.indexOf('pull') >= 0 || lower.indexOf('legs') >= 0 ||
+            lower.indexOf('full body') >= 0 || lower.indexOf('souplesse') >= 0 ||
+            lower.indexOf('mobilité') >= 0 || lower.indexOf('core') >= 0) {
+          setRoutineCheck(idx, true, d);
+        }
+      });
+    }
+  }
 
   /* --- Chess --- */
   function getChess() { return get('chess', { elo: 1200, goal: 1400, games: [] }); }
@@ -166,6 +187,15 @@ window.Store = (function () {
     return pos;
   }
 
+  /* Mark a study-related routine block as done when logging from routine */
+  function logStudyFromRoutine(matiere, addAmount, taskIdx, date) {
+    var newPos = logStudyProgress(matiere, addAmount);
+    if (taskIdx !== undefined && taskIdx !== null) {
+      setRoutineCheck(taskIdx, true, date || today());
+    }
+    return newPos;
+  }
+
   /* --- Finance (monthly budget) --- */
   function getFinanceMonth(month) {
     return get('finance_' + (month || currentMonth()), {
@@ -182,6 +212,25 @@ window.Store = (function () {
   /* Legacy finance accessor for backward compat */
   function getFinance() { return getFinanceMonth(currentMonth()); }
   function setFinance(data) { setFinanceMonth(currentMonth(), data); }
+
+  /* List of months that have finance data */
+  function getFinanceMonths() {
+    var months = [];
+    try {
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (k && k.indexOf(PFX + 'finance_') === 0) {
+          var m = k.slice((PFX + 'finance_').length);
+          if (/^\d{4}-\d{2}$/.test(m)) months.push(m);
+        }
+      }
+    } catch(e) {}
+    /* Always include current month */
+    var cm = currentMonth();
+    if (months.indexOf(cm) < 0) months.push(cm);
+    months.sort();
+    return months;
+  }
 
   /* --- Vinted --- */
   function getVinted() {
@@ -205,8 +254,7 @@ window.Store = (function () {
     var v = getVinted();
     v.items = (v.items || []).map(function (item) {
       if (item.id !== id) return item;
-      var updated = Object.assign({}, item, updates);
-      return updated;
+      return Object.assign({}, item, updates);
     });
     set('vinted', v);
   }
@@ -245,6 +293,15 @@ window.Store = (function () {
     set('books', books);
   }
 
+  function logBookPages(id, addPages) {
+    var b = getBook(id);
+    var pos = (parseInt(b.position, 10) || 0) + (parseInt(addPages, 10) || 0);
+    var total = parseInt(b.total, 10) || 0;
+    if (total && pos >= total) { pos = total; setBook(id, { position: pos, status: 'termine' }); }
+    else setBook(id, { position: pos });
+    return pos;
+  }
+
   /* --- Scoring --- */
   function getDayScore(date) {
     return get('score_' + (date || today()), {
@@ -271,32 +328,35 @@ window.Store = (function () {
 
     var pts = 0;
 
-    // Routine blocks
+    /* Routine blocks */
     var doneBlocks = Object.values(checks).filter(Boolean).length;
     pts += doneBlocks * 15;
 
-    // Focus sessions
+    /* Focus sessions */
     sessions.forEach(function (s) {
       var min = s.seconds / 60;
       if (min >= 50) pts += 50;
       else if (min >= 25) pts += 25;
     });
 
-    // Sport
-    var sportDone = (log.sport === '✓ Fait') || sportOff;
+    /* Sport */
+    var sportDone = (log.sport === '✓ Fait') || sportOff ||
+      (getSportLog(d).sessionDone === true);
     if (sportDone) pts += 50;
 
-    // Log filled (>=5 non-empty fields)
-    var filledFields = Object.values(log).filter(function (v) { return v !== '' && v !== null && v !== undefined && v !== 0; }).length;
+    /* Log filled (>=5 non-empty fields) */
+    var filledFields = Object.values(log).filter(function (v) {
+      return v !== '' && v !== null && v !== undefined && v !== 0;
+    }).length;
     var logFilled = filledFields >= 5;
     if (logFilled) pts += 20;
 
-    // Full rotation bonus
-    var rotation = (window.D && window.D.todayRotation()) || { tasks: [] };
+    /* Full rotation bonus */
+    var rotation = (window.D && window.D.todayRotation) ? D.todayRotation() : { tasks: [] };
     var fullRotation = rotation.tasks.length > 0 && doneBlocks >= rotation.tasks.length;
     if (fullRotation) pts += 50;
 
-    // Streak multiplier
+    /* Streak multiplier */
     var streaks = getStreaks();
     var maxStreak = 0;
     Object.values(streaks).forEach(function (s) { if ((s.count || 0) > maxStreak) maxStreak = s.count; });
@@ -322,11 +382,11 @@ window.Store = (function () {
   }
 
   function getScoreTier(pts) {
-    if (pts >= 200) return { label: 'LÉGENDE', color: 'tier-legend', next: null, nextPts: 0 };
-    if (pts >= 150) return { label: 'CHAMPION', color: 'tier-champion', next: 'LÉGENDE', nextPts: 200 };
-    if (pts >= 100) return { label: 'CONTENDER', color: 'tier-contender', next: 'CHAMPION', nextPts: 150 };
-    if (pts >= 50)  return { label: 'CHALLENGER', color: 'tier-challenger', next: 'CONTENDER', nextPts: 100 };
-    return { label: 'SPARRING', color: 'tier-sparring', next: 'CHALLENGER', nextPts: 50 };
+    if (pts >= 200) return { label: 'LÉGENDE',   color: 'tier-legend',    next: null,        nextPts: 0,   prevPts: 200 };
+    if (pts >= 150) return { label: 'CHAMPION',   color: 'tier-champion',  next: 'LÉGENDE',   nextPts: 200, prevPts: 150 };
+    if (pts >= 100) return { label: 'CONTENDER',  color: 'tier-contender', next: 'CHAMPION',  nextPts: 150, prevPts: 100 };
+    if (pts >= 50)  return { label: 'CHALLENGER', color: 'tier-challenger',next: 'CONTENDER', nextPts: 100, prevPts: 50  };
+    return             { label: 'SPARRING',    color: 'tier-sparring',  next: 'CHALLENGER',nextPts: 50,  prevPts: 0   };
   }
 
   /* --- Streaks --- */
@@ -422,14 +482,17 @@ window.Store = (function () {
     getRoutineNote: getRoutineNote, setRoutineNote: setRoutineNote,
     getSportLog: getSportLog, setSportLog: setSportLog,
     getSportOff: getSportOff, setSportOff: setSportOff,
+    markSportDone: markSportDone,
     getChess: getChess, setChess: setChess, addChessGame: addChessGame,
     getStudy: getStudy, setStudy: setStudy, logStudyProgress: logStudyProgress,
+    logStudyFromRoutine: logStudyFromRoutine,
     getFinance: getFinance, setFinance: setFinance,
     getFinanceMonth: getFinanceMonth, setFinanceMonth: setFinanceMonth,
+    getFinanceMonths: getFinanceMonths,
     getVinted: getVinted, setVinted: setVinted,
     addVintedItem: addVintedItem, updateVintedItem: updateVintedItem,
     deleteVintedItem: deleteVintedItem, getVintedStats: getVintedStats,
-    getBooks: getBooks, getBook: getBook, setBook: setBook,
+    getBooks: getBooks, getBook: getBook, setBook: setBook, logBookPages: logBookPages,
     getDayScore: getDayScore, setDayScore: setDayScore,
     computeDayScore: computeDayScore, getScoreTier: getScoreTier,
     getStreaks: getStreaks, updateStreak: updateStreak,

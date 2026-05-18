@@ -1,4 +1,4 @@
-/* data.js — constantes, ressources, rotation semaine */
+/* data.js — constantes, ressources, rotation semaine, livres */
 'use strict';
 
 window.D = (function () {
@@ -8,11 +8,22 @@ window.D = (function () {
   var ROTATION = {
     lundi:    ['EPFC Python','Coding exercices','Néerlandais','Sport Pull'],
     mardi:    ['EPFC Linux/OS','IoT lab','Lecture','Sport Push'],
-    mercredi: ['EPFC Architecture','Réparation électronique','IA','Souplesse'],
+    mercredi: ['EPFC Architecture','Réparation électronique','IA','Core + Souplesse'],
     jeudi:    ['EPFC SQL','Coding projet','Néerlandais','Sport Legs'],
     vendredi: ['EPFC Web/JS','IoT ou Réparation catch-up','Échecs','Mobilité'],
-    samedi:   ['Long study block','Vinted','Sport','Famille/flexible'],
+    samedi:   ['Long study block','Vinted','Sport Full Body','Famille/flexible'],
     dimanche: ['Weekly review','Révision','Planning','Stretch']
+  };
+
+  /* PPL Day mapping by weekday */
+  var SPORT_DAY = {
+    lundi:    { type: 'pull',      label: 'Pull',          emoji: '🏋️' },
+    mardi:    { type: 'push',      label: 'Push',          emoji: '💪' },
+    mercredi: { type: 'core',      label: 'Core + Souplesse', emoji: '🧘' },
+    jeudi:    { type: 'legs',      label: 'Legs',          emoji: '🦵' },
+    vendredi: { type: 'push',      label: 'Push',          emoji: '💪' },
+    samedi:   { type: 'fullbody',  label: 'Full Body',     emoji: '🔥' },
+    dimanche: { type: 'off',       label: 'OFF',           emoji: '😴' }
   };
 
   var BOOKMARKS = [
@@ -59,6 +70,26 @@ window.D = (function () {
     { id:'reseau',    label:'Réseaux' },
     { id:'nl',        label:'Néerlandais' }
   ];
+
+  /* Study matières mapped to routine keywords, for auto-complete detection */
+  var STUDY_ROUTINE_MAP = {
+    'epfc python':       'python',
+    'coding exercices':  'coding',
+    'coding projet':     'coding',
+    'long study block':  'epfc_prog',
+    'ia':                'ia',
+    'épfc linux':        'linux',
+    'epfc linux/os':     'linux',
+    'epfc architecture': 'archi',
+    'epfc sql':          'sql',
+    'epfc web/js':       'web',
+    'néerlandais':       'nl',
+    'lecture':           'lecture_pg',
+    'iot lab':           'iot_s',
+    'iot ou réparation catch-up': 'iot_s',
+    'réparation électronique': 'repair',
+    'révision':          'epfc_prog'
+  };
 
   var RESOURCES = {
     python: [
@@ -149,8 +180,64 @@ window.D = (function () {
       { name:'Couch stretch',       type:'sec' },
       { name:'PNF contraction/relax',type:'sec'},
       { name:'Progression grand écart', type:'sec' }
+    ],
+    fullbody: [
+      { name:'Pompes strictes',     type:'reps' },
+      { name:'Tractions assistées', type:'reps' },
+      { name:'Split squat',         type:'reps' },
+      { name:'Rowing inversé',      type:'reps' },
+      { name:'Dead bug',            type:'sec' },
+      { name:'Frog stretch',        type:'sec' }
     ]
   };
+
+  /* ── BOOKS CATALOGUE ── */
+  var BOOKS = [
+    /* Concentration & Deep Work */
+    { id:'deepwork',      title:'Deep Work',                  author:'Cal Newport',       category:'Concentration & Deep Work', pages:304  },
+    { id:'flow',          title:'Flow',                       author:'Csikszentmihalyi',  category:'Concentration & Deep Work', pages:336  },
+    { id:'shallows',      title:'The Shallows',               author:'Nicholas Carr',     category:'Concentration & Deep Work', pages:276  },
+
+    /* Science */
+    { id:'briefhistory',  title:'A Brief History of Time',    author:'Stephen Hawking',   category:'Science',                   pages:212  },
+    { id:'selfishgene',   title:'The Selfish Gene',           author:'Richard Dawkins',   category:'Science',                   pages:360  },
+    { id:'sapiens',       title:'Sapiens',                    author:'Yuval Noah Harari', category:'Science',                   pages:443  },
+    { id:'cosmos',        title:'Cosmos',                     author:'Carl Sagan',        category:'Science',                   pages:365  },
+
+    /* Psychologie & Habitudes */
+    { id:'thinkfast',     title:'Thinking Fast and Slow',     author:'Daniel Kahneman',   category:'Psychologie & Habitudes',   pages:499  },
+    { id:'atomichabits',  title:'Atomic Habits',              author:'James Clear',       category:'Psychologie & Habitudes',   pages:319  },
+    { id:'powerofhabit',  title:'The Power of Habit',         author:'Charles Duhigg',    category:'Psychologie & Habitudes',   pages:371  },
+
+    /* Charisme & Communication */
+    { id:'howtowinfriends',title:'How to Win Friends',        author:'Dale Carnegie',     category:'Charisme & Communication',  pages:288  },
+    { id:'influence',     title:'Influence',                  author:'Robert Cialdini',   category:'Charisme & Communication',  pages:336  },
+    { id:'charismamyth',  title:'The Charisma Myth',          author:'Olivia Fox Cabane', category:'Charisme & Communication',  pages:272  },
+
+    /* Santé & Sommeil */
+    { id:'whywesleep',    title:'Why We Sleep',               author:'Matthew Walker',    category:'Santé & Sommeil',           pages:368  },
+    { id:'thebody',       title:'The Body',                   author:'Bill Bryson',       category:'Santé & Sommeil',           pages:464  },
+
+    /* Physique */
+    { id:'sixpieces',     title:'Six Easy Pieces',            author:'Richard Feynman',   category:'Physique',                  pages:176  },
+    { id:'elegantuniverse',title:'The Elegant Universe',      author:'Brian Greene',      category:'Physique',                  pages:448  },
+
+    /* Finance */
+    { id:'fastlane',      title:'The Millionaire Fastlane',   author:'MJ DeMarco',        category:'Finance',                   pages:339  },
+    { id:'psychmoney',    title:'The Psychology of Money',    author:'Morgan Housel',     category:'Finance',                   pages:256  },
+    { id:'richdad',       title:'Rich Dad Poor Dad',          author:'Robert Kiyosaki',   category:'Finance',                   pages:336  }
+  ];
+
+  /* Unique categories in order */
+  var BOOK_CATEGORIES = [
+    'Concentration & Deep Work',
+    'Science',
+    'Psychologie & Habitudes',
+    'Charisme & Communication',
+    'Santé & Sommeil',
+    'Physique',
+    'Finance'
+  ];
 
   var PRIORITY_CATEGORIES = ['Étude','Sport','Travail','Projet','Admin','Autre'];
 
@@ -159,16 +246,48 @@ window.D = (function () {
     return { day: day, tasks: ROTATION[day] || [] };
   }
 
+  function todaySportDay() {
+    var day = DAYS[new Date().getDay()];
+    return SPORT_DAY[day] || { type:'off', label:'OFF', emoji:'😴' };
+  }
+
+  /* Detect study matière from routine task label */
+  function taskToStudyMatiere(taskLabel) {
+    var lower = taskLabel.toLowerCase().trim();
+    var keys = Object.keys(STUDY_ROUTINE_MAP);
+    for (var i = 0; i < keys.length; i++) {
+      if (lower.indexOf(keys[i]) >= 0) return STUDY_ROUTINE_MAP[keys[i]];
+    }
+    return null;
+  }
+
+  /* Is this a sport-related task? */
+  function taskIsSport(taskLabel) {
+    var lower = taskLabel.toLowerCase();
+    return lower.indexOf('sport') >= 0 || lower.indexOf('push') >= 0 ||
+      lower.indexOf('pull') >= 0 || lower.indexOf('legs') >= 0 ||
+      lower.indexOf('full body') >= 0 || lower.indexOf('souplesse') >= 0 ||
+      lower.indexOf('mobilité') >= 0 || lower.indexOf('core') >= 0 ||
+      lower.indexOf('stretch') >= 0;
+  }
+
   return {
     DAYS: DAYS,
     ROTATION: ROTATION,
+    SPORT_DAY: SPORT_DAY,
     BOOKMARKS: BOOKMARKS,
     FOCUS_DOMAINS: FOCUS_DOMAINS,
     LOG_FIELDS: LOG_FIELDS,
     STUDY_TABS: STUDY_TABS,
+    STUDY_ROUTINE_MAP: STUDY_ROUTINE_MAP,
     RESOURCES: RESOURCES,
     SPORT: SPORT,
+    BOOKS: BOOKS,
+    BOOK_CATEGORIES: BOOK_CATEGORIES,
     PRIORITY_CATEGORIES: PRIORITY_CATEGORIES,
-    todayRotation: todayRotation
+    todayRotation: todayRotation,
+    todaySportDay: todaySportDay,
+    taskToStudyMatiere: taskToStudyMatiere,
+    taskIsSport: taskIsSport
   };
 })();

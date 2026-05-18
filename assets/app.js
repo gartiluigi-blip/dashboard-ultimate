@@ -1,4 +1,4 @@
-/* app.js — main entry point */
+/* app.js — main entry point — Fight Night Dashboard v3 */
 'use strict';
 
 (function () {
@@ -28,7 +28,7 @@
     t.textContent = msg;
     t.classList.add('show');
     clearTimeout(t._timer);
-    t._timer = setTimeout(function () { t.classList.remove('show'); }, duration || 2000);
+    t._timer = setTimeout(function () { t.classList.remove('show'); }, duration || 2200);
   }
 
   function fmtTime(sec) {
@@ -45,10 +45,83 @@
 
   function pct(v, max) { return Math.min(100, max > 0 ? Math.round(v / max * 100) : 0); }
 
+  function fmtEur(v) { return parseFloat(v || 0).toFixed(2) + ' €'; }
+
   /* ─── Header date ─── */
   function initHeader() {
     var d = qs('#header-date');
     if (d) d.textContent = fmtDate(new Date());
+  }
+
+  /* ═══════════════════════════════════════════
+     SCORE WIDGET
+  ═══════════════════════════════════════════ */
+  function renderScoreWidget() {
+    var pts = Store.computeDayScore();
+    var tier = Store.getScoreTier(pts);
+    var scoreData = Store.getDayScore();
+
+    var wrap = el('div', { class:'score-widget card-spotlight' });
+
+    /* Top row */
+    var top = el('div', { class:'score-widget-top' });
+    var lbl = el('div', { class:'score-label' }, '⚡ Score du jour');
+    var tierBadge = el('div', { class:'score-tier-badge ' + tier.color }, tier.label);
+    top.appendChild(lbl);
+    top.appendChild(tierBadge);
+    wrap.appendChild(top);
+
+    /* Big number */
+    var numWrap = el('div', { style:'text-align:center;padding:4px 0 8px' });
+    var num = el('div', { class:'score-number' }, String(pts));
+    numWrap.appendChild(num);
+    if (scoreData.mult && scoreData.mult > 1) {
+      var multEl = el('div', { class:'score-mult-badge' }, '×' + scoreData.mult.toFixed(1) + ' streak');
+      numWrap.style.position = 'relative';
+      numWrap.appendChild(multEl);
+    }
+    wrap.appendChild(numWrap);
+
+    /* Progress to next tier */
+    if (tier.next) {
+      var progWrap = el('div', { class:'score-progress-wrap' });
+      var progLabels = el('div', { class:'score-progress-labels' });
+      var p = pct(pts - tier.prevPts, tier.nextPts - tier.prevPts);
+      progLabels.innerHTML =
+        '<span>' + tier.label + '</span>' +
+        '<span>' + tier.next + ' (' + (tier.nextPts - pts) + ' pts)</span>';
+      var progBar = el('div', { class:'score-progress-bar' });
+      var progFill = el('div', { class:'score-progress-fill', style:'width:' + p + '%' });
+      progBar.appendChild(progFill);
+      progWrap.appendChild(progLabels);
+      progWrap.appendChild(progBar);
+      wrap.appendChild(progWrap);
+    } else {
+      var legendMsg = el('div', { style:'text-align:center;font-size:11px;color:var(--orange);font-weight:900;letter-spacing:.1em;margin-top:4px' },
+        '🏆 NIVEAU MAXIMUM ATTEINT');
+      wrap.appendChild(legendMsg);
+    }
+
+    /* Score breakdown mini */
+    var breakdown = el('div', { style:'display:flex;gap:8px;margin-top:10px;flex-wrap:wrap' });
+    var parts = [
+      { icon:'🧱', label:'Routine ×' + (scoreData.routineBlocks||0), pts: (scoreData.routineBlocks||0)*15 },
+      { icon:'💪', label:'Sport',  pts: scoreData.sportDone ? 50 : 0, done: scoreData.sportDone },
+      { icon:'📋', label:'Log',    pts: scoreData.logFilled ? 20 : 0, done: scoreData.logFilled },
+      { icon:'🔄', label:'Full',   pts: scoreData.fullRotation ? 50 : 0, done: scoreData.fullRotation }
+    ];
+    parts.forEach(function (p2) {
+      var chip = el('div', {
+        style: 'font-size:10px;padding:3px 8px;border-radius:12px;font-weight:800;' +
+               'background:' + (p2.pts > 0 || p2.done ? 'rgba(255,90,24,.12)' : 'var(--panel3)') + ';' +
+               'color:' + (p2.pts > 0 || p2.done ? 'var(--orange)' : 'var(--dim)') + ';' +
+               'border:1px solid ' + (p2.pts > 0 || p2.done ? 'rgba(255,90,24,.25)' : 'var(--border)')
+      }, p2.icon + ' ' + p2.label + (p2.pts ? ' +' + p2.pts : ''));
+      breakdown.appendChild(chip);
+    });
+    wrap.appendChild(breakdown);
+
+    return wrap;
   }
 
   /* ═══════════════════════════════════════════
@@ -65,7 +138,7 @@
 
     page.innerHTML = '';
 
-    /* Hero — prochaine action */
+    /* Hero */
     var rotation = D.todayRotation();
     var hero = el('div', { class:'hero-card' });
     hero.innerHTML =
@@ -75,9 +148,12 @@
         rotation.tasks.length + ' blocs</div>';
     page.appendChild(hero);
 
+    /* SCORE WIDGET */
+    page.appendChild(renderScoreWidget());
+
     /* Stats rapides */
     var statRow = el('div', { class:'stat-row' });
-    var totalStudy = (log.epfc_min||0)+(log.code_min||0)+(log.nl_min||0)+(log.ia_min||0)+(log.repair_min||0)+(log.iot_min||0);
+    var totalStudy = (parseInt(log.epfc_min)||0)+(parseInt(log.code_min)||0)+(parseInt(log.nl_min)||0)+(parseInt(log.ia_min)||0)+(parseInt(log.repair_min)||0)+(parseInt(log.iot_min)||0);
     statRow.innerHTML =
       '<div class="stat-box stat-box-o"><div class="stat-value v-orange">' + focusMin + '</div><div class="stat-label">Focus min</div></div>' +
       '<div class="stat-box stat-box-g"><div class="stat-value v-gold">' + totalStudy + '</div><div class="stat-label">Étude min</div></div>' +
@@ -90,7 +166,7 @@
     /* Reprendre */
     page.appendChild(renderBookmarksCard());
 
-    /* Priorités du jour */
+    /* Priorités */
     page.appendChild(renderPrioritiesCard(today));
 
     /* Log du jour */
@@ -107,10 +183,10 @@
   var focusState = { running: false, seconds: 0, domain: null, interval: null };
 
   function renderFocusCard() {
-    var card = el('div', { class:'card card-glow-o' });
+    var card = el('div', { class:'card card-glow-o card-spotlight' });
 
     var head = el('div', { class:'card-head' });
-    head.innerHTML = '<div class="card-title"><span class="card-title-icon">🥊</span> Focus</div>';
+    head.innerHTML = '<div class="card-title"><span class="card-title-icon">🥊</span> Focus Timer</div>';
     card.appendChild(head);
 
     var grid = el('div', { class:'focus-domain-grid' });
@@ -143,11 +219,12 @@
     var btnStop = el('button', { class:'btn btn-secondary', type:'button' }, '⏹ Stop');
 
     btnStart.addEventListener('click', function () {
-      if (!focusState.domain && !focusState.running) { toast('Choisis un domaine'); return; }
+      if (!focusState.domain && !focusState.running) { toast('Choisis un domaine !'); return; }
       if (focusState.running) {
         clearInterval(focusState.interval);
         focusState.running = false;
         btnStart.textContent = '▶ Reprendre';
+        timeEl.classList.remove('running');
       } else {
         focusState.running = true;
         btnStart.textContent = '⏸ Pause';
@@ -164,7 +241,7 @@
       clearInterval(focusState.interval);
       Store.addFocusSession(focusState.domain, focusState.seconds);
       Store.updateStreak(focusState.domain);
-      toast('Session ' + focusState.domain + ' · ' + Math.round(focusState.seconds/60) + 'min sauvegardée');
+      toast('Session ' + focusState.domain + ' · ' + Math.round(focusState.seconds/60) + 'min ✓');
       focusState.running = false;
       focusState.seconds = 0;
       focusState.domain = null;
@@ -224,14 +301,10 @@
       var head = el('div', { class:'card-head' });
       head.innerHTML = '<div class="card-title">🎯 Priorités du jour</div>';
 
-      /* Add form */
       var form = el('div', { class:'flex gap-6 mt-8', style:'margin-bottom:10px' });
-      var txt = el('input', { type:'text', placeholder:'Nouvelle priorité...', style:'flex:1' });
+      var txt = el('input', { type:'text', placeholder:'Nouvelle priorité...' , style:'flex:1'});
       var sel = el('select', { style:'width:60px;flex-shrink:0' });
-      ['A','B','C'].forEach(function (l) {
-        var o = el('option', { value:l }, l);
-        sel.appendChild(o);
-      });
+      ['A','B','C'].forEach(function (l) { sel.appendChild(el('option', { value:l }, l)); });
       sel.value = 'B';
       var addBtn = el('button', { class:'btn btn-primary btn-sm', type:'button' }, '+');
       addBtn.addEventListener('click', function () {
@@ -285,7 +358,7 @@
     var grid = el('div', { class:'log-grid' });
 
     D.LOG_FIELDS.forEach(function (f) {
-      var wrap = el('div', { class:'log-field' + (f.wide ? ' ' : '') });
+      var wrap = el('div', { class:'log-field' });
       if (f.wide) wrap.style.gridColumn = 'span 2';
       var label = el('label', {}, f.label + (f.unit ? ' (' + f.unit + ')' : ''));
 
@@ -293,8 +366,7 @@
       if (f.type === 'select') {
         input = el('select', {});
         (f.options || []).forEach(function (o) {
-          var opt = el('option', { value:o }, o);
-          input.appendChild(opt);
+          input.appendChild(el('option', { value:o }, o));
         });
         input.value = log[f.id] || '';
       } else if (f.type === 'text') {
@@ -315,9 +387,8 @@
 
     card.appendChild(grid);
 
-    var saveBtn = el('button', { class:'btn btn-primary btn-sm mt-8', type:'button' }, '💾 Sauvegarder');
-    saveBtn.style.marginTop = '10px';
-    saveBtn.addEventListener('click', function () { toast('Log sauvegardé'); });
+    var saveBtn = el('button', { class:'btn btn-primary btn-sm', type:'button', style:'margin-top:10px' }, '💾 Sauvegarder');
+    saveBtn.addEventListener('click', function () { toast('Log sauvegardé ✓'); });
     card.appendChild(saveBtn);
 
     return card;
@@ -329,9 +400,10 @@
     card.innerHTML = '<div class="card-head"><div class="card-title">🏆 Objectifs du mois</div></div>';
 
     var objs = Store.getObjectives();
+
     if (!objs.length) {
-      var addBtn2 = el('button', { class:'btn btn-secondary btn-sm', type:'button' }, '+ Ajouter objectif');
-      addBtn2.addEventListener('click', function () { showAddObjectiveModal(); });
+      var addBtn2 = el('button', { class:'btn btn-secondary btn-sm', type:'button', style:'margin-top:8px' }, '+ Ajouter objectif');
+      addBtn2.addEventListener('click', showAddObjectiveModal);
       card.appendChild(el('div', { class:'empty-state' },
         el('div', { class:'empty-state-text text-muted' }, 'Aucun objectif ce mois')));
       card.appendChild(addBtn2);
@@ -347,8 +419,7 @@
       card.appendChild(item);
     });
 
-    var addBtn = el('button', { class:'btn btn-secondary btn-sm mt-8', type:'button' }, '+ Objectif');
-    addBtn.style.marginTop = '10px';
+    var addBtn = el('button', { class:'btn btn-secondary btn-sm', type:'button', style:'margin-top:10px' }, '+ Objectif');
     addBtn.addEventListener('click', showAddObjectiveModal);
     card.appendChild(addBtn);
     return card;
@@ -374,8 +445,9 @@
 
     domains.forEach(function (d) {
       var s = streaks[d] || { count: 0 };
-      var chip = el('div', { class:'streak-chip' });
-      chip.innerHTML = '<div class="streak-num">' + (s.count || 0) + '</div><div class="streak-name">' + d + '</div>';
+      var count = s.count || 0;
+      var chip = el('div', { class:'streak-chip' + (count > 3 ? ' hot' : '') });
+      chip.innerHTML = '<div class="streak-num">' + count + '</div><div class="streak-name">' + d + '</div>';
       grid.appendChild(chip);
     });
 
@@ -400,7 +472,7 @@
       '📅 ' + rotation.day.charAt(0).toUpperCase() + rotation.day.slice(1));
     page.appendChild(pill);
 
-    /* Travail */
+    /* Travail block */
     var workCard = el('div', { class:'card card-l-orange' });
     workCard.innerHTML =
       '<div class="card-head"><div class="card-title"><span class="card-title-icon">💼</span> Travail</div></div>' +
@@ -419,8 +491,7 @@
       if (fa) { fa.value = rtData.fatigue || ''; fa.addEventListener('change', saveRT); }
       function saveRT() {
         Store.set('routine_work_' + today, {
-          start: ws ? ws.value : '', end: we ? we.value : '',
-          fatigue: fa ? fa.value : ''
+          start: ws ? ws.value : '', end: we ? we.value : '', fatigue: fa ? fa.value : ''
         });
       }
     }, 0);
@@ -429,9 +500,12 @@
     var rotTitle = el('div', { class:'section-title' }, 'Rotation du jour');
     page.appendChild(rotTitle);
 
-    var icons = { 'EPFC':'🎓','Coding':'💻','IoT':'🌐','Lecture':'📚','Réparation':'🔧','IA':'🤖',
-                  'Néerlandais':'🇳🇱','Sport':'💪','Souplesse':'🧘','Vinted':'🛍','Famille':'👨‍👩‍👧','Weekly':'📊',
-                  'Révision':'📖','Planning':'📅','Stretch':'🧘','Mobilité':'🦵','Échecs':'♟️','Long':'📚' };
+    var icons = {
+      'EPFC':'🎓','Coding':'💻','IoT':'🌐','Lecture':'📚','Réparation':'🔧','IA':'🤖',
+      'Néerlandais':'🇳🇱','Sport':'💪','Souplesse':'🧘','Vinted':'🛍','Famille':'👨‍👩‍👧','Weekly':'📊',
+      'Révision':'📖','Planning':'📅','Stretch':'🧘','Mobilité':'🦵','Échecs':'♟️','Long':'📚',
+      'Pull':'🏋️','Push':'💪','Legs':'🦵','Full':'🔥','Core':'🧘','OFF':'😴'
+    };
 
     function getIcon(label) {
       var keys = Object.keys(icons);
@@ -443,34 +517,129 @@
 
     rotation.tasks.forEach(function (task, idx) {
       var done = !!checks[idx];
+      var dateIndex = today + '_' + idx;
+      var savedNote = Store.getRoutineNote(dateIndex);
+
+      /* Detect study matière */
+      var studyMatiere = D.taskToStudyMatiere(task);
+      var isSportTask = D.taskIsSport(task);
+
       var block = el('div', { class:'routine-block' + (done ? ' done' : '') });
-      block.innerHTML =
-        '<div class="routine-block-icon">' + getIcon(task) + '</div>' +
-        '<div class="routine-block-info">' +
-          '<div class="routine-block-title">' + task + '</div>' +
-        '</div>';
+
+      /* Main row */
+      var mainRow = el('div', { class:'routine-block-main' });
+      var iconEl = el('div', { class:'routine-block-icon' }, getIcon(task));
+      var infoEl = el('div', { class:'routine-block-info' });
+      var titleEl = el('div', { class:'routine-block-title' }, task);
+      infoEl.appendChild(titleEl);
+      if (savedNote) {
+        var noteEl = el('div', { class:'routine-block-note' }, savedNote);
+        infoEl.appendChild(noteEl);
+      }
+      if (studyMatiere) {
+        var sd = Store.getStudy(studyMatiere);
+        if (sd && (sd.position || sd.total)) {
+          var pctVal = pct(parseInt(sd.position)||0, parseInt(sd.total)||1);
+          var subEl = el('div', { class:'routine-block-sub' },
+            'Progression : ' + (sd.position||0) + '/' + (sd.total||'?') + ' ' + (sd.unit||'') + ' (' + pctVal + '%)');
+          infoEl.appendChild(subEl);
+        }
+      }
+      mainRow.appendChild(iconEl);
+      mainRow.appendChild(infoEl);
+
+      /* Actions */
+      var actions = el('div', { class:'routine-block-actions' });
+
+      /* Expand chevron */
+      var expandBtn = el('button', { class:'routine-expand-btn', type:'button', title:'Développer' }, '▾');
+      actions.appendChild(expandBtn);
+
+      /* Check button */
       var chk = el('button', { class:'btn-icon', type:'button' }, done ? '✓' : '○');
       chk.addEventListener('click', function () {
         Store.toggleRoutineCheck(idx, today);
         renderRoutine();
       });
-      block.appendChild(chk);
+      actions.appendChild(chk);
+
+      mainRow.appendChild(actions);
+      block.appendChild(mainRow);
+
+      /* Expand panel */
+      var expandPanel = el('div', { class:'routine-block-expand' });
+
+      /* Note field */
+      var noteWrap = el('div', { class:'routine-note-field' });
+      noteWrap.appendChild(el('label', {}, 'Où j\'en suis / reprendre à...'));
+      var noteTA = el('textarea', { placeholder:'Page 42, exercice 3, continuer à...' });
+      noteTA.value = savedNote || '';
+      noteWrap.appendChild(noteTA);
+      expandPanel.appendChild(noteWrap);
+
+      /* If study matière — log progress */
+      if (studyMatiere) {
+        var sd2 = Store.getStudy(studyMatiere);
+        var studyRow = el('div', { class:'routine-study-log' });
+        studyRow.appendChild(el('span', { class:'unit-label' }, '+'));
+        var studyInp = el('input', { type:'number', min:'0', placeholder:'0' });
+        studyRow.appendChild(studyInp);
+        studyRow.appendChild(el('span', { class:'unit-label' }, sd2.unit || 'pages'));
+        expandPanel.appendChild(studyRow);
+      }
+
+      /* Save button */
+      var saveRow = el('div', { style:'display:flex;gap:8px;margin-top:6px' });
+      var saveBtn = el('button', { class:'btn btn-primary btn-sm', type:'button' }, '💾 Sauvegarder');
+      saveBtn.addEventListener('click', function () {
+        var noteVal = noteTA.value.trim();
+        Store.setRoutineNote(dateIndex, noteVal);
+
+        if (studyMatiere) {
+          var addAmt = parseInt(studyInp ? studyInp.value : '0', 10);
+          if (addAmt > 0) {
+            Store.logStudyFromRoutine(studyMatiere, addAmt, idx, today);
+            toast('Progression +' + addAmt + ' ' + (Store.getStudy(studyMatiere).unit||'') + ' · Bloc ✓');
+          } else {
+            Store.setRoutineCheck(idx, true, today);
+            toast('Note sauvegardée · Bloc ✓');
+          }
+        } else if (isSportTask) {
+          Store.markSportDone(today);
+          toast('Sport enregistré · Bloc ✓');
+        } else {
+          Store.setRoutineCheck(idx, true, today);
+          toast('Note sauvegardée · Bloc ✓');
+        }
+        renderRoutine();
+      });
+      saveRow.appendChild(saveBtn);
+      expandPanel.appendChild(saveRow);
+
+      block.appendChild(expandPanel);
       page.appendChild(block);
+
+      /* Toggle expand */
+      expandBtn.addEventListener('click', function () {
+        var isOpen = expandPanel.classList.contains('open');
+        expandPanel.classList.toggle('open', !isOpen);
+        expandBtn.classList.toggle('open', !isOpen);
+        block.classList.toggle('expanded', !isOpen);
+      });
     });
 
     /* Total productif */
     var log = Store.getLog(today);
-    var total = (log.epfc_min||0)+(log.code_min||0)+(log.nl_min||0)+(log.repair_min||0)+(log.iot_min||0);
+    var total = (parseInt(log.epfc_min)||0)+(parseInt(log.code_min)||0)+(parseInt(log.nl_min)||0)+(parseInt(log.repair_min)||0)+(parseInt(log.iot_min)||0);
     var doneCount = Object.values(checks).filter(Boolean).length;
 
-    var totalCard = el('div', { class:'card card-glow-o' });
-    totalCard.style.marginTop = '12px';
+    var totalCard = el('div', { class:'card card-glow-o', style:'margin-top:14px' });
     totalCard.innerHTML =
       '<div class="card-head"><div class="card-title"><span class="card-title-icon">⚡</span> Total productif</div></div>' +
       '<div class="stat-row">' +
         '<div class="stat-box stat-box-o"><div class="stat-value v-orange">' + total + '</div><div class="stat-label">Min étude</div></div>' +
         '<div class="stat-box stat-box-g"><div class="stat-value v-gold">' + doneCount + '/' + rotation.tasks.length + '</div><div class="stat-label">Blocs faits</div></div>' +
-        '<div class="stat-box stat-box-gr"><div class="stat-value v-green">' + (log.sport === '✓ Fait' ? '1' : '0') + '</div><div class="stat-label">Sport</div></div>' +
+        '<div class="stat-box stat-box-gr"><div class="stat-value v-green">' + (log.sport === '✓ Fait' ? '✓' : '–') + '</div><div class="stat-label">Sport</div></div>' +
       '</div>';
     page.appendChild(totalCard);
   }
@@ -483,12 +652,34 @@
     if (!page) return;
     page.innerHTML = '';
 
-    /* Last 7 days */
-    var sTitle = el('div', { class:'section-title' }, '7 derniers jours');
-    page.appendChild(sTitle);
-
     var sessions = Store.getFocusSessions();
     var today = Store.today();
+
+    /* Score history — last 7 days */
+    var scoreCard = el('div', { class:'card card-glow-o card-spotlight' });
+    scoreCard.innerHTML = '<div class="card-head"><div class="card-title">⚡ Scores 7 jours</div></div>';
+    var scoreRow = el('div', { style:'display:flex;gap:6px;flex-wrap:wrap' });
+    for (var di = 6; di >= 0; di--) {
+      var dd = new Date(); dd.setDate(dd.getDate() - di);
+      var dk = dd.getFullYear() + '-' + String(dd.getMonth()+1).padStart(2,'0') + '-' + String(dd.getDate()).padStart(2,'0');
+      var sc = Store.getDayScore(dk);
+      var pt = sc.pts || 0;
+      var tier = Store.getScoreTier(pt);
+      var isToday = dk === today;
+      var chip = el('div', {
+        style: 'flex:1;min-width:36px;text-align:center;padding:8px 4px;border-radius:10px;' +
+               'background:' + (isToday ? 'rgba(255,90,24,.15)' : 'var(--panel2)') + ';' +
+               'border:1px solid ' + (isToday ? 'rgba(255,90,24,.4)' : 'var(--border)')
+      });
+      var dayName = ['D','L','M','Me','J','V','S'][dd.getDay()];
+      chip.innerHTML =
+        '<div style="font-size:9px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.04em">' + dayName + '</div>' +
+        '<div style="font-size:18px;font-weight:900;color:var(--orange);margin:3px 0">' + pt + '</div>' +
+        '<div style="font-size:8px;font-weight:900;color:var(--dim);letter-spacing:.04em">' + tier.label + '</div>';
+      scoreRow.appendChild(chip);
+    }
+    scoreCard.appendChild(scoreRow);
+    page.appendChild(scoreCard);
 
     /* Heatmap */
     var hCard = el('div', { class:'card' });
@@ -501,11 +692,11 @@
     });
 
     for (var i = 89; i >= 0; i--) {
-      var d = new Date(); d.setDate(d.getDate() - i);
-      var dk = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-      var min = dailyMap[dk] || 0;
+      var d2 = new Date(); d2.setDate(d2.getDate() - i);
+      var dk2 = d2.getFullYear() + '-' + String(d2.getMonth()+1).padStart(2,'0') + '-' + String(d2.getDate()).padStart(2,'0');
+      var min = dailyMap[dk2] || 0;
       var lvl = min === 0 ? '0' : min < 30 ? '1' : min < 60 ? '2' : min < 120 ? '3' : '4';
-      var cell = el('div', { class:'heatmap-cell', 'data-level': lvl, title: dk + ': ' + min + 'min' });
+      var cell = el('div', { class:'heatmap-cell', 'data-level': lvl, title: dk2 + ': ' + min + 'min' });
       hRow.appendChild(cell);
     }
     hCard.appendChild(hRow);
@@ -531,9 +722,9 @@
       sorted.forEach(function (d) {
         var v = domTotals[d];
         var p = pct(v, maxVal);
-        var row = el('div', { style:'margin-bottom:8px' });
+        var row = el('div', { style:'margin-bottom:10px' });
         row.innerHTML =
-          '<div class="flex justify-between text-sm" style="margin-bottom:4px">' +
+          '<div class="flex justify-between text-sm" style="margin-bottom:5px">' +
             '<span>' + d + '</span><span class="text-orange font-bold">' + v + ' min</span>' +
           '</div>' +
           '<div class="progress-bar"><div class="progress-fill" style="width:' + p + '%"></div></div>';
@@ -543,22 +734,19 @@
     page.appendChild(domCard);
 
     /* Streaks */
-    var sCard = el('div', { class:'card' });
-    sCard.innerHTML = '<div class="card-head"><div class="card-title">🔥 Streaks actuels</div></div>';
-    sCard.appendChild(renderStreaksCard(Store.getStreaks()));
-    page.appendChild(sCard);
+    page.appendChild(renderStreaksCard(Store.getStreaks()));
 
     /* Today log summary */
     var log = Store.getLog(today);
     var logCard = el('div', { class:'card' });
     logCard.innerHTML = '<div class="card-head"><div class="card-title">📋 Log aujourd\'hui</div></div>';
-    var fields = [
+    var fields2 = [
       ['EPFC', log.epfc_min, 'min'], ['Code', log.code_min, 'min'],
       ['NL', log.nl_min, 'min'], ['Lecture', log.lecture_pg, 'pages'],
       ['Réparation', log.repair_min, 'min'], ['IoT', log.iot_min, 'min'],
       ['Anki', log.anki, 'cartes'], ['Sport', log.sport, '']
     ];
-    fields.forEach(function (f) {
+    fields2.forEach(function (f) {
       if (!f[1] && f[1] !== 0) return;
       var item = el('div', { class:'finance-item' });
       item.innerHTML = '<span>' + f[0] + '</span><span class="font-bold">' + f[1] + (f[2] ? ' '+f[2] : '') + '</span>';
@@ -576,6 +764,43 @@
     page.innerHTML = '';
 
     var today = Store.today();
+    var todaySport = D.todaySportDay();
+    var sportOff = Store.getSportOff(today);
+    var sportLog = Store.getSportLog(today);
+
+    /* Today's session badge */
+    var topRow = el('div', { style:'display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px' });
+    var dayBadge = el('div', { class:'sport-day-badge' },
+      todaySport.emoji + ' Séance du jour : ' + todaySport.label);
+    topRow.appendChild(dayBadge);
+
+    var offBtn = el('button', { class:'btn btn-secondary btn-sm', type:'button' },
+      sportOff ? '😴 OFF aujourd\'hui' : '😴 Jour OFF');
+    offBtn.style.marginLeft = 'auto';
+    if (sportOff) offBtn.style.opacity = '.6';
+    offBtn.addEventListener('click', function () {
+      if (!sportOff) {
+        Store.setSportOff(today, true);
+        Store.markSportDone(today);
+        toast('Jour OFF enregistré');
+        renderSport();
+      }
+    });
+    topRow.appendChild(offBtn);
+    page.appendChild(topRow);
+
+    /* Save session button */
+    if (!sportOff && todaySport.type !== 'off') {
+      var doneBtn = el('button', { class:'btn btn-green w-full', type:'button', style:'margin-bottom:14px' },
+        sportLog.sessionDone ? '✓ Séance enregistrée' : '✅ Marquer séance terminée');
+      if (sportLog.sessionDone) doneBtn.style.opacity = '.7';
+      doneBtn.addEventListener('click', function () {
+        Store.markSportDone(today);
+        toast('Séance sport ✓ — Bloc routine mis à jour !');
+        renderSport();
+      });
+      page.appendChild(doneBtn);
+    }
 
     /* Inner tabs */
     var tabs = [
@@ -583,16 +808,22 @@
       { id:'pull', label:'Pull' },
       { id:'legs', label:'Legs' },
       { id:'core', label:'Core' },
-      { id:'souplesse', label:'Souplesse' }
+      { id:'souplesse', label:'Souplesse' },
+      { id:'fullbody', label:'Full Body' }
     ];
 
     var innerTabRow = el('div', { class:'inner-tabs' });
     var panels = {};
 
+    /* Default to today's type */
+    var defaultTab = todaySport.type === 'off' ? 'push' : todaySport.type;
+    if (!D.SPORT[defaultTab]) defaultTab = 'push';
+
     tabs.forEach(function (t) {
-      var tab = el('div', { class:'inner-tab' + (t.id === 'push' ? ' active' : ''), 'data-itab': t.id }, t.label);
+      var isActive = t.id === defaultTab;
+      var tab = el('div', { class:'inner-tab' + (isActive ? ' active' : ''), 'data-itab': t.id }, t.label);
       innerTabRow.appendChild(tab);
-      var panel = el('div', { class:'inner-panel' + (t.id === 'push' ? ' active' : ''), id:'sport-panel-' + t.id });
+      var panel = el('div', { class:'inner-panel' + (isActive ? ' active' : ''), id:'sport-panel-' + t.id });
       panels[t.id] = panel;
     });
 
@@ -609,8 +840,6 @@
       });
     });
 
-    var sportLog = Store.getSportLog(today);
-
     Object.keys(panels).forEach(function (key) {
       var panel = panels[key];
       var exercises = D.SPORT[key] || [];
@@ -623,15 +852,18 @@
         var name = el('span', { class:'exercise-name' }, ex.name);
         var inputs = el('div', { class:'exercise-inputs' });
 
+        function saveSport(data) {
+          var d2 = {}; d2[savedKey] = data;
+          Store.setSportLog(today, d2);
+        }
+
         if (ex.type === 'kg') {
           var sets = el('input', { type:'number', min:'0', value: saved.sets||'', placeholder:'sets' });
           var reps = el('input', { type:'number', min:'0', value: saved.reps||'', placeholder:'reps' });
           var kg   = el('input', { type:'number', min:'0', step:'0.5', value: saved.kg||'', placeholder:'kg' });
-          var unit = el('span', { class:'exercise-unit' }, 'kg');
           [sets, reps, kg].forEach(function (inp) {
             inp.addEventListener('change', function () {
-              var d2 = {}; d2[savedKey] = { sets:sets.value, reps:reps.value, kg:kg.value };
-              Store.setSportLog(today, d2);
+              saveSport({ sets:sets.value, reps:reps.value, kg:kg.value });
             });
           });
           inputs.appendChild(sets);
@@ -639,13 +871,10 @@
           inputs.appendChild(reps);
           inputs.appendChild(el('span', { class:'exercise-unit' }, '@'));
           inputs.appendChild(kg);
-          inputs.appendChild(unit);
+          inputs.appendChild(el('span', { class:'exercise-unit' }, 'kg'));
         } else if (ex.type === 'sec') {
           var sec = el('input', { type:'number', min:'0', value: saved.sec||'', placeholder:'sec' });
-          sec.addEventListener('change', function () {
-            var d3 = {}; d3[savedKey] = { sec: sec.value };
-            Store.setSportLog(today, d3);
-          });
+          sec.addEventListener('change', function () { saveSport({ sec: sec.value }); });
           inputs.appendChild(sec);
           inputs.appendChild(el('span', { class:'exercise-unit' }, 'sec'));
         } else {
@@ -653,8 +882,7 @@
           var reps2 = el('input', { type:'number', min:'0', value: saved.reps||'', placeholder:'reps' });
           [sets2, reps2].forEach(function (inp) {
             inp.addEventListener('change', function () {
-              var d4 = {}; d4[savedKey] = { sets:sets2.value, reps:reps2.value };
-              Store.setSportLog(today, d4);
+              saveSport({ sets:sets2.value, reps:reps2.value });
             });
           });
           inputs.appendChild(sets2);
@@ -711,26 +939,95 @@
     var data = Store.getStudy(t.id);
 
     /* Progress card */
-    var card = el('div', { class:'card' });
-    card.innerHTML = '<div class="card-title" style="margin-bottom:10px;font-weight:700;font-size:14px">' + t.label + '</div>';
+    var card = el('div', { class:'card card-l-orange' });
+    var titleEl = el('div', {
+      style:'margin-bottom:12px;font-weight:900;font-size:14px;text-transform:uppercase;letter-spacing:.05em'
+    }, t.label);
+    card.appendChild(titleEl);
 
-    var fields = [
-      { id:'resource', label:'Ressource actuelle', ph:'Titre du livre / cours' },
-      { id:'position', label:'Position exacte',    ph:'Page, chapitre, timestamp...' },
-      { id:'next',     label:'Prochaine action',   ph:'Ce que je dois faire' }
-    ];
+    /* Resource */
+    var resWrap = el('div', { class:'log-field', style:'margin-bottom:10px' });
+    resWrap.appendChild(el('label', {}, 'Ressource actuelle'));
+    var resInp = el('input', { type:'text', placeholder:'Titre du livre / cours', value: data.resource || '' });
+    resInp.addEventListener('change', function () { Store.setStudy(t.id, { resource: resInp.value }); });
+    resWrap.appendChild(resInp);
+    card.appendChild(resWrap);
 
-    fields.forEach(function (f) {
-      var wrap = el('div', { class:'log-field', style:'margin-bottom:8px' });
-      wrap.appendChild(el('label', {}, f.label));
-      var inp = el('input', { type:'text', placeholder: f.ph, value: data[f.id] || '' });
-      inp.addEventListener('change', function () {
-        var upd = {}; upd[f.id] = inp.value;
-        Store.setStudy(t.id, upd);
-      });
-      wrap.appendChild(inp);
-      card.appendChild(wrap);
+    /* Position / Total / Unit */
+    var posRow = el('div', { style:'display:grid;grid-template-columns:1fr 1fr 100px;gap:8px;margin-bottom:10px' });
+
+    var posWrap = el('div', { class:'log-field' });
+    posWrap.appendChild(el('label', {}, 'Position actuelle'));
+    var posInp = el('input', { type:'number', min:'0', value: data.position || '' });
+    posInp.addEventListener('change', function () { Store.setStudy(t.id, { position: parseInt(posInp.value,10)||0 }); });
+    posWrap.appendChild(posInp);
+    posRow.appendChild(posWrap);
+
+    var totWrap = el('div', { class:'log-field' });
+    totWrap.appendChild(el('label', {}, 'Total'));
+    var totInp = el('input', { type:'number', min:'0', value: data.total || '' });
+    totInp.addEventListener('change', function () { Store.setStudy(t.id, { total: parseInt(totInp.value,10)||0 }); });
+    totWrap.appendChild(totInp);
+    posRow.appendChild(totWrap);
+
+    var unitWrap = el('div', { class:'log-field' });
+    unitWrap.appendChild(el('label', {}, 'Unité'));
+    var unitSel = el('select', {});
+    ['pages','minutes','chapitres','leçons'].forEach(function (u) {
+      unitSel.appendChild(el('option', { value:u }, u));
     });
+    unitSel.value = data.unit || 'pages';
+    unitSel.addEventListener('change', function () { Store.setStudy(t.id, { unit: unitSel.value }); });
+    unitWrap.appendChild(unitSel);
+    posRow.appendChild(unitWrap);
+
+    card.appendChild(posRow);
+
+    /* Progress bar */
+    var pos = parseInt(data.position)||0;
+    var tot = parseInt(data.total)||0;
+    var pctVal = tot > 0 ? pct(pos, tot) : 0;
+    var remaining = tot > 0 ? (tot - pos) : 0;
+
+    var progSection = el('div', { style:'margin-bottom:10px' });
+    var progBar = el('div', { class:'progress-bar' });
+    var progFill = el('div', { class:'progress-fill', style:'width:' + pctVal + '%' });
+    progBar.appendChild(progFill);
+    progSection.appendChild(progBar);
+
+    var progInfo = el('div', { class:'study-progress-info' });
+    progInfo.innerHTML =
+      '<span class="study-progress-pct">' + pctVal + '%</span>' +
+      (remaining > 0 ? '<span class="study-remaining">' + remaining + ' ' + (data.unit||'') + ' restant</span>' : '') +
+      (pctVal >= 100 ? '<span style="color:var(--green);font-weight:900">✓ Terminé !</span>' : '');
+    progSection.appendChild(progInfo);
+    card.appendChild(progSection);
+
+    /* Quick log +X */
+    var logRow = el('div', { style:'display:flex;gap:8px;align-items:center;margin-bottom:10px' });
+    var logInp = el('input', { type:'number', min:'0', placeholder:'0', style:'width:80px;text-align:center' });
+    logRow.appendChild(el('span', { style:'font-size:11px;color:var(--muted);font-weight:700' }, '+'));
+    logRow.appendChild(logInp);
+    logRow.appendChild(el('span', { style:'font-size:11px;color:var(--muted);font-weight:700' }, data.unit || 'pages'));
+    var logBtn = el('button', { class:'btn btn-primary btn-sm', type:'button' }, '+ Logger');
+    logBtn.addEventListener('click', function () {
+      var add = parseInt(logInp.value, 10);
+      if (!add || add < 1) return;
+      var newPos = Store.logStudyProgress(t.id, add);
+      toast('+' + add + ' ' + (data.unit||'') + ' · Total: ' + newPos);
+      logInp.value = '';
+      renderEtude();
+    });
+    logRow.appendChild(logBtn);
+    card.appendChild(logRow);
+
+    /* Next action */
+    var nextWrap = el('div', { class:'log-field', style:'margin-bottom:10px' });
+    nextWrap.appendChild(el('label', {}, 'Prochaine action'));
+    var nextInp = el('input', { type:'text', placeholder:'Ce que je dois faire...', value: data.next || '' });
+    nextInp.addEventListener('change', function () { Store.setStudy(t.id, { next: nextInp.value }); });
+    nextWrap.appendChild(nextInp);
+    card.appendChild(nextWrap);
 
     /* Notes */
     var notesWrap = el('div', { class:'log-field', style:'margin-bottom:8px' });
@@ -747,7 +1044,7 @@
     var resources = D.RESOURCES[t.id];
     if (resources && resources.length) {
       var rCard = el('div', { class:'card' });
-      rCard.innerHTML = '<div class="card-head"><div class="card-title">📚 Ressources O\'Reilly</div></div>';
+      rCard.innerHTML = '<div class="card-head"><div class="card-title">📚 Ressources recommandées</div></div>';
       resources.forEach(function (r) {
         var item = el('div', { class:'resource-item' });
         item.innerHTML = '<div class="resource-dot"></div><div class="resource-title">' + r + '</div>';
@@ -758,22 +1055,60 @@
   }
 
   /* ═══════════════════════════════════════════
-     PAGE : LOISIR (Échecs)
+     PAGE : LOISIR (Échecs + Lecture)
   ═══════════════════════════════════════════ */
   function renderLoisir() {
     var page = qs('#page-loisir');
     if (!page) return;
     page.innerHTML = '';
 
+    var innerTabRow = el('div', { class:'inner-tabs' });
+    var panels = {};
+
+    var loisirTabs = [
+      { id:'echecs', label:'♟️ Échecs' },
+      { id:'lecture', label:'📚 Lecture' }
+    ];
+
+    loisirTabs.forEach(function (t, idx) {
+      var tab = el('div', { class:'inner-tab' + (idx === 0 ? ' active' : ''), 'data-itab': t.id }, t.label);
+      innerTabRow.appendChild(tab);
+      var panel = el('div', { class:'inner-panel' + (idx === 0 ? ' active' : ''), id:'loisir-panel-' + t.id });
+      panels[t.id] = panel;
+    });
+
+    page.appendChild(innerTabRow);
+
+    qsa('.inner-tab', innerTabRow).forEach(function (t) {
+      t.addEventListener('click', function () {
+        qsa('.inner-tab', innerTabRow).forEach(function (x) { x.classList.remove('active'); });
+        t.classList.add('active');
+        var tid = t.dataset.itab;
+        Object.keys(panels).forEach(function (k) {
+          panels[k].classList.toggle('active', k === tid);
+        });
+      });
+    });
+
+    /* Build chess panel */
+    buildChessPanel(panels.echecs);
+
+    /* Build lecture panel */
+    buildLecturePanel(panels.lecture);
+
+    Object.keys(panels).forEach(function (k) { page.appendChild(panels[k]); });
+  }
+
+  function buildChessPanel(panel) {
     var chess = Store.getChess();
     var lastGame = chess.games && chess.games.length ? chess.games[chess.games.length-1] : null;
     var eloChange = lastGame ? chess.elo - (lastGame.prev || chess.elo) : 0;
 
     /* ELO card */
-    var eloCard = el('div', { class:'card card-glow-g' });
+    var eloCard = el('div', { class:'card card-glow-g card-spotlight' });
     eloCard.innerHTML =
       '<div class="card-head"><div class="card-title">♟️ Échecs</div>' +
-        '<span class="card-head-badge badge-gold">ELO</span></div>' +
+        '<span class="badge badge-gold">ELO</span></div>' +
       '<div class="elo-display">' +
         '<div class="elo-value">' + chess.elo + '</div>' +
         (eloChange !== 0 ? '<div class="elo-change ' + (eloChange > 0 ? 'elo-up' : 'elo-down') + '">' +
@@ -785,7 +1120,7 @@
     var prog = el('div', { class:'progress-bar mt-8' });
     prog.innerHTML = '<div class="progress-fill progress-fill-gold" style="width:' + goalPct + '%"></div>';
     eloCard.appendChild(prog);
-    page.appendChild(eloCard);
+    panel.appendChild(eloCard);
 
     /* Log partie */
     var logCard = el('div', { class:'card' });
@@ -805,17 +1140,17 @@
     form.appendChild(wEl); form.appendChild(rEl); form.appendChild(nEl);
     logCard.appendChild(form);
 
-    var saveBtn = el('button', { class:'btn btn-primary btn-sm mt-8', type:'button' }, '💾 Enregistrer');
-    saveBtn.style.marginTop = '10px';
+    var saveBtn = el('button', { class:'btn btn-primary btn-sm', type:'button', style:'margin-top:10px' }, '💾 Enregistrer');
     saveBtn.addEventListener('click', function () {
       var newElo = parseInt(eloInp.value, 10);
       if (isNaN(newElo) || newElo < 100) { toast('ELO invalide'); return; }
       Store.addChessGame(newElo, resSelect.value, noteInp.value);
+      Store.updateStreak('CHESS');
       toast('Partie enregistrée · ELO ' + newElo);
-      renderLoisir();
+      buildChessPanel(panel); /* rebuild */
     });
     logCard.appendChild(saveBtn);
-    page.appendChild(logCard);
+    panel.appendChild(logCard);
 
     /* Set goal */
     var goalCard = el('div', { class:'card' });
@@ -824,9 +1159,9 @@
     goalInp.addEventListener('change', function () {
       Store.setChess({ goal: parseInt(goalInp.value, 10) || chess.goal });
     });
-    var gWrap = el('div', { class:'log-field' }); gWrap.appendChild(el('label', {}, 'Objectif')); gWrap.appendChild(goalInp);
+    var gWrap = el('div', { class:'log-field' }); gWrap.appendChild(el('label', {}, 'Objectif ELO')); gWrap.appendChild(goalInp);
     goalCard.appendChild(gWrap);
-    page.appendChild(goalCard);
+    panel.appendChild(goalCard);
 
     /* Last 5 games */
     if (chess.games && chess.games.length) {
@@ -842,28 +1177,231 @@
           '</span>';
         histCard.appendChild(item);
       });
-      page.appendChild(histCard);
+      panel.appendChild(histCard);
     }
   }
 
+  function buildLecturePanel(panel) {
+    panel.innerHTML = '';
+    var books = Store.getBooks();
+
+    /* Summary */
+    var inProgressBooks = D.BOOKS.filter(function (b) {
+      var s = books[b.id];
+      return s && s.status === 'en_cours';
+    });
+    var doneBooks = D.BOOKS.filter(function (b) {
+      var s = books[b.id];
+      return s && s.status === 'termine';
+    });
+
+    var summaryCard = el('div', { class:'card card-glow-g card-spotlight' });
+    summaryCard.innerHTML =
+      '<div class="card-head"><div class="card-title">📚 Bibliothèque</div></div>' +
+      '<div class="stat-row">' +
+        '<div class="stat-box stat-box-g"><div class="stat-value v-gold">' + inProgressBooks.length + '</div><div class="stat-label">En cours</div></div>' +
+        '<div class="stat-box stat-box-gr"><div class="stat-value v-green">' + doneBooks.length + '</div><div class="stat-label">Terminés</div></div>' +
+        '<div class="stat-box stat-box-o"><div class="stat-value v-orange">' + D.BOOKS.length + '</div><div class="stat-label">Total</div></div>' +
+      '</div>';
+    panel.appendChild(summaryCard);
+
+    /* Books by category */
+    D.BOOK_CATEGORIES.forEach(function (cat) {
+      var catBooks = D.BOOKS.filter(function (b) { return b.category === cat; });
+      if (!catBooks.length) return;
+
+      var catTitle = el('div', { class:'book-category-title' }, cat);
+      panel.appendChild(catTitle);
+
+      catBooks.forEach(function (b) {
+        var bData = books[b.id] || { status: 'non_commence', position: 0, total: 0 };
+        var status = bData.status || 'non_commence';
+        var pos = parseInt(bData.position) || 0;
+        var tot = b.pages || parseInt(bData.total) || 0;
+        var pctVal = tot > 0 ? pct(pos, tot) : 0;
+
+        var itemClass = 'book-item' + (status === 'en_cours' ? ' in-progress' : status === 'termine' ? ' done' : '');
+        var bookEl = el('div', { class: itemClass });
+
+        var statusLabel = status === 'en_cours' ? 'En cours' : status === 'termine' ? 'Terminé' : 'À lire';
+        var statusClass = status === 'en_cours' ? 'book-status-en' : status === 'termine' ? 'book-status-done' : 'book-status-nc';
+
+        /* Info */
+        var info = el('div', { class:'book-info' });
+        info.innerHTML =
+          '<div class="book-title">' + b.title + '</div>' +
+          '<div class="book-author">' + b.author + '</div>';
+
+        if (status !== 'non_commence') {
+          var progRow = el('div', { class:'book-progress-row' });
+          progRow.innerHTML =
+            '<div class="book-progress-bar"><div class="book-progress-fill" style="width:' + pctVal + '%"></div></div>' +
+            '<span class="book-pct">' + pctVal + '%</span>';
+          info.appendChild(progRow);
+        }
+        bookEl.appendChild(info);
+
+        /* Status badge */
+        var stBadge = el('span', { class:'book-status-badge ' + statusClass }, statusLabel);
+        bookEl.appendChild(stBadge);
+
+        /* Actions */
+        var actEl = el('div', { class:'book-actions' });
+
+        if (status !== 'termine') {
+          var readBtn = el('button', { class:'btn btn-gold btn-xs', type:'button' },
+            status === 'en_cours' ? '+ Pages' : 'Lire');
+          readBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            if (status !== 'en_cours') {
+              Store.setBook(b.id, { status: 'en_cours', total: b.pages });
+              toast('"' + b.title + '" démarré !');
+              buildLecturePanel(panel);
+              return;
+            }
+            /* Toggle log row */
+            var logRow = bookEl.querySelector('.book-log-row');
+            if (logRow) logRow.classList.toggle('open');
+          });
+          actEl.appendChild(readBtn);
+        }
+
+        if (status === 'en_cours') {
+          var doneBtn2 = el('button', { class:'btn-icon', type:'button', title:'Marquer terminé' }, '✓');
+          doneBtn2.addEventListener('click', function () {
+            Store.setBook(b.id, { status: 'termine', position: tot });
+            toast('"' + b.title + '" terminé ! 🎉');
+            buildLecturePanel(panel);
+          });
+          actEl.appendChild(doneBtn2);
+        }
+
+        bookEl.appendChild(actEl);
+
+        /* Log pages row (hidden by default) */
+        if (status === 'en_cours') {
+          var logRow2 = el('div', { class:'book-log-row' });
+          var pagesInp = el('input', { type:'number', min:'1', placeholder:'0' });
+          logRow2.appendChild(el('span', { style:'font-size:11px;color:var(--muted);font-weight:700' }, '+'));
+          logRow2.appendChild(pagesInp);
+          logRow2.appendChild(el('span', { style:'font-size:11px;color:var(--muted);font-weight:700' }, 'pages'));
+          var logBtnBook = el('button', { class:'btn btn-primary btn-xs', type:'button' }, 'Logger');
+          logBtnBook.addEventListener('click', function () {
+            var pg = parseInt(pagesInp.value, 10);
+            if (!pg || pg < 1) return;
+            var newPos = Store.logBookPages(b.id, pg);
+            Store.updateStreak('LECTURE');
+            toast('+' + pg + ' pages · Total: ' + newPos + '/' + tot);
+            buildLecturePanel(panel);
+          });
+          logRow2.appendChild(logBtnBook);
+          bookEl.appendChild(logRow2);
+        }
+
+        panel.appendChild(bookEl);
+      });
+    });
+  }
+
   /* ═══════════════════════════════════════════
-     PAGE : ARGENT
+     PAGE : ARGENT (Budget + Vinted)
   ═══════════════════════════════════════════ */
   function renderArgent() {
     var page = qs('#page-argent');
     if (!page) return;
     page.innerHTML = '';
 
-    var fin = Store.getFinance();
+    var innerTabRow = el('div', { class:'inner-tabs' });
+    var panels = {};
 
-    /* Budget */
+    var argentTabs = [
+      { id:'budget', label:'💰 Budget' },
+      { id:'vinted', label:'🛍 Vinted' }
+    ];
+
+    argentTabs.forEach(function (t, idx) {
+      var tab = el('div', { class:'inner-tab' + (idx === 0 ? ' active' : ''), 'data-itab': t.id }, t.label);
+      innerTabRow.appendChild(tab);
+      var panel = el('div', { class:'inner-panel' + (idx === 0 ? ' active' : ''), id:'argent-panel-' + t.id });
+      panels[t.id] = panel;
+    });
+
+    page.appendChild(innerTabRow);
+
+    qsa('.inner-tab', innerTabRow).forEach(function (t) {
+      t.addEventListener('click', function () {
+        qsa('.inner-tab', innerTabRow).forEach(function (x) { x.classList.remove('active'); });
+        t.classList.add('active');
+        var tid = t.dataset.itab;
+        Object.keys(panels).forEach(function (k) {
+          panels[k].classList.toggle('active', k === tid);
+        });
+      });
+    });
+
+    buildBudgetPanel(panels.budget);
+    buildVintedPanel(panels.vinted);
+
+    Object.keys(panels).forEach(function (k) { page.appendChild(panels[k]); });
+  }
+
+  function buildBudgetPanel(panel) {
+    panel.innerHTML = '';
+
+    /* Month selector */
+    var months = Store.getFinanceMonths();
+    var currentMonth = Store.currentMonth();
+
+    var monthRow = el('div', { class:'month-selector' });
+    monthRow.appendChild(el('label', { style:'font-size:11px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.08em;white-space:nowrap' }, 'Mois :'));
+    var monthSel = el('select', {});
+    months.forEach(function (m) {
+      var opt = el('option', { value:m }, m);
+      if (m === currentMonth) opt.selected = true;
+      monthSel.appendChild(opt);
+    });
+    monthRow.appendChild(monthSel);
+    panel.appendChild(monthRow);
+
+    var selectedMonth = monthSel.value || currentMonth;
+
+    monthSel.addEventListener('change', function () {
+      buildBudgetPanel(panel);
+    });
+
+    var fin = Store.getFinanceMonth(selectedMonth);
+
+    /* Budget overview */
+    var salary = parseFloat(fin.salary)||0;
+    var charges = (fin.charges||[]).reduce(function(a,c){return a+(parseFloat(c.amount)||0);}, 0);
+    var libre = salary - charges;
+
+    if (salary > 0) {
+      var overviewCard = el('div', { class:'card card-glow-g card-spotlight' });
+      overviewCard.innerHTML =
+        '<div class="card-head"><div class="card-title">💰 Vue ensemble — ' + selectedMonth + '</div></div>' +
+        '<div class="stat-row">' +
+          '<div class="stat-box stat-box-g"><div class="stat-value v-gold">' + salary.toFixed(0) + '</div><div class="stat-label">Salaire €</div></div>' +
+          '<div class="stat-box stat-box-o"><div class="stat-value" style="color:var(--red)">' + charges.toFixed(0) + '</div><div class="stat-label">Charges €</div></div>' +
+          '<div class="stat-box stat-box-gr"><div class="stat-value v-green">' + libre.toFixed(0) + '</div><div class="stat-label">Libre €</div></div>' +
+        '</div>';
+      var savPct = fin.savings_goal > 0 ? pct(fin.savings_current||0, fin.savings_goal) : 0;
+      overviewCard.innerHTML +=
+        '<div style="margin-top:10px"><div class="flex justify-between text-xs text-muted" style="margin-bottom:4px">' +
+          '<span>Épargne : ' + (fin.savings_current||0) + ' €</span>' +
+          '<span>Objectif : ' + (fin.savings_goal||0) + ' €</span></div>' +
+          '<div class="progress-bar"><div class="progress-fill progress-fill-gold" style="width:' + savPct + '%"></div></div></div>';
+      panel.appendChild(overviewCard);
+    }
+
+    /* Budget fields */
     var budCard = el('div', { class:'card' });
-    budCard.innerHTML = '<div class="card-head"><div class="card-title">💰 Budget mensuel</div></div>';
+    budCard.innerHTML = '<div class="card-head"><div class="card-title">💰 Budget ' + selectedMonth + '</div></div>';
     var fields = [
-      { id:'salary', label:'Salaire net', ph:'2500' },
-      { id:'budget', label:'Budget libre', ph:'500' },
-      { id:'savings_goal', label:'Objectif épargne', ph:'300' },
-      { id:'savings_current', label:'Épargne actuelle', ph:'150' }
+      { id:'salary',          label:'Salaire net',     ph:'2500' },
+      { id:'budget',          label:'Budget libre',    ph:'500' },
+      { id:'savings_goal',    label:'Objectif épargne',ph:'300' },
+      { id:'savings_current', label:'Épargne actuelle',ph:'150' }
     ];
     var fGrid = el('div', { class:'log-grid' });
     fields.forEach(function (f) {
@@ -872,83 +1410,198 @@
       var inp = el('input', { type:'number', min:'0', placeholder: f.ph, value: fin[f.id] || '' });
       inp.addEventListener('change', function () {
         var upd = {}; upd[f.id] = parseFloat(inp.value) || 0;
-        Store.setFinance(upd);
+        Store.setFinanceMonth(selectedMonth, upd);
       });
       wrap.appendChild(inp);
       fGrid.appendChild(wrap);
     });
     budCard.appendChild(fGrid);
-    page.appendChild(budCard);
+    var saveFinBtn = el('button', { class:'btn btn-primary btn-sm', type:'button', style:'margin-top:10px' }, '💾 Sauvegarder');
+    saveFinBtn.addEventListener('click', function () { toast('Budget ' + selectedMonth + ' sauvegardé ✓'); });
+    budCard.appendChild(saveFinBtn);
+    panel.appendChild(budCard);
 
     /* Charges */
     var cCard = el('div', { class:'card' });
-    cCard.innerHTML = '<div class="card-head"><div class="card-title">📋 Charges fixes</div><button class="btn btn-secondary btn-sm" id="add-charge">+</button></div>';
-    var charges = fin.charges || [];
-    charges.forEach(function (c, idx) {
-      var item = el('div', { class:'finance-item' });
-      item.innerHTML =
-        '<span>' + c.label + '</span>' +
-        '<div class="flex gap-6 items-center">' +
-          '<span class="font-bold finance-neg">-' + c.amount + ' €</span>' +
-          '<button class="btn-icon" data-idx="' + idx + '">×</button>' +
-        '</div>';
-      item.querySelector('[data-idx]').addEventListener('click', function () {
-        var upd = (Store.getFinance().charges || []).filter(function (_,i) { return i !== idx; });
-        Store.setFinance({ charges: upd });
-        renderArgent();
-      });
-      cCard.appendChild(item);
+    var cHead = el('div', { class:'card-head' });
+    cHead.innerHTML = '<div class="card-title">📋 Charges fixes</div>';
+    var addChrBtn = el('button', { class:'btn btn-secondary btn-sm', type:'button' }, '+ Charge');
+    addChrBtn.addEventListener('click', function () {
+      var label = prompt('Nom de la charge :');
+      if (!label) return;
+      var amount = parseFloat(prompt('Montant (€) :') || '0');
+      var f2 = Store.getFinanceMonth(selectedMonth);
+      var c2 = (f2.charges || []).concat([{ label: label, amount: amount }]);
+      Store.setFinanceMonth(selectedMonth, { charges: c2 });
+      buildBudgetPanel(panel);
     });
-    page.appendChild(cCard);
+    cHead.appendChild(addChrBtn);
+    cCard.appendChild(cHead);
 
-    setTimeout(function () {
-      var addBtn = qs('#add-charge');
-      if (addBtn) addBtn.addEventListener('click', function () {
-        var label = prompt('Nom de la charge :');
-        if (!label) return;
-        var amount = parseFloat(prompt('Montant (€) :') || '0');
-        var f2 = Store.getFinance();
-        var c2 = (f2.charges || []).concat([{ label: label, amount: amount }]);
-        Store.setFinance({ charges: c2 });
-        renderArgent();
+    var chargesArr = fin.charges || [];
+    if (!chargesArr.length) {
+      cCard.appendChild(el('div', { class:'text-muted text-xs', style:'padding:8px 0' }, 'Aucune charge fixe'));
+    } else {
+      chargesArr.forEach(function (c, idx) {
+        var item = el('div', { class:'finance-item' });
+        item.innerHTML =
+          '<span>' + c.label + '</span>' +
+          '<div class="flex gap-6 items-center">' +
+            '<span class="font-bold finance-neg">-' + fmtEur(c.amount) + '</span>' +
+            '<button class="btn-icon" data-idx="' + idx + '">×</button>' +
+          '</div>';
+        item.querySelector('[data-idx]').addEventListener('click', function () {
+          var f3 = Store.getFinanceMonth(selectedMonth);
+          var c3 = (f3.charges || []).filter(function (_,i) { return i !== idx; });
+          Store.setFinanceMonth(selectedMonth, { charges: c3 });
+          buildBudgetPanel(panel);
+        });
+        cCard.appendChild(item);
       });
-    }, 0);
+    }
+    panel.appendChild(cCard);
 
     /* Dettes */
     var dCard = el('div', { class:'card' });
-    dCard.innerHTML = '<div class="card-head"><div class="card-title">📉 Dettes / Remboursements</div><button class="btn btn-secondary btn-sm" id="add-debt">+</button></div>';
-    var debts = fin.debts || [];
-    debts.forEach(function (d, idx) {
+    var dHead = el('div', { class:'card-head' });
+    dHead.innerHTML = '<div class="card-title">📉 Dettes</div>';
+    var addDebtBtn = el('button', { class:'btn btn-secondary btn-sm', type:'button' }, '+ Dette');
+    addDebtBtn.addEventListener('click', function () {
+      var label = prompt('Nom de la dette :');
+      if (!label) return;
+      var total = parseFloat(prompt('Montant total (€) :') || '0');
+      var paid  = parseFloat(prompt('Déjà remboursé (€) :') || '0');
+      var f2 = Store.getFinanceMonth(selectedMonth);
+      var d2 = (f2.debts || []).concat([{ label: label, total: total, paid: paid }]);
+      Store.setFinanceMonth(selectedMonth, { debts: d2 });
+      buildBudgetPanel(panel);
+    });
+    dHead.appendChild(addDebtBtn);
+    dCard.appendChild(dHead);
+
+    var debtsArr = fin.debts || [];
+    debtsArr.forEach(function (d, idx) {
       var item = el('div', { class:'finance-item' });
       var p2 = pct(d.paid || 0, d.total || 1);
       item.innerHTML =
         '<div style="flex:1">' +
-          '<div class="flex justify-between"><span>' + d.label + '</span><span class="finance-neg">-' + ((d.total||0)-(d.paid||0)) + ' €</span></div>' +
+          '<div class="flex justify-between"><span>' + d.label + '</span><span class="finance-neg">-' + ((d.total||0)-(d.paid||0)).toFixed(0) + ' €</span></div>' +
           '<div class="progress-bar mt-8"><div class="progress-fill progress-fill-gold" style="width:' + p2 + '%"></div></div>' +
         '</div>' +
         '<button class="btn-icon" style="margin-left:8px" data-idx="' + idx + '">×</button>';
       item.querySelector('[data-idx]').addEventListener('click', function () {
-        var upd = (Store.getFinance().debts || []).filter(function (_,i) { return i !== idx; });
-        Store.setFinance({ debts: upd });
-        renderArgent();
+        var f2 = Store.getFinanceMonth(selectedMonth);
+        var d2 = (f2.debts || []).filter(function (_,i) { return i !== idx; });
+        Store.setFinanceMonth(selectedMonth, { debts: d2 });
+        buildBudgetPanel(panel);
       });
       dCard.appendChild(item);
     });
-    page.appendChild(dCard);
+    panel.appendChild(dCard);
+  }
 
-    setTimeout(function () {
-      var addBtn = qs('#add-debt');
-      if (addBtn) addBtn.addEventListener('click', function () {
-        var label = prompt('Nom de la dette :');
-        if (!label) return;
-        var total = parseFloat(prompt('Montant total (€) :') || '0');
-        var paid  = parseFloat(prompt('Déjà remboursé (€) :') || '0');
-        var f2 = Store.getFinance();
-        var d2 = (f2.debts || []).concat([{ label: label, total: total, paid: paid }]);
-        Store.setFinance({ debts: d2 });
-        renderArgent();
+  function buildVintedPanel(panel) {
+    panel.innerHTML = '';
+
+    var stats = Store.getVintedStats();
+
+    /* Stats banner */
+    var statsCard = el('div', { class:'card card-glow-o card-spotlight' });
+    statsCard.innerHTML = '<div class="card-head"><div class="card-title">🛍 Vinted — Statistiques</div></div>';
+    var vStats = el('div', { class:'vinted-stats' });
+    vStats.innerHTML =
+      '<div class="vinted-stat">' +
+        '<div class="vinted-stat-value" style="color:var(--green)">' + fmtEur(stats.totalGained) + '</div>' +
+        '<div class="vinted-stat-label">Gagné</div>' +
+      '</div>' +
+      '<div class="vinted-stat">' +
+        '<div class="vinted-stat-value" style="color:var(--red)">' + fmtEur(stats.totalInvested) + '</div>' +
+        '<div class="vinted-stat-label">Investi</div>' +
+      '</div>' +
+      '<div class="vinted-stat">' +
+        '<div class="vinted-stat-value" style="color:' + (stats.profit >= 0 ? 'var(--green)' : 'var(--red)') + '">' +
+          (stats.profit >= 0 ? '+' : '') + fmtEur(stats.profit) +
+        '</div>' +
+        '<div class="vinted-stat-label">Profit</div>' +
+      '</div>';
+    statsCard.appendChild(vStats);
+    panel.appendChild(statsCard);
+
+    /* Add article button */
+    var addBtn = el('button', { class:'btn btn-primary', type:'button', style:'width:100%;margin-bottom:14px' }, '+ Ajouter article');
+    addBtn.addEventListener('click', function () {
+      var name = prompt('Nom de l\'article :');
+      if (!name) return;
+      var buyPrice = parseFloat(prompt('Prix d\'achat (€) :') || '0');
+      var sellPrice = parseFloat(prompt('Prix de vente prévu (€) :') || '0');
+      Store.addVintedItem({ name: name, buyPrice: buyPrice, sellPrice: sellPrice, status: 'En vente' });
+      buildVintedPanel(panel);
+      toast('Article ajouté ✓');
+    });
+    panel.appendChild(addBtn);
+
+    /* Items list */
+    var vinted = Store.getVinted();
+    var items = (vinted.items || []).slice().reverse();
+
+    if (!items.length) {
+      panel.appendChild(el('div', { class:'empty-state' },
+        el('div', { class:'empty-state-text text-muted' }, 'Aucun article Vinted')));
+      return;
+    }
+
+    items.forEach(function (item) {
+      var statusClass = item.status === 'Vendu' ? 'vinted-status-sold' :
+                        item.status === 'Non vendu' ? 'vinted-status-unsold' : 'vinted-status-selling';
+      var itemClass = 'vinted-item' +
+        (item.status === 'Vendu' ? ' sold' : item.status === 'Non vendu' ? ' unsold' : '');
+
+      var itemEl = el('div', { class: itemClass });
+
+      var infoEl = el('div', { class:'vinted-item-info' });
+      infoEl.innerHTML =
+        '<div class="vinted-item-name">' + item.name + '</div>' +
+        '<div class="vinted-item-prices">Acheté: ' + fmtEur(item.buyPrice) +
+          ' · Vente: ' + fmtEur(item.sellPrice) +
+          (item.status === 'Vendu' ? ' · Bénéf: <span style="color:var(--green)">+' + fmtEur((item.sellPrice||0)-(item.buyPrice||0)) + '</span>' : '') +
+        '</div>';
+      itemEl.appendChild(infoEl);
+
+      var stBadge = el('span', { class:'vinted-item-status ' + statusClass }, item.status);
+      itemEl.appendChild(stBadge);
+
+      /* Actions */
+      var actEl = el('div', { class:'flex gap-6 items-center', style:'flex-shrink:0' });
+
+      if (item.status !== 'Vendu') {
+        var sellBtn = el('button', { class:'btn btn-green btn-xs', type:'button' }, '✓ Vendu');
+        sellBtn.addEventListener('click', function () {
+          var sp = parseFloat(prompt('Prix de vente réel (€) :', item.sellPrice) || item.sellPrice);
+          Store.updateVintedItem(item.id, { status: 'Vendu', sellPrice: sp });
+          toast('Vendu ' + fmtEur(sp) + ' · Profit: ' + fmtEur(sp - (item.buyPrice||0)));
+          buildVintedPanel(panel);
+        });
+        actEl.appendChild(sellBtn);
+
+        var noSellBtn = el('button', { class:'btn btn-ghost btn-xs', type:'button' }, 'Non vendu');
+        noSellBtn.addEventListener('click', function () {
+          Store.updateVintedItem(item.id, { status: 'Non vendu' });
+          buildVintedPanel(panel);
+        });
+        actEl.appendChild(noSellBtn);
+      }
+
+      var delBtn = el('button', { class:'btn-icon', type:'button', title:'Supprimer' }, '×');
+      delBtn.addEventListener('click', function () {
+        if (!confirm('Supprimer "' + item.name + '" ?')) return;
+        Store.deleteVintedItem(item.id);
+        buildVintedPanel(panel);
       });
-    }, 0);
+      actEl.appendChild(delBtn);
+
+      itemEl.appendChild(actEl);
+      panel.appendChild(itemEl);
+    });
   }
 
   /* ═══════════════════════════════════════════
@@ -969,7 +1622,7 @@
           var a = document.createElement('a');
           a.href = url; a.download = 'dashboard-backup-' + Store.today() + '.json';
           a.click(); URL.revokeObjectURL(url);
-          toast('Export téléchargé');
+          toast('Export téléchargé ✓');
         }
       },
       {
@@ -1001,7 +1654,7 @@
           if (window.caches) {
             caches.keys().then(function (keys) {
               keys.forEach(function (k) { caches.delete(k); });
-              toast('Cache vidé');
+              toast('Cache vidé ✓');
             });
           } else { toast('Cache API non disponible'); }
         }
@@ -1034,12 +1687,30 @@
 
     page.appendChild(card);
 
+    /* Score info */
+    var scoreInfoCard = el('div', { class:'card card-l-orange' });
+    scoreInfoCard.innerHTML =
+      '<div class="card-head"><div class="card-title">⚡ Système de Score</div></div>' +
+      '<div class="text-xs text-muted" style="line-height:2">' +
+        'Bloc routine : <b>+15 pts</b><br>' +
+        'Focus ≥25min : <b>+25 pts</b> · ≥50min : <b>+50 pts</b><br>' +
+        'Sport fait : <b>+50 pts</b><br>' +
+        'Log ≥5 champs : <b>+20 pts</b><br>' +
+        'Rotation complète : <b>+50 pts bonus</b><br>' +
+        'Streak ≥7j : <b>×1.5</b> · ≥30j : <b>×2.0</b><br><br>' +
+        '<b style="color:var(--muted)">Tiers :</b><br>' +
+        '0-49 : <b>Sparring</b> · 50-99 : <b style="color:var(--blue2)">Challenger</b><br>' +
+        '100-149 : <b style="color:var(--orange)">Contender</b> · 150-199 : <b style="color:var(--gold)">Champion</b><br>' +
+        '200+ : <b style="color:var(--red)">LÉGENDE 🏆</b>' +
+      '</div>';
+    page.appendChild(scoreInfoCard);
+
     /* Debug info */
     var dbgCard = el('div', { class:'card' });
     dbgCard.innerHTML =
       '<div class="card-head"><div class="card-title">🔬 Debug</div></div>' +
-      '<div class="text-xs text-muted" style="line-height:1.8">' +
-        'Version : dashv3-20260518<br>' +
+      '<div class="text-xs text-muted" style="line-height:1.9">' +
+        'Version : dashv3-20260518-v3<br>' +
         'LocalStorage : ' + (function () {
           var n = 0;
           for (var i = 0; i < localStorage.length; i++) {
