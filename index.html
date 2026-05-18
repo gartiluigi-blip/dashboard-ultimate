@@ -4315,7 +4315,7 @@ function ensurePagesVisible(){
   // elles ne sont pas dans pageEls. Solution : on observe le clic et on
   // force la visibilité manuellement.
   document.addEventListener('click', e => {
-    const tab = e.target.closest('.tab[data-tab="trading"], .tab[data-tab="settings"]');
+    const tab = e.target.closest('.tab[data-tab="settings"]');
     if (!tab) return;
     const target = tab.dataset.tab;
     // Cache toutes les .page
@@ -4368,14 +4368,8 @@ if (document.readyState === 'loading'){
 if (window.__lazyContentLoaded) return;
 window.__lazyContentLoaded = true;
 
-// Lazy load du contenu trading et settings au premier clic
-const loaded = { trading: false, settings: false };
-
-function loadTrading(){
-  if (loaded.trading) return;
-  loaded.trading = true;
-  // Élec/IoT content is in the static p-trading section, no injection needed
-}
+// Lazy load du contenu settings au premier clic
+const loaded = { settings: false };
 
 function loadSettings(){
   if (loaded.settings) return;
@@ -4756,16 +4750,13 @@ function executeCleanup(previewEl, groups){
 
 // Hook sur les clics d'onglets
 document.addEventListener('click', e => {
-  const tab = e.target.closest('.tab[data-tab="trading"]');
-  if (tab) setTimeout(loadTrading, 100);
   const tab2 = e.target.closest('.tab[data-tab="settings"]');
   if (tab2) setTimeout(loadSettings, 100);
 }, true);
 
-// Si on est déjà sur ces onglets au load
+// Si on est déjà sur l'onglet settings au load
 setTimeout(() => {
   const cur = document.querySelector('.tab.active');
-  if (cur && cur.dataset.tab === 'trading') loadTrading();
   if (cur && cur.dataset.tab === 'settings') loadSettings();
 }, 500);
 
@@ -8380,7 +8371,7 @@ if (document.readyState === 'loading') {
   }
   function planCardHTML(w, i){
     const active = i === activeIndex();
-    return `<div class="card gm-plan-card ${active?'active':''} ${w.type==='rest'?'off':'on'}"><div class="card-title"><h3>${i+1}. ${esc(w.short)}</h3><span class="badge ${w.type==='rest'?'badge-ghost':'badge-flame'}">${esc(w.tag)}</span></div><p>${esc(w.label)}</p><div class="note">${esc(w.desc)}</div>${w.exercises.length ? `<ul class="dlist">${w.exercises.slice(0,5).map(e=>`<li><span class="k">${esc(e[0])}</span><span class="v">${esc(e[2])}×${esc(e[3])}</span></li>`).join('')}</ul>` : `<ul class="dlist"><li><span class="k">Marche + mobilité</span><span class="v info">${esc(w.minutes)} min</span></li></ul>`}</div>`;
+    return `<div class="card gm-plan-card ${active?'active':''} ${w.type==='rest'?'off':'on'}"><div class="card-title"><h3>${i+1}. ${esc(w.short)}</h3><span class="badge ${w.type==='rest'?'badge-ghost':'badge-flame'}">${esc(w.tag)}</span></div><p>${esc(w.label)}</p><div class="note">${esc(w.desc)}</div>${w.exercises.length ? `<ul class="dlist">${w.exercises.slice(0,5).filter(e=>e&&Array.isArray(e)&&e.length>=4).map(e=>`<li><span class="k">${esc(e[0])}</span><span class="v">${esc(e[2])}×${esc(e[3])}</span></li>`).join('')}</ul>` : `<ul class="dlist"><li><span class="k">Marche + mobilité</span><span class="v info">${esc(w.minutes)} min</span></li></ul>`}</div>`;
   }
   function trackerHTML(w, session){
     return `<div class="gm-tracker" id="gm-tracker" data-workout="${esc(w.key)}"><div class="gm-tracker-head"><div><div class="gm-kicker">Tracker anti-bug · sauvegarde live</div><h3>${esc(w.short)} · ${esc(w.label)}</h3><p>${esc(w.desc)}</p></div><div class="gm-save-state" id="gm-save-state">${session.completed ? '✅ Validé '+new Date(session.completedAt).toLocaleTimeString('fr-BE',{hour:'2-digit',minute:'2-digit'}) : 'Sauvegarde automatique'}</div></div><div class="gm-ex-list">${w.exercises.map((e,i)=>exerciseHTML(w, session, e, i)).join('')}</div><textarea class="gm-session-notes" id="gm-session-notes" placeholder="Notes séance : douleur, énergie, prochaine surcharge…">${esc(session.notes || '')}</textarea><div class="gm-actions"><button class="gm-validate" id="gm-validate-workout">Valider séance + cocher Routine</button><button class="gm-secondary" id="gm-clear-workout">Reset séance du jour</button></div></div>`;
