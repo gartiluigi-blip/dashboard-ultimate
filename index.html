@@ -8278,7 +8278,8 @@ if (document.readyState === 'loading') {
   function defaultSession(w){
     const ex = {};
     w.exercises.forEach((e, i) => {
-      ex[`e${i}`] = { name:e[0], target:e[1], sets:Array.from({length:e[2]}, (_, s) => ({ set:s+1, reps:'', kg:'', rpe:'', note:'' })) };
+      if (!e || !Array.isArray(e) || e.length < 3) return;
+      ex[`e${i}`] = { name:e[0]||'?', target:e[1]||'?', sets:Array.from({length:e[2]||0}, (_, s) => ({ set:s+1, reps:'', kg:'', rpe:'', note:'' })) };
     });
     return { version:VERSION, date:todayISO(), workoutKey:w.key, workoutLabel:w.short, completed:false, completedAt:null, exercises:ex, notes:'', updatedAt:nowISO() };
   }
