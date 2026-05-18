@@ -71,35 +71,43 @@
     });
   }
 
+  function loadFinalCleanupV2(){
+    loadScriptOnce('ud-final-cleanup-v2-runtime','/assets/core/final-cleanup-v2.js?v=20260518-1',function(){
+      if (window.UDFinalCleanupV2 && window.UDFinalCleanupV2.run) window.UDFinalCleanupV2.run();
+    });
+  }
+
+  function runAll(){
+    loadEtudesTracker();
+    loadFinalCleanup();
+    loadFinalCleanupV2();
+    if (window.__studyTracker && window.__studyTracker.render) window.__studyTracker.render();
+    if (window.UDEtudesTracker && window.UDEtudesTracker.render) window.UDEtudesTracker.render();
+    if (window.UDFinalCleanup && window.UDFinalCleanup.run) window.UDFinalCleanup.run();
+    if (window.UDFinalCleanupV2 && window.UDFinalCleanupV2.run) window.UDFinalCleanupV2.run();
+  }
+
   function boot(){
     try {
-      loadEtudesTracker();
-      loadFinalCleanup();
+      runAll();
       window.UDRuntimeDiag = {
-        version: 'diag-2026-05-18-4',
+        version: 'diag-2026-05-18-5',
         host: !!document.getElementById('study-resources-host'),
         study: !!(window.__studyTracker && window.__studyTracker.render),
         etudes: !!(window.UDEtudesTracker && window.UDEtudesTracker.render),
         etudesVersion: window.UDEtudesTracker && window.UDEtudesTracker.version,
         cleanup: !!(window.UDFinalCleanup && window.UDFinalCleanup.run),
+        cleanupV2: !!(window.UDFinalCleanupV2 && window.UDFinalCleanupV2.run),
         plan: !!document.getElementById('p-plan'),
         epfc: !!document.getElementById('p-epfc'),
         code: !!document.getElementById('p-code')
       };
-      if (window.__studyTracker && window.__studyTracker.render) window.__studyTracker.render();
-      if (window.UDEtudesTracker && window.UDEtudesTracker.render) window.UDEtudesTracker.render();
-      if (window.UDFinalCleanup && window.UDFinalCleanup.run) window.UDFinalCleanup.run();
       document.addEventListener('click', function(e){
         var target = e.target && e.target.closest && e.target.closest('.tab,[data-tab],[data-go],button,a');
         if (!target) return;
-        setTimeout(function(){
-          loadEtudesTracker();
-          loadFinalCleanup();
-          if (window.__studyTracker && window.__studyTracker.render) window.__studyTracker.render();
-          if (window.UDEtudesTracker && window.UDEtudesTracker.render) window.UDEtudesTracker.render();
-          if (window.UDFinalCleanup && window.UDFinalCleanup.run) window.UDFinalCleanup.run();
-        }, 150);
+        setTimeout(runAll, 150);
       }, true);
+      document.addEventListener('change', function(){ setTimeout(runAll, 150); }, true);
     } catch (error) {
       console.warn('[UDRuntimeDiag]', error);
     }
