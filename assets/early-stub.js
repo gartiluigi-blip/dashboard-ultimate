@@ -1,4 +1,4 @@
-/* early-stub.js · minimal boot guard + legacy purge */
+/* early-stub.js · minimal boot guard + legacy purge + user patch loader */
 window.__earlyStub = true;
 
 if (typeof window.Notification === 'undefined') {
@@ -16,56 +16,52 @@ window.__V79FreezeGuardInstalled = true;
 window.__V80EpfcDisplayFixInstalled = true;
 window.__V79FreezeGuardBypassedByFinal = true;
 
-/* Kill all competing routine/study engine patches (v49–v73).
-   These scripts check their own guard flag on load and exit immediately if set.
-   Setting them here (before DOMContentLoaded) neutralises every inline engine
-   that was overwriting Routine, EPFC, and study pages. */
-window.__ULTIMATE_ROUTINE_V49_PATCH__    = true;
+/* Kill all competing routine/study engine patches. */
+window.__ULTIMATE_ROUTINE_V49_PATCH__ = true;
 window.__ULTIMATE_ROUTINE_V50_MOBILE_OVERLAP__ = true;
-window.__ULTIMATE_ROUTINE_V52_CHESS_TRACKER__  = true;
-window.__UD_V54_CLEANUP_CONSOLIDATOR__   = true;
-window.__UD_V55_MOBILE_LOG_CHESS_ELO__   = true;
-window.__UD_V57_RESCUE__                 = true;
-window.__udV59CleanRoutine               = true;
-window.__udV62RoutineOneEngine           = true;
-window.__udV63SmartRoutine               = true;
-window.__udV64StudyCheckin               = true;
-window.__udV67FullCleanCore              = true;
-window.__udV69EpfcLab                    = true;
-window.__enhV38                          = true;
-window.__udV60RoutineCardClickFix        = true;
-window.__udV61RoutineCleanPolicy         = true;
-window.__udV71MatiereFix                 = true;
-window.__udV73Command                    = true;
-window.__UD_ROUTINE_CHECKIN_ENGINE_V1__  = true;
-window.__UD_INTAKE_BUTTONS_V48           = true;
+window.__ULTIMATE_ROUTINE_V52_CHESS_TRACKER__ = true;
+window.__UD_V54_CLEANUP_CONSOLIDATOR__ = true;
+window.__UD_V55_MOBILE_LOG_CHESS_ELO__ = true;
+window.__UD_V57_RESCUE__ = true;
+window.__udV59CleanRoutine = true;
+window.__udV62RoutineOneEngine = true;
+window.__udV63SmartRoutine = true;
+window.__udV64StudyCheckin = true;
+window.__udV67FullCleanCore = true;
+window.__udV69EpfcLab = true;
+window.__enhV38 = true;
+window.__udV60RoutineCardClickFix = true;
+window.__udV61RoutineCleanPolicy = true;
+window.__udV71MatiereFix = true;
+window.__udV73Command = true;
+window.__UD_ROUTINE_CHECKIN_ENGINE_V1__ = true;
+window.__UD_INTAKE_BUTTONS_V48 = true;
 
-/* Kill old feature packs that inject stale UI (cockpit, trading panel, resume cards) */
-window.__UD_ULTIMATE_20_FEATURES_PACK__  = true;
-window.__ultimateV3                      = true;
+/* Kill old feature packs that inject stale UI. */
+window.__UD_ULTIMATE_20_FEATURES_PACK__ = true;
+window.__ultimateV3 = true;
 
 (function(){
   'use strict';
   if (window.__EarlyStubMinimal) return;
   window.__EarlyStubMinimal = true;
 
-  var VERSION = '20260518b-inline-kills';
+  var VERSION = '20260518c-user-request';
   var debugMode = /[?&]uddebug=1\b/.test(location.search);
   var loadStatus = {};
 
   function $(sel, root){ return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
   function byId(id){ return document.getElementById(id); }
   function page(id){ return byId('p-' + id); }
-
   function removeNode(node){ if (node && node.parentNode) node.parentNode.removeChild(node); }
 
   function purgeLegacyInlinePatches(){
-    var ids = [
+    [
       'v75-forcefix-style','v76-visible-fix-style','v77-ops-fix-style','v78-grade-system-style',
       'v75-home-modules','v75-focus-fab','v75-focus-overlay','v77-overdue-card','v77-chess-card',
-      'v77-prio-command','v77-chess-panel','v78-grade-panel','v79-freeze-panel','v80-epfc-display-fix'
-    ];
-    ids.forEach(function(id){ removeNode(byId(id)); });
+      'v77-prio-command','v77-chess-panel','v78-grade-panel','v79-freeze-panel','v80-epfc-display-fix',
+      'u20-cockpit','u20-fab'
+    ].forEach(function(id){ removeNode(byId(id)); });
 
     $('[id^="v75-"], [id^="v76-"], [id^="v77-"], [id^="v78-"], [id^="v79-"], [id^="v80-"]').forEach(function(node){
       if (node.id === 'v75-score-value' || node.id === 'v75-score-detail' || node.id === 'v75-morning-body') return;
@@ -79,26 +75,16 @@ window.__ultimateV3                      = true;
       removeNode(page(tab));
     });
 
-    // Nutrition/Flex legacy pages sometimes returned with old IDs/classes rather than tabs.
-    $('[id="p-nutrition"],[id="p-souplesse"],.nutrition-tab,.nutrition-page,.souplesse-tab,.souplesse-page').forEach(removeNode);
-
-    // Kill u20 cockpit + FAB injected by ud-ultimate-20-features-pack
-    removeNode(byId('u20-cockpit'));
-    removeNode(byId('u20-fab'));
-    $('[class*="u20-resume-card"]').forEach(removeNode);
+    $('[id="p-nutrition"],[id="p-souplesse"],.nutrition-tab,.nutrition-page,.souplesse-tab,.souplesse-page,[class*="u20-resume-card"]').forEach(removeNode);
   }
 
   function disableServiceWorkers(){
     try {
       if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
-        navigator.serviceWorker.getRegistrations().then(function(regs){
-          regs.forEach(function(reg){ try { reg.unregister(); } catch(_){} });
-        }).catch(function(){});
+        navigator.serviceWorker.getRegistrations().then(function(regs){ regs.forEach(function(reg){ try { reg.unregister(); } catch(_){} }); }).catch(function(){});
       }
       if (window.caches && caches.keys) {
-        caches.keys().then(function(keys){
-          keys.forEach(function(k){ if (/dash|ultimate|dashboard|v\d+/i.test(k)) caches.delete(k); });
-        }).catch(function(){});
+        caches.keys().then(function(keys){ keys.forEach(function(k){ if (/dash|ultimate|dashboard|v\d+/i.test(k)) caches.delete(k); }); }).catch(function(){});
       }
     } catch(_){}
   }
@@ -118,24 +104,12 @@ window.__ultimateV3                      = true;
   function snapshot(){
     return {
       version: VERSION,
-      disabledLegacy: true,
       loadStatus: loadStatus,
       pages: {
-        home: !!page('home'),
-        routine: !!page('routine'),
-        stats: !!page('stats'),
-        epfc: !!page('epfc'),
-        code: !!page('code'),
-        repair: !!page('repair'),
-        iot: !!page('trading'),
-        nl: !!page('nl'),
-        sport: !!page('sport'),
-        chess: !!page('chess'),
-        finance: !!page('finance'),
-        plan: !!page('plan'),
-        vinted: !!page('vinted'),
-        ia: !!page('ia')
+        home: !!page('home'), routine: !!page('routine'), stats: !!page('stats'),
+        etude: !!page('etude'), sport: !!page('sport'), loisir: !!page('loisir')
       },
+      userPatch: !!window.__UD_USER_REQUEST_20260518__,
       legacyLeft: $('[id^="v75-"], [id^="v76-"], [id^="v77-"], [id^="v78-"], [id^="v79-"], [id^="v80-"]').map(function(n){ return n.id; }).filter(Boolean),
       runAt: new Date().toISOString()
     };
@@ -158,11 +132,14 @@ window.__ultimateV3                      = true;
     disableServiceWorkers();
     loadScript('ud-core-html-runtime', '/assets/core/html.js?v=' + VERSION, 'html', function(){
       purgeLegacyInlinePatches();
-      renderDebug();
+      loadScript('ud-user-request-20260518', '/assets/ud-user-request-20260518.js?v=' + VERSION, 'userPatch', function(){
+        purgeLegacyInlinePatches();
+      });
     });
     setTimeout(purgeLegacyInlinePatches, 100);
     setTimeout(purgeLegacyInlinePatches, 500);
     setTimeout(purgeLegacyInlinePatches, 1500);
+    setTimeout(function(){ loadScript('ud-user-request-20260518', '/assets/ud-user-request-20260518.js?v=' + VERSION, 'userPatchFallback'); }, 2000);
     setTimeout(renderDebug, 500);
     setTimeout(renderDebug, 1500);
     setTimeout(renderDebug, 3000);
