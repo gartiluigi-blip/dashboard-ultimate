@@ -712,7 +712,7 @@ Bachelor dev en septembre. Bilingue NL+FR d'ici 2 ans. Corps robuste malgré la 
 
 <div class="stats stats-3">
 <button aria-label="Action" class="stat" data-go="sport" style="cursor:pointer"><div class="stat-v flame" style="font-size:22px">💪</div><div class="stat-l">Séance du jour</div></button>
-<button aria-label="Action" class="stat" data-go="nutrition" style="cursor:pointer"><div class="stat-v amber" style="font-size:22px">🥩</div><div class="stat-l">Nutrition</div></button>
+<button aria-label="Action" class="stat" data-go="routine" style="cursor:pointer"><div class="stat-v amber" style="font-size:22px">🥩</div><div class="stat-l">Protéines/Eau</div></button>
 <button aria-label="Action" class="stat" data-go="stats" style="cursor:pointer"><div class="stat-v jade" style="font-size:22px">📊</div><div class="stat-l">Mes stats</div></button>
 </div>
 
@@ -5107,7 +5107,7 @@ const Cmd = {
     { re: /^rappel(?:le)?(?:-?moi)?\s+(?:demain|aujourd['’]?hui|à|a)?\s*(?:à|a)?\s*(\d{1,2})\s*h(?:eure)?\s*(\d{0,2})?\s*(?::|,|—|-)?\s*(.+)$/i,
       fn: (m) => Cmd.addReminder(m[1], m[2] || '0', m[3]) },
     // Navigation
-    { re: /^(?:ouvre|va\s+(?:à|sur)|montre|affiche)\s+(?:l['’]?)?(?:onglet\s+)?(home|aujourd['’]?hui|stats|routine|sport|flex|nutrition|epfc|code|ia|vinted|nl|chess|finance|social|plan|trading|settings|paramètres|parametres)$/i,
+    { re: /^(?:ouvre|va\s+(?:à|sur)|montre|affiche)\s+(?:l[‘’]?)?(?:onglet\s+)?(home|aujourd[‘’]?hui|stats|routine|sport|repair|trading|epfc|code|ia|vinted|nl|chess|finance|social|plan|settings|paramètres|parametres)$/i,
       fn: (m) => Cmd.openTab(m[1]) },
     // Suppression
     { re: /^(?:supprime|enlève|enleve|retire|cache)\s+(?:l['’]?)?(?:onglet\s+)?(trading|settings|paramètres|parametres)$/i,
@@ -8324,7 +8324,7 @@ window.__UD_ROUTINE_CHECKIN_ENGINE_V1__ = true;
     panel.querySelector('#udrci-refresh').onclick = render; panel.querySelector('#udrci-shift').onchange = render; panel.querySelector('#udrci-date').onchange = render; panel.querySelector('#udrci-clear').onclick = () => ['udrci-natural','udrci-title','udrci-start','udrci-end'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; }); panel.querySelector('#udrci-parse').onclick = () => { const p = parseNatural(panel.querySelector('#udrci-natural').value); if (!p) return toast("Format non reconnu. Ex: aujourd'hui 10h à 11h30 coiffeur"); panel.querySelector('#udrci-title').value = p.title; panel.querySelector('#udrci-start').value = p.start; panel.querySelector('#udrci-end').value = p.end; panel.querySelector('#udrci-date').value = p.day; toast('Parsé. Vérifie puis ajoute.'); }; panel.querySelector('#udrci-add-natural').onclick = () => { const p = parseNatural(panel.querySelector('#udrci-natural').value); if (!p) return toast('Format non reconnu.'); addTimedTask({ day:p.day, title:p.title, start:p.start, end:p.end, category:'Perso' }); }; panel.querySelector('#udrci-add-manual').onclick = () => addTimedTask({ day: panel.querySelector('#udrci-date').value, title: panel.querySelector('#udrci-title').value, start: panel.querySelector('#udrci-start').value, end: panel.querySelector('#udrci-end').value, category: panel.querySelector('#udrci-cat').value }); panel.querySelectorAll('[data-validate]').forEach(btn => { btn.onclick = () => { const schedule = window.__UD_ROUTINE_CHECKIN_CURRENT_SCHEDULE__; const b = schedule?.blocks?.find(x => x.id === btn.dataset.validate); if (b) openCheckin(b, schedule.day); }; });
   }
   function refreshModuleProgressBoxes() {
-    const map = { epfc:'p-epfc', coding:'p-code', nl:'p-nl', trading:'p-trading', muscu:'p-sport', souplesse:'p-flex', lecture:'p-plan', vinted:'p-vinted', ia:'p-ia' }; const p = progress();
+    const map = { epfc:'p-epfc', coding:'p-code', nl:'p-nl', trading:'p-trading', muscu:'p-sport', souplesse:'p-sport', lecture:'p-plan', vinted:'p-vinted', ia:'p-ia' }; const p = progress();
     Object.entries(map).forEach(([module, id]) => { const page = document.getElementById(id); if (!page) return; let box = page.querySelector(`.udrci-progress-box[data-module="${module}"]`); const info = p[module]; if (!info) return; if (!box) { box = document.createElement('div'); box.className = 'udrci-progress-box'; box.dataset.module = module; const h = page.querySelector('h1,h2,h3'); if (h && h.parentNode) h.parentNode.insertBefore(box, h.nextSibling); else page.prepend(box); } box.innerHTML = `<b>Reprendre ${escapeHTML(MODULE_LABELS[module] || module)}</b><small>${escapeHTML(info.resume || info.endPoint || info.nextAction || info.nextFocus || info.nextProgression || 'Dernier check-in enregistré')}</small><small>Mis à jour : ${escapeHTML((info.updatedAt || '').slice(0,16).replace('T',' '))}</small>`; });
   }
   function isRoutineActive(){ const p = routinePage(); return !!(p && (p.classList.contains('active') || p.offsetParent !== null)); }
@@ -10270,9 +10270,7 @@ window.__UD_ROUTINE_CHECKIN_ENGINE_V1__ = true;
     window.renderTrainingSport = renderSport;
     renderHomeStatus();
     renderSport();
-    renderFlex();
-    renderNutrition();
-    document.addEventListener('click', e => { if (e.target.closest('.tab[data-tab="sport"]')) setTimeout(renderSport, 80); if (e.target.closest('.tab[data-tab="flex"]')) setTimeout(renderFlex, 80); if (e.target.closest('.tab[data-tab="nutrition"]')) setTimeout(renderNutrition, 80); }, true);
+    document.addEventListener('click', e => { if (e.target.closest('.tab[data-tab="sport"]')) setTimeout(renderSport, 80); }, true);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(init, 350)); else setTimeout(init, 350);
   window.UD_GODMODE_V40 = { renderSport, renderFlex, renderNutrition, validateWorkout, getSession, PLAN, VERSION };
@@ -13445,8 +13443,8 @@ window.UD_V72_OPTS = Object.assign({
   ];
   const PLUS_ITEMS = [
     ['sport','💪 Sport','séance et cycle'],
-    ['flex','🧘 Souplesse','mobilité et C7'],
-    ['nutrition','🥩 Nutrition','repas, eau, protéines'],
+    ['repair','🔧 Réparation','électronique, multimètre, labs'],
+    ['trading','🔌 IoT','Arduino, ESP32, capteurs'],
     ['vinted','🛍️ Vinted','business et ventes'],
     ['finance','💰 Finance','ETF, budget, rappels'],
     ['chess','♟️ Échecs','Elo et tactiques'],
