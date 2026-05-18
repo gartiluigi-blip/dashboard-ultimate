@@ -6,12 +6,23 @@ if (typeof window.Notification === 'undefined') {
   window.Notification.requestPermission = function(){ return Promise.resolve('denied'); };
 }
 
+/* Final runtime takeover.
+   Ces flags sont lus par les vieux scripts inline dans index.html.
+   Comme early-stub est chargé avant eux, on les bloque avant leur installation. */
+window.__V75ForceFixInstalled = true;
+window.__V76VisibleFixInstalled = true;
+window.__V77OpsFixInstalled = true;
+window.__V79FreezeGuardInstalled = true;
+window.__V80EpfcDisplayFixInstalled = true;
+window.__V78GradeSystemInstalled = true;
+window.__V79FreezeGuardBypassedByFinal = true;
+
 (function(){
   'use strict';
   if (window.__DashboardFinalLoader) return;
   window.__DashboardFinalLoader = true;
 
-  var VERSION = '20260518-final-2';
+  var VERSION = '20260518-final-3';
   var debugMode = /[?&]uddebug=1\b/.test(location.search);
   var loadStatus = {};
 
@@ -27,6 +38,16 @@ if (typeof window.Notification === 'undefined') {
     (document.head || document.documentElement).appendChild(script);
   }
 
+  function legacyState(){
+    return {
+      v75: !!window.__V75ForceFixInstalled,
+      v76: !!window.__V76VisibleFixInstalled,
+      v77: !!window.__V77OpsFixInstalled,
+      v79: !!window.__V79FreezeGuardInstalled,
+      v80: !!window.__V80EpfcDisplayFixInstalled
+    };
+  }
+
   function snapshot(){
     return {
       version: 'final-loader-' + VERSION,
@@ -34,6 +55,7 @@ if (typeof window.Notification === 'undefined') {
       dashboardFinal: !!window.DashboardFinal,
       dashboardFinalStatus: window.DashboardFinalStatus || null,
       disabledLegacy: true,
+      inlineLegacyFlags: legacyState(),
       loadStatus: loadStatus,
       pages: {
         home: !!document.getElementById('p-home'),
