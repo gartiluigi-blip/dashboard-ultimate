@@ -186,7 +186,7 @@
 <div class="brand-text">
 <div class="brand-title">Protocole <em class="serif">Ultimate</em></div>
 <div class="brand-sub" id="brand-sub">Chargement…</div>
-<div style="font:900 10px ui-monospace,monospace;color:#22c55e;margin-top:2px;letter-spacing:.04em">v2026-05-18-v12 · sport-etude-clean · ✓</div>
+<div style="font:900 10px ui-monospace,monospace;color:#22c55e;margin-top:2px;letter-spacing:.04em">v2026-05-18-v13 · 8tabs+engines+jsfix · ✓</div>
 </div>
 </div>
 <div class="masthead-meta" id="meta">
@@ -200,16 +200,9 @@
 <div class="tab" data-tab="stats">📊 Stats</div>
 <div class="tab" data-tab="routine">📅 Routine</div>
 <div class="tab" data-tab="sport">💪 Sport</div>
-<div class="tab" data-tab="epfc">🎓 EPFC</div>
-<div class="tab" data-tab="code">🧪 Exercices</div>
-<div class="tab" data-tab="ia">🤖 IA</div>
-<div class="tab" data-tab="vinted">🛍️ Vinted</div>
-<div class="tab" data-tab="nl">🇳🇱 NL</div>
-<div class="tab" data-tab="chess">♟️ Échecs</div>
-<div class="tab" data-tab="finance">💰 Finance</div>
-<div class="tab" data-tab="plan">📋 Plan</div>
-<div class="tab" data-tab="repair">🔧 Réparation</div>
-<div class="tab" data-tab="trading">🔌 IoT</div>
+<div class="tab" data-tab="etude">🎓 Étude</div>
+<div class="tab" data-tab="loisir">🎮 Loisir</div>
+<div class="tab" data-tab="argent">💰 Argent</div>
 <div class="tab" data-tab="settings">⚙️</div>
 </nav>
 </div>
@@ -638,14 +631,14 @@ Bachelor dev en septembre. Bilingue NL+FR d'ici 2 ans. Corps robuste malgré la 
 
 <div class="stats stats-3">
 <button aria-label="Action" class="stat" data-go="sport" style="cursor:pointer"><div class="stat-v flame" style="font-size:22px">💪</div><div class="stat-l">Séance du jour</div></button>
-<button aria-label="Action" class="stat" data-go="repair" style="cursor:pointer"><div class="stat-v amber" style="font-size:22px">🔧</div><div class="stat-l">Réparation</div></button>
+<button aria-label="Action" class="stat" data-go="etude" style="cursor:pointer"><div class="stat-v sapphire" style="font-size:22px">🎓</div><div class="stat-l">Mes études</div></button>
 <button aria-label="Action" class="stat" data-go="stats" style="cursor:pointer"><div class="stat-v jade" style="font-size:22px">📊</div><div class="stat-l">Mes stats</div></button>
 </div>
 
 <div class="stats stats-3" style="margin-top:10px">
 <button aria-label="Action" class="stat" data-action="pomo-open" style="cursor:pointer"><div class="stat-v coral" style="font-size:22px">⏱️</div><div class="stat-l">Pomodoro 25/5</div></button>
-<button aria-label="Action" class="stat" data-go="code" style="cursor:pointer"><div class="stat-v violet" style="font-size:22px">💻</div><div class="stat-l">Où coder</div></button>
-<button aria-label="Action" class="stat" data-go="plan" style="cursor:pointer"><div class="stat-v blue" style="font-size:22px">📋</div><div class="stat-l">Mon plan</div></button>
+<button aria-label="Action" class="stat" data-go="loisir" style="cursor:pointer"><div class="stat-v violet" style="font-size:22px">🎮</div><div class="stat-l">Loisirs</div></button>
+<button aria-label="Action" class="stat" data-go="argent" style="cursor:pointer"><div class="stat-v blue" style="font-size:22px">💰</div><div class="stat-l">Finances</div></button>
 </div>
 
 <h2 class="section-title coral">Mes données</h2>
@@ -774,10 +767,50 @@ Bachelor dev en septembre. Bilingue NL+FR d'ici 2 ans. Corps robuste malgré la 
 <div class="callout callout-tip"><strong>Comment lire ces stats :</strong> les jours sans log apparaissent vides. Un trou = pas un drame, c'est juste un signal. La constance bat l'intensité chaque fois.</div>
 </section>
 
-<section class="page" id="p-routine">
+<section class="page" id="p-routine" data-page="routine">
 <div class="page-kicker">Routine</div>
 <h1 class="page-title">Ton <em>rythme</em> quotidien</h1>
-<p class="page-lead">Quatre shifts rotatifs + mode weekend + mode maladie. Chaque emploi du temps est calibré pour tes 180g de protéines, tes 6 repas, et tes <em>5 blocs d'étude</em>. Le bloc <span class="flame">rouge pulsé</span> = ce que tu es censé faire <em>maintenant</em>. Les blocs <span class="jade">verts ✓</span> = auto-validés d'après ton log.</p>
+
+<!-- SHIFT CONFIG: work hours, courses, fatigue -->
+<div class="card" id="shift-config-card">
+  <h3>⚙️ Configurer ma journée</h3>
+  <div class="shift-form">
+    <div class="sf-row">
+      <label>Je travaille</label>
+      <div class="sf-group">
+        <input type="time" id="sf-work-start" placeholder="De">
+        <span>→</span>
+        <input type="time" id="sf-work-end" placeholder="À">
+        <label class="sf-check"><input type="checkbox" id="sf-no-work"> Repos / congé</label>
+      </div>
+    </div>
+    <div class="sf-row">
+      <label>Cours du soir EPFC</label>
+      <div class="sf-group">
+        <label class="sf-check"><input type="checkbox" id="sf-evening-class"> Oui</label>
+        <input type="time" id="sf-class-start" placeholder="De" style="display:none">
+        <span id="sf-class-arrow" style="display:none">→</span>
+        <input type="time" id="sf-class-end" placeholder="À" style="display:none">
+      </div>
+    </div>
+    <div class="sf-row">
+      <label>Niveau de fatigue</label>
+      <div class="sf-group">
+        <input type="range" id="sf-fatigue" min="1" max="5" value="2" style="flex:1">
+        <span id="sf-fatigue-label" class="sf-val">2 · Normal</span>
+      </div>
+    </div>
+    <button id="sf-generate" class="btn-primary">Générer ma routine</button>
+  </div>
+</div>
+
+<!-- GENERATED DAILY BLOCKS -->
+<div id="routine-blocks-host">
+  <div class="callout callout-note">Configure ta journée ci-dessus pour générer tes blocs.</div>
+</div>
+
+<!-- TASK VALIDATION: keep existing shift-view timeline system if it exists -->
+<div id="p-routine-timeline-host"></div>
 
 <div class="routine-progress" id="routine-progress">—</div>
 
@@ -806,62 +839,6 @@ Bachelor dev en septembre. Bilingue NL+FR d'ici 2 ans. Corps robuste malgré la 
 <button class="shift-chip" data-shift="s4">Shift 13h30</button>
 <button class="shift-chip" data-shift="sw">Weekend</button>
 </div>
-
-<style id="routine-prio-style">
-.rp-grid{display:grid;gap:8px;margin:14px 0}
-.rp-block{border-radius:14px;border:1px solid rgba(148,163,184,.2);background:rgba(15,23,42,.7);padding:12px 14px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:opacity .2s}
-.rp-block.done{opacity:.45;filter:grayscale(.3)}
-.rp-block[data-prio="P0"]{border-color:rgba(239,68,68,.5);background:rgba(239,68,68,.07)}
-.rp-block[data-prio="P1"]{border-color:rgba(249,115,22,.5);background:rgba(249,115,22,.07)}
-.rp-block[data-prio="P2"]{border-color:rgba(59,130,246,.5);background:rgba(59,130,246,.07)}
-.rp-block[data-prio="P3"]{border-color:rgba(34,197,94,.5);background:rgba(34,197,94,.07)}
-.rp-check{width:26px;height:26px;border-radius:8px;border:2px solid rgba(148,163,184,.4);background:transparent;display:grid;place-items:center;font-size:14px;flex-shrink:0;transition:all .15s}
-.rp-block.done .rp-check{background:rgba(34,197,94,.3);border-color:#22c55e;color:#22c55e}
-.rp-tag{font:900 10px system-ui;letter-spacing:.08em;padding:2px 7px;border-radius:99px;flex-shrink:0}
-.rp-block[data-prio="P0"] .rp-tag{background:rgba(239,68,68,.25);color:#fca5a5}
-.rp-block[data-prio="P1"] .rp-tag{background:rgba(249,115,22,.25);color:#fdba74}
-.rp-block[data-prio="P2"] .rp-tag{background:rgba(59,130,246,.25);color:#93c5fd}
-.rp-block[data-prio="P3"] .rp-tag{background:rgba(34,197,94,.25);color:#86efac}
-.rp-text b{display:block;color:#f1f5f9;font:800 14px system-ui}
-.rp-text span{color:#94a3b8;font:600 11px system-ui}
-</style>
-
-<h2 class="section-title" style="margin-top:20px">Blocs <em>priorités · aujourd'hui</em></h2>
-<div class="rp-grid" id="routine-prio-grid">
-  <div class="rp-block" data-prio="P0" data-rp-id="p0_repair"><div class="rp-check">✓</div><span class="rp-tag">P0</span><div class="rp-text"><b>🔧 Réparation / IoT</b><span>Avancer dans le livre ou compléter un lab REP/IOT.</span></div></div>
-  <div class="rp-block" data-prio="P1" data-rp-id="p1_epfc"><div class="rp-check">✓</div><span class="rp-tag">P1</span><div class="rp-text"><b>🎓 EPFC</b><span>Bloc matière du jour · Pomodoro 25/5.</span></div></div>
-  <div class="rp-block" data-prio="P1" data-rp-id="p1_sport"><div class="rp-check">✓</div><span class="rp-tag">P1</span><div class="rp-text"><b>💪 Sport</b><span>Séance PPL ou mobilité selon le cycle.</span></div></div>
-  <div class="rp-block" data-prio="P2" data-rp-id="p2_nl"><div class="rp-check">✓</div><span class="rp-tag">P2</span><div class="rp-text"><b>🇳🇱 Néerlandais</b><span>B2/C1 · Brulingua + Vanzelfsprekend + Anki.</span></div></div>
-  <div class="rp-block" data-prio="P3" data-rp-id="p3_admin"><div class="rp-check">✓</div><span class="rp-tag">P3</span><div class="rp-text"><b>🛍️ Vinted / Admin</b><span>Seulement si P0–P2 sont faits.</span></div></div>
-</div>
-<script>
-(function(){
-  if (window.__rpBlocksInit) return;
-  window.__rpBlocksInit = true;
-  var KEY = 'dashv2_rp_';
-  function todayKey(){ return new Date().toISOString().slice(0,10); }
-  function getD(){ try{ return JSON.parse(localStorage.getItem(KEY+todayKey())||'{}'); }catch(e){ return {}; } }
-  function setD(d){ try{ localStorage.setItem(KEY+todayKey(), JSON.stringify(d)); }catch(e){} }
-  function render(){
-    var d = getD();
-    document.querySelectorAll('[data-rp-id]').forEach(function(el){
-      var id = el.getAttribute('data-rp-id'), done = !!d[id];
-      el.classList.toggle('done', done);
-    });
-  }
-  document.addEventListener('click', function(e){
-    var block = e.target.closest('[data-rp-id]');
-    if (!block) return;
-    var id = block.getAttribute('data-rp-id'), d = getD();
-    d[id] = !d[id];
-    setD(d);
-    render();
-  }, true);
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', render, {once:true});
-  else render();
-  setInterval(render, 3000);
-})();
-</script>
 
 <!-- SHIFT MALADIE (défaut actuel) -->
 <div class="shift-view" id="view-sm">
@@ -1011,639 +988,239 @@ Si t'as de la fièvre, douleurs fortes, ou t'es vraiment KO : <strong>protocole 
 <div class="callout callout-rule"><span class="ruletag">Réveil</span>Pas de snooze. Alarme → pieds au sol. Tâche la plus dure en premier. <strong>Jamais 2 jours ratés d'affilée.</strong></div>
 <div class="callout callout-rule"><span class="ruletag">Journal</span>Soir 2 min : 3 wins + 1 amélioration. <strong>Weekly review dim 15 min.</strong> Zéro alcool en semaine.</div>
 
+<script>
+(function(){
+  var fatigue = document.getElementById('sf-fatigue');
+  var fatigueLabel = document.getElementById('sf-fatigue-label');
+  var eveningCheck = document.getElementById('sf-evening-class');
+  if (!fatigue || !fatigueLabel || !eveningCheck) return;
+  var NS = 'dashv2_shiftcfg_';
+
+  var FATIGUE_LABELS = ['', '1 · Épuisé — minimum vital', '2 · Fatigué — réduit', '3 · Normal', '4 · Bon', '5 · Excellent — max'];
+
+  function save() {
+    try {
+      localStorage.setItem(NS+'v1', JSON.stringify({
+        workStart: document.getElementById('sf-work-start').value,
+        workEnd: document.getElementById('sf-work-end').value,
+        noWork: document.getElementById('sf-no-work').checked,
+        eveningClass: eveningCheck.checked,
+        classStart: document.getElementById('sf-class-start').value,
+        classEnd: document.getElementById('sf-class-end').value,
+        fatigue: Number(fatigue.value)
+      }));
+    } catch(_) {}
+  }
+
+  function load() {
+    try {
+      var d = JSON.parse(localStorage.getItem(NS+'v1') || '{}');
+      if (d.workStart) document.getElementById('sf-work-start').value = d.workStart;
+      if (d.workEnd) document.getElementById('sf-work-end').value = d.workEnd;
+      if (d.noWork) document.getElementById('sf-no-work').checked = d.noWork;
+      if (d.eveningClass) {
+        eveningCheck.checked = d.eveningClass;
+        showClassFields(true);
+      }
+      if (d.classStart) document.getElementById('sf-class-start').value = d.classStart;
+      if (d.classEnd) document.getElementById('sf-class-end').value = d.classEnd;
+      if (d.fatigue) { fatigue.value = d.fatigue; updateFatigueLabel(); }
+    } catch(_) {}
+  }
+
+  function updateFatigueLabel() {
+    var v = Number(fatigue.value);
+    fatigueLabel.textContent = FATIGUE_LABELS[v] || v;
+    fatigueLabel.style.color = v <= 2 ? '#f87171' : v >= 4 ? '#34d399' : '#f59e0b';
+  }
+
+  function showClassFields(show) {
+    ['sf-class-start','sf-class-arrow','sf-class-end'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.style.display = show ? '' : 'none';
+    });
+  }
+
+  function generateBlocks() {
+    save();
+    var v = Number(fatigue.value);
+    var noWork = document.getElementById('sf-no-work').checked;
+    var evening = eveningCheck.checked;
+    var workStart = document.getElementById('sf-work-start').value;
+    var workEnd = document.getElementById('sf-work-end').value;
+
+    var host = document.getElementById('routine-blocks-host');
+    if (!host) return;
+
+    var blocks = [];
+
+    if (v <= 1) {
+      blocks.push({ time:'', label:'Minimum vital', desc:'Shot protéines · 3L eau · hygiène · 10 min marche · sommeil priorité', tag:'🛡️', color:'#f87171' });
+    } else {
+      if (!noWork || v >= 3) {
+        blocks.push({ time: '07:00', label: 'Matin · Réveil actif', desc: '5 min mobilité · petit-dej protéiné · Anki NL 10 min', tag:'🌅', color:'#fb923c' });
+      }
+
+      if (!noWork && workStart) {
+        blocks.push({ time: workStart, label: 'Travail ' + workStart + ' → ' + (workEnd || '?'), desc: 'Bloc professionnel. Zéro distraction dashboard.', tag:'💼', color:'#6b7280' });
+      }
+
+      var studyMin = v === 2 ? 30 : v === 3 ? 60 : v === 4 ? 90 : 120;
+      if (!evening || v >= 3) {
+        blocks.push({ time: noWork ? '10:00' : '', label: 'Étude · ' + studyMin + ' min', desc: 'EPFC prioritaire · ' + (studyMin >= 60 ? 'exercices + ' + (studyMin-30) + ' min lecture' : 'exercice court') + '. Pas de zapping entre matières.', tag:'🎓', color:'#22c55e' });
+      }
+
+      if (v >= 3) {
+        blocks.push({ time: '', label: 'Sport · 60-90 min', desc: 'Séance planifiée. Voir onglet Sport pour le programme du jour.', tag:'💪', color:'#fb923c' });
+      } else if (v === 2) {
+        blocks.push({ time: '', label: 'Sport léger · 20 min', desc: 'Marche + mobilité seulement. Pas de charge.', tag:'🚶', color:'#f59e0b' });
+      }
+
+      if (evening) {
+        var cs = document.getElementById('sf-class-start').value;
+        var ce = document.getElementById('sf-class-end').value;
+        blocks.push({ time: cs || '18:00', label: 'Cours EPFC ' + (cs || '') + ' → ' + (ce || ''), desc: 'Présence + prise de notes. Après : synthèse 10 min.', tag:'📚', color:'#6366f1' });
+      }
+
+      blocks.push({ time: '21:00', label: 'Soir · Récup', desc: 'Dîner protéiné · Anki 10 min · pas d\'écrans 30 min avant sommeil', tag:'🌙', color:'#a78bfa' });
+    }
+
+    host.innerHTML = '<h2 class="section-title jade">Blocs du jour · <em>générés</em></h2>' + blocks.map(function(b, i) {
+      return '<div class="routine-block-gen"><div class="rb-left"><div class="rb-tag">' + b.tag + '</div>' + (b.time ? '<div class="rb-time">' + b.time + '</div>' : '') + '</div><div class="rb-body"><div class="rb-label">' + b.label + '</div><div class="rb-desc">' + b.desc + '</div></div><button class="rb-check" data-rb="' + i + '" aria-label="Valider ce bloc">✓</button></div>';
+    }).join('');
+
+    var today = new Date().toISOString().slice(0,10);
+    var doneSet = JSON.parse(localStorage.getItem('dashv2_rbgen_'+today) || '[]');
+    host.querySelectorAll('.rb-check').forEach(function(btn) {
+      var idx = Number(btn.dataset.rb);
+      if (doneSet.includes(idx)) { btn.classList.add('done'); btn.closest('.routine-block-gen').classList.add('done'); }
+      btn.addEventListener('click', function() {
+        var d = JSON.parse(localStorage.getItem('dashv2_rbgen_'+today) || '[]');
+        var isDone = d.includes(idx);
+        var next = isDone ? d.filter(function(x){ return x !== idx; }) : d.concat([idx]);
+        localStorage.setItem('dashv2_rbgen_'+today, JSON.stringify(next));
+        btn.classList.toggle('done', !isDone);
+        btn.closest('.routine-block-gen').classList.toggle('done', !isDone);
+      });
+    });
+  }
+
+  fatigue.addEventListener('input', updateFatigueLabel);
+  eveningCheck.addEventListener('change', function() { showClassFields(eveningCheck.checked); });
+  var generateBtn = document.getElementById('sf-generate');
+  if (generateBtn) generateBtn.addEventListener('click', generateBlocks);
+
+  document.addEventListener('DOMContentLoaded', function() {
+    load();
+    updateFatigueLabel();
+    try {
+      var d = JSON.parse(localStorage.getItem(NS+'v1') || '{}');
+      if (d.fatigue) generateBlocks();
+    } catch(_) {}
+  });
+
+  if (document.readyState !== 'loading') {
+    load();
+    updateFatigueLabel();
+    try {
+      var d = JSON.parse(localStorage.getItem(NS+'v1') || '{}');
+      if (d.fatigue) generateBlocks();
+    } catch(_) {}
+  }
+})();
+</script>
+
 </section>
 
-<section class="page" id="p-sport">
-<div class="page-kicker">Force & Mouvement</div>
-<h1 class="page-title">Push <em>Pull</em> Legs</h1>
-<p class="page-lead">À jeun. Échauffement <em>obligatoire</em> 5 min avant chaque séance. Repos 60-90s. Progression RPE 7-8 (il te reste 2-3 reps dans le réservoir). +1 rep ou +1-2kg/sem. Hevy app pour tracker. <strong>Deload semaine 7</strong> : même exos, 50% poids, 50% séries. Stretch 15 min après chaque séance (25 min le dimanche).</p>
+<section class="page" id="p-sport" data-page="sport">
+<!-- Sport content rendered dynamically by ud-godmode-sport-v40 -->
+</section>
 
-<div class="callout callout-warn">
-<strong>⚠️ Contrainte C7</strong> — Chronique bilatéral C7 confirmé. 3 séances/sem max. Machines en priorité. <strong>Zéro compression cervicale</strong> : pas de shrugs lourds, pas de squat nuque, pas de développé militaire barre. Préférer haltères, poulie, développé assis. Si tension cervicale → arrêt.
+<!-- REMOVED: p-epfc, p-code, p-ia, p-nl, p-chess, p-trading, p-repair, p-vinted, p-finance, p-plan (merged into etude/loisir/argent) -->
+<section class="page" id="p-epfc-legacy" data-page="epfc-legacy" style="display:none" hidden aria-hidden="true">
+<!-- Legacy EPFC page removed - content merged into #p-etude -->
+</section>
+
+<section class="page" id="p-etude" data-page="etude">
+<div class="page-header">
+  <h1 class="page-title">Étude · <em>progression réelle</em></h1>
+  <p class="page-sub">Un seul endroit. Toutes les matières. Pages lues, heures investies, où reprendre.</p>
+</div>
+<div id="etude-host">
+  <div style="padding:16px;text-align:center;color:#64748b">Chargement…</div>
+</div>
+</section>
+
+<section class="page" id="p-loisir" data-page="loisir">
+<div class="page-header">
+  <h1 class="page-title">Loisir · <em>Échecs &amp; Lecture</em></h1>
+  <p class="page-sub">Progression mesurée. Pas de temps perdu.</p>
 </div>
 
-<div class="training-status" id="training-status-sport">
-<div class="training-status-inner">
-<span class="training-label" id="training-label-sport">—</span>
-<div class="training-title" id="training-title-sport">—</div>
-<div class="training-desc" id="training-desc-sport">—</div>
+<!-- ELO TRACKER -->
+<h2 class="section-title gold">♟️ Échecs · <em>ELO tracker</em></h2>
+<div class="card" id="elo-card">
+  <div class="elo-display">
+    <div class="elo-current" id="elo-current">—</div>
+    <div class="elo-delta" id="elo-delta"></div>
+  </div>
+  <div class="elo-input-row">
+    <input id="elo-input" type="number" placeholder="ELO actuel" min="0" max="3000" style="background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:8px;padding:8px 12px;font:700 14px var(--f-mono);width:140px">
+    <button id="elo-add" class="btn-primary" style="padding:8px 16px">Enregistrer</button>
+  </div>
+  <canvas id="elo-canvas" height="120" style="width:100%;margin-top:12px;border-radius:8px;background:rgba(15,23,42,.6)"></canvas>
 </div>
+
+<!-- LECTURE TRACKER -->
+<h2 class="section-title sapphire">📚 Lecture · <em>livres recommandés</em></h2>
+<div id="lecture-host">
+  <div style="padding:12px;color:#64748b;text-align:center">Chargement…</div>
 </div>
-<div class="training-week" id="training-week-sport" style="margin-top:10px" aria-label="Cycle d'entraînement 7 jours"></div>
+</section>
 
-<div id="training-cycle-full" style="margin-top:14px"></div>
-
-<details style="margin-top:10px;background:var(--surface);border:1px solid var(--border-soft);border-radius:10px;padding:10px 12px;font-size:12.5px">
-<summary style="cursor:pointer;color:var(--text-dim);font-weight:600;letter-spacing:.02em">🔄 Désynchronisé ? Resetter le cycle sur aujourd'hui</summary>
-<p style="color:var(--text-faint);margin-top:8px;line-height:1.5">Clique sur ce que tu <strong>fais aujourd'hui</strong>. Le cycle se recalera à partir de là et les 8 jours suivants se réorganiseront automatiquement.</p>
-<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px" id="cycle-reset-row">
-<button type="button" class="wake-btn" data-reset-type="push1">Push 1</button>
-<button type="button" class="wake-btn" data-reset-type="pull1">Pull 1</button>
-<button type="button" class="wake-btn" data-reset-type="legs1">Legs 1</button>
-<button type="button" class="wake-btn" data-reset-type="push2">Push 2</button>
-<button type="button" class="wake-btn" data-reset-type="pull2">Pull 2</button>
-<button type="button" class="wake-btn" data-reset-type="legs2">Legs 2</button>
-<button type="button" class="wake-btn" data-reset-type="rest">Repos</button>
+<section class="page" id="p-argent" data-page="argent">
+<div class="page-header">
+  <h1 class="page-title">Argent · <em>Vinted &amp; Épargne</em></h1>
+  <p class="page-sub">Ce qui rentre, ce qui sort, ce qui reste.</p>
 </div>
-</details>
 
-<p class="page-lead" style="margin-top:8px;font-size:11.5px;color:var(--text-faint)">Cycle <b>2 sport + 1 repos</b> sur 9 jours : Push 1 → Pull 1 → Repos → Legs 1 → Push 2 → Repos → Pull 2 → Legs 2 → Repos. Le jour actif est mis en surbrillance.</p>
-
-<h2 class="section-title">Échauffement · <em>5 min avant chaque séance</em></h2>
+<h2 class="section-title jade">🛍️ Vinted · <em>Investissements &amp; Ventes</em></h2>
 <div class="card">
-<ul class="dlist">
-<li><span class="k">Rotations articulaires : cou → épaules → coudes → poignets → hanches → chevilles</span><span class="v">10 reps chaque</span></li>
-<li><span class="k">Jumping jacks ou corde à sauter (cardio montée)</span><span class="v">60s</span></li>
-<li><span class="k">Band pull-aparts ou rotations externes élastique (prévention épaules)</span><span class="v">2×15</span></li>
-<li><span class="k">1 série légère du premier exo (50% du poids de travail)</span><span class="v">1×12</span></li>
-</ul>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+    <div>
+      <label style="font:600 11px var(--f-mono,monospace);color:#64748b;display:block;margin-bottom:6px">ARTICLE ACHETÉ</label>
+      <input id="vt-buy-name" type="text" placeholder="Nom article" style="width:100%;background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:8px;padding:8px;font:12px var(--f-sans);margin-bottom:6px">
+      <input id="vt-buy-price" type="number" placeholder="Prix achat €" step="0.01" style="width:100%;background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:8px;padding:8px;font:12px var(--f-sans)">
+      <button id="vt-add-buy" style="width:100%;margin-top:6px;padding:8px;background:#0f172a;border:1px solid #475569;border-radius:8px;color:#e2e8f0;font:700 11px var(--f-sans);cursor:pointer">+ Investissement</button>
+    </div>
+    <div>
+      <label style="font:600 11px var(--f-mono,monospace);color:#64748b;display:block;margin-bottom:6px">ARTICLE VENDU</label>
+      <input id="vt-sell-name" type="text" placeholder="Nom article" style="width:100%;background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:8px;padding:8px;font:12px var(--f-sans);margin-bottom:6px">
+      <input id="vt-sell-price" type="number" placeholder="Prix vente €" step="0.01" style="width:100%;background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:8px;padding:8px;font:12px var(--f-sans)">
+      <button id="vt-add-sell" style="width:100%;margin-top:6px;padding:8px;background:linear-gradient(135deg,#059669,#10b981);border:none;border-radius:8px;color:#fff;font:700 11px var(--f-sans);cursor:pointer">+ Vente</button>
+    </div>
+  </div>
+  <div class="vt-profit-bar">
+    <div class="vt-profit-item"><span>Investi</span><b id="vt-total-invested">0.00 €</b></div>
+    <div class="vt-profit-item"><span>CA ventes</span><b id="vt-total-sales">0.00 €</b></div>
+    <div class="vt-profit-item vt-profit-main"><span>Profit net</span><b id="vt-profit">0.00 €</b></div>
+  </div>
 </div>
+<div id="vt-list-host"></div>
 
-<h2 class="section-title">Semaine <em>type</em></h2>
-<div class="weekrow">
-<button aria-label="Action" class="wday active" data-d="d1"><b>L</b><em>Push</em></button>
-<button aria-label="Action" class="wday" data-d="d2"><b>M</b><em>Pull</em></button>
-<button aria-label="Action" class="wday" data-d="d3"><b>Me</b><em>Legs</em></button>
-<button aria-label="Action" class="wday" data-d="d4"><b>J</b><em>Push</em></button>
-<button aria-label="Action" class="wday" data-d="d5"><b>V</b><em>Pull</em></button>
-<button aria-label="Action" class="wday" data-d="d6"><b>S</b><em>Legs</em></button>
-<button aria-label="Action" class="wday" data-d="d7"><b>D</b><em>Repos</em></button>
-</div>
-
-<div class="day-view" id="day-d1">
-<div class="card card-elevated">
-<div class="card-title"><h3>Lundi · Push 1</h3><span class="badge badge-flame">Poitrine · Épaules · Triceps</span></div>
-<ul class="dlist">
-<li><span class="k">Pompes échauffement</span><span class="v">2×15</span></li>
-<li><span class="k">DC haltères · incliné · écarté</span><span class="v">4×10 · 3×10 · 3×12</span></li>
-<li><span class="k">DM épaules · élévations latérales</span><span class="v">4×10 · 4×15-20</span></li>
-<li><span class="k">Dips triceps · extension overhead</span><span class="v">3×max · 3×12</span></li>
-<li><span class="k">Crunchs + planche</span><span class="v">3×20 + 3×60s</span></li>
-</ul>
-</div>
-<div class="set-tracker" data-set-tracker="d1"></div>
-</div>
-
-<div class="day-view hidden" id="day-d2">
-<div class="card card-elevated">
-<div class="card-title"><h3>Mardi · Pull 1</h3><span class="badge badge-sapphire">Dos · Biceps</span></div>
-<ul class="dlist">
-<li><span class="k">Tractions large · rowing 1 bras · rowing 2 haltères</span><span class="v">4×6-10 · 4×10 · 3×10</span></li>
-<li><span class="k">Face pulls · oiseau</span><span class="v">4×15 · 3×15</span></li>
-<li><span class="k">Curl biceps · curl marteau</span><span class="v">3×12 · 3×12</span></li>
-<li><span class="k">Relevé jambes</span><span class="v">3×15</span></li>
-</ul>
-</div>
-<div class="set-tracker" data-set-tracker="d2"></div>
-</div>
-
-<div class="day-view hidden" id="day-d3">
-<div class="card card-elevated">
-<div class="card-title"><h3>Mercredi · Legs 1</h3><span class="badge badge-jade">Quads · Fessiers</span></div>
-<ul class="dlist">
-<li><span class="k">Squat goblet · fentes · squat bulgare</span><span class="v">4×12 · 3×12/j · 3×10/j</span></li>
-<li><span class="k">SDT roumain · mollets</span><span class="v">3×12 · 4×20</span></li>
-<li><span class="k">Obliques + ab wheel</span><span class="v">3×20 + 3×12</span></li>
-</ul>
-</div>
-<div class="set-tracker" data-set-tracker="d3"></div>
-</div>
-
-<div class="day-view hidden" id="day-d4">
-<div class="card card-elevated">
-<div class="card-title"><h3>Jeudi · Push 2</h3><span class="badge badge-flame">Épaules · Pecs · Triceps</span></div>
-<ul class="dlist">
-<li><span class="k">Pike push-ups · Arnold press</span><span class="v">3×10 · 4×10-12</span></li>
-<li><span class="k">Élévations latérales · élévations frontales</span><span class="v">4×15 · 3×12</span></li>
-<li><span class="k">Pompes diamant · pompes déclinées</span><span class="v">3×max · 3×12</span></li>
-<li><span class="k">Skull crushers · kickback · planche latérale</span><span class="v">3×12 · 3×12 · 3×30s</span></li>
-</ul>
-</div>
-<div class="set-tracker" data-set-tracker="d4"></div>
-</div>
-
-<div class="day-view hidden" id="day-d5">
-<div class="card card-elevated">
-<div class="card-title"><h3>Vendredi · Pull 2</h3><span class="badge badge-sapphire">Dos · Biceps · Trapèzes</span></div>
-<ul class="dlist">
-<li><span class="k">Chin-ups · rowing · pullover · shrugs</span><span class="v">4×6-10 · 4×10 · 3×12 · 4×15</span></li>
-<li><span class="k">Face pulls · curl concentré · curl inversé</span><span class="v">3×15 · 3×12 · 3×15</span></li>
-<li><span class="k">Relevé + twist</span><span class="v">3×15</span></li>
-</ul>
-</div>
-<div class="set-tracker" data-set-tracker="d5"></div>
-</div>
-
-<div class="day-view hidden" id="day-d6">
-<div class="card card-elevated">
-<div class="card-title"><h3>Samedi · Legs 2</h3><span class="badge badge-jade">Posterior chain</span></div>
-<ul class="dlist">
-<li><span class="k">Hip thrust · SDT roumain · squat sumo</span><span class="v">4×12 · 4×10 · 3×12</span></li>
-<li><span class="k">Nordic curl · step-ups · mollets assis</span><span class="v">3×8 · 3×12/j · 4×20</span></li>
-<li><span class="k">Planche + crunchs inversés</span><span class="v">3×60s + 3×20</span></li>
-</ul>
-</div>
-<div class="set-tracker" data-set-tracker="d6"></div>
-</div>
-
-<div class="day-view hidden" id="day-d7">
-<div class="card card-elevated">
-<div class="card-title"><h3>Dimanche · Repos actif</h3><span class="badge badge-ghost">70 min</span></div>
-<ul class="dlist">
-<li><span class="k">Marche ou vélo doux</span><span class="v">30 min</span></li>
-<li><span class="k">Stretch LONG full body (voir onglet Souplesse)</span><span class="v">25 min</span></li>
-<li><span class="k">Foam roll + auto-massage</span><span class="v">15 min</span></li>
-</ul>
-</div>
-</div>
-
-<div class="callout callout-tip">
-<strong>Tracker intégré</strong> · chaque jour d'entraînement a désormais son propre tracker de sets/reps/poids. Les sessions précédentes sont rappelées en regard (↗ tu montes, ↘ tu baisses). La règle : <em>charge ou reps augmente d'une semaine à l'autre</em>. Si 3 semaines tu stagnes sur un exo = deload (50% poids, même séries). Puis relance. Hevy reste une alternative si tu veux pousser les analyses au-delà.
-</div>
-
-
-</section>
-
-<section class="page" id="p-epfc">
-<div class="page-kicker">Bachelor · Développement d'applications</div>
-<h1 class="page-title">EPFC · <em>avance 1re année</em></h1>
-<p class="page-lead">Objectif : prendre de l'avance sur le <strong>niveau 1</strong>, pas avaler tout le bachelor. Chaque matière a maintenant : objectif, ressource O’Reilly, exercice pratique et preuve à produire.</p>
-
-<div class="callout callout-focus"><strong>Règle anti-stack :</strong> une seule matière active par bloc. Niveau 2/3, IA, IoT, cloud, SAP, Scrum, Java avancé = parking tant que le socle niveau 1 n’est pas solide.</div>
-
-<div class="gm-plan-grid">
-  <div class="card"><h3>Mission actuelle</h3><p class="page-lead"><strong>Avance 1re année.</strong><br>Priorité : PRM3 → BDO1/BDG4 → WEB1 → BNE2 → STO4/SYS4 → MAP4/STA1 → PAN2/ICO1.</p></div>
-  <div class="card"><h3>Certif active</h3><p class="page-lead"><strong>PCEP uniquement.</strong><br>Elle sert PRM3. Le reste attend. Une certif à la fois.</p></div>
-  <div class="card"><h3>Parking niveau 2</h3><p class="page-lead">PRO3, PRW3, SNE4, ANC4, PRB2, TGP2, EBN5 visibles mais non prioritaires.</p></div>
-  <div class="card"><h3>Parking niveau 3</h3><p class="page-lead">Stage, ASAP, PRI2, PLG3, ORM1, VTEC, DAEI : trajectoire, pas charge actuelle.</p></div>
-</div>
-
-<h2 class="section-title flame">Niveau 1 · <em>actif maintenant</em></h2>
-<div class="card"><ul class="dlist">
-<li><span class="k"><strong>PRM3</strong> — Principes algorithmiques et programmation</span><span class="v pos">120p · 8 ECTS</span><div class="note">Priorité 1. Logique, variables, conditions, boucles, fonctions, listes, dictionnaires, fichiers, debug. Preuve : exercice validé + erreur comprise.</div></li>
-<li><span class="k"><strong>BDO1</strong> — Initiation aux bases de données</span><span class="v pos">60p · 5 ECTS</span><div class="note">Tables, colonnes, clés primaires/étrangères, SELECT, WHERE, ORDER BY, INSERT, UPDATE, DELETE.</div></li>
-<li><span class="k"><strong>BDG4</strong> — Gestion et exploitation des bases de données</span><span class="v warn">60p · 5 ECTS</span><div class="note">Après BDO1 : JOIN, GROUP BY, agrégats, contraintes, normalisation, vues, index, transactions, droits.</div></li>
-<li><span class="k"><strong>WEB1</strong> — Web : principes de base</span><span class="v pos">40p · 3 ECTS</span><div class="note">HTML, CSS, responsive, formulaires, accessibilité, JavaScript DOM simple.</div></li>
-<li><span class="k"><strong>BNE2</strong> — Bases des réseaux</span><span class="v pos">80p · 6 ECTS</span><div class="note">IP, masque, passerelle, DNS, DHCP, TCP/UDP, HTTP, ports, ping, traceroute, nslookup, curl.</div></li>
-<li><span class="k"><strong>STO4</strong> — Structure des ordinateurs</span><span class="v pos">60p · 5 ECTS</span><div class="note">Binaire, hexadécimal, portes logiques, CPU, RAM, bus, registres, ALU, cycle fetch-decode-execute, stockage, BIOS/UEFI.</div></li>
-<li><span class="k"><strong>SYS4</strong> — Système d’exploitation</span><span class="v pos">100p · 8 ECTS</span><div class="note">Pas Linux seulement : OS général + Windows + Linux. Processus, mémoire, fichiers, permissions, utilisateurs, services, shell, scripts, logs.</div></li>
-<li><span class="k"><strong>MAP4</strong> — Mathématique appliquée à l'informatique</span><span class="v pos">60p · 5 ECTS</span><div class="note">Logique, ensembles, fonctions, suites simples, modulo, binaire, combinatoire légère.</div></li>
-<li><span class="k"><strong>STA1</strong> — Éléments de statistique</span><span class="v pos">40p · 3 ECTS</span><div class="note">Moyenne, médiane, variance, écart-type, fréquence, probabilité simple, graphiques, interprétation.</div></li>
-<li><span class="k"><strong>PAN2</strong> — Analyse informatique</span><span class="v pos">60p · 4 ECTS</span><div class="note">Besoin utilisateur, use case, workflow, règles métier, pseudo-code, mini cahier des charges.</div></li>
-<li><span class="k"><strong>ICO1</strong> — Information et communication professionnelles</span><span class="v pos">40p · 3 ECTS</span><div class="note">Mail pro, synthèse, rapport court, README, documentation technique simple.</div></li>
-</ul></div>
-
-<h2 class="section-title sapphire">Ressources + exercices · <em>par matière N1</em></h2>
-<div class="card"><ul class="dlist">
-<li><span class="k"><strong>PRM3 — Algorithmique / programmation</strong></span><span class="v pos">priorité 1</span><div class="note"><strong>O’Reilly :</strong> Learn Python the Hard Way, 5th Ed. + Head First Algorithms and Data Structures. <strong>Exos :</strong> CodingBat Python, Exercism Python, Python Tutor. <strong>Preuve :</strong> 1 exercice validé + capture/lien + erreur corrigée en 3 lignes.</div></li>
-<li><span class="k"><strong>BDO1 — SQL base</strong></span><span class="v pos">priorité 2</span><div class="note"><strong>O’Reilly :</strong> Learning SQL, 3rd Ed. + Head First SQL si besoin visuel. <strong>Exos :</strong> SQLBolt, W3Schools SQL Exercises, w3resource. <strong>Preuve :</strong> 5 requêtes SELECT/WHERE/ORDER BY/INSERT/UPDATE.</div></li>
-<li><span class="k"><strong>BDG4 — SQL exploitation</strong></span><span class="v warn">après BDO1</span><div class="note"><strong>O’Reilly :</strong> Learning SQL + Practical SQL. <strong>Exos :</strong> SQLBolt intermediate, w3resource joins/subqueries/group by, mini-base SQLite. <strong>Preuve :</strong> 3 tables, 2 FK, 5 JOIN, 2 GROUP BY, 1 schéma relationnel.</div></li>
-<li><span class="k"><strong>WEB1 — Web base</strong></span><span class="v pos">socle web</span><div class="note"><strong>O’Reilly :</strong> Head First HTML and CSS + Learning Web Design. <strong>Exos :</strong> MDN Learn Web Development + freeCodeCamp Responsive Web Design. <strong>Preuve :</strong> page responsive + formulaire + validation JS + capture mobile.</div></li>
-<li><span class="k"><strong>BNE2 — Réseaux</strong></span><span class="v pos">base infrastructure</span><div class="note"><strong>O’Reilly :</strong> Network+ N10-009 en lecture ciblée + Practical Packet Analysis plus tard. <strong>Exos :</strong> Cisco Packet Tracer, ping, tracert/traceroute, nslookup, ipconfig/ifconfig, curl -I. <strong>Preuve :</strong> mini réseau 2 PC + switch + routeur + ping OK.</div></li>
-<li><span class="k"><strong>STO4 — Structure des ordinateurs</strong></span><span class="v pos">hardware réel</span><div class="note"><strong>O’Reilly :</strong> Code: The Hidden Language + CompTIA A+ Certification Companion. <strong>Exos :</strong> CircuitVerse, Logisim Evolution, Little Man Computer, Nand2Tetris bonus. <strong>Preuve :</strong> conversion binaire/hexa + circuit AND/OR/NOT/XOR + programme LMC ou schéma CPU/RAM/bus.</div></li>
-<li><span class="k"><strong>SYS4 — Système d’exploitation</strong></span><span class="v pos">Windows + Linux</span><div class="note"><strong>O’Reilly :</strong> CompTIA A+ Certification Companion + The Practice of System and Network Administration. <strong>Exos Windows :</strong> Microsoft Learn PowerShell + Windows Commands. <strong>Exos Linux :</strong> Linux Journey + OverTheWire Bandit. <strong>Preuve :</strong> 1 lab Windows + 1 lab Linux.</div></li>
-<li><span class="k"><strong>MAP4 — Maths informatique</strong></span><span class="v info">petites doses</span><div class="note"><strong>O’Reilly :</strong> Math for Programming + Essentials of Discrete Mathematics. <strong>Exos :</strong> Khan Academy + mini-scripts Python : binaire, modulo, moyenne, variance, factorielle, Fibonacci. <strong>Preuve :</strong> 5 exercices corrigés + 1 script lié.</div></li>
-<li><span class="k"><strong>STA1 — Statistiques</strong></span><span class="v info">utile IA plus tard</span><div class="note"><strong>O’Reilly :</strong> Practical Statistics for Data Scientists en lecture ciblée. <strong>Exos :</strong> Khan Academy Statistics & Probability + Google Sheets/Excel sur données dashboard. <strong>Preuve :</strong> moyenne, médiane, écart-type, graphique, interprétation courte.</div></li>
-<li><span class="k"><strong>PAN2 — Analyse informatique</strong></span><span class="v pos">analyse métier</span><div class="note"><strong>O’Reilly :</strong> Software Development, Design, and Coding + Head First Software Development. <strong>Exos :</strong> Mermaid Live Editor, cas réel dashboard. <strong>Preuve :</strong> besoin utilisateur + use case + flowchart + règle métier + pseudo-code.</div></li>
-<li><span class="k"><strong>ICO1 — Communication pro</strong></span><span class="v pos">production</span><div class="note"><strong>Ressource :</strong> modèle mail pro / README / fiche technique. <strong>Exos :</strong> mail pro, README GitHub, fiche synthèse, mini présentation. <strong>Preuve :</strong> document produit avec objectif, public, structure, version finale.</div></li>
-</ul></div>
-
-<h2 class="section-title gold">Certifications · <em>une active, le reste verrouillé</em></h2>
-<div class="card"><ul class="dlist">
-<li><span class="k"><strong>PCEP — Python Entry-Level</strong></span><span class="v pos">ACTIVE</span><div class="note">La seule certif active avant septembre. Elle sert PRM3 et force la pratique Python.</div></li>
-<li><span class="k"><strong>CompTIA A+ Core 1/2</strong></span><span class="v warn">Parking</span><div class="note">Seulement si STO4/SYS4 deviennent prioritaires. Pas en parallèle avec PCEP.</div></li>
-<li><span class="k"><strong>Network+</strong></span><span class="v warn">Parking</span><div class="note">Après BNE2 solide. Pas examen année 1 tant que Python/SQL/Web ne sont pas propres.</div></li>
-<li><span class="k"><strong>Oracle SQL Associate</strong></span><span class="v warn">Parking</span><div class="note">Après BDO1 + BDG4. Pas avant d'avoir beaucoup de requêtes.</div></li>
-<li><span class="k"><strong>Meta Front-End / Java OCA / Google Data / PSM / AWS / SAP</strong></span><span class="v">Plus tard</span><div class="note">Plan long terme. Non actifs en première année.</div></li>
-</ul></div>
-
-<div class="callout callout-tip"><strong>Règle finale :</strong> lecture seule = zéro. Chaque bloc doit sortir une preuve : exercice fini, requête SQL, mini-page, commande, diagramme, fiche, script ou correction d’erreur.</div>
-</section>
-
-<!-- TAB : CODE -->
-
-<!-- TAB : IA -->
-
-<!-- TAB : VINTED -->
-
-<section class="page" id="p-vinted" data-page="vinted">
-<div class="page-header">
-<h1 class="page-title">Vinted · <em>Business Plan</em></h1>
-<p class="page-sub">Sourcing 1688 + Hypobuy · vente EU · objectif <em>€300-800/mois net</em> à M9. Zéro contrefaçon. Discipline fiscale BE.</p>
-</div>
-
-<div class="callout callout-danger"><strong>⛔ Règle absolue · pas négociable.</strong> ZÉRO contrefaçon, ZÉRO "replica", ZÉRO dupe de marque. Tu vends des produits génériques / sans marque / marques chinoises légitimes. Une seule plainte = compte perma banned + risque judiciaire BE. Le jeu n'en vaut pas la chandelle.</div>
-
-<h2 class="section-title jade">Économie unitaire <em>(modèle)</em></h2>
-<div class="stats-grid">
-<div class="stat"><div class="stat-k">Coût unitaire</div><div class="stat-v">€3-8</div><div class="stat-note">1688 + frais Hypobuy + shipping prorata</div></div>
-<div class="stat"><div class="stat-k">Prix de vente</div><div class="stat-v flame">€15-35</div><div class="stat-note">selon niche · toujours &gt; 3× coût</div></div>
-<div class="stat"><div class="stat-k">Commission Vinted</div><div class="stat-v">0 %</div><div class="stat-note">payée par l'acheteur (frais de protection)</div></div>
-<div class="stat"><div class="stat-k">Profit net/pièce</div><div class="stat-v jade">€8-22</div><div class="stat-note">après shipping BE + emballage</div></div>
-</div>
-
-<h2 class="section-title sapphire">3 niches prioritaires</h2>
-<div class="card"><ul class="dlist">
-<li><span class="k"><strong>Streetwear générique</strong> <span class="muted">(t-shirts, hoodies, joggers)</span></span><span class="v info">Volume · marge ~€10/pièce</span><div class="note">Panier moyen bas mais rotation rapide. Bon pour tester le process. <em>Pas de logos de marques</em>.</div></li>
-<li><span class="k"><strong>Accessoires tech</strong> <span class="muted">(coques, câbles, supports, stands)</span></span><span class="v pos">Meilleure marge · ~€15/pièce</span><div class="note">Léger = shipping cheap. Forte demande. Peu de retours. <em>La niche à pousser.</em></div></li>
-<li><span class="k"><strong>Fitness/lifestyle</strong> <span class="muted">(bandes résistance, sangles yoga, foam rollers, straps)</span></span><span class="v info">Croisement personnel</span><div class="note">Tu connais la niche (sport + PPL). Tu peux rédiger de vraies descriptions expertes → taux de conversion ++.</div></li>
-</ul></div>
-
-<h2 class="section-title flame">Process · 6 étapes par lot</h2>
-<div class="card"><ol class="dlist">
-<li><span class="k">1. <strong>Veille 1688</strong> via Hypobuy</span><span class="v muted">1h/sem</span><div class="note">Repère 10-15 produits potentiels. Compare taux de conversion, reviews vendeur, délais.</div></li>
-<li><span class="k">2. <strong>Commande test</strong> (1-2 unités/modèle)</span><span class="v muted">€20-40</span><div class="note">Reçois, photographie, évalue qualité réelle. 50% des produits dégagent à cette étape.</div></li>
-<li><span class="k">3. <strong>Commande lot</strong> (5-10 unités du gagnant)</span><span class="v muted">€30-80</span></li>
-<li><span class="k">4. <strong>Listing Vinted</strong> — photos naturelles, descriptions honnêtes</span><span class="v muted">30min/pièce la 1ʳᵉ fois</span><div class="note">Light box + fond neutre. Mentionne <em>taille</em>, <em>matière</em>, <em>délais</em>. Pas de superlatifs creux.</div></li>
-<li><span class="k">5. <strong>Expédition J+1</strong> Mondial Relay ou bpost</span><span class="v muted">€3-5</span><div class="note">Enveloppes / cartons à l'avance. Étiquettes imprimées. Feedback 5★ ciblé.</div></li>
-<li><span class="k">6. <strong>SAV rapide</strong></span><span class="v pos">Réponse &lt;12h</span><div class="note">La vitesse SAV = la note vendeur = le classement algo Vinted = le ventes. Non-négociable.</div></li>
-</ol></div>
-
-<h2 class="section-title violet">Scaling · 4 phases</h2>
-<div class="phase">
-<div class="phase-head"><span class="phase-tag">M1-M3</span><h3>Test · 3-5 produits différents</h3></div>
-<div class="note">Budget lancement : €150-200. Objectif : valider le process + identifier 1-2 produits qui cartonnent. <em>Pas de rentabilité attendue.</em></div>
-</div>
-<div class="phase">
-<div class="phase-head"><span class="phase-tag">M4-M6</span><h3>Consolidation · €100-250/mois net</h3></div>
-<div class="note">Double les stocks des winners. Élimine les losers. Ajoute 2-3 nouveaux tests.</div>
-</div>
-<div class="phase">
-<div class="phase-head"><span class="phase-tag">M7-M9</span><h3>Scaling · €300-500/mois net</h3></div>
-<div class="note">10-15 SKU actifs. 3-5 commandes/jour. Stock rotatif €400-600 continuellement.</div>
-</div>
-<div class="phase">
-<div class="phase-head"><span class="phase-tag">M10+</span><h3>Plateau ou expansion</h3></div>
-<div class="note">Soit tu stabilises €500-800/mois (travail soutenable + EPFC) → parfait. Soit tu passes sur Amazon FBA / boutique Shopify → attention temps.</div>
-</div>
-
-<h2 class="section-title gold">Fiscalité Belgique <em>(respecte-la, toujours)</em></h2>
-<div class="card"><ul class="dlist">
-<li><span class="k"><strong>Plateformes — DAC7</strong></span><span class="v warn">Déclaration auto au fisc dès 30 ventes ou €2 000/an</span><div class="note">Vinted communique tes chiffres au SPF Finances. <em>Ignorer ça = enquête fiscale garantie.</em></div></li>
-<li><span class="k"><strong>Revenus occasionnels</strong></span><span class="v info">&lt; €1 000-1 500/an</span><div class="note">Reste "revenus divers" exonérés de cotisations sociales. Mais à déclarer si le fisc demande.</div></li>
-<li><span class="k"><strong>Indépendant complémentaire</strong></span><span class="v warn">Dès €1 500-2 000/an de profits réguliers</span><div class="note">Statut INASTI obligatoire. Cotisations trimestrielles + TVA si &gt; €25k CA. <em>Compatible avec ton salaire actuel.</em></div></li>
-<li><span class="k"><strong>Recommandation</strong></span><span class="v pos">Comptable à M6</span><div class="note">Quand tu atteins €200+/mois net régulier, consulte un comptable BE (€300-500/an). Il t'optimise les frais déductibles (stock, shipping, matos).</div></li>
-</ul></div>
-
-<div class="callout callout-focus"><strong>Mindset :</strong> Vinted est un <em>side-hustle</em>, pas le projet de vie. Il finance les certifs EPFC + le crédit. Si ça prend plus de 8-10h/semaine, c'est trop — l'école passe avant.</div>
-
-<h2 class="section-title jade">📦 Mes produits · <em>tracker</em></h2>
-<p class="page-lead" style="margin-top:-4px">Ajoute chaque pièce que tu achètes / listes / vends. La marge et les totaux se calculent tout seuls.</p>
-
-<div class="vt-summary">
-<div class="vt-sum-card invest"><div class="vt-sum-lbl">Investi total</div><div class="vt-sum-val" id="vt-invested">€0</div></div>
-<div class="vt-sum-card"><div class="vt-sum-lbl">Ventes</div><div class="vt-sum-val" id="vt-sales">€0</div></div>
-<div class="vt-sum-card profit"><div class="vt-sum-lbl">Profit net</div><div class="vt-sum-val" id="vt-profit">€0</div></div>
-</div>
-
-<div class="vt-roi" id="vt-roi" style="display:none">
-  <span>ROI réel <small style="color:var(--text-faint);font-weight:400">(ventes − tout le coût investi)</small> : <b id="vt-roi-net">€0</b> · <b id="vt-roi-pct">0%</b></span>
-  <span id="vt-stock-info" style="font-size:11px;color:var(--text-faint)">—</span>
-</div>
-
-<div class="vt-form">
-<input type="text" id="vt-name" placeholder="Nom produit (ex. Coque iPhone 15)" class="vt-form-name" autocomplete="off">
-<input type="number" id="vt-cost" placeholder="Coût €" step="0.5" min="0" inputmode="decimal" pattern="[0-9.]*">
-<input type="number" id="vt-price" placeholder="Prix vente €" step="0.5" min="0" inputmode="decimal" pattern="[0-9.]*">
-<select id="vt-status">
-<option value="listed">Listé</option>
-<option value="sold">Vendu</option>
-<option value="return">Retour</option>
-</select>
-<button class="vt-form-btn" id="vt-add">Ajouter</button>
-</div>
-
-<div class="vt-list" id="vt-list">
-<div class="vt-empty" id="vt-empty">Aucun produit pour l'instant. Ajoute ton premier test Vinted au-dessus ↑</div>
-</div>
-
-</section>
-
-<!-- TAB : NL -->
-
-<!-- TAB : CHESS -->
-
-<!-- TAB : FINANCE -->
-
-<section class="page" id="p-finance" data-page="finance">
-<div class="page-header">
-<h1 class="page-title">Finance · <em>Plan 10 ans</em></h1>
-<p class="page-sub">Crédit zéro · fonds d'urgence · ETF · pension BE · immobilier à l'année 7. Aucune spéculation.</p>
-</div>
-
-<h2 class="section-title jade">Budget mensuel · <em>€2 200 net</em></h2>
-<div class="stats-grid">
-<div class="stat"><div class="stat-k">Revenus</div><div class="stat-v jade">€2 200</div><div class="stat-note">shift pay</div></div>
-<div class="stat"><div class="stat-k">Logement + factures</div><div class="stat-v">~€900</div><div class="stat-note">loyer + charges + internet</div></div>
-<div class="stat"><div class="stat-k">Contributions fils</div><div class="stat-v">€540</div><div class="stat-note">alimentaire · non-négociable</div></div>
-<div class="stat"><div class="stat-k">Nourriture</div><div class="stat-v">~€350</div><div class="stat-note">vise €300 quand Vinted tourne</div></div>
-<div class="stat"><div class="stat-k">Transport</div><div class="stat-v">~€80</div><div class="stat-note">STIB abo</div></div>
-<div class="stat"><div class="stat-k">Compléments + gym</div><div class="stat-v">~€70</div><div class="stat-note">protéine + basiques</div></div>
-<div class="stat"><div class="stat-k">Disponible</div><div class="stat-v flame">~€260/mois</div><div class="stat-note">à allouer stratégiquement</div></div>
-</div>
-
-<div class="callout callout-warn"><strong>Priorité 1 absolue :</strong> tuer le crédit €10K. Chaque euro qui n'y va pas te coûte ~8-12% d'intérêts annuels. Aucun ETF ne rapporte ça avec certitude.</div>
-
-<h2 class="section-title sapphire">Phase 1 · <em>M1-M12 · Attaque crédit</em></h2>
-<div class="phase">
-<div class="phase-head"><span class="phase-tag">Sprint crédit</span><h3>€10 000 → €0</h3></div>
-<ul class="dlist">
-<li><span class="k"><strong>Remboursement mensuel</strong></span><span class="v">€200 fixes + tout surplus</span></li>
-<li><span class="k"><strong>+ Vinted profit</strong></span><span class="v pos">100% vers crédit M1-M6</span></li>
-<li><span class="k"><strong>+ Remboursement impôts / primes</strong></span><span class="v pos">100% vers crédit</span></li>
-<li><span class="k"><strong>Règle</strong></span><span class="v warn">Aucun investissement tant que crédit &gt; 0</span></li>
-</ul>
-<div class="note">Objectif M12 : crédit à zéro. Libère <em>€200-300/mois</em> immédiatement investissables.</div>
-</div>
-
-<h2 class="section-title flame">Phase 2 · <em>M13-M20 · Fonds d'urgence</em></h2>
-<div class="phase">
-<div class="phase-head"><span class="phase-tag">3 mois de charges</span><h3>€5 000 en livret sécurisé</h3></div>
-<ul class="dlist">
-<li><span class="k"><strong>Livret réglementé BE</strong> <span class="muted">(ING Tempo, KBC, Keytrade)</span></span><span class="v pos">~2-3% net 2026</span></li>
-<li><span class="k"><strong>Accessible en 24h</strong></span><span class="v info">Pas bloqué, pas investi</span></li>
-<li><span class="k"><strong>Règle</strong></span><span class="v warn">On n'y touche QUE pour : perte d'emploi, urgence médicale, réparation logement</span></li>
-</ul>
-</div>
-
-<h2 class="section-title violet">Phase 3 · <em>M21+ · Investissement ETF</em></h2>
-<div class="phase">
-<div class="phase-head"><span class="phase-tag">Bolero · ETF monde</span><h3>DCA mensuel · horizon 15+ ans</h3></div>
-<ul class="dlist">
-<li><span class="k"><strong>Courtier :</strong> Bolero (Belfius/KBC) ou Keytrade</span><span class="v pos">Fiable BE, frais bas</span></li>
-<li><span class="k"><strong>ETF cible :</strong> <code>SPDR MSCI ACWI IMI</code> <span class="muted">ISIN IE00B44Z5B48</span></span><span class="v pos">Diversification monde maximale · TER 0.17%</span></li>
-<li><span class="k"><strong>DCA</strong></span><span class="v info">€200-400/mois · ordre automatique le 1ᵉʳ</span></li>
-<li><span class="k"><strong>Épargne-pension 3ᵉ pilier</strong></span><span class="v pos">€1 020/an max · 30% de réduction d'impôts</span><div class="note">via Bolero ou compagnie (AG, KBC). <em>Le seul truc qui te "rapporte" 30% instant garanti.</em> Priorité à M14+.</div></li>
-</ul>
-</div>
-
-<h2 class="section-title gold">📊 Simulateur ETF interactif</h2>
+<h2 class="section-title gold" style="margin-top:24px">💰 Finance · <em>Épargne &amp; Dettes</em></h2>
 <div class="card">
-<div class="calc">
-<div class="calc-row"><label>Versement mensuel : <strong class="calc-val" data-out="amt">€300</strong></label><input type="range" min="50" max="1000" step="50" value="300" data-calc="amt"></div>
-<div class="calc-row"><label>Durée : <strong class="calc-val" data-out="yrs">20 ans</strong></label><input type="range" min="5" max="40" step="1" value="20" data-calc="yrs"></div>
-<div class="calc-row"><label>Rendement annuel moyen : <strong class="calc-val" data-out="ret">7.0%</strong></label><input type="range" min="3" max="10" step="0.5" value="7" data-calc="ret"></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px">
+    <div><label style="font:600 11px var(--f-mono,monospace);color:#64748b;display:block;margin-bottom:6px">ÉPARGNE</label>
+      <input id="fin-savings" type="number" placeholder="€" style="width:100%;background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:8px;padding:8px;font:13px var(--f-mono)"></div>
+    <div><label style="font:600 11px var(--f-mono,monospace);color:#64748b;display:block;margin-bottom:6px">DETTE</label>
+      <input id="fin-debt" type="number" placeholder="€" style="width:100%;background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:8px;padding:8px;font:13px var(--f-mono)"></div>
+    <div><label style="font:600 11px var(--f-mono,monospace);color:#64748b;display:block;margin-bottom:6px">ÉPARGNE/MOIS</label>
+      <input id="fin-monthly" type="number" placeholder="€" style="width:100%;background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:8px;padding:8px;font:13px var(--f-mono)"></div>
+  </div>
+  <button id="fin-save" style="padding:10px 20px;background:#1e293b;border:1px solid #475569;border-radius:8px;color:#e2e8f0;font:700 12px var(--f-sans);cursor:pointer">Sauvegarder</button>
+  <div id="fin-summary" style="margin-top:10px;font:600 12px var(--f-mono,monospace);color:#94a3b8"></div>
 </div>
-<div class="sim-grid" style="margin-top:16px">
-<div class="sim"><div class="sim-k">Versé total</div><div class="sim-v" data-sim="paid">€72 000</div></div>
-<div class="sim"><div class="sim-k">Capital final</div><div class="sim-v jade" data-sim="final">€156 281</div></div>
-<div class="sim"><div class="sim-k">Plus-value</div><div class="sim-v flame" data-sim="gain">€84 281</div></div>
-<div class="sim"><div class="sim-k">× du versé</div><div class="sim-v" data-sim="mult">2.17×</div></div>
-</div>
-<div class="note" style="margin-top:12px"><em>Projections indicatives, hors inflation et fiscalité. 7% = rendement historique MSCI ACWI long terme (non garanti). Les marchés peuvent baisser 40-50% sur un cycle — tu ne vends JAMAIS en baisse.</em></div>
-</div>
-
-<h2 class="section-title pink">Fiscalité BE · ETF <em>(régime 2026)</em></h2>
-<div class="card"><ul class="dlist">
-<li><span class="k"><strong>TOB</strong> (taxe opération boursière)</span><span class="v info">0,12% à l'achat et à la vente</span><div class="note">ETF UCITS domicilié Irlande. 0,12% sur acheté ET sur vendu.</div></li>
-<li><span class="k"><strong>Taxe plus-value générale</strong></span><span class="v warn">Possible réforme 2026-27</span><div class="note">Suivre actualité. Aujourd'hui : exonérée pour "bon père de famille" sur ETF capitalisant monde.</div></li>
-<li><span class="k"><strong>Taxe Reynders</strong> (30% sur plus-values d'obligations)</span><span class="v pos">N/A sur actions ETF</span><div class="note">S'applique aux fonds &gt; 10% d'obligations. ACWI = 100% actions → exempté.</div></li>
-<li><span class="k"><strong>Épargne-pension</strong></span><span class="v pos">30% réduction impôts</span><div class="note">€1 020/an max bénéficie du taux réduit. Taxe anticipée à 60 ans : 8% sur le capital. Rentabilité nette supérieure à un simple ETF malgré ça.</div></li>
-</ul></div>
-
-<h2 class="section-title cyan">Phase 4 · <em>Post-diplôme (année 4+)</em></h2>
-<div class="card"><ul class="dlist">
-<li><span class="k">Revenus junior dev <strong>~€2 800-3 500 net</strong></span><span class="v pos">Bond disponible</span></li>
-<li><span class="k">DCA ETF → <strong>€500-800/mois</strong></span><span class="v pos">Capitalisation agressive</span></li>
-<li><span class="k">Maintenir pension €1 020/an</span><span class="v info">Plafond légal</span></li>
-<li><span class="k">Objectif année 7 · <strong>apport immobilier €40-60k</strong></span><span class="v flame">Studio ou T1 Bruxelles</span><div class="note">Crédit hypothécaire BE jusqu'à 100% avec apport 10-20%. Les intérêts déductibles si résidence principale. Patrimoine réel.</div></li>
-</ul></div>
-
-<div class="callout callout-warn"><strong>Exclusions explicites :</strong> pas de crypto, pas de trading actif, pas d'options / levier, pas de P2P lending, pas de "robo-advisor" cher. <em>DCA ETF monde + épargne-pension + immobilier = la combinaison qui marche statistiquement.</em></div>
-
-<div class="callout callout-focus"><strong>Résumé 10 ans · chiffres réalistes :</strong> an 1 crédit à 0, an 3 début ETF, an 7 apport maison réuni, an 10 patrimoine net <em>€60-90k</em> liquide + résidence principale. Rien d'héroïque. Juste de la régularité.</div>
-
-</section>
-
-<!-- TAB : SOCIAL / LIENS -->
-
-<!-- TAB : PLAN -->
-
-<section class="page" id="p-plan" data-page="plan">
-<div class="page-header">
-<h1 class="page-title">Plan · <em>O’Reilly / Certifs / Master</em></h1>
-<p class="page-sub">Salle de commandement. Pas 10 certifs actives en même temps : une active, une suivante, le reste en parking. Chaque certif doit servir une matière EPFC, un projet ou l’employabilité.</p>
-</div>
-
-<h2 class="section-title jade">Certif active</h2>
-<div class="card"><ul class="dlist">
-<li><span class="k"><strong>PCEP — Certified Entry-Level Python Programmer</strong></span><span class="v pos">active</span><div class="note">Critère examen : 100 exercices Python, 3 mocks à 80%+, 1 mini-projet CLI propre. Matière liée : programmation / algo.</div></li>
-<li><span class="k">O’Reilly principal</span><span class="v">Python Crash Course, 3rd Ed. — Eric Matthes</span><div class="note">À utiliser en mode exécution : chapitre → exercices → script → log de reprise.</div></li>
-</ul></div>
-
-<h2 class="section-title blue">Certif suivante</h2>
-<div class="card"><ul class="dlist">
-<li><span class="k"><strong>LPI Linux Essentials</strong></span><span class="v info">suivante</span><div class="note">Critère : 30 commandes Linux, 10 scripts bash simples, permissions, fichiers, grep/find/tar/ssh, 2 mocks à 80%+.</div></li>
-<li><span class="k"><strong>CCST Networking</strong></span><span class="v info">après ou parallèle léger</span><div class="note">Critère : IP/DNS/DHCP/HTTP, ports, ping/traceroute, Wireshark basique, subnet simple.</div></li>
-</ul></div>
-
-<h2 class="section-title gold">Parking certifs</h2>
-<div class="gm-plan-grid">
-  <div class="card"><h3>Oracle SQL 1Z0-071</h3><p class="page-lead">Seulement après 150 requêtes, 30 JOIN, base Vinted SQL complète.</p></div>
-  <div class="card"><h3>Java Foundations 1Z0-811</h3><p class="page-lead">Après Python + SQL. Objectif : POO propre, projet console.</p></div>
-  <div class="card"><h3>AZ-900</h3><p class="page-lead">Après Linux/réseaux bases. Utile entreprise belge/cloud.</p></div>
-  <div class="card"><h3>AI-900</h3><p class="page-lead">Après Python Data/Pandas. Pas avant les bases.</p></div>
-  <div class="card"><h3>ITIL 4 Foundation</h3><p class="page-lead">Option si tu vises support applicatif / analyste fonctionnel.</p></div>
-</div>
-
-<h2 class="section-title sapphire">O’Reilly · ressources officielles de travail</h2>
-<div class="card"><ul class="dlist">
-<li><span class="k">Python Crash Course, 3rd Edition — Eric Matthes</span><span class="v pos">PRM3 / PCEP</span><div class="note">Livre principal. Tu lis un chapitre, tu fais les exercices, puis tu produis un mini-script.</div></li>
-<li><span class="k">Python Sandbox / Hands-On Python Foundations Scenarios</span><span class="v pos">PRM3 pratique</span><div class="note">À utiliser quand tu n’as pas VS Code sous la main. Objectif : coder, pas regarder.</div></li>
-<li><span class="k">Learning SQL, 3rd Edition — Alan Beaulieu</span><span class="v pos">BDO1 / BDG4</span><div class="note">Ressource SQL principale. Chapitre → 10 requêtes → sauvegarde dans ton log.</div></li>
-<li><span class="k">Head First HTML and CSS, 2nd Edition</span><span class="v pos">WEB1</span><div class="note">Ressource web de départ. À compléter par MDN/freeCodeCamp pour les exercices.</div></li>
-<li><span class="k">Network+ N10-009 resources</span><span class="v info">BNE2</span><div class="note">Lecture ciblée uniquement : IP, DNS, DHCP, HTTP, TCP/UDP, OSI. Pas d’examen Network+ maintenant.</div></li>
-<li><span class="k">Linux Pocket Guide, 3rd/4th Edition</span><span class="v info">SYS4</span><div class="note">Commandes Linux, fichiers, permissions, grep/find/curl. C’est directement utile.</div></li>
-<li><span class="k">Essentials of Discrete Mathematics / Math for Programming</span><span class="v">MAP4</span><div class="note">À faire en micro-sessions : logique, ensembles, fonctions, graphes simples.</div></li>
-<li><span class="k">Practical Statistics for Data Scientists, 2nd Edition</span><span class="v">STA1</span><div class="note">À utiliser seulement pour les bases statistiques maintenant. IA plus tard.</div></li>
-</ul></div>
-
-<h2 class="section-title jade">Sites pratiques · <em>exercices réels</em></h2>
-<div class="gm-plan-grid">
-  <div class="card"><h3>Python</h3><ul class="dlist"><li><span class="k">CodingBat Python</span><span class="v pos">échauffement</span></li><li><span class="k">Exercism Python</span><span class="v pos">146 exos</span></li><li><span class="k">Python Tutor</span><span class="v info">visualiser ton code</span></li></ul></div>
-  <div class="card"><h3>SQL</h3><ul class="dlist"><li><span class="k">SQLBolt</span><span class="v pos">leçons interactives</span></li><li><span class="k">W3Schools SQL Exercises</span><span class="v pos">drill rapide</span></li><li><span class="k">w3resource SQL</span><span class="v info">gros volume</span></li></ul></div>
-  <div class="card"><h3>Web</h3><ul class="dlist"><li><span class="k">MDN Learn Web Development</span><span class="v pos">référence</span></li><li><span class="k">freeCodeCamp Responsive Web Design</span><span class="v pos">projets guidés</span></li></ul></div>
-  <div class="card"><h3>Linux / Réseaux</h3><ul class="dlist"><li><span class="k">OverTheWire Bandit</span><span class="v pos">terminal</span></li><li><span class="k">ping / traceroute / nslookup / curl</span><span class="v info">preuves locales</span></li></ul></div>
-  <div class="card"><h3>Maths / stats</h3><ul class="dlist"><li><span class="k">Khan Academy Statistics</span><span class="v pos">stats</span></li><li><span class="k">Khan Academy CS theory</span><span class="v info">algo / logique</span></li></ul></div>
-  <div class="card"><h3>Analyse</h3><ul class="dlist"><li><span class="k">Mermaid Live Editor</span><span class="v pos">diagrammes</span></li><li><span class="k">README GitHub</span><span class="v info">communication pro</span></li></ul></div>
-</div>
-
-<h2 class="section-title violet">Master readiness</h2>
-<div class="card"><ul class="dlist">
-<li><span class="k">Maths/statistiques</span><span class="v warn">à ne pas négliger</span><div class="note">Moyennes, variance, fonctions, logique, preuve, graphes, régression simple. Si ça reste faible, master difficile.</div></li>
-<li><span class="k">Algo/structures</span><span class="v pos">priorité longue</span><div class="note">Listes, dictionnaires, tri, recherche, complexité simple. Casse-têtes courts chaque semaine.</div></li>
-<li><span class="k">Projets GitHub</span><span class="v info">preuve recruteur</span><div class="note">Vinted Tracker + Smart Room Dashboard + README propre + captures + démo.</div></li>
-</ul></div>
-
-<h2 class="section-title sapphire">Ressources · <em>suivi progression</em></h2>
-<div id="study-resources-host">
-  <div style="padding:12px;text-align:center;color:var(--text-faint,#888);font-size:13px">Chargement du tracker…</div>
-</div>
-</section>
-
-<!-- UD GODMODE V42 CLEAN: missing operational tabs -->
-<!-- TAB : CODE -->
-<section class="page" id="p-code" data-page="code">
-  <div class="page-header">
-    <h1 class="page-title">Exercices / Preuves · <em>pas un onglet Coding séparé</em></h1>
-    <p class="page-sub">Le code devient un atelier transversal lié aux matières EPFC. Tu ne coches rien sans preuve : fichier, exercice, requête, commande, capture ou erreur corrigée.</p>
-  </div>
-
-  <div class="callout callout-focus"><strong>Règle dure :</strong> Coding n’est plus un front autonome. Il sert PRM3, BDO1/BDG4, WEB1, SYS4, BNE2, STO4, IA Lab et IoT Lab.</div>
-
-  <h2 class="section-title blue">Ateliers pratiques · <em>liés aux UE</em></h2>
-  <div class="gm-plan-grid">
-    <div class="card"><h3>PRM3 · Python</h3><ul class="dlist"><li><span class="k">Exos</span><span class="v pos">CodingBat / Exercism / Python Tutor</span></li><li><span class="k">Preuve</span><span class="v info">1 exercice + erreur expliquée</span></li></ul></div>
-    <div class="card"><h3>BDO1/BDG4 · SQL</h3><ul class="dlist"><li><span class="k">Exos</span><span class="v pos">SQLBolt / W3Schools / w3resource</span></li><li><span class="k">Preuve</span><span class="v info">5 requêtes sauvegardées</span></li></ul></div>
-    <div class="card"><h3>WEB1 · HTML/CSS/JS</h3><ul class="dlist"><li><span class="k">Exos</span><span class="v pos">MDN / freeCodeCamp</span></li><li><span class="k">Preuve</span><span class="v info">mini-page responsive</span></li></ul></div>
-    <div class="card"><h3>SYS4 · Windows/Linux</h3><ul class="dlist"><li><span class="k">Exos</span><span class="v pos">PowerShell / Windows Commands / Bandit</span></li><li><span class="k">Preuve</span><span class="v info">commande + résultat</span></li></ul></div>
-    <div class="card"><h3>BNE2 · Réseau</h3><ul class="dlist"><li><span class="k">Exos</span><span class="v pos">Packet Tracer / ping / nslookup / curl</span></li><li><span class="k">Preuve</span><span class="v info">mini-réseau ou diagnostic</span></li></ul></div>
-    <div class="card"><h3>STO4 · Ordinateur</h3><ul class="dlist"><li><span class="k">Exos</span><span class="v pos">CircuitVerse / Logisim / LMC</span></li><li><span class="k">Preuve</span><span class="v info">circuit ou simulation</span></li></ul></div>
-  </div>
-
-  <h2 class="section-title jade">Cycle minimal sans surcharge</h2>
-  <div class="card"><ul class="dlist">
-    <li><span class="k">Bloc EPFC prioritaire</span><span class="v pos">45–75 min</span><div class="note">Une matière. Une preuve. Pas de zapping.</div></li>
-    <li><span class="k">Bloc exercice court</span><span class="v info">20–35 min</span><div class="note">Python, SQL, Web, OS ou réseau selon la matière du jour.</div></li>
-    <li><span class="k">IA / IoT</span><span class="v warn">samedi ou bonus</span><div class="note">Maximum 1 bloc IA + 1 bloc IoT par semaine tant que le socle EPFC n’est pas stable.</div></li>
-  </ul></div>
-</section>
-
-<!-- TAB : IA -->
-<section class="page" id="p-ia" data-page="ia">
-  <div class="page-header">
-    <h1 class="page-title">IA Lab · <em>bonus structuré</em></h1>
-    <p class="page-sub">IA = lab applicatif lié à Python, stats et dashboard. Ce n’est pas prioritaire sur l’EPFC. Maximum 1 bloc/semaine si le socle avance.</p>
-  </div>
-
-  <div class="callout callout-focus"><strong>Règle :</strong> pas de validation IA sans preuve : prompt testé, notebook, dataset, graphique, modèle, métrique, pipeline ou bug corrigé.</div>
-
-  <h2 class="section-title violet">IA Lab · <em>modules progressifs</em></h2>
-  <div class="card"><ul class="dlist">
-    <li><span class="k"><strong>IA0</strong> — Culture IA + prompt engineering</span><span class="v pos">bonus actif</span><div class="note"><strong>Objectif :</strong> modèles, consignes propres, JSON structuré, tests, limites, hallucinations. <strong>O’Reilly :</strong> Prompt Engineering for Generative AI ; AI Engineering en parking. <strong>Exos :</strong> OpenAI Prompt Engineering Guide, Teachable Machine. <strong>Preuve :</strong> prompt v1/v2 + 5 tests + grille qualité.</div></li>
-    <li><span class="k"><strong>IA1</strong> — Python data / notebook</span><span class="v pos">bonus actif</span><div class="note"><strong>Objectif :</strong> charger données, nettoyer, filtrer, graphique, conclusion. <strong>O’Reilly :</strong> Hands-On Machine Learning par extraits. <strong>Exos :</strong> Kaggle Learn, Google Colab, dataset personnel. <strong>Preuve :</strong> notebook + dataset + graphique + conclusion 5 lignes.</div></li>
-    <li><span class="k"><strong>IA2</strong> — Machine learning base</span><span class="v pos">bonus actif</span><div class="note"><strong>Objectif :</strong> train/test, régression, classification, métriques, overfitting. <strong>O’Reilly :</strong> Hands-On Machine Learning. <strong>Exos :</strong> Google ML Crash Course, Kaggle Intro ML, Scikit-learn tutorials. <strong>Preuve :</strong> modèle entraîné + métrique + erreur expliquée + amélioration tentée.</div></li>
-    <li><span class="k"><strong>IA3</strong> — LLM / NLP</span><span class="v warn">parking</span><div class="note"><strong>Objectif :</strong> tokens, embeddings, classification texte, résumé, RAG simple. <strong>O’Reilly :</strong> AI Engineering. <strong>Exos :</strong> Hugging Face LLM Course. <strong>Preuve :</strong> pipeline NLP + résultat + limite observée.</div></li>
-    <li><span class="k"><strong>IA4</strong> — Agent dashboard</span><span class="v warn">parking</span><div class="note"><strong>Objectif :</strong> mini-agent qui lit un JSON dashboard et renvoie une mission claire. <strong>O’Reilly :</strong> AI Engineering / Building Applications with AI Agents. <strong>Exos :</strong> Hugging Face Agents Course, OpenAI Cookbook. <strong>Preuve :</strong> JSON input + réponse structurée + bug/hallucination corrigé.</div></li>
-    <li><span class="k"><strong>IA5</strong> — TinyML</span><span class="v warn">parking IoT</span><div class="note"><strong>Objectif :</strong> IA embarquée, capteurs, edge AI. À faire seulement après IoT0–IOT2 et IA1–IA2.</div></li>
-  </ul></div>
-
-  <h2 class="section-title gold">Rotation IA</h2>
-  <div class="card"><ul class="dlist">
-    <li><span class="k">Fréquence</span><span class="v warn">1 bloc / semaine max</span><div class="note">Samedi ou bonus. Jamais à la place d’un bloc EPFC prioritaire.</div></li>
-    <li><span class="k">Ordre</span><span class="v pos">IA0 → IA1 → IA2</span><div class="note">LLM/agents/TinyML restent parking jusqu’à bases Python/stats propres.</div></li>
-    <li><span class="k">Preuve standard</span><span class="v info">input → traitement → sortie → limite</span><div class="note">Tu dois pouvoir montrer ce qui est entré, ce que tu as fait, ce qui est sorti, et ce qui ne marche pas.</div></li>
-  </ul></div>
-</section>
-
-<section class="page" id="p-nl" data-page="nl">
-  <div class="page-header">
-    <h1 class="page-title">Néerlandais · <em>objectif B2</em></h1>
-    <p class="page-sub">Pas de méthode molle. Tu construis compréhension, vocabulaire actif, grammaire utile et conversation.</p>
-  </div>
-
-  <div class="stats stats-3">
-    <div class="stat"><div class="stat-v sapphire mono">180</div><div class="stat-l">min/semaine cible</div></div>
-    <div class="stat"><div class="stat-v jade mono">15</div><div class="stat-l">min Anki/jour</div></div>
-    <div class="stat"><div class="stat-v gold mono">B2</div><div class="stat-l">cap long terme</div></div>
-  </div>
-
-  <h2 class="section-title sapphire">Bloc quotidien</h2>
-  <div class="card"><ul class="dlist">
-    <li><span class="k">Anki</span><span class="v pos">15 min</span><div class="note">Vocabulaire actif. Phrases, pas mots isolés uniquement.</div></li>
-    <li><span class="k">Écoute</span><span class="v">10–20 min</span><div class="note">NedBox, podcasts faciles, sous-titres NL quand possible.</div></li>
-    <li><span class="k">Bloc actif</span><span class="v info">30–45 min</span><div class="note">Brulingua / Taalgarage / Vanzelfsprekend. Production écrite courte.</div></li>
-  </ul></div>
-
-  <h2 class="section-title jade">Méthode</h2>
-  <div class="gm-plan-grid">
-    <div class="card"><h3>Comprendre</h3><p class="page-lead">Écoute lente, répétée. Tu notes les structures fréquentes.</p></div>
-    <div class="card"><h3>Produire</h3><p class="page-lead">5 phrases par jour sur ta vraie vie : boulot, logement, sport, études.</p></div>
-    <div class="card"><h3>Corriger</h3><p class="page-lead">Tu fais corriger tes phrases, puis tu transformes les erreurs en cartes Anki.</p></div>
-  </div>
-</section>
-
-<section class="page" id="p-chess" data-page="chess">
-  <div class="page-header">
-    <h1 class="page-title">Échecs · <em>calme tactique</em></h1>
-    <p class="page-sub">Objectif : monter ton Elo sans jouer au hasard. Tactique, finales, analyse de tes défaites. Rien d’autre.</p>
-  </div>
-
-  <div class="callout callout-focus"><strong>Règle :</strong> pas de bullet si tu veux progresser. Rapid 10+5 ou 15+10. Tu analyses chaque défaite avant de relancer.</div>
-
-  <h2 class="section-title gold">Routine 30 minutes</h2>
-  <div class="card"><ul class="dlist">
-    <li><span class="k">Puzzles</span><span class="v pos">10 min</span><div class="note">Lent. Tu calcules jusqu’à la fin avant de jouer.</div></li>
-    <li><span class="k">Finales</span><span class="v">10 min</span><div class="note">Roi+pion, opposition, tours de base.</div></li>
-    <li><span class="k">Partie rapide ou analyse</span><span class="v info">10–30 min</span><div class="note">Une seule erreur critique par partie à corriger.</div></li>
-  </ul></div>
-
-  <h2 class="section-title violet">Roadmap</h2>
-  <div class="gm-plan-grid">
-    <div class="card"><h3>0–800</h3><p class="page-lead">Ne donne pas les pièces. Tactiques simples : fourchette, clouage, attaque double.</p></div>
-    <div class="card"><h3>800–1200</h3><p class="page-lead">Ouvertures simples, roque, centre, pièces actives. Analyse systématique.</p></div>
-    <div class="card"><h3>1200+</h3><p class="page-lead">Plans, finales de tours, calcul propre, répertoire stable.</p></div>
-  </div>
-</section>
-
-<!-- TAB : SOCIAL / LIENS -->
-<!-- /UD GODMODE V42 CLEAN: missing operational tabs -->
-
-<section class="page" id="p-trading" data-page="trading">
-<div class="page-kicker">IoT Lab · bonus contrôlé</div>
-<h1 class="page-title">Élec / IoT · <em>matières + labs</em></h1>
-<p class="page-lead">IoT = application de STO4, SYS4, BNE2, WEB1 et BDD. Ce n’est pas un nouveau front prioritaire. Tu avances par lab : ressource, exercice, preuve.</p>
-
-<div class="callout callout-focus"><strong>Règle :</strong> chaque session IoT doit produire une preuve : schéma, simulation, mesure, code, câblage testé, message MQTT/HTTP, donnée affichée ou blocage précis.</div>
-
-<h2 class="section-title jade">IoT Lab · <em>modules progressifs</em></h2>
-<div class="card"><ul class="dlist">
-  <li><span class="k"><strong>IOT0</strong> — Électronique de base</span><span class="v pos">bonus actif</span><div class="note"><strong>Objectif :</strong> tension, courant, résistance, LED, bouton, pull-up/pull-down, breadboard, multimètre. <strong>O’Reilly :</strong> Getting Started with Arduino + Electronics Cookbook. <strong>Exos :</strong> Tinkercad Circuits, Wokwi. <strong>Preuve :</strong> circuit LED/bouton + schéma + calcul résistance + capture simulation.</div></li>
-  <li><span class="k"><strong>IOT1</strong> — Arduino / microcontrôleur</span><span class="v pos">bonus actif</span><div class="note"><strong>Objectif :</strong> setup(), loop(), digitalRead, digitalWrite, analogRead, PWM, Serial Monitor. <strong>O’Reilly :</strong> Exploring Arduino. <strong>Exos :</strong> Arduino Project Hub, Wokwi. <strong>Preuve :</strong> sketch Arduino + entrée capteur/bouton + sortie LED/buzzer + explication ligne par ligne.</div></li>
-  <li><span class="k"><strong>IOT2</strong> — Capteurs & actionneurs</span><span class="v pos">bonus actif</span><div class="note"><strong>Objectif :</strong> température, humidité, luminosité, distance, mouvement, servo, moteur, OLED. <strong>O’Reilly :</strong> Sensors for Mechatronics + Make: Action. <strong>Exos :</strong> Wokwi, Arduino Project Hub. <strong>Preuve :</strong> capteur lu + valeur Serial Monitor + seuil + action déclenchée.</div></li>
-  <li><span class="k"><strong>IOT3</strong> — ESP32 / MQTT / cloud</span><span class="v warn">parking</span><div class="note"><strong>Objectif :</strong> WiFi, HTTP, JSON, MQTT, publish/subscribe, dashboard cloud. <strong>O’Reilly :</strong> Exploring Arduino + Practical Packet Analysis plus tard. <strong>Exos :</strong> MQTT.org, ThingSpeak, Adafruit IO. <strong>Preuve :</strong> ESP32 connecté + donnée envoyée + topic/endpoint + capture graphique.</div></li>
-  <li><span class="k"><strong>IOT4</strong> — Raspberry Pi / Node-RED</span><span class="v warn">parking</span><div class="note"><strong>Objectif :</strong> GPIO, scripts Python, service Linux, automatisation, dashboard visuel. <strong>O’Reilly :</strong> The Practice of System and Network Administration. <strong>Exos :</strong> Raspberry Pi Physical Computing, Node-RED. <strong>Preuve :</strong> script GPIO + flow Node-RED + donnée affichée + note dépannage.</div></li>
-  <li><span class="k"><strong>IOT5</strong> — TinyML / IA embarquée</span><span class="v warn">parking fort</span><div class="note"><strong>Objectif :</strong> modèle léger sur capteur, classification son/image/mouvement, edge AI. <strong>O’Reilly :</strong> TinyML. <strong>Exos :</strong> Edge Impulse, Arm Edge Impulse lab. <strong>Preuve :</strong> dataset capteur + modèle + test + précision + limite technique.</div></li>
-</ul></div>
-
-<h2 class="section-title gold">Applications portfolio · <em>après les bases</em></h2>
-<div class="card"><ul class="dlist">
-  <li><span class="k">Smart Room Dashboard</span><span class="v pos">IOT0–IOT3</span><div class="note">Capteurs → ESP32 → MQTT/HTTP → SQL → dashboard → graphique.</div></li>
-  <li><span class="k">Presence Logger</span><span class="v info">réseau + système</span><div class="note">PIR → événement → stockage → graphique → analyse simple.</div></li>
-  <li><span class="k">Vinted Stock Counter</span><span class="v">bonus</span><div class="note">Bouton/scan → compteur stock → SQLite → dashboard. Utile mais pas prioritaire.</div></li>
-</ul></div>
-
-<h2 class="section-title coral">Rotation IoT</h2>
-<div class="card"><ul class="dlist">
-  <li><span class="k">Fréquence</span><span class="v warn">1 bloc / semaine max</span><div class="note">60–90 min samedi. Si EPFC est en retard, IoT saute.</div></li>
-  <li><span class="k">Ordre</span><span class="v pos">IOT0 → IOT1 → IOT2</span><div class="note">ESP32/MQTT/Raspberry/TinyML restent parking tant que les bases ne sont pas testées.</div></li>
-  <li><span class="k">Preuve standard</span><span class="v info">schéma → code → test → capture</span><div class="note">Sans preuve, la session ne compte pas.</div></li>
-</ul></div>
-</section>
-
-<section class="page" id="p-repair" data-page="repair">
-<div class="page-kicker">Réparation électronique</div>
-<h1 class="page-title">🔧 Réparation · <em>diagnostic + composants</em></h1>
-<p class="page-lead">Multimètre, circuits, composants passifs. Séparé de l'IoT. Source principale : Geier + O'Reilly. Labs REP0–REP3 à compléter dans l'ordre.</p>
-
-<div class="callout callout-focus"><strong>Règle :</strong> chaque session produit une mesure réelle ou un composant identifié. Sans preuve physique, la session ne compte pas.</div>
-
-<h2 class="section-title jade">🧪 Labs REP0–REP3</h2>
-<div class="card"><ul class="dlist">
-  <li><span class="k"><strong>REP0</strong> — Sécurité + matériel</span><span class="v pos">actif</span><div class="note">EPI, composants de base, identification résistances, condensateurs. 1 séance.</div></li>
-  <li><span class="k"><strong>REP1</strong> — Mesures multimètre</span><span class="v pos">actif</span><div class="note">Tension, courant, résistance, continuité. Identifier pannes simples.</div></li>
-  <li><span class="k"><strong>REP2</strong> — Circuits passifs</span><span class="v warn">après REP1</span><div class="note">Diviseur de tension, filtre RC, loi d'Ohm en pratique. Breadboard obligatoire.</div></li>
-  <li><span class="k"><strong>REP3</strong> — Diagnostic composant</span><span class="v warn">après REP2</span><div class="note">Tester diodes, transistors, caps ESR. Circuit défectueux → identifier la panne.</div></li>
-</ul></div>
-
-<h2 class="section-title cyan">📖 Références O'Reilly</h2>
-<div class="card"><ul class="dlist">
-  <li><span class="k">Make: Electronics</span><span class="v info">Charles Platt</span><div class="note">Base absolue. Expériences hands-on. Lire en parallèle des labs.</div></li>
-  <li><span class="k">Troubleshooting Electronic Circuits</span><span class="v info">Homer Davidson</span><div class="note">Techniques de debug réel sur circuits.</div></li>
-  <li><span class="k">Passive Components for Circuit Design</span><span class="v">Ian Hickman</span><div class="note">Résistances, condensateurs, inductances. Référence technique.</div></li>
-</ul></div>
-
-
 </section>
 
 <section class="page" id="p-settings" data-page="settings">
@@ -4628,33 +4205,7 @@ function fixTabsAndSections(){
     if (!settingsSec.dataset.page) settingsSec.dataset.page = 'settings';
   }
 
-  // 2c. Vérifie que les onglets existent
-  const tabsNav = document.getElementById('tabs');
-  if (tabsNav){
-    if (!document.querySelector('.tab[data-tab="trading"]')){
-      const t = document.createElement('div');
-      t.className = 'tab';
-      t.dataset.tab = 'trading';
-      t.setAttribute('role','tab');
-      t.setAttribute('tabindex','0');
-      t.setAttribute('aria-selected','false');
-      t.innerHTML = '📈 Trading';
-      tabsNav.appendChild(t);
-      log('tab trading recréé');
-    }
-    if (!document.querySelector('.tab[data-tab="settings"]')){
-      const t = document.createElement('div');
-      t.className = 'tab';
-      t.dataset.tab = 'settings';
-      t.setAttribute('role','tab');
-      t.setAttribute('tabindex','0');
-      t.setAttribute('aria-selected','false');
-      t.title = 'Paramètres';
-      t.innerHTML = '⚙️';
-      tabsNav.appendChild(t);
-      log('tab settings recréé');
-    }
-  }
+  // Tab injection disabled — 8-tab structure is static in HTML
 }
 
 // ────────────────────────────────────────────────────────────
@@ -5569,9 +5120,7 @@ section.page.active{
 .tl-badge-adaptive{ display:inline-flex; margin-left:8px; padding:2px 7px; border-radius:999px; font:800 9px var(--f-mono,monospace); letter-spacing:.04em; text-transform:uppercase; }
 .tl-badge-fixed{ color:#a78bfa; background:rgba(167,139,250,.13); }
 .tl-badge-moved{ color:#f97316; background:rgba(249,115,22,.13); }
-.tl-item.routine-fixed-event{ border-left:3px solid #a78bfa !important; background:linear-gradient(90deg,rgba(167,139,250,.12),transparent) !important; cursor:default; }
-.tl-item.routine-moved-flex{ border-left:3px solid #f97316 !important; background:linear-gradient(90deg,rgba(249,115,22,.07),transparent) !important; }
-.routine-reschedule-section{ margin:6px 8px; padding:7px 12px; border-radius:8px; background:rgba(249,115,22,.08); border:1px solid rgba(249,115,22,.25); font:600 11px var(--f-mono,monospace); color:#fb923c; }
+.tl-item.routine-fixed-event{ border-left:3px solid #a78bfa !important; background:linear-gradient(90deg,rgba(167,139,250,.12),transparent) !important; cursor:default; }.routine-reschedule-section{ margin:6px 8px; padding:7px 12px; border-radius:8px; background:rgba(249,115,22,.08); border:1px solid rgba(249,115,22,.25); font:600 11px var(--f-mono,monospace); color:#fb923c; }
 .routine-replan-section{ margin:10px 8px 4px; padding:10px 14px; border-radius:10px; background:rgba(239,68,68,.07); border:1px solid rgba(239,68,68,.25); font:12px var(--f-sans,system-ui); color:#fca5a5; }
 .routine-replan-section strong{ display:block; margin-bottom:4px; font-size:11px; text-transform:uppercase; letter-spacing:.05em; }
 .routine-replan-section ul{ margin:4px 0 0 14px; padding:0; font:11px var(--f-mono,monospace); color:#f87171; }
@@ -6267,10 +5816,6 @@ function removeDuplicateHomeAndTocs(){
 function ensureCriticalTabs(){
   const tabs = document.getElementById('tabs') || document.querySelector('.tabs');
   if (!tabs) return;
-  if (!document.querySelector('.tab[data-tab="trading"]')){
-    const t = document.createElement('div');
-    t.className = 'tab'; t.dataset.tab = 'trading'; t.setAttribute('role','tab'); t.tabIndex = 0; t.textContent = '🔌 Élec/IoT'; tabs.appendChild(t);
-  }
   if (!document.querySelector('.tab[data-tab="settings"]')){
     const t = document.createElement('div');
     t.className = 'tab'; t.dataset.tab = 'settings'; t.setAttribute('role','tab'); t.tabIndex = 0; t.textContent = '⚙️'; t.title = 'Paramètres'; tabs.appendChild(t);
@@ -7154,20 +6699,15 @@ if (document.readyState === 'loading') {
   const NS = "dashv2_";
   const PACK = "u20_";
   const MODULES = {
-    epfc: { label:"EPFC", icon:"🎓", goalMin:840, tab:"epfc", color:"#60a5fa" },
-    coding: { label:"Coding", icon:"💻", goalMin:300, tab:"code", color:"#34d399" },
-    nl: { label:"Néerlandais", icon:"🇳🇱", goalMin:180, tab:"nl", color:"#22d3ee" },
     sport: { label:"Muscu/Sport", icon:"💪", goalSessions:3, tab:"sport", color:"#f97316" },
-    trading: { label:"Trading", icon:"📈", goalSessions:4, maxSessions:4, tab:"trading", color:"#f59e0b" },
-    lecture: { label:"Lecture", icon:"📚", goalPages:150, tab:"plan", color:"#818cf8" },
-    vinted: { label:"Vinted", icon:"🛍️", goalListings:10, tab:"vinted", color:"#ec4899" },
-    ia: { label:"IA", icon:"🤖", goalMin:120, tab:"ia", color:"#c084fc" },
-    finance: { label:"Finance", icon:"💰", tab:"finance", color:"#eab308" },
-    admin: { label:"Admin", icon:"📄", tab:"finance", color:"#f87171" },
+    etude: { label:"Études", icon:"🎓", goalMin:600, tab:"etude", color:"#60a5fa" },
+    loisir: { label:"Loisirs", icon:"🎮", goalSessions:2, tab:"loisir", color:"#818cf8" },
+    argent: { label:"Finances", icon:"💰", tab:"argent", color:"#eab308" },
+    routine: { label:"Routine", icon:"📅", goalSessions:1, tab:"routine", color:"#34d399" },
     job: { label:"Job", icon:"💼", tab:"home", color:"#38bdf8" }
   };
 
-  const CRITICAL = ["epfc","coding","nl","sport"];
+  const CRITICAL = ["sport","etude","routine"];
   const WEEK_GOALS_KEY = PACK + "weekly_goals";
   const INBOX_KEY = PACK + "inbox";
   const RULES_KEY = PACK + "rules";
@@ -7636,14 +7176,10 @@ if (document.readyState === 'loading') {
   function renderModuleResumeCards(){
     const progress = getProgress();
     const pages = {
-      epfc:'[data-page="epfc"]',
-      coding:'[data-page="code"]',
-      nl:'[data-page="nl"]',
-      trading:'[data-page="trading"]',
       sport:'[data-page="sport"]',
-      ia:'[data-page="ia"]',
-      vinted:'[data-page="vinted"]',
-      lecture:'[data-page="plan"]'
+      etude:'[data-page="etude"]',
+      loisir:'[data-page="loisir"]',
+      argent:'[data-page="argent"]'
     };
     Object.entries(pages).forEach(([module, sel]) => {
       const page = document.querySelector(sel);
@@ -7773,7 +7309,7 @@ if (document.readyState === 'loading') {
         </div>
 
         <div class="u20-section">
-          <h3>9–10 · Muscu + Souplesse</h3>
+          <h3>9 · Muscu · progression</h3>
           <div class="u20-grid">
             <div><b>Progression muscu</b><span>${esc(latestStrengthSuggestion())}</span></div>
           </div>
@@ -8373,7 +7909,7 @@ if (document.readyState === 'loading') {
     
     const ctx = {
       currentDate: today,
-      modules_known: ['epfc', 'code', 'nl', 'ia', 'sport', 'flex', 'lecture', 'vinted', 'trading', 'chess', 'finance'],
+      modules_known: ['epfc', 'code', 'nl', 'ia', 'sport', 'lecture', 'vinted', 'trading', 'chess', 'finance'],
       tasksToday_count: tasksToday.length,
       module_progress_summary: Object.keys(moduleProgress).slice(0, 8).reduce((acc, k) => {
         const mp = moduleProgress[k];
@@ -8817,6 +8353,22 @@ if (document.readyState === 'loading') {
       <h2 class="section-title sapphire">Cycle complet · <em>9 jours</em></h2>
       <div class="gm-plan-grid">${PLAN.map((x,i)=>planCardHTML(x,i)).join('')}</div>
       <div class="callout callout-tip"><strong>Règle de progression</strong> — Quand toutes les séries atteignent le haut de la fourchette avec RPE ≤ 8, tu montes de 1-2 kg ou une plaque la séance suivante. Si tu stagnes 3 expositions : deload 50 % volume/charge puis relance.</div>
+      <h2 class='section-title sapphire'>Souplesse · <em>mobilité progressive</em></h2>
+      <div class="callout callout-tip" style="margin-bottom:12px"><strong>Fréquence :</strong> 5–7×/semaine · 10–20 min. Toujours après l'entraînement ou le soir. Ne jamais forcer à froid.</div>
+      <div class="gm-plan-grid">
+        <div class="card"><h3>Hanches & Fessiers</h3><ul class="dlist"><li><span class="k">Pigeon au sol</span><span class="v">60–90 s / côté</span></li><li><span class="k">Fente basse avec rotation</span><span class="v">45 s / côté</span></li><li><span class="k">Figure 4 (assis ou allongé)</span><span class="v">60 s / côté</span></li><li><span class="k">Cossack squat</span><span class="v">10 lent / côté</span></li></ul></div>
+        <div class="card"><h3>Épaules & Thorax</h3><ul class="dlist"><li><span class="k">Étirement pec à l'encadrement</span><span class="v">60 s / côté</span></li><li><span class="k">Child's pose bras tendus</span><span class="v">90 s</span></li><li><span class="k">Thread the needle</span><span class="v">45 s / côté</span></li><li><span class="k">Rotation thoracique au sol</span><span class="v">12 / côté</span></li></ul></div>
+        <div class="card"><h3>Chaîne postérieure</h3><ul class="dlist"><li><span class="k">Chien tête en bas</span><span class="v">60 s tenu</span></li><li><span class="k">Étirement ischio debout</span><span class="v">60 s / côté</span></li><li><span class="k">Cat-Cow</span><span class="v">10 répétitions lentes</span></li><li><span class="k">Étirement lombaire au sol</span><span class="v">90 s</span></li></ul></div>
+        <div class="card"><h3>Cheville & Mollet</h3><ul class="dlist"><li><span class="k">Étirement mollet mur (droit)</span><span class="v">60 s / côté</span></li><li><span class="k">Étirement mollet mur (fléchi)</span><span class="v">60 s / côté</span></li><li><span class="k">Deep squat 5 s</span><span class="v">10 × 5 s bas</span></li><li><span class="k">Cercles chevilles</span><span class="v">20 / sens</span></li></ul></div>
+      </div>
+      <h2 class='section-title violet'>Poids du corps · <em>par muscle</em></h2>
+      <div class="callout callout-tip" style="margin-bottom:12px"><strong>Usage :</strong> complément salle, jours légers, déplacements. Pas de charge — qualité de mouvement prioritaire. RPE 6–8 max.</div>
+      <div class="gm-plan-grid">
+        <div class="card"><h3>Push — Pecs & Épaules</h3><ul class="dlist"><li><span class="k">Pompes tempo (3-1-1)</span><span class="v">3 × 10–15</span></li><li><span class="k">Pompes inclinées (pieds hauts)</span><span class="v">3 × 8–12</span></li><li><span class="k">Pompes diamant</span><span class="v">3 × 8–10</span></li><li><span class="k">Pike push-up</span><span class="v">3 × 10</span></li><li><span class="k">Scapular push-up</span><span class="v">2 × 15</span></li></ul></div>
+        <div class="card"><h3>Pull — Dos & Biceps</h3><ul class="dlist"><li><span class="k">Row inversé (barre basse / table)</span><span class="v">3 × 10–15</span></li><li><span class="k">Traction prise large (si barre)</span><span class="v">3 × max</span></li><li><span class="k">Dead bug</span><span class="v">3 × 10 / côté</span></li><li><span class="k">Superman</span><span class="v">3 × 12</span></li><li><span class="k">Face pull élastique</span><span class="v">3 × 15</span></li></ul></div>
+        <div class="card"><h3>Lower — Jambes & Fessiers</h3><ul class="dlist"><li><span class="k">Squat poids du corps tempo</span><span class="v">3 × 15–20</span></li><li><span class="k">Fentes alternées</span><span class="v">3 × 12 / côté</span></li><li><span class="k">Glute bridge 1 jambe</span><span class="v">3 × 10 / côté</span></li><li><span class="k">Cossack squat</span><span class="v">3 × 8 / côté</span></li><li><span class="k">Step-up chaise</span><span class="v">3 × 12 / côté</span></li></ul></div>
+        <div class="card"><h3>Core — Sangle abdominale</h3><ul class="dlist"><li><span class="k">Planche avant</span><span class="v">3 × 30–60 s</span></li><li><span class="k">Planche latérale</span><span class="v">3 × 20–40 s / côté</span></li><li><span class="k">Pallof press (élastique)</span><span class="v">3 × 12 / côté</span></li><li><span class="k">Mountain climber lent</span><span class="v">3 × 16</span></li><li><span class="k">Hollow body hold</span><span class="v">3 × 20–30 s</span></li></ul></div>
+      </div>
     `;
     bindSport(page);
     renderHomeStatus();
@@ -8833,6 +8385,7 @@ if (document.readyState === 'loading') {
     return `<div class="gm-tracker" id="gm-tracker" data-workout="${esc(w.key)}"><div class="gm-tracker-head"><div><div class="gm-kicker">Tracker anti-bug · sauvegarde live</div><h3>${esc(w.short)} · ${esc(w.label)}</h3><p>${esc(w.desc)}</p></div><div class="gm-save-state" id="gm-save-state">${session.completed ? '✅ Validé '+new Date(session.completedAt).toLocaleTimeString('fr-BE',{hour:'2-digit',minute:'2-digit'}) : 'Sauvegarde automatique'}</div></div><div class="gm-ex-list">${w.exercises.map((e,i)=>exerciseHTML(w, session, e, i)).join('')}</div><textarea class="gm-session-notes" id="gm-session-notes" placeholder="Notes séance : douleur, énergie, prochaine surcharge…">${esc(session.notes || '')}</textarea><div class="gm-actions"><button class="gm-validate" id="gm-validate-workout">Valider séance + cocher Routine</button><button class="gm-secondary" id="gm-clear-workout">Reset séance du jour</button></div></div>`;
   }
   function exerciseHTML(w, session, e, idx){
+    if (!e || !Array.isArray(e) || e.length < 6) return '';
     const id = `e${idx}`;
     const saved = session.exercises?.[id]?.sets || [];
     const rows = Array.from({length:e[2]}, (_,s) => {
@@ -8998,27 +8551,15 @@ if (document.readyState === 'loading') {
   window.__UD_NAV_MISSING_TABS_V42_CLEAN = true;
   function canonTab(x){
     x = String(x || 'home').toLowerCase().trim();
-    if (['coding','code'].includes(x)) return 'code';
-    if (['ai','ia'].includes(x)) return 'ia';
-    if (['nl','neerlandais','néerlandais','dutch'].includes(x)) return 'nl';
-    if (['echec','echecs','échec','échecs','chess','check'].includes(x)) return 'chess';
+    if (['etude','études','etudes','study'].includes(x)) return 'etude';
+    if (['loisir','loisirs','leisure','gaming','game'].includes(x)) return 'loisir';
+    if (['argent','finance','money','budget'].includes(x)) return 'argent';
     if (['liens','link','links','social'].includes(x)) return 'home';
     if (['today','aujourdhui','aujourd’hui','aujourd\'hui'].includes(x)) return 'home';
     return x;
   }
-  function ensurePage(id, title){
-    var main = document.querySelector('main.main') || document.querySelector('main');
-    if (!main || document.getElementById('p-'+id)) return;
-    var s = document.createElement('section');
-    s.className = 'page';
-    s.id = 'p-' + id;
-    s.dataset.page = id;
-    s.innerHTML = '<div class="page-header"><h1 class="page-title">'+title+'</h1><p class="page-sub">Onglet opérationnel V42.</p></div><div class="callout callout-tip"><strong>Correctif :</strong> cette page existe maintenant, donc le routeur ne renvoie plus vers Accueil.</div>';
-    main.appendChild(s);
-  }
   function activate(raw){
     var target = canonTab(raw);
-    ['code','ia','nl','chess'].forEach(function(id){ ensurePage(id, id.toUpperCase()); });
     var page = document.getElementById('p-' + target);
     if (!page) target = 'home';
     document.querySelectorAll('.tab[data-tab]').forEach(function(t){
@@ -9039,7 +8580,6 @@ if (document.readyState === 'loading') {
     try { window.scrollTo({top:0, behavior:'smooth'}); } catch(_){ window.scrollTo(0,0); }
   }
   function boot(){
-    ['code','ia','nl','chess'].forEach(function(id){ ensurePage(id, id.toUpperCase()); });
     var tabs = document.getElementById('tabs');
     if (tabs && !tabs.dataset.navV42){
       tabs.dataset.navV42 = '1';
@@ -9047,7 +8587,7 @@ if (document.readyState === 'loading') {
         var tab = e.target.closest && e.target.closest('.tab[data-tab]');
         if (!tab) return;
         var id = canonTab(tab.dataset.tab);
-        if (['code','ia','nl','chess'].includes(id)){
+        if (['etude','loisir','argent'].includes(id)){
           e.preventDefault();
           e.stopImmediatePropagation();
           activate(id);
@@ -9057,7 +8597,7 @@ if (document.readyState === 'loading') {
     var oldGo = window.go;
     window.go = function(name){
       var id = canonTab(name);
-      if (['code','ia','nl','chess'].includes(id)) return activate(id);
+      if (['etude','loisir','argent'].includes(id)) return activate(id);
       if (typeof oldGo === 'function') return oldGo(name);
       return activate(id);
     };
@@ -9092,129 +8632,458 @@ window.UD_V72_OPTS = Object.assign({
 </script>
 <script src="/assets/ud-v72-godmode-pack.js"></script>
 
-<style id="study-tracker-css">
-.stk-section{margin:20px 0}
-.stk-section-title{font:900 13px system-ui;letter-spacing:.06em;text-transform:uppercase;margin:0 0 10px;padding:6px 10px;border-radius:10px;display:flex;align-items:center;gap:8px}
-.stk-grid{display:grid;gap:8px}
-.stk-book{background:#0f172a;border:1px solid rgba(148,163,184,.18);border-radius:13px;padding:11px 13px}
-.stk-book b{display:block;color:#f1f5f9;font:800 13px system-ui;margin-bottom:2px}
-.stk-book small{color:#64748b;font:600 10px system-ui}
-.stk-bar{height:6px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.07);margin:7px 0}
-.stk-bar i{display:block;height:100%;border-radius:999px;transition:width .3s}
-.stk-meta{font:800 11px var(--f-mono,monospace);color:#94a3b8}
-.stk-btns{margin-top:6px;display:flex;gap:6px;flex-wrap:wrap}
-.stk-btn{padding:4px 11px;border-radius:8px;border:none;font:900 11px system-ui;cursor:pointer}
-.stk-reset{padding:3px 8px;border-radius:7px;border:1px solid rgba(148,163,184,.2);background:transparent;color:#64748b;font:700 10px system-ui;cursor:pointer;margin-left:auto}
+<style id="new-features-css">
+/* ── ROUTINE SHIFT CONFIG ──────────────────────────────────── */
+.shift-form { display:grid; gap:12px; margin-top:12px; }
+.sf-row { display:grid; grid-template-columns:140px 1fr; gap:12px; align-items:start; }
+.sf-group { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.sf-group input[type="time"] { background:#1e293b; border:1px solid #334155; color:#e2e8f0; border-radius:6px; padding:6px 10px; font:13px var(--f-mono,monospace); min-height:38px; }
+.sf-check { display:flex; align-items:center; gap:6px; font:600 12px var(--f-sans); color:#94a3b8; cursor:pointer; }
+.sf-val { font:700 13px var(--f-mono,monospace); padding:4px 8px; border-radius:6px; background:#1e293b; min-width:160px; }
+.btn-primary { background:linear-gradient(135deg,#6366f1,#4f46e5); color:#fff; border:none; border-radius:10px; padding:10px 20px; font:700 13px var(--f-sans); cursor:pointer; min-height:44px; margin-top:4px; }
+.routine-block-gen { display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:12px; background:rgba(30,41,59,.7); border:1px solid rgba(148,163,184,.2); margin:6px 0; transition:.2s; }
+.routine-block-gen.done { opacity:.55; }
+.routine-block-gen.done .rb-label { text-decoration:line-through; }
+.rb-left { display:flex; flex-direction:column; align-items:center; gap:4px; min-width:40px; }
+.rb-tag { font-size:20px; line-height:1; }
+.rb-time { font:700 10px var(--f-mono,monospace); color:#64748b; }
+.rb-body { flex:1; min-width:0; }
+.rb-label { font:700 14px var(--f-sans); color:#f1f5f9; }
+.rb-desc { font:400 12px var(--f-sans); color:#94a3b8; margin-top:2px; }
+.rb-check { width:36px; height:36px; border-radius:50%; border:2px solid #475569; background:transparent; color:#475569; font:700 14px sans-serif; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.rb-check.done { background:#22c55e; border-color:#22c55e; color:#fff; }
+@media (max-width:640px) { .sf-row { grid-template-columns:1fr; } }
+
+/* ── ÉTUDE ENGINE ────────────────────────────────────────────── */
+.etude-cat { margin:16px 0; }
+.etude-cat-title { font:700 11px var(--f-mono,monospace); letter-spacing:.1em; text-transform:uppercase; margin-bottom:10px; padding:6px 0; border-bottom:1px solid rgba(148,163,184,.15); }
+.etude-book { background:rgba(15,23,42,.6); border:1px solid rgba(148,163,184,.18); border-radius:14px; padding:14px; margin:8px 0; }
+.etude-book-head { display:flex; justify-content:space-between; align-items:start; gap:10px; margin-bottom:8px; }
+.etude-book-info b { display:block; font:700 13px var(--f-sans,system-ui); color:#f1f5f9; }
+.etude-book-info small { font:400 11px var(--f-sans); color:#64748b; }
+.etude-pct-badge { font:800 13px var(--f-mono,monospace); padding:4px 8px; border-radius:8px; white-space:nowrap; flex-shrink:0; }
+.etude-bar { height:6px; background:rgba(148,163,184,.15); border-radius:999px; overflow:hidden; margin:8px 0; }
+.etude-bar-fill { height:100%; border-radius:999px; transition:.3s; }
+.etude-meta { font:600 11px var(--f-mono,monospace); color:#64748b; margin-bottom:8px; }
+.etude-resume-row { margin:8px 0; }
+.etude-resume-input { width:100%; background:#0f172a; border:1px solid #334155; color:#e2e8f0; border-radius:8px; padding:8px 10px; font:12px var(--f-sans); box-sizing:border-box; }
+.etude-btns { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+.etude-btn { padding:6px 12px; border-radius:8px; border:1px solid; background:transparent; font:700 11px var(--f-mono,monospace); cursor:pointer; min-height:36px; }
+
+/* ── ELO TRACKER ─────────────────────────────────────────────── */
+.elo-display { display:flex; align-items:baseline; gap:16px; padding:12px 0; }
+.elo-current { font:900 48px var(--f-mono,monospace); color:#f1f5f9; }
+.elo-delta { font:800 24px var(--f-mono,monospace); }
+.elo-input-row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+
+/* ── VINTED/ARGENT ───────────────────────────────────────────── */
+.vt-profit-bar { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; padding:12px 0; border-top:1px solid rgba(148,163,184,.15); }
+.vt-profit-item { text-align:center; }
+.vt-profit-item span { display:block; font:600 11px var(--f-mono,monospace); color:#64748b; margin-bottom:4px; }
+.vt-profit-item b { font:800 18px var(--f-mono,monospace); color:#f1f5f9; }
+.vt-profit-main b { font-size:22px; color:#22c55e; }
+.vt-list { display:grid; gap:6px; margin-top:8px; }
+.vt-item { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:10px; background:rgba(15,23,42,.6); border:1px solid rgba(148,163,184,.15); }
+.vt-item-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.vt-item-dot.red { background:#f87171; }
+.vt-item-dot.green { background:#22c55e; }
+
+/* ── GLOBAL DESIGN IMPROVEMENTS ─────────────────────────────── */
+.card { border-radius:16px !important; }
+.page { padding:0 0 80px !important; }
+.section-title { font:700 11px var(--f-mono,monospace) !important; letter-spacing:.1em !important; text-transform:uppercase !important; padding:8px 0 !important; border-bottom:1px solid rgba(148,163,184,.12) !important; margin:20px 0 12px !important; }
+.stats-card { border-radius:14px !important; }
 </style>
-<script id="study-tracker-script">
+
+<script id="etude-engine">
 (function(){
 'use strict';
-if (window.__studyTrackerV2) return;
-window.__studyTrackerV2 = true;
+if (window.__etudeEngine) return;
+window.__etudeEngine = true;
 
-/* ── CATALOGUE ─────────────────────────────────────────────── */
-/* ns = localStorage namespace prefix, id = unique key        */
-var SUBJECTS = [
-  { key:'epfc', label:'🎓 EPFC · O\'Reilly', color:'#22c55e', barColor:'linear-gradient(90deg,#22c55e,#10b981)',
-    books:[
-      { ns:'dashv2_study_', id:'epfc_pcc',  title:'Python Crash Course 3e',                   author:'Eric Matthes',         total:552, unit:'pages' },
-      { ns:'dashv2_study_', id:'epfc_sql',  title:'Learning SQL 3e',                           author:'Alan Beaulieu',        total:376, unit:'pages' },
-      { ns:'dashv2_study_', id:'epfc_hf',   title:'Head First HTML and CSS',                   author:'Freeman & Robson',     total:704, unit:'pages' },
-      { ns:'dashv2_study_', id:'epfc_net',  title:'Network Warrior',                           author:'Gary Donahue',         total:720, unit:'pages' },
-      { ns:'dashv2_study_', id:'epfc_lin',  title:'Linux Pocket Guide',                        author:'Daniel Barrett',       total:320, unit:'pages' },
-      { ns:'dashv2_study_', id:'epfc_map',  title:'Math for Programmers',                      author:'Paul Orland',          total:384, unit:'pages' },
-      { ns:'dashv2_study_', id:'epfc_sta',  title:'Practical Statistics for Data Scientists',  author:'Bruce & Gedeck',       total:368, unit:'pages' },
-    ]
-  },
-  { key:'repair', label:'🔧 Réparation électronique', color:'#fb923c', barColor:'linear-gradient(90deg,#fb923c,#f59e0b)',
-    books:[
-      { ns:'dashv2_repair_', id:'geier',    title:'How to Diagnose and Fix Everything Electronic', author:'Michael Jay Geier', total:416, unit:'pages' },
-      { ns:'dashv2_repair_', id:'platt',    title:'Make: Electronics',                             author:'Charles Platt',     total:325, unit:'pages' },
-      { ns:'dashv2_repair_', id:'davidson', title:'Troubleshooting Electronic Circuits',           author:'Homer Davidson',    total:384, unit:'pages' },
-      { ns:'dashv2_repair_', id:'hickman',  title:'Passive Components for Circuit Design',         author:'Ian Hickman',       total:300, unit:'pages' },
-    ]
-  },
-  { key:'iot', label:'🔌 IoT · Labs', color:'#38bdf8', barColor:'linear-gradient(90deg,#38bdf8,#818cf8)',
-    books:[
-      { ns:'dashv2_iot_', id:'iot_iot0', title:'IOT0 — Électronique de base',    author:'Lab hands-on', total:5,  unit:'labs' },
-      { ns:'dashv2_iot_', id:'iot_iot1', title:'IOT1 — Arduino / microcontrôleur', author:'Lab hands-on', total:8,  unit:'labs' },
-      { ns:'dashv2_iot_', id:'iot_iot2', title:'IOT2 — Capteurs & actionneurs', author:'Lab hands-on', total:8,  unit:'labs' },
-      { ns:'dashv2_iot_', id:'iot_iot3', title:'IOT3 — ESP32 / MQTT / cloud',   author:'Lab hands-on', total:10, unit:'labs' },
-      { ns:'dashv2_iot_', id:'iot_iot4', title:'IOT4 — Raspberry Pi / Node-RED',author:'Lab hands-on', total:10, unit:'labs' },
-    ]
-  },
-  { key:'nl', label:'🇳🇱 Néerlandais B2/C1', color:'#a78bfa', barColor:'linear-gradient(90deg,#a78bfa,#818cf8)',
-    books:[
-      { ns:'dashv2_study_', id:'nl_vanz',  title:'Vanzelfsprekend',                      author:'Coutinho', total:600, unit:'min' },
-      { ns:'dashv2_study_', id:'nl_nn',    title:'Nederlands op niveau',                 author:'Coutinho', total:100, unit:'unités' },
-      { ns:'dashv2_study_', id:'nl_nnp',   title:'Nederlands naar perfectie',            author:'Coutinho', total:100, unit:'unités' },
-      { ns:'dashv2_study_', id:'nl_nbox',  title:'NedBox (fiches)',                      author:'—',        total:300, unit:'min' },
-      { ns:'dashv2_study_', id:'nl_bruli', title:'Brulingua',                            author:'—',        total:600, unit:'min' },
-      { ns:'dashv2_study_', id:'nl_gram',  title:'Grammaire de l\'etudiant neerlandais', author:'—',        total:100, unit:'unités' },
-    ]
-  },
+var CATALOGUE = [
+  { key:'epfc', label:'🎓 EPFC', color:'#22c55e', subjects:[
+    { id:'pcc', title:'Python Crash Course 3e', author:'Matthes', total:552, unit:'pages' },
+    { id:'sql', title:'Learning SQL 3e', author:'Beaulieu', total:376, unit:'pages' },
+    { id:'hf', title:'Head First HTML & CSS', author:'Freeman', total:704, unit:'pages' },
+    { id:'net', title:'Network Warrior', author:'Donahue', total:720, unit:'pages' },
+    { id:'lin', title:'Linux Pocket Guide', author:'Barrett', total:320, unit:'pages' },
+    { id:'map', title:'Math for Programmers', author:'Orland', total:384, unit:'pages' },
+    { id:'sta', title:'Practical Statistics for DS', author:'Bruce', total:368, unit:'pages' },
+  ]},
+  { key:'code', label:'🧪 Exercices', color:'#6366f1', subjects:[
+    { id:'codingbat', title:'CodingBat Python', author:'pratique', total:146, unit:'exercices' },
+    { id:'sqlbolt', title:'SQLBolt', author:'pratique', total:20, unit:'leçons' },
+    { id:'fcc', title:'freeCodeCamp Responsive Web', author:'pratique', total:300, unit:'défis' },
+  ]},
+  { key:'ia', label:'🤖 IA Lab', color:'#f59e0b', subjects:[
+    { id:'ia0', title:'Prompt Engineering', author:'OpenAI Guide', total:100, unit:'exercices' },
+    { id:'ia1', title:'Python Data / Kaggle Learn', author:'Kaggle', total:50, unit:'leçons' },
+    { id:'ia2', title:'Hands-On ML (extraits)', author:'Géron', total:200, unit:'pages' },
+  ]},
+  { key:'iot', label:'🔌 IoT · Labs', color:'#38bdf8', subjects:[
+    { id:'iot0', title:'IOT0 — Électronique de base', author:'Lab', total:5, unit:'labs' },
+    { id:'iot1', title:'IOT1 — Arduino', author:'Lab', total:8, unit:'labs' },
+    { id:'iot2', title:'IOT2 — Capteurs & actionneurs', author:'Lab', total:8, unit:'labs' },
+    { id:'iot3', title:'IOT3 — ESP32 / MQTT', author:'Lab', total:10, unit:'labs' },
+    { id:'iot4', title:'IOT4 — Raspberry Pi', author:'Lab', total:10, unit:'labs' },
+  ]},
+  { key:'repair', label:'🔧 Réparation électronique', color:'#fb923c', subjects:[
+    { id:'geier', title:'How to Diagnose & Fix Everything Electronic', author:'Geier', total:416, unit:'pages' },
+    { id:'platt', title:'Make: Electronics', author:'Platt', total:325, unit:'pages' },
+    { id:'davidson', title:'Troubleshooting Electronic Circuits', author:'Davidson', total:384, unit:'pages' },
+    { id:'hickman', title:'Passive Components', author:'Hickman', total:300, unit:'pages' },
+  ]},
+  { key:'nl', label:'🇳🇱 Néerlandais B2/C1', color:'#a78bfa', subjects:[
+    { id:'vanz', title:'Vanzelfsprekend', author:'Coutinho', total:600, unit:'min' },
+    { id:'nn', title:'Nederlands op niveau', author:'Coutinho', total:100, unit:'unités' },
+    { id:'nnp', title:'Nederlands naar perfectie', author:'Coutinho', total:100, unit:'unités' },
+    { id:'nbox', title:'NedBox (fiches)', author:'—', total:300, unit:'min' },
+    { id:'bruli', title:'Brulingua', author:'—', total:600, unit:'min' },
+  ]},
 ];
 
-/* ── STORAGE ────────────────────────────────────────────────── */
-function getVal(b){ try{ return parseInt(localStorage.getItem(b.ns+b.id)||'0',10)||0; }catch(e){ return 0; } }
-function setVal(b,v){ try{ localStorage.setItem(b.ns+b.id,String(v)); }catch(e){} }
-function pct(done,total){ return Math.min(100,Math.round(done/Math.max(1,total)*100)); }
+var NS = 'dashv2_etude_';
 
-/* ── RENDER ─────────────────────────────────────────────────── */
-function renderAll(){
-  var host = document.getElementById('study-resources-host');
+function getVal(key, id) {
+  try { return parseInt(localStorage.getItem(NS+key+'_'+id)||'0',10)||0; } catch(_){ return 0; }
+}
+function setVal(key, id, v) {
+  try { localStorage.setItem(NS+key+'_'+id, String(v)); } catch(_){}
+}
+function getResume(key, id) {
+  try { return localStorage.getItem(NS+'resume_'+key+'_'+id)||''; } catch(_){ return ''; }
+}
+function setResume(key, id, v) {
+  try { localStorage.setItem(NS+'resume_'+key+'_'+id, v); } catch(_){}
+}
+function pct(done, total) { return Math.min(100, Math.round(done/Math.max(1,total)*100)); }
+
+function render() {
+  var host = document.getElementById('etude-host');
   if (!host) return;
   var html = '';
-  SUBJECTS.forEach(function(subj){
-    html += '<div class="stk-section">';
-    html += '<div class="stk-section-title" style="background:rgba(0,0,0,.25);color:'+subj.color+'">'+subj.label+'</div>';
-    html += '<div class="stk-grid">';
-    subj.books.forEach(function(b){
-      var done = getVal(b), p = pct(done, b.total), rem = Math.max(0, b.total - done);
-      var step = b.unit==='pages' ? 10 : b.unit==='min' ? 15 : 1;
-      html += '<div class="stk-book">';
-      html += '<b>'+b.title+'</b>';
-      html += '<small>'+b.author+' · '+b.unit+'</small>';
-      html += '<div class="stk-bar"><i style="width:'+p+'%;'+subj.barColor.replace('linear-gradient','background:linear-gradient')+'"></i></div>';
-      html += '<div style="display:flex;align-items:center;gap:8px">';
-      html += '<span class="stk-meta">'+done+' / '+b.total+' '+b.unit+' · '+p+'% · '+rem+' restants</span>';
-      html += '<button class="stk-reset" data-stk-ns="'+b.ns+'" data-stk-id="'+b.id+'" data-stk-action="reset">↺</button>';
+  CATALOGUE.forEach(function(cat) {
+    html += '<div class="etude-cat">';
+    html += '<div class="etude-cat-title" style="color:'+cat.color+'">'+cat.label+'</div>';
+    cat.subjects.forEach(function(s) {
+      var done = getVal(cat.key, s.id);
+      var p = pct(done, s.total);
+      var rem = Math.max(0, s.total - done);
+      var resume = getResume(cat.key, s.id);
+      var step = s.unit==='pages' ? 10 : s.unit==='min' ? 15 : 1;
+      html += '<div class="etude-book" data-cat="'+cat.key+'" data-id="'+s.id+'">';
+      html += '<div class="etude-book-head">';
+      html += '<div class="etude-book-info"><b>'+s.title+'</b><small>'+s.author+' · '+s.unit+'</small></div>';
+      html += '<div class="etude-pct-badge" style="background:'+cat.color+'22;color:'+cat.color+'">'+p+'%</div>';
       html += '</div>';
-      html += '<div class="stk-btns">';
-      html += '<button class="stk-btn" data-stk-ns="'+b.ns+'" data-stk-id="'+b.id+'" data-stk-step="'+step+'" style="background:'+subj.color+'22;color:'+subj.color+'">+'+step+' '+b.unit+'</button>';
-      if (b.unit !== 'labs') {
-        html += '<button class="stk-btn" data-stk-ns="'+b.ns+'" data-stk-id="'+b.id+'" data-stk-step="'+(step*3)+'" style="background:'+subj.color+'22;color:'+subj.color+'">+'+(step*3)+' '+b.unit+'</button>';
+      html += '<div class="etude-bar"><div class="etude-bar-fill" style="width:'+p+'%;background:'+cat.color+'"></div></div>';
+      html += '<div class="etude-meta">'+done+' / '+s.total+' '+s.unit+' · '+rem+' restants</div>';
+      html += '<div class="etude-resume-row">';
+      html += '<input class="etude-resume-input" type="text" placeholder="Où reprendre…" value="'+resume.replace(/"/g,'&quot;')+'" data-cat="'+cat.key+'" data-id="'+s.id+'">';
+      html += '</div>';
+      html += '<div class="etude-btns">';
+      html += '<button class="etude-btn etude-minus" data-cat="'+cat.key+'" data-id="'+s.id+'" data-step="-'+step+'" style="color:'+cat.color+';border-color:'+cat.color+'44">-'+step+'</button>';
+      html += '<button class="etude-btn etude-plus" data-cat="'+cat.key+'" data-id="'+s.id+'" data-step="'+step+'" style="background:'+cat.color+'22;color:'+cat.color+';border-color:'+cat.color+'44">+'+step+' '+s.unit+'</button>';
+      if (s.unit !== 'labs') {
+        html += '<button class="etude-btn etude-plus" data-cat="'+cat.key+'" data-id="'+s.id+'" data-step="'+(step*3)+'" style="background:'+cat.color+'22;color:'+cat.color+';border-color:'+cat.color+'44">+'+(step*3)+'</button>';
       }
+      html += '<button class="etude-btn etude-reset" data-cat="'+cat.key+'" data-id="'+s.id+'" style="color:#f87171;border-color:#f8717144">↺</button>';
       html += '</div>';
       html += '</div>';
     });
-    html += '</div></div>';
+    html += '</div>';
   });
   host.innerHTML = html;
+
+  host.addEventListener('click', function(e) {
+    var btn = e.target.closest('[data-step]');
+    if (btn) {
+      var cat = btn.dataset.cat, id = btn.dataset.id, step = Number(btn.dataset.step);
+      var catObj = null;
+      for (var ci=0;ci<CATALOGUE.length;ci++) { if (CATALOGUE[ci].key===cat) { catObj=CATALOGUE[ci]; break; } }
+      var subj = null;
+      if (catObj) { for (var si=0;si<catObj.subjects.length;si++) { if (catObj.subjects[si].id===id) { subj=catObj.subjects[si]; break; } } }
+      if (!subj) return;
+      var cur = getVal(cat, id);
+      var next = Math.max(0, Math.min(subj.total, cur + step));
+      setVal(cat, id, next);
+      render();
+      return;
+    }
+    var rst = e.target.closest('.etude-reset');
+    if (rst) {
+      if (!confirm('Remettre à 0 ?')) return;
+      setVal(rst.dataset.cat, rst.dataset.id, 0);
+      render();
+    }
+  });
+  host.addEventListener('change', function(e) {
+    var inp = e.target.closest('.etude-resume-input');
+    if (inp) setResume(inp.dataset.cat, inp.dataset.id, inp.value);
+  });
 }
 
-/* ── EVENTS ─────────────────────────────────────────────────── */
-document.addEventListener('click', function(e){
-  var btn = e.target.closest('[data-stk-id]');
-  if (!btn) return;
-  e.preventDefault();
-  var ns = btn.getAttribute('data-stk-ns'), id = btn.getAttribute('data-stk-id');
-  var subj, book;
-  SUBJECTS.forEach(function(s){ s.books.forEach(function(b){ if(b.ns===ns && b.id===id){ subj=s; book=b; } }); });
-  if (!book) return;
-  var action = btn.getAttribute('data-stk-action');
-  if (action === 'reset'){ if(confirm('Remettre à zéro ?')){ setVal(book,0); renderAll(); } return; }
-  var step = parseInt(btn.getAttribute('data-stk-step'),10)||1;
-  setVal(book, Math.min(book.total, getVal(book)+step));
-  renderAll();
-}, true);
+function boot() {
+  render();
+  document.addEventListener('click', function(e) {
+    if (e.target.closest('.tab[data-tab="etude"]')) setTimeout(render, 80);
+  });
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+else boot();
+})();
+</script>
 
-/* ── BOOT ───────────────────────────────────────────────────── */
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', renderAll, {once:true});
-else renderAll();
-document.addEventListener('click', function(e){
-  if (e.target.closest('.tab[data-tab="plan"]')) setTimeout(renderAll, 80);
-}, true);
+<script id="loisir-engine">
+(function(){
+'use strict';
+if (window.__loisirEngine) return;
+window.__loisirEngine = true;
+
+// ── ELO ──
+var ELO_KEY = 'dashv2_elo_history';
+function eloHistory() { try { return JSON.parse(localStorage.getItem(ELO_KEY)||'[]'); } catch(_){ return []; } }
+function eloSave(h) { try { localStorage.setItem(ELO_KEY, JSON.stringify(h)); } catch(_){} }
+
+function renderElo() {
+  var h = eloHistory();
+  var cur = h.length ? h[h.length-1].elo : null;
+  var prev = h.length > 1 ? h[h.length-2].elo : null;
+  var el = document.getElementById('elo-current');
+  var dEl = document.getElementById('elo-delta');
+  if (el) el.textContent = cur !== null ? cur : '—';
+  if (dEl && cur !== null && prev !== null) {
+    var diff = cur - prev;
+    dEl.textContent = (diff > 0 ? '+' : '') + diff;
+    dEl.style.color = diff > 0 ? '#22c55e' : diff < 0 ? '#f87171' : '#94a3b8';
+  } else if (dEl) { dEl.textContent = ''; }
+  drawEloGraph(h);
+}
+
+function drawEloGraph(h) {
+  var canvas = document.getElementById('elo-canvas');
+  if (!canvas || !h.length) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.offsetWidth || 300;
+  var H = 120;
+  canvas.width = W; canvas.height = H;
+  ctx.clearRect(0,0,W,H);
+  if (h.length < 2) {
+    ctx.fillStyle = '#64748b'; ctx.font = '12px monospace'; ctx.textAlign='center';
+    ctx.fillText('Ajoute au moins 2 entrées pour voir le graphe', W/2, H/2);
+    return;
+  }
+  var elos = h.map(function(x){return x.elo;});
+  var mn = Math.min.apply(null,elos), mx = Math.max.apply(null,elos);
+  var pad = 20, range = mx - mn || 1;
+  function px(i) { return pad + (i/(h.length-1))*(W-2*pad); }
+  function py(v) { return H-pad - ((v-mn)/range)*(H-2*pad); }
+  ctx.strokeStyle = 'rgba(148,163,184,.1)'; ctx.lineWidth=1;
+  [0.25,0.5,0.75].forEach(function(t) {
+    var y = pad + t*(H-2*pad);
+    ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-pad,y); ctx.stroke();
+  });
+  ctx.strokeStyle = '#6366f1'; ctx.lineWidth=2; ctx.beginPath();
+  h.forEach(function(pt,i) { i===0 ? ctx.moveTo(px(i),py(pt.elo)) : ctx.lineTo(px(i),py(pt.elo)); });
+  ctx.stroke();
+  h.forEach(function(pt,i) {
+    var x=px(i),y=py(pt.elo);
+    ctx.fillStyle = i===h.length-1 ? '#22c55e' : '#6366f1';
+    ctx.beginPath(); ctx.arc(x,y,4,0,Math.PI*2); ctx.fill();
+  });
+  ctx.fillStyle='#94a3b8'; ctx.font='10px monospace'; ctx.textAlign='center';
+  [0,Math.floor(h.length/2),h.length-1].forEach(function(i) {
+    if (!h[i]) return;
+    ctx.fillText(h[i].elo, px(i), py(h[i].elo)-8);
+  });
+}
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('#elo-add')) return;
+  var inp = document.getElementById('elo-input');
+  if (!inp) return;
+  var val = parseInt(inp.value, 10);
+  if (!val || val < 0 || val > 3000) return;
+  var h = eloHistory();
+  h.push({ elo: val, date: new Date().toISOString().slice(0,10) });
+  eloSave(h);
+  inp.value = '';
+  renderElo();
+});
+
+// ── LECTURE ──
+var LECTURE_BOOKS = [
+  { id:'lec_sommeil', title:'Pourquoi nous dormons', author:'Matthew Walker', total:384, unit:'pages', theme:'Neuroscience', note:'LA référence scientifique sur le sommeil. Impacte tout : mémoire, sport, humeur.' },
+  { id:'lec_apprenons', title:'Comment nous apprenons', author:'Stanislas Dehaene', total:352, unit:'pages', theme:'Apprentissage', note:"Neurosciences de l'apprentissage. Indispensable pour optimiser l'étude." },
+  { id:'lec_habitudes', title:"L'art de l'infiniment petit (Atomic Habits)", author:'James Clear', total:320, unit:'pages', theme:'Productivité', note:"Preuve scientifique que les habitudes > la motivation. Pratique immédiat." },
+  { id:'lec_deepwork', title:'Travail intense (Deep Work)', author:'Cal Newport', total:296, unit:'pages', theme:'Concentration', note:'Focus profond = compétence rare et précieuse. Méthodes applicables.' },
+  { id:'lec_cerveau', title:'Le cerveau à tous les âges', author:'Lionel Naccache', total:272, unit:'pages', theme:'Neuroscience', note:'Comment fonctionne le cerveau. Base scientifique solide.' },
+  { id:'lec_psychomoney', title:"La psychologie de l'argent", author:'Morgan Housel', total:256, unit:'pages', theme:'Finance', note:"Études empiriques sur comment les humains pensent (et se plantent) avec l'argent." },
+  { id:'lec_investisseur', title:"L'investisseur intelligent", author:'Benjamin Graham', total:640, unit:'pages', theme:'Finance', note:"Fondation de l'investissement rationnel. Buffett s'en inspire." },
+  { id:'lec_influence', title:'Influence et manipulation', author:'Robert Cialdini', total:352, unit:'pages', theme:'Psychologie', note:'6 principes d'influence validés scientifiquement. Incontournable.' },
+  { id:'lec_7habitudes', title:'Les 7 habitudes des gens très efficaces', author:'Stephen Covey', total:416, unit:'pages', theme:'Développement', note:'Un des livres de management les plus validés. Principes durables.' },
+  { id:'lec_stoic', title:'Réflexions de Marc Aurèle', author:'Marc Aurèle', total:224, unit:'pages', theme:'Philosophie', note:'Stoïcisme appliqué. Résilience et clarté mentale prouvés par les neurosciences.' },
+  { id:'lec_nutrition', title:'Manger pour performer', author:'John Berardi', total:384, unit:'pages', theme:'Santé', note:'Nutrition sportive basée sur des études. Appliqué aux objectifs de composition corporelle.' },
+  { id:'lec_flow', title:"Flow : L'expérience optimale", author:'Csikszentmihalyi', total:336, unit:'pages', theme:'Psychologie', note:"Recherche scientifique sur l'état de flow et la performance maximale." },
+];
+
+var LEC_NS = 'dashv2_lec_';
+function lecGet(id) { try { return parseInt(localStorage.getItem(LEC_NS+id)||'0',10)||0; } catch(_){ return 0; } }
+function lecSet(id, v) { try { localStorage.setItem(LEC_NS+id, String(v)); } catch(_){} }
+
+function renderLecture() {
+  var host = document.getElementById('lecture-host');
+  if (!host) return;
+  var themes = [];
+  LECTURE_BOOKS.forEach(function(b){ if (themes.indexOf(b.theme)===-1) themes.push(b.theme); });
+  var html = '';
+  themes.forEach(function(theme) {
+    html += '<h3 class="section-title blue" style="font-size:13px;margin:16px 0 8px">' + theme + '</h3>';
+    LECTURE_BOOKS.filter(function(b){return b.theme===theme;}).forEach(function(b) {
+      var done = lecGet(b.id), p = Math.min(100,Math.round(done/Math.max(1,b.total)*100));
+      var rem = Math.max(0,b.total-done);
+      html += '<div class="etude-book">';
+      html += '<div class="etude-book-head"><div class="etude-book-info"><b>'+b.title+'</b><small>'+b.author+' · '+b.unit+'</small></div>';
+      html += '<div class="etude-pct-badge" style="background:#6366f122;color:#818cf8">'+p+'%</div></div>';
+      html += '<div class="etude-bar"><div class="etude-bar-fill" style="width:'+p+'%;background:#6366f1"></div></div>';
+      html += '<div class="etude-meta">'+done+' / '+b.total+' · '+rem+' restants</div>';
+      if (b.note) html += '<div style="font:400 11px var(--f-sans);color:#64748b;margin:4px 0 8px;font-style:italic">'+b.note+'</div>';
+      html += '<div class="etude-btns">';
+      html += '<button class="etude-btn" data-lec-minus="'+b.id+'" style="color:#6366f1;border-color:#6366f144">-10</button>';
+      html += '<button class="etude-btn" data-lec-plus="'+b.id+'" data-step="10" style="background:#6366f122;color:#818cf8;border-color:#6366f144">+10 pages</button>';
+      html += '<button class="etude-btn" data-lec-plus="'+b.id+'" data-step="25" style="background:#6366f122;color:#818cf8;border-color:#6366f144">+25 pages</button>';
+      html += '<button class="etude-btn" data-lec-reset="'+b.id+'" style="color:#f87171;border-color:#f8717144">↺</button>';
+      html += '</div></div>';
+    });
+  });
+  host.innerHTML = html;
+
+  host.addEventListener('click', function(e) {
+    var pl = e.target.closest('[data-lec-plus]');
+    var mi = e.target.closest('[data-lec-minus]');
+    var re = e.target.closest('[data-lec-reset]');
+    if (pl) {
+      var id=pl.dataset.lecPlus, step=Number(pl.dataset.step)||10;
+      var book=null; for (var bi=0;bi<LECTURE_BOOKS.length;bi++){if(LECTURE_BOOKS[bi].id===id){book=LECTURE_BOOKS[bi];break;}}
+      if (!book) return;
+      lecSet(id, Math.min(book.total, lecGet(id)+step));
+      renderLecture();
+    }
+    if (mi) { var id2=mi.dataset.lecMinus; lecSet(id2, Math.max(0, lecGet(id2)-10)); renderLecture(); }
+    if (re) { if (!confirm('Remettre à 0 ?')) return; lecSet(re.dataset.lecReset, 0); renderLecture(); }
+  });
+}
+
+function boot() {
+  renderElo();
+  renderLecture();
+  document.addEventListener('click', function(e) {
+    if (e.target.closest('.tab[data-tab="loisir"]')) { setTimeout(renderElo, 80); setTimeout(renderLecture, 80); }
+  });
+  window.addEventListener('resize', function() {
+    var page = document.getElementById('p-loisir');
+    if (page && page.classList.contains('active')) renderElo();
+  });
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+else boot();
+})();
+</script>
+
+<script id="argent-engine">
+(function(){
+'use strict';
+if (window.__argentEngine) return;
+window.__argentEngine = true;
+
+var VT_KEY = 'dashv2_vt_items_v2';
+var FIN_KEY = 'dashv2_fin_v2';
+
+function vtRead() { try { return JSON.parse(localStorage.getItem(VT_KEY)||'[]'); } catch(_){ return []; } }
+function vtWrite(d) { try { localStorage.setItem(VT_KEY, JSON.stringify(d)); } catch(_){} }
+function finRead() { try { return JSON.parse(localStorage.getItem(FIN_KEY)||'{}'); } catch(_){ return {}; } }
+function finWrite(d) { try { localStorage.setItem(FIN_KEY, JSON.stringify(d)); } catch(_){} }
+
+function vtRender() {
+  var items = vtRead();
+  var invested = items.filter(function(i){return i.type==='buy';}).reduce(function(s,i){return s+Number(i.price||0);},0);
+  var sold = items.filter(function(i){return i.type==='sell';}).reduce(function(s,i){return s+Number(i.price||0);},0);
+  var profit = sold - invested;
+
+  var el = document.getElementById('vt-total-invested');
+  if (el) el.textContent = invested.toFixed(2)+' €';
+  var el2 = document.getElementById('vt-total-sales');
+  if (el2) el2.textContent = sold.toFixed(2)+' €';
+  var el3 = document.getElementById('vt-profit');
+  if (el3) { el3.textContent = (profit >= 0 ? '+' : '') + profit.toFixed(2)+' €'; el3.style.color = profit >= 0 ? '#22c55e' : '#f87171'; }
+
+  var host = document.getElementById('vt-list-host');
+  if (!host) return;
+  if (!items.length) { host.innerHTML = '<div style="padding:12px;text-align:center;color:#64748b;font-size:12px">Aucune entrée</div>'; return; }
+  host.innerHTML = '<div class="vt-list">' + items.slice().reverse().map(function(item,ri) {
+    var realIdx = items.length-1-ri;
+    return '<div class="vt-item vt-'+(item.type||'')+'"><div class="vt-item-dot '+(item.type==="buy"?"red":"green")+'"></div><div style="flex:1;min-width:0"><b style="font:600 13px var(--f-sans)">'+(item.name||'—')+'</b><span style="font:400 11px var(--f-sans);color:#64748b;margin-left:8px">'+(item.date||'')+'</span></div><span style="font:700 14px var(--f-mono);color:'+(item.type==="buy"?"#f87171":"#22c55e")+'">'+(item.type==="buy"?"-":"+")+Number(item.price||0).toFixed(2)+' €</span><button data-vt-del="'+realIdx+'" style="background:transparent;border:none;color:#475569;font-size:16px;cursor:pointer;padding:0 4px">×</button></div>';
+  }).join('')+'</div>';
+
+  host.querySelectorAll('[data-vt-del]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      if (!confirm('Supprimer ?')) return;
+      var items2 = vtRead();
+      items2.splice(Number(btn.dataset.vtDel),1);
+      vtWrite(items2);
+      vtRender();
+    });
+  });
+}
+
+function finRender() {
+  var d = finRead();
+  if (d.savings !== undefined) { var el=document.getElementById('fin-savings'); if(el) el.value=d.savings; }
+  if (d.debt !== undefined) { var el2=document.getElementById('fin-debt'); if(el2) el2.value=d.debt; }
+  if (d.monthly !== undefined) { var el3=document.getElementById('fin-monthly'); if(el3) el3.value=d.monthly; }
+  var s = document.getElementById('fin-summary');
+  if (s && d.savings !== undefined) {
+    var net = (d.savings||0) - (d.debt||0);
+    var months = d.monthly > 0 ? Math.ceil(Math.abs(net) / d.monthly) : '?';
+    s.textContent = 'Patrimoine net : '+net.toFixed(0)+' € · '+(net < 0 ? 'dette liquidée dans ≈'+months+' mois' : 'pas de dette · objectif suivant ?');
+    s.style.color = net >= 0 ? '#22c55e' : '#f87171';
+  }
+}
+
+document.addEventListener('click', function(e) {
+  var today = new Date().toISOString().slice(0,10);
+  if (e.target.closest('#vt-add-buy')) {
+    var n=document.getElementById('vt-buy-name'), p=document.getElementById('vt-buy-price');
+    if (!n||!p||!n.value) return;
+    var items=vtRead(); items.push({type:'buy',name:n.value,price:Number(p.value||0),date:today});
+    vtWrite(items); n.value=''; p.value=''; vtRender();
+  }
+  if (e.target.closest('#vt-add-sell')) {
+    var n2=document.getElementById('vt-sell-name'), p2=document.getElementById('vt-sell-price');
+    if (!n2||!p2||!n2.value) return;
+    var items2=vtRead(); items2.push({type:'sell',name:n2.value,price:Number(p2.value||0),date:today});
+    vtWrite(items2); n2.value=''; p2.value=''; vtRender();
+  }
+  if (e.target.closest('#fin-save')) {
+    var sv=document.getElementById('fin-savings'), dv=document.getElementById('fin-debt'), mv=document.getElementById('fin-monthly');
+    finWrite({
+      savings:Number(sv?sv.value:0),
+      debt:Number(dv?dv.value:0),
+      monthly:Number(mv?mv.value:0)
+    });
+    finRender();
+  }
+});
+
+function boot() {
+  vtRender(); finRender();
+  document.addEventListener('click', function(e) {
+    if (e.target.closest('.tab[data-tab="argent"]')) { setTimeout(vtRender,80); setTimeout(finRender,80); }
+  });
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+else boot();
 })();
 </script>
 
