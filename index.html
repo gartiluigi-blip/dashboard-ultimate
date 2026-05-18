@@ -186,7 +186,7 @@
 <div class="brand-text">
 <div class="brand-title">Protocole <em class="serif">Ultimate</em></div>
 <div class="brand-sub" id="brand-sub">Chargement…</div>
-<div style="font:900 10px ui-monospace,monospace;color:#22c55e;margin-top:2px;letter-spacing:.04em">v2026-05-18-v10 · deep-clean · ✓</div>
+<div style="font:900 10px ui-monospace,monospace;color:#22c55e;margin-top:2px;letter-spacing:.04em">v2026-05-18-v11 · souplesse-purge-final · ✓</div>
 </div>
 </div>
 <div class="masthead-meta" id="meta">
@@ -7273,7 +7273,6 @@ if (document.readyState === 'loading') {
     if(/code|coding|python|javascript|html|css|sql|git|fonction|exercice|codingbat|codewars|leetcode/.test(s)) return "coding";
     if(/\bnl\b|néerlandais|neerlandais|dutch|anki|brulingua|nedbox/.test(s)) return "nl";
     if(/trading|backtest|setup|replay|journal|trade|marché|marche|forex|indice|r\b/.test(s)) return "trading";
-    if(/souplesse|stretch|mobilit|pancake|straddle|écart|ecart/.test(s)) return "souplesse";
     if(/sport|muscu|push|pull|legs|bench|squat|deadlift|développé|developpe|rpe|kg/.test(s)) return "sport";
     if(/lecture|livre|pages?|read/.test(s)) return "lecture";
     if(/vinted|listing|photo|vente|sourcing|article|vendu/.test(s)) return "vinted";
@@ -7426,7 +7425,6 @@ if (document.readyState === 'loading') {
     if(module === "nl") return data.lesson || data.endPoint ? `Reprendre ${data.lesson || data.endPoint}` : "Anki + 10 min écoute";
     if(module === "trading") return data.nextFocus || data.mistake ? `Corriger : ${data.mistake || data.nextFocus}` : "Backtest 1 setup propre";
     if(module === "sport") return suggestStrengthProgression(data);
-    if(module === "souplesse") return "Séance normale + douleur /10";
     if(module === "lecture") return data.endPage ? `Reprendre page ${data.endPage + 1}` : "Lire 10 pages";
     if(module === "vinted") return "Lister 1 article ou traiter les invendus";
     return data.nextAction || "";
@@ -7467,7 +7465,6 @@ if (document.readyState === 'loading') {
     if(mods.has("coding")) score += 15;
     if(mods.has("nl")) score += 15;
     if(mods.has("sport")) score += 15;
-    if(mods.has("souplesse")) score += 10;
     if(mods.has("trading")) score += 5;
     if(mods.has("lecture")) score += 5;
     const tasks = get(`tasks_${dateKey}`, []);
@@ -7514,7 +7511,6 @@ if (document.readyState === 'loading') {
       coding:"Faire 1 exercice Python/Web",
       nl:"Anki 10 min + écoute 10 min",
       sport:"Séance prévue ou minimum 20 min",
-      souplesse:"Routine mobilité + douleur /10",
       trading:"Backtest 1 setup + discipline /10",
       lecture:"Lire 10 pages",
       vinted:"Lister 1 article",
@@ -7602,13 +7598,6 @@ if (document.readyState === 'loading') {
     return `${ex} : ${kg}kg · consolider puis +1 rep`;
   }
 
-  function souplesseMeasurementDue(){
-    const logs = getAllRecentCheckins(30).filter(x=>x.module==="souplesse" && (x.checkinData?.frontFoldCm || x.checkinData?.straddleCm || x.checkinData?.measurement));
-    if(!logs.length) return true;
-    const last = new Date(logs[0].completedAt || logs[0].dateKey);
-    return (Date.now() - last.getTime()) / 86400000 >= 7;
-  }
-
   function eveningReport(){
     const stats = weeklyStats();
     const score = computeDayScore();
@@ -7652,7 +7641,6 @@ if (document.readyState === 'loading') {
       nl:'[data-page="nl"]',
       trading:'[data-page="trading"]',
       sport:'[data-page="sport"]',
-      souplesse:'[data-page="flex"]',
       ia:'[data-page="ia"]',
       vinted:'[data-page="vinted"]',
       lecture:'[data-page="plan"]'
@@ -7788,7 +7776,6 @@ if (document.readyState === 'loading') {
           <h3>9–10 · Muscu + Souplesse</h3>
           <div class="u20-grid">
             <div><b>Progression muscu</b><span>${esc(latestStrengthSuggestion())}</span></div>
-            <div><b>Mesures souplesse</b><span>${souplesseMeasurementDue() ? "Mesure due aujourd'hui" : "Mesure pas obligatoire aujourd'hui"}</span></div>
           </div>
         </div>
 
@@ -7917,7 +7904,6 @@ if (document.readyState === 'loading') {
     if(module==="nl") return `<div class="u20-form"><select data-ci="activity"><option>Anki</option><option>Brulingua</option><option>NedBox</option><option>Écoute</option><option>Expression orale</option></select><input data-ci="ankiCards" type="number" placeholder="Cartes Anki"><input data-ci="lesson" placeholder="Leçon / niveau"><input data-ci="endPoint" placeholder="Où reprendre">${common}</div>`;
     if(module==="trading") return `<div class="u20-form"><select data-ci="sessionType"><option>backtest</option><option>replay</option><option>journal review</option><option>lecture</option><option>simulation</option></select><input data-ci="market" placeholder="Marché"><input data-ci="setup" placeholder="Setup"><input data-ci="mistake" placeholder="Erreur observée"><input data-ci="ruleScore" type="number" min="0" max="10" placeholder="Discipline /10"><input data-ci="nextFocus" placeholder="Focus prochaine session">${common}</div>`;
     if(module==="sport") return `<div class="u20-form"><select data-ci="workoutType"><option>Push</option><option>Pull</option><option>Legs</option><option>Full body</option></select><input data-ci="exerciseName" placeholder="Exercice"><input data-ci="sets" type="number" placeholder="Séries"><input data-ci="reps" type="number" placeholder="Reps"><input data-ci="weightKg" type="number" step="0.5" placeholder="Kg"><input data-ci="rpe" type="number" min="1" max="10" placeholder="RPE"><input data-ci="pain" type="number" min="0" max="10" placeholder="Douleur /10"><input data-ci="nextProgression" placeholder="Prochaine surcharge">${common}</div>`;
-    if(module==="souplesse") return `<div class="u20-form"><select data-ci="mobilityFeeling"><option>raide</option><option>normal</option><option>souple</option></select><input data-ci="painLevel" type="number" placeholder="Douleur /10"><input data-ci="frontFoldCm" type="number" placeholder="Flexion avant cm ${souplesseMeasurementDue() ? '(due)' : '(option)'}"><input data-ci="straddleCm" type="number" placeholder="Straddle cm">${common}</div>`;
     if(module==="lecture") return `<div class="u20-form"><input data-ci="book" placeholder="Livre"><input data-ci="startPage" type="number" placeholder="Page départ"><input data-ci="endPage" type="number" placeholder="Page arrêt"><textarea data-ci="keyIdea" placeholder="Idée clé"></textarea>${common}</div>`;
     if(module==="vinted") return `<div class="u20-form"><input data-ci="photosTaken" type="number" placeholder="Photos prises"><input data-ci="itemsListed" type="number" placeholder="Articles listés"><input data-ci="itemsSold" type="number" placeholder="Articles vendus"><input data-ci="revenue" type="number" placeholder="CA">${common}</div>`;
     if(module==="ia") return `<div class="u20-form"><input data-ci="topic" placeholder="Sujet"><input data-ci="resource" placeholder="Ressource"><input data-ci="concept" placeholder="Concept compris"><input data-ci="endPoint" placeholder="Où reprendre"><input data-ci="nextAction" placeholder="Prochaine action">${common}</div>`;
