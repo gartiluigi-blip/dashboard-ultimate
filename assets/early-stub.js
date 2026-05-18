@@ -13,7 +13,7 @@ if (typeof window.Notification === 'undefined') {
   if (window.__UDRuntimePatchLoader) return;
   window.__UDRuntimePatchLoader = true;
 
-  var VERSION = '20260518-8';
+  var VERSION = '20260518-10';
   var debugMode = /[?&]uddebug=1\b/.test(location.search);
   var loadStatus = {};
 
@@ -43,6 +43,8 @@ if (typeof window.Notification === 'undefined') {
       cleanupV2: !!window.UDFinalCleanupV2,
       forceV3: !!window.UDForceUIV3,
       forceV3Status: window.UDForceUIV3Status || null,
+      forceV4: !!window.UDForceUIV4,
+      forceV4Status: window.UDForceUIV4Status || null,
       study: !!window.__studyTracker,
       pages: {
         home: !!document.getElementById('p-home'),
@@ -79,6 +81,7 @@ if (typeof window.Notification === 'undefined') {
       if (window.UDFinalCleanup && window.UDFinalCleanup.run) window.UDFinalCleanup.run();
       if (window.UDFinalCleanupV2 && window.UDFinalCleanupV2.run) window.UDFinalCleanupV2.run();
       if (window.UDForceUIV3 && window.UDForceUIV3.run) window.UDForceUIV3.run();
+      if (window.UDForceUIV4 && window.UDForceUIV4.run) window.UDForceUIV4.run();
       window.UDRuntimeLoaded = runtimeSnapshot();
       renderDebug();
     } catch (error) {
@@ -94,6 +97,7 @@ if (typeof window.Notification === 'undefined') {
     loadScript('ud-final-cleanup-direct', '/assets/core/final-cleanup.js?v=' + VERSION, 'cleanupV1', runAll);
     loadScript('ud-final-cleanup-v2-direct', '/assets/core/final-cleanup-v2.js?v=' + VERSION, 'cleanupV2', runAll);
     loadScript('ud-force-ui-v3-direct', '/assets/core/force-ui-v3.js?v=' + VERSION, 'forceV3', runAll);
+    loadScript('ud-force-ui-v4-direct', '/assets/core/force-ui-v4.js?v=' + VERSION, 'forceV4', runAll);
     setTimeout(runAll, 500);
     setTimeout(runAll, 1500);
     setTimeout(runAll, 3000);
