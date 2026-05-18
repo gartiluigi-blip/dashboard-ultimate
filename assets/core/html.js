@@ -19,14 +19,14 @@
   }
 
   function attrNameIsSafe(name){
-    return /^[a-zA-Z_:][a-zA-Z0-9_:\\-.]*$/.test(name) && !/^on/i.test(name);
+    return /^[a-zA-Z_:][a-zA-Z0-9_:\-.]*$/.test(name) && !/^on/i.test(name);
   }
 
   function attrs(values){
     if (!values || typeof values !== 'object') return '';
     return Object.entries(values)
       .filter(([name, value]) => attrNameIsSafe(name) && value !== false && value !== null && value !== undefined)
-      .map(([name, value]) => value === true ? ` ${name}` : ` ${name}=\"${escape(value)}\"`)
+      .map(([name, value]) => value === true ? ` ${name}` : ` ${name}="${escape(value)}"`)
       .join('');
   }
 
@@ -34,7 +34,12 @@
     return escape(value).replace(/\n/g, '<br>');
   }
 
-  window.UDHtml = Object.freeze({ text, escape, attrs, nl2br });
+  window.UDHtml = Object.freeze({
+    text,
+    escape,
+    attrs,
+    nl2br
+  });
 })();
 
 (function(){
