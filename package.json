@@ -1,30 +1,8 @@
 {
   "name": "dashboard-ultimate",
   "private": true,
-  "version": "0.0.0",
-  "description": "Personal dashboard static app validation scripts.",
-  "scripts": {
-    "patch": "node tools/patch-all.js",
-    "patch:main-store": "node tools/patch-main-store.js",
-    "check": "node tools/check-all.js",
-    "check:syntax": "node tools/check-syntax.js",
-    "smoke:coach": "node tools/smoke-coach.js",
-    "audit:main-storage": "node tools/audit-main-storage-report.js",
-    "audit:dead-code": "node tools/audit-dead-code-report.js",
-    "audit:index-sections": "node tools/audit-index-section-size-report.js",
-    "audit:inline-css": "node tools/audit-inline-css-report.js",
-    "audit:inline-script": "node tools/audit-inline-script-report.js",
-    "audit:post-extraction": "node tools/audit-post-extraction-hardening.js",
-    "audit:functions": "node tools/audit-function-duplication-report.js",
-    "audit:static": "node tools/audit-static.js",
-    "audit:prototypes": "node tools/audit-prototypes.js",
-    "audit:storage": "node tools/audit-storage-direct.js",
-    "audit:lines": "node tools/audit-line-length.js",
-    "audit:size": "node tools/audit-size.js",
-    "audit:v74": "node tools/audit-v74.js",
-    "audit:index": "node tools/audit-index-debt.js",
-    "audit:secrets": "node tools/audit-secrets.js"
-  },
+  "version": "3.0.0",
+  "description": "Dashboard personnel — vanilla JS, mobile-first.",
   "engines": {
     "node": ">=18"
   }
