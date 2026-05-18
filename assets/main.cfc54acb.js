@@ -1311,7 +1311,7 @@ function renderNextAction(){
   const startBtn= document.getElementById('na-start');
   const snoozeBtn=document.getElementById('na-snooze');
   const skipBtn = document.getElementById('na-skip');
-  if (!titleEl) return;
+  if (!titleEl || !subEl || !cdEl || !lblEl || !startBtn || !snoozeBtn || !skipBtn) return;
 
   const now = new Date();
   const curMin = now.getHours()*60 + now.getMinutes();

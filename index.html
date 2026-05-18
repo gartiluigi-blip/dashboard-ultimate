@@ -200,668 +200,6 @@ body.ud-v54-clean .tl-desc{overflow-wrap:anywhere;word-break:normal;}
 }
 </style>
 
-<style id="v75-forcefix-style">
-/* V75 FORCE FIX — blocs visibles, sans dépendance fragile aux anciennes fonctions */
-.v75-force-strip{display:grid;gap:12px;margin:16px 0}
-.v75-force-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-.v75-force-card{border:1px solid rgba(139,92,246,.38);background:linear-gradient(135deg,rgba(30,27,75,.86),rgba(2,6,23,.88));border-radius:18px;padding:14px;box-shadow:0 14px 32px rgba(0,0,0,.22)}
-.v75-force-card h3,.v75-force-card h4{margin:0 0 8px;font:900 13px var(--f-sans,system-ui);letter-spacing:.04em;text-transform:uppercase;color:#c4b5fd}
-.v75-big-score{font:950 44px/1 var(--f-sans,system-ui);color:#f8fafc;letter-spacing:-.04em}
-.v75-sub{font:700 12px/1.5 var(--f-sans,system-ui);color:var(--text-faint,#94a3b8)}
-.v75-morning-list{margin:8px 0 0;padding-left:18px;color:#e5e7eb;font:700 12px/1.55 var(--f-sans,system-ui)}
-.v75-bar-wrap{height:16px;background:rgba(15,23,42,.9);border:1px solid rgba(148,163,184,.28);border-radius:999px;overflow:hidden;margin:10px 0 8px}
-.v75-bar{height:100%;width:0%;background:linear-gradient(90deg,#22c55e,#a3e635);border-radius:inherit;transition:width .25s ease}
-.v75-pre-rdv{display:none;border:1px solid rgba(168,85,247,.65);background:linear-gradient(90deg,rgba(88,28,135,.94),rgba(126,34,206,.82));color:#fff;border-radius:16px;padding:12px 14px;font:900 13px var(--f-sans,system-ui);box-shadow:0 12px 28px rgba(126,34,206,.25)}
-.v75-pre-rdv.show{display:block}
-.v75-stats-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:16px 0}
-.v75-chart-box{min-height:220px}
-#heatmap-90d{display:grid;grid-template-columns:repeat(15,minmax(12px,1fr));gap:4px;margin-top:10px}
-.v75-heat-cell{aspect-ratio:1;border-radius:5px;background:#111827;border:1px solid rgba(148,163,184,.14)}
-.v75-heat-0{background:#111827}.v75-heat-1{background:#064e3b}.v75-heat-2{background:#047857}.v75-heat-3{background:#16a34a}.v75-heat-4{background:#22c55e}.v75-heat-5{background:#86efac}
-.v75-domain-row,.v75-task-row,.v75-test-row{display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid rgba(148,163,184,.16);padding:8px 0;font:800 12px var(--f-sans,system-ui);color:#e5e7eb}
-.v75-domain-row:first-child,.v75-task-row:first-child,.v75-test-row:first-child{border-top:0}
-.v75-pill{border-radius:999px;padding:3px 8px;background:rgba(15,23,42,.9);border:1px solid rgba(148,163,184,.24);font:900 11px var(--f-mono,monospace)}
-.v75-test-row.pass span:last-child{color:#22c55e}.v75-test-row.fail span:last-child{color:#ef4444}
-.v75-chart-fallback svg{width:100%;height:220px;display:block}
-.v75-version-badge{display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(34,197,94,.35);background:rgba(6,78,59,.35);border-radius:999px;padding:5px 10px;color:#bbf7d0;font:900 11px var(--f-mono,monospace);margin:8px 0}
-@media(max-width:760px){
-  .v75-force-grid,.v75-stats-grid{grid-template-columns:1fr}
-  #heatmap-90d{grid-template-columns:repeat(10,minmax(12px,1fr))}
-  .v75-fixed-focus{right:12px;bottom:12px}
-}
-</style>
-
-
-<style id="v76-visible-fix-style">
-/* V76 — corrige l'erreur V75 : les cartes doivent être visibles AVANT la mission du jour. */
-#v75-focus-fab,
-#v75-focus-overlay{
-  display:none!important;
-  visibility:hidden!important;
-  pointer-events:none!important;
-}
-#v75-home-modules.v76-top-modules{
-  display:block!important;
-  visibility:visible!important;
-  opacity:1!important;
-  margin:12px 0 14px!important;
-  position:relative!important;
-  z-index:3!important;
-}
-#v75-home-modules .v76-grid{
-  display:grid!important;
-  grid-template-columns:repeat(3,minmax(0,1fr));
-  gap:10px!important;
-}
-#score-du-jour,
-#momentum-card,
-#morning-card{
-  display:block!important;
-  visibility:visible!important;
-  opacity:1!important;
-}
-.v76-card-primary{
-  border-color:rgba(251,146,60,.55)!important;
-  background:linear-gradient(135deg,rgba(124,45,18,.78),rgba(15,23,42,.92))!important;
-}
-.v76-section-label{
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-  border:1px solid rgba(251,146,60,.35);
-  background:rgba(124,45,18,.28);
-  border-radius:999px;
-  padding:6px 10px;
-  color:#fed7aa;
-  font:900 11px var(--f-mono,monospace);
-  margin:10px 0 4px;
-  text-transform:uppercase;
-  letter-spacing:.05em;
-}
-@media(max-width:760px){
-  #v75-home-modules .v76-grid{
-    grid-template-columns:1fr!important;
-  }
-  #v75-home-modules .v75-force-card{
-    padding:12px!important;
-    border-radius:16px!important;
-  }
-  #v75-home-modules .v75-big-score{
-    font-size:38px!important;
-  }
-}
-</style>
-
-
-<style id="v77-ops-fix-style">
-/* V77 OPS FIX — échecs, priorités niveau/couleur, activités en retard */
-#v77-overdue-card,
-#v77-chess-card,
-#v77-prio-command,
-#v77-chess-panel{
-  display:block!important;
-  visibility:visible!important;
-  opacity:1!important;
-}
-#v77-overdue-card{
-  margin:12px 0 14px;
-  border:1px solid rgba(239,68,68,.38);
-  background:linear-gradient(135deg,rgba(127,29,29,.72),rgba(15,23,42,.92));
-  border-radius:18px;
-  padding:13px;
-  box-shadow:0 14px 35px rgba(0,0,0,.24);
-}
-#v77-overdue-card.is-empty{
-  border-color:rgba(16,185,129,.28);
-  background:linear-gradient(135deg,rgba(6,78,59,.42),rgba(15,23,42,.9));
-}
-.v77-card-head{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
-  margin-bottom:8px;
-}
-.v77-card-title{
-  font:900 12px var(--f-sans,system-ui);
-  text-transform:uppercase;
-  letter-spacing:.10em;
-  color:#fed7aa;
-}
-.v77-badge{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  border-radius:999px;
-  padding:4px 8px;
-  font:900 10px var(--f-mono,monospace);
-  border:1px solid rgba(255,255,255,.16);
-  background:rgba(255,255,255,.08);
-  color:#fff;
-}
-.v77-overdue-list{
-  display:grid;
-  gap:7px;
-}
-.v77-overdue-item{
-  display:grid;
-  grid-template-columns:auto 1fr auto;
-  gap:9px;
-  align-items:center;
-  border:1px solid rgba(255,255,255,.12);
-  border-radius:13px;
-  background:rgba(2,6,23,.36);
-  padding:8px 9px;
-}
-.v77-overdue-time{
-  font:900 11px var(--f-mono,monospace);
-  color:#fecaca;
-}
-.v77-overdue-name{
-  font:800 12px var(--f-sans,system-ui);
-  color:var(--text,#fff);
-  overflow-wrap:anywhere;
-}
-.v77-overdue-type{
-  font:900 9px var(--f-sans,system-ui);
-  text-transform:uppercase;
-  letter-spacing:.08em;
-  color:#cbd5e1;
-}
-#v77-chess-card .v77-chess-line,
-#v77-chess-panel .v77-chess-line{
-  display:flex;
-  justify-content:space-between;
-  gap:10px;
-  border-top:1px solid rgba(255,255,255,.10);
-  padding-top:7px;
-  margin-top:7px;
-  font:800 12px var(--f-sans,system-ui);
-}
-.v77-chess-actions{
-  display:grid;
-  grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:8px;
-  margin-top:10px;
-}
-.v77-mini-btn{
-  min-height:38px;
-  border-radius:12px;
-  border:1px solid rgba(251,146,60,.34);
-  background:rgba(251,146,60,.12);
-  color:#fff;
-  font:900 11px var(--f-sans,system-ui);
-  cursor:pointer;
-}
-.v77-mini-btn.done{
-  background:rgba(16,185,129,.20);
-  border-color:rgba(16,185,129,.42);
-}
-#v77-prio-command{
-  margin:10px 0 10px;
-  border:1px solid rgba(148,163,184,.22);
-  background:linear-gradient(135deg,rgba(15,23,42,.82),rgba(2,6,23,.74));
-  border-radius:16px;
-  padding:12px;
-}
-.v77-prio-legend{
-  display:grid;
-  grid-template-columns:repeat(4,minmax(0,1fr));
-  gap:8px;
-}
-.v77-prio-chip{
-  border-radius:12px;
-  border:1px solid rgba(255,255,255,.13);
-  padding:8px;
-  font:900 10px var(--f-sans,system-ui);
-  text-transform:uppercase;
-  letter-spacing:.04em;
-}
-.v77-prio-chip small{
-  display:block;
-  margin-top:3px;
-  font:700 9px var(--f-sans,system-ui);
-  color:#cbd5e1;
-  text-transform:none;
-  letter-spacing:0;
-}
-.v77-prio-chip.critical{background:rgba(239,68,68,.15);color:#fecaca;border-color:rgba(239,68,68,.35);}
-.v77-prio-chip.high{background:rgba(245,158,11,.14);color:#fed7aa;border-color:rgba(245,158,11,.35);}
-.v77-prio-chip.normal{background:rgba(59,130,246,.14);color:#bfdbfe;border-color:rgba(59,130,246,.35);}
-.v77-prio-chip.low{background:rgba(16,185,129,.14);color:#bbf7d0;border-color:rgba(16,185,129,.35);}
-.v77-prio-control{
-  display:flex;
-  align-items:center;
-  gap:7px;
-  margin-left:auto;
-}
-.v77-prio-level{
-  min-height:30px;
-  border-radius:999px;
-  border:1px solid rgba(255,255,255,.16);
-  background:rgba(2,6,23,.62);
-  color:#fff;
-  font:900 10px var(--f-sans,system-ui);
-  padding:0 8px;
-}
-.v77-level-badge{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  min-height:24px;
-  border-radius:999px;
-  padding:0 8px;
-  font:900 9px var(--f-mono,monospace);
-  text-transform:uppercase;
-}
-.prio-item.v77-level-critical{border-color:rgba(239,68,68,.48)!important;background:linear-gradient(90deg,rgba(239,68,68,.16),rgba(15,23,42,.82))!important;}
-.prio-item.v77-level-high{border-color:rgba(245,158,11,.46)!important;background:linear-gradient(90deg,rgba(245,158,11,.13),rgba(15,23,42,.82))!important;}
-.prio-item.v77-level-normal{border-color:rgba(59,130,246,.40)!important;background:linear-gradient(90deg,rgba(59,130,246,.10),rgba(15,23,42,.82))!important;}
-.prio-item.v77-level-low{border-color:rgba(16,185,129,.36)!important;background:linear-gradient(90deg,rgba(16,185,129,.09),rgba(15,23,42,.82))!important;}
-.v77-level-critical .v77-level-badge{background:rgba(239,68,68,.22);color:#fecaca;}
-.v77-level-high .v77-level-badge{background:rgba(245,158,11,.20);color:#fed7aa;}
-.v77-level-normal .v77-level-badge{background:rgba(59,130,246,.20);color:#bfdbfe;}
-.v77-level-low .v77-level-badge{background:rgba(16,185,129,.20);color:#bbf7d0;}
-#v77-chess-panel{
-  margin:12px 0 16px;
-  border:1px solid rgba(99,102,241,.32);
-  border-radius:18px;
-  background:linear-gradient(135deg,rgba(49,46,129,.42),rgba(15,23,42,.90));
-  padding:14px;
-}
-.v77-chess-grid{
-  display:grid;
-  grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:10px;
-}
-.v77-field{
-  display:grid;
-  gap:5px;
-}
-.v77-field label{
-  font:900 10px var(--f-sans,system-ui);
-  text-transform:uppercase;
-  letter-spacing:.08em;
-  color:#cbd5e1;
-}
-.v77-field input{
-  min-height:38px;
-  border-radius:12px;
-  border:1px solid rgba(255,255,255,.16);
-  background:rgba(2,6,23,.52);
-  color:#fff;
-  padding:0 10px;
-  font:900 13px var(--f-mono,monospace);
-}
-@media(max-width:760px){
-  .v77-prio-legend{grid-template-columns:1fr 1fr;}
-  .v77-prio-control{width:100%;margin-left:0;margin-top:7px;justify-content:space-between;}
-  .v77-prio-level{flex:1;}
-  .v77-chess-grid{grid-template-columns:1fr;}
-  .v77-overdue-item{grid-template-columns:1fr;align-items:start;}
-}
-</style>
-
-
-<style id="v78-grade-system-style">
-.v78-grade-panel{display:block!important;margin:12px 0 18px;border:1px solid rgba(251,146,60,.28);border-radius:20px;background:radial-gradient(circle at top left,rgba(251,146,60,.18),transparent 38%),linear-gradient(135deg,rgba(15,23,42,.92),rgba(2,6,23,.82));padding:14px;box-shadow:0 18px 45px rgba(0,0,0,.28)}
-.v78-grade-top{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center}.v78-grade-emblem{width:52px;height:52px;display:grid;place-items:center;border-radius:17px;border:1px solid rgba(255,255,255,.16);background:linear-gradient(135deg,rgba(251,146,60,.30),rgba(99,102,241,.20));font-size:27px}.v78-grade-title{margin:0;font:900 15px var(--f-sans,system-ui);color:var(--text,#fff)}.v78-grade-sub{margin-top:3px;font:750 11.5px/1.45 var(--f-sans,system-ui);color:var(--text-dim,#cbd5e1)}.v78-grade-rank{display:grid;gap:3px;min-width:92px;text-align:right}.v78-grade-rank b{font:950 18px var(--f-mono,monospace);color:#fed7aa}.v78-grade-rank span{font:900 9.5px var(--f-sans,system-ui);color:#cbd5e1;text-transform:uppercase;letter-spacing:.08em}.v78-progress-wrap{margin-top:12px;height:13px;border-radius:999px;overflow:hidden;border:1px solid rgba(255,255,255,.12);background:rgba(2,6,23,.65)}.v78-progress-bar{height:100%;border-radius:999px;background:linear-gradient(90deg,#fb923c,#facc15,#22c55e);transition:width .25s ease}.v78-grade-meta{display:flex;justify-content:space-between;gap:10px;margin-top:7px;font:800 10.5px var(--f-sans,system-ui);color:#cbd5e1}.v78-grade-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:12px}.v78-grade-stat{border:1px solid rgba(255,255,255,.11);border-radius:14px;padding:9px;background:rgba(2,6,23,.36)}.v78-grade-stat span{display:block;font:900 9px var(--f-sans,system-ui);text-transform:uppercase;letter-spacing:.08em;color:#94a3b8}.v78-grade-stat b{display:block;margin-top:4px;font:950 14px var(--f-mono,monospace);color:#fff}.v78-grade-actions{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:12px}.v78-grade-btn{min-height:40px;border-radius:13px;border:1px solid rgba(148,163,184,.22);background:rgba(15,23,42,.72);color:#e5e7eb;font:900 10.5px var(--f-sans,system-ui);cursor:pointer}.v78-grade-btn.done{border-color:rgba(34,197,94,.45);background:rgba(34,197,94,.18);color:#bbf7d0}.v78-roadmap{display:grid;gap:7px;margin-top:12px}.v78-step{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;border:1px solid rgba(255,255,255,.10);border-radius:13px;padding:8px;background:rgba(255,255,255,.035)}.v78-step-dot{width:23px;height:23px;display:grid;place-items:center;border-radius:999px;border:1px solid rgba(255,255,255,.14);font:950 10px var(--f-mono,monospace)}.v78-step.done .v78-step-dot{border-color:rgba(34,197,94,.45);background:rgba(34,197,94,.18);color:#bbf7d0}.v78-step-name{font:850 11.5px var(--f-sans,system-ui);color:#fff}.v78-step-sub{font:700 10px/1.35 var(--f-sans,system-ui);color:#94a3b8}.v78-step-tag{font:900 9px var(--f-sans,system-ui);text-transform:uppercase;letter-spacing:.08em;color:#fed7aa}.v78-grade-panel[data-domain="epfc"]{border-color:rgba(16,185,129,.30)}.v78-grade-panel[data-domain="code"]{border-color:rgba(99,102,241,.32)}.v78-grade-panel[data-domain="trading"]{border-color:rgba(56,189,248,.32)}.v78-grade-panel[data-domain="nl"]{border-color:rgba(59,130,246,.34)}.v78-grade-panel[data-domain="chess"]{border-color:rgba(168,85,247,.34)}
-@media(max-width:760px){.v78-grade-top{grid-template-columns:auto 1fr}.v78-grade-rank{text-align:left;grid-column:1/-1;grid-template-columns:auto auto;align-items:end;justify-content:space-between}.v78-grade-grid{grid-template-columns:1fr}.v78-grade-actions{grid-template-columns:1fr 1fr}.v78-step{grid-template-columns:auto 1fr}.v78-step-tag{grid-column:2}}
-</style>
-
-
-<style id="v79-freeze-guard-style">
-/* V79 Freeze Guard — aucun rerender global après clic */
-#v79-freeze-badge{
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-  margin:8px 0 10px;
-  padding:7px 10px;
-  border-radius:999px;
-  border:1px solid rgba(34,197,94,.35);
-  background:rgba(34,197,94,.12);
-  color:#bbf7d0;
-  font:900 10px var(--f-mono,monospace);
-  letter-spacing:.06em;
-  text-transform:uppercase;
-}
-.v79-grade-panel{
-  display:block!important;
-  margin:12px 0 18px;
-  border:1px solid rgba(251,146,60,.28);
-  border-radius:20px;
-  background:linear-gradient(135deg,rgba(15,23,42,.94),rgba(2,6,23,.86));
-  padding:14px;
-}
-.v79-grade-top{
-  display:grid;
-  grid-template-columns:auto 1fr auto;
-  gap:12px;
-  align-items:center;
-}
-.v79-emblem{
-  width:50px;height:50px;display:grid;place-items:center;
-  border-radius:16px;
-  border:1px solid rgba(255,255,255,.16);
-  background:rgba(251,146,60,.15);
-  font-size:26px;
-}
-.v79-title{margin:0;font:900 15px var(--f-sans,system-ui);color:#fff}
-.v79-sub{margin-top:3px;font:750 11.5px/1.45 var(--f-sans,system-ui);color:#cbd5e1}
-.v79-rank{text-align:right}
-.v79-rank b{display:block;font:950 18px var(--f-mono,monospace);color:#fed7aa}
-.v79-rank span{font:900 9px var(--f-sans,system-ui);text-transform:uppercase;letter-spacing:.08em;color:#94a3b8}
-.v79-bar-wrap{margin-top:12px;height:13px;border-radius:999px;overflow:hidden;border:1px solid rgba(255,255,255,.12);background:rgba(2,6,23,.65)}
-.v79-bar{height:100%;width:0%;border-radius:999px;background:linear-gradient(90deg,#fb923c,#facc15,#22c55e)}
-.v79-meta{display:flex;justify-content:space-between;gap:10px;margin-top:7px;font:800 10.5px var(--f-sans,system-ui);color:#cbd5e1}
-.v79-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:12px}
-.v79-stat{border:1px solid rgba(255,255,255,.11);border-radius:14px;padding:9px;background:rgba(2,6,23,.36)}
-.v79-stat span{display:block;font:900 9px var(--f-sans,system-ui);text-transform:uppercase;letter-spacing:.08em;color:#94a3b8}
-.v79-stat b{display:block;margin-top:4px;font:950 14px var(--f-mono,monospace);color:#fff}
-.v79-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}
-.v79-btn{
-  min-height:40px;border-radius:13px;border:1px solid rgba(148,163,184,.22);
-  background:rgba(15,23,42,.72);color:#e5e7eb;font:900 10.5px var(--f-sans,system-ui);
-}
-.v79-btn.done{border-color:rgba(34,197,94,.45);background:rgba(34,197,94,.18);color:#bbf7d0}
-.v79-road{display:grid;gap:7px;margin-top:12px}
-.v79-step{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;border:1px solid rgba(255,255,255,.10);border-radius:13px;padding:8px;background:rgba(255,255,255,.035)}
-.v79-step-dot{width:23px;height:23px;display:grid;place-items:center;border-radius:999px;border:1px solid rgba(255,255,255,.14);font:950 10px var(--f-mono,monospace)}
-.v79-step.done .v79-step-dot{border-color:rgba(34,197,94,.45);background:rgba(34,197,94,.18);color:#bbf7d0}
-.v79-step-name{font:850 11.5px var(--f-sans,system-ui);color:#fff}
-.v79-step-sub{font:700 10px/1.35 var(--f-sans,system-ui);color:#94a3b8}
-.v79-step-tag{font:900 9px var(--f-sans,system-ui);text-transform:uppercase;letter-spacing:.08em;color:#fed7aa}
-@media(max-width:760px){
-  .v79-grade-top{grid-template-columns:auto 1fr}
-  .v79-rank{grid-column:1 / -1;text-align:left;display:flex;justify-content:space-between;align-items:end}
-  .v79-grid{grid-template-columns:1fr}
-  .v79-actions{grid-template-columns:1fr}
-  .v79-step{grid-template-columns:auto 1fr}
-  .v79-step-tag{grid-column:2}
-}
-</style>
-
-
-<style id="v80-epfc-display-fix-style">
-/* V80 — correction affichage priorités + EPFC informatique */
-#v80-fix-badge{
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-  margin:8px 0 10px;
-  padding:7px 10px;
-  border-radius:999px;
-  border:1px solid rgba(34,197,94,.38);
-  background:rgba(34,197,94,.12);
-  color:#bbf7d0;
-  font:900 10px var(--f-mono,monospace);
-  text-transform:uppercase;
-  letter-spacing:.06em;
-}
-
-/* Priorités : anti texte vertical / anti compression mobile */
-#prio-list{
-  display:grid!important;
-  gap:10px!important;
-  min-width:0!important;
-}
-#prio-list .prio-item{
-  display:grid!important;
-  grid-template-columns:minmax(0,1fr)!important;
-  grid-auto-flow:row!important;
-  gap:8px!important;
-  width:100%!important;
-  min-width:0!important;
-  max-width:100%!important;
-  padding:14px 12px 14px 22px!important;
-  align-items:start!important;
-  writing-mode:horizontal-tb!important;
-  text-orientation:mixed!important;
-  word-break:normal!important;
-  overflow-wrap:normal!important;
-  white-space:normal!important;
-}
-#prio-list .prio-item *,
-#prio-list .prio-item{
-  writing-mode:horizontal-tb!important;
-  text-orientation:mixed!important;
-}
-#prio-list .prio-item .prio-text,
-#prio-list .prio-item [contenteditable],
-#prio-list .prio-item .prio-title,
-#prio-list .prio-item .prio-label,
-#prio-list .prio-item label,
-#prio-list .prio-item p,
-#prio-list .prio-item b,
-#prio-list .prio-item strong{
-  display:block!important;
-  min-width:0!important;
-  max-width:100%!important;
-  width:auto!important;
-  white-space:normal!important;
-  word-break:normal!important;
-  overflow-wrap:anywhere!important;
-  line-height:1.35!important;
-  letter-spacing:normal!important;
-}
-
-/* Les contrôles niveau/couleur ne doivent plus manger la largeur du texte */
-#prio-list .v77-prio-control{
-  display:flex!important;
-  flex-direction:row!important;
-  flex-wrap:wrap!important;
-  align-items:center!important;
-  justify-content:flex-start!important;
-  gap:8px!important;
-  width:100%!important;
-  max-width:100%!important;
-  margin:6px 0 0!important;
-  grid-column:1 / -1!important;
-}
-#prio-list .v77-prio-level{
-  width:auto!important;
-  min-width:132px!important;
-  max-width:170px!important;
-  flex:0 0 auto!important;
-}
-#prio-list .v77-level-badge{
-  flex:0 0 auto!important;
-}
-
-/* Ancien picker à points : trop large sur mobile, on le masque. Le select C1/P1/P2/P3 reste. */
-@media(max-width:760px){
-  #prio-list .prio-picker-v35{
-    display:none!important;
-  }
-  #prio-list .prio-del,
-  #prio-list [data-act="del"]{
-    position:absolute!important;
-    right:10px!important;
-    top:10px!important;
-  }
-  #prio-list .v77-prio-control{
-    padding-right:38px!important;
-  }
-}
-
-/* EPFC : masquer les anciens panneaux EPFC assurance/génériques */
-#v78-grade-epfc,
-#v79-grade-epfc{
-  display:none!important;
-}
-
-/* Panneau EPFC informatique */
-#v80-epfc-panel{
-  display:block!important;
-  margin:12px 0 18px;
-  border:1px solid rgba(16,185,129,.32);
-  border-radius:20px;
-  background:
-    radial-gradient(circle at top left,rgba(16,185,129,.16),transparent 38%),
-    linear-gradient(135deg,rgba(15,23,42,.94),rgba(2,6,23,.86));
-  padding:14px;
-}
-.v80-epfc-top{
-  display:grid;
-  grid-template-columns:auto 1fr auto;
-  gap:12px;
-  align-items:center;
-}
-.v80-epfc-icon{
-  width:52px;
-  height:52px;
-  display:grid;
-  place-items:center;
-  border-radius:17px;
-  border:1px solid rgba(255,255,255,.16);
-  background:rgba(16,185,129,.16);
-  font-size:27px;
-}
-.v80-epfc-title{
-  margin:0;
-  font:900 15px var(--f-sans,system-ui);
-  color:#fff;
-}
-.v80-epfc-sub{
-  margin-top:4px;
-  font:750 11.5px/1.45 var(--f-sans,system-ui);
-  color:#cbd5e1;
-}
-.v80-epfc-rank{
-  text-align:right;
-}
-.v80-epfc-rank b{
-  display:block;
-  font:950 18px var(--f-mono,monospace);
-  color:#bbf7d0;
-}
-.v80-epfc-rank span{
-  font:900 9px var(--f-sans,system-ui);
-  color:#94a3b8;
-  text-transform:uppercase;
-  letter-spacing:.08em;
-}
-.v80-bar-wrap{
-  margin-top:12px;
-  height:13px;
-  border-radius:999px;
-  overflow:hidden;
-  border:1px solid rgba(255,255,255,.12);
-  background:rgba(2,6,23,.65);
-}
-.v80-bar{
-  height:100%;
-  width:0%;
-  border-radius:999px;
-  background:linear-gradient(90deg,#22c55e,#facc15,#fb923c);
-}
-.v80-epfc-meta{
-  display:flex;
-  justify-content:space-between;
-  gap:10px;
-  margin-top:7px;
-  font:800 10.5px var(--f-sans,system-ui);
-  color:#cbd5e1;
-}
-.v80-ue-grid{
-  display:grid;
-  grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:9px;
-  margin-top:13px;
-}
-.v80-ue-card{
-  border:1px solid rgba(255,255,255,.12);
-  border-radius:15px;
-  background:rgba(2,6,23,.38);
-  padding:10px;
-}
-.v80-ue-card.done{
-  border-color:rgba(34,197,94,.45);
-  background:rgba(34,197,94,.12);
-}
-.v80-ue-head{
-  display:flex;
-  justify-content:space-between;
-  gap:8px;
-  align-items:flex-start;
-}
-.v80-ue-code{
-  font:950 11px var(--f-mono,monospace);
-  color:#fed7aa;
-}
-.v80-ue-ects{
-  font:900 10px var(--f-sans,system-ui);
-  color:#bbf7d0;
-  white-space:nowrap;
-}
-.v80-ue-name{
-  margin-top:5px;
-  font:850 12px/1.35 var(--f-sans,system-ui);
-  color:#fff;
-}
-.v80-ue-sub{
-  margin-top:5px;
-  font:700 10px/1.35 var(--f-sans,system-ui);
-  color:#94a3b8;
-}
-.v80-ue-actions{
-  display:grid;
-  grid-template-columns:repeat(3,minmax(0,1fr));
-  gap:6px;
-  margin-top:9px;
-}
-.v80-ue-btn{
-  min-height:32px;
-  border-radius:10px;
-  border:1px solid rgba(148,163,184,.22);
-  background:rgba(15,23,42,.72);
-  color:#e5e7eb;
-  font:900 9px var(--f-sans,system-ui);
-}
-.v80-ue-btn.done{
-  border-color:rgba(34,197,94,.45);
-  background:rgba(34,197,94,.18);
-  color:#bbf7d0;
-}
-.v80-exam-box{
-  margin-top:13px;
-  border:1px solid rgba(251,146,60,.28);
-  border-radius:16px;
-  padding:11px;
-  background:rgba(251,146,60,.08);
-}
-.v80-exam-title{
-  font:950 12px var(--f-sans,system-ui);
-  color:#fed7aa;
-  text-transform:uppercase;
-  letter-spacing:.08em;
-}
-.v80-exam-list{
-  margin:8px 0 0;
-  padding-left:18px;
-  font:750 11.5px/1.55 var(--f-sans,system-ui);
-  color:#e5e7eb;
-}
-@media(max-width:760px){
-  .v80-epfc-top{
-    grid-template-columns:auto 1fr;
-  }
-  .v80-epfc-rank{
-    grid-column:1 / -1;
-    text-align:left;
-    display:flex;
-    justify-content:space-between;
-    align-items:end;
-  }
-  .v80-ue-grid{
-    grid-template-columns:1fr;
-  }
-  .v80-ue-actions{
-    grid-template-columns:1fr;
-  }
-}
-</style>
 
 <script src="/assets/core/store.js"></script>
 <script src="/assets/core/router.js"></script>
@@ -879,6 +217,7 @@ body.ud-v54-clean .tl-desc{overflow-wrap:anywhere;word-break:normal;}
 <div class="brand-text">
 <div class="brand-title">Protocole <em class="serif">Ultimate</em></div>
 <div class="brand-sub" id="brand-sub">Chargement…</div>
+<div style="font:900 10px ui-monospace,monospace;color:#22c55e;margin-top:2px;letter-spacing:.04em">v2026-05-18-v4 · surgical-cleanup · ✓</div>
 </div>
 </div>
 <div class="masthead-meta" id="meta">
@@ -892,8 +231,6 @@ body.ud-v54-clean .tl-desc{overflow-wrap:anywhere;word-break:normal;}
 <div class="tab" data-tab="stats">📊 Stats</div>
 <div class="tab" data-tab="routine">📅 Routine</div>
 <div class="tab" data-tab="sport">💪 Sport</div>
-<div class="tab" data-tab="flex" style="display:none">🧘 Souplesse</div>
-<div class="tab" data-tab="nutrition">🥩 Nutrition</div>
 <div class="tab" data-tab="epfc">🎓 EPFC</div>
 <div class="tab" data-tab="code">🧪 Exercices</div>
 <div class="tab" data-tab="ia">🤖 IA</div>
@@ -902,7 +239,8 @@ body.ud-v54-clean .tl-desc{overflow-wrap:anywhere;word-break:normal;}
 <div class="tab" data-tab="chess">♟️ Échecs</div>
 <div class="tab" data-tab="finance">💰 Finance</div>
 <div class="tab" data-tab="plan">📋 Plan</div>
-<div class="tab" data-tab="trading">🔌 Élec/IoT</div>
+<div class="tab" data-tab="repair">🔧 Réparation</div>
+<div class="tab" data-tab="trading">🔌 IoT</div>
 <div class="tab" data-tab="settings">⚙️</div>
 </nav>
 </div>
@@ -924,27 +262,6 @@ body.ud-v54-clean .tl-desc{overflow-wrap:anywhere;word-break:normal;}
 
 
 
-<!-- V76 VISIBLE FIX · HOME MODULES ABOVE MISSION -->
-<div class="v76-top-modules" id="v75-home-modules" aria-label="Pilotage du jour">
-  <div class="v75-pre-rdv" id="v75-pre-rdv">🟣 Alerte pré-RDV : aucune tâche dans les 30 prochaines minutes.</div>
-  <div class="v76-grid">
-    <div id="score-du-jour" class="v75-force-card v76-card-primary" aria-live="polite">
-      <h3>Score du jour</h3>
-      <div class="v75-big-score" id="v75-score-value">—</div>
-      <div class="v75-sub" id="v75-score-detail">Tâches + humeur + domaines + C7</div>
-    </div>
-    <div id="momentum-card" class="v75-force-card" aria-live="polite">
-      <h3>Momentum 7j</h3>
-      <div class="v75-bar-wrap"><div class="v75-bar" id="momentum-bar"></div></div>
-      <div class="v75-sub" id="momentum-label">Momentum 7j : —/100</div>
-    </div>
-    <div id="morning-card" class="v75-force-card" aria-live="polite">
-      <h3>Morning card</h3>
-      <div id="v75-morning-body" class="v75-sub">Chargement sommeil + tâches du jour…</div>
-    </div>
-  </div>
-</div>
-<!-- /V76 VISIBLE FIX · HOME MODULES ABOVE MISSION -->
 
 <div class="next-action" id="next-action" aria-live="polite">
   <div class="na-head">
@@ -1437,24 +754,22 @@ Bachelor dev en septembre. Bilingue NL+FR d'ici 2 ans. Corps robuste malgré la 
 </div>
 
 
-<!-- V75 FORCE FIX · STATS MODULES -->
-<div class="v76-section-label" id="v75-stats-badge">Pilotage avancé · 90j / 7j / C7 / tâches</div>
-<div class="v75-stats-grid" id="v75-stats-modules">
-  <div class="chart-card v75-force-card">
+<div id="v75-stats-modules">
+  <div class="chart-card">
     <div class="chart-head">
       <span class="chart-title">Heatmap 90j · <em>domaines</em></span>
       <span class="chart-legend" id="v75-heatmap-meta">—</span>
     </div>
     <div id="heatmap-90d" aria-label="Heatmap activité 90 jours"></div>
   </div>
-  <div class="chart-card v75-force-card">
+  <div class="chart-card">
     <div class="chart-head">
       <span class="chart-title">Streaks 🔥 · <em>par domaine</em></span>
       <span class="chart-legend">jours consécutifs</span>
     </div>
     <div id="domain-streaks-v39"></div>
   </div>
-  <div class="chart-card v75-force-card">
+  <div class="chart-card">
     <div class="chart-head">
       <span class="chart-title">Radar 7j · <em>cohérence</em></span>
       <span class="chart-legend">SVG fallback, Chart.js non obligatoire</span>
@@ -1464,7 +779,7 @@ Bachelor dev en septembre. Bilingue NL+FR d'ici 2 ans. Corps robuste malgré la 
       <div id="radar-fallback" class="v75-chart-fallback"></div>
     </div>
   </div>
-  <div class="chart-card v75-force-card">
+  <div class="chart-card">
     <div class="chart-head">
       <span class="chart-title">Douleur C7 · <em>30j</em></span>
       <span class="chart-legend">0 aucune · 10 critique</span>
@@ -1474,16 +789,11 @@ Bachelor dev en septembre. Bilingue NL+FR d'ici 2 ans. Corps robuste malgré la 
       <div id="c7-fallback" class="v75-chart-fallback"></div>
     </div>
   </div>
-  <div id="task-history-card" class="chart-card v75-force-card">
+  <div id="task-history-card" class="chart-card">
     <h3>Historique tâches · 10j</h3>
-    <div id="task-history-list" class="v75-sub">Chargement…</div>
-  </div>
-  <div id="v75-selftest-card" class="chart-card v75-force-card">
-    <h3>Contrôle modules</h3>
-    <div id="v75-selftest-list"></div>
+    <div id="task-history-list" class="">Chargement…</div>
   </div>
 </div>
-<!-- /V75 FORCE FIX · STATS MODULES -->
 
 <div class="stats-cards">
 <div class="stats-card accent"><div class="stats-card-lbl">Streak actuel</div><div class="stats-card-val" id="sv-streak">0</div><div class="stats-card-sub">jours consécutifs</div></div>
@@ -1725,6 +1035,61 @@ Si t'as de la fièvre, douleurs fortes, ou t'es vraiment KO : <strong>protocole 
 <div class="callout callout-rule"><span class="ruletag">Réveil</span>Pas de snooze. Alarme → pieds au sol. Tâche la plus dure en premier. <strong>Jamais 2 jours ratés d'affilée.</strong></div>
 <div class="callout callout-rule"><span class="ruletag">Journal</span>Soir 2 min : 3 wins + 1 amélioration. <strong>Weekly review dim 15 min.</strong> Zéro alcool en semaine.</div>
 
+
+<div class="card" style="margin-top:20px">
+<h2 class="section-title flame" style="margin-bottom:12px">🥩 Protéines + 🚰 Eau · <em>tracker du jour</em></h2>
+<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+  <input type="number" id="nutr-prot-input" min="0" max="400" step="5" placeholder="g protéines" inputmode="numeric"
+    style="flex:1;min-width:130px;min-height:44px;border-radius:12px;border:1px solid rgba(148,163,184,.35);background:#020617;color:#e5e7eb;padding:8px 12px;font:800 14px system-ui">
+  <button type="button" id="nutr-prot-save"
+    style="min-height:44px;padding:8px 16px;border-radius:12px;border:none;background:linear-gradient(135deg,#fb923c,#f59e0b);color:#0a0a10;font:900 13px system-ui;cursor:pointer">Enregistrer</button>
+</div>
+<div id="nutr-prot-bar-wrap" style="height:8px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.08);margin-bottom:4px">
+  <div id="nutr-prot-bar" style="height:100%;border-radius:999px;background:linear-gradient(90deg,#fb923c,#f59e0b);transition:width .3s;width:0%"></div>
+</div>
+<div id="nutr-prot-label" style="font:800 11px var(--f-mono,monospace);color:#94a3b8;margin-bottom:12px">0 / 180g</div>
+<div id="nutr-water-cups" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px"></div>
+<div id="nutr-water-bar-wrap" style="height:8px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.08);margin-bottom:4px">
+  <div id="nutr-water-bar" style="height:100%;border-radius:999px;background:linear-gradient(90deg,#38bdf8,#818cf8);transition:width .3s;width:0%"></div>
+</div>
+<div id="nutr-water-label" style="font:800 11px var(--f-mono,monospace);color:#94a3b8">0 / 12 verres (3L)</div>
+</div>
+<script>
+(function(){
+  if (window.__nutrTrackerBound) return;
+  window.__nutrTrackerBound = true;
+  const todayKey = () => new Date().toISOString().slice(0,10);
+  const NS2 = 'dashv2_nutr_';
+  const getD = () => { try { return JSON.parse(localStorage.getItem(NS2 + todayKey()) || '{}'); } catch(_){ return {}; } };
+  const saveD = d => { try { localStorage.setItem(NS2 + todayKey(), JSON.stringify(d)); } catch(_){} };
+  function renderProt(){
+    const d = getD(), val = d.prot || 0, pct = Math.min(100, Math.round(val/180*100));
+    const bar = document.getElementById('nutr-prot-bar'), lbl = document.getElementById('nutr-prot-label'), inp = document.getElementById('nutr-prot-input');
+    if (bar) bar.style.width = pct + '%';
+    if (lbl) lbl.textContent = val + ' / 180g (' + pct + '%)';
+    if (inp && document.activeElement !== inp) inp.value = val || '';
+  }
+  function renderWater(){
+    const d = getD(), cups = d.water || 0, pct = Math.min(100, Math.round(cups/12*100));
+    const wrap = document.getElementById('nutr-water-cups'), bar = document.getElementById('nutr-water-bar'), lbl = document.getElementById('nutr-water-label');
+    if (wrap){ wrap.innerHTML = '';
+      for(let i=0;i<12;i++){const b=document.createElement('button');b.type='button';b.textContent='💧';b.style.cssText='min-width:36px;min-height:36px;border-radius:10px;border:1px solid '+(i<cups?'rgba(56,189,248,.6)':'rgba(148,163,184,.2)')+';background:'+(i<cups?'rgba(56,189,248,.12)':'transparent')+';font-size:16px;cursor:pointer';b.dataset.cup=i+1;wrap.appendChild(b);}
+    }
+    if (bar) bar.style.width = pct + '%';
+    if (lbl) lbl.textContent = cups + ' / 12 verres (3L)';
+  }
+  function init(){ renderProt(); renderWater(); }
+  document.addEventListener('click', e => {
+    const save = e.target.closest('#nutr-prot-save');
+    if(save){ const d=getD(); const inp=document.getElementById('nutr-prot-input'); d.prot=parseInt(inp&&inp.value)||0; saveD(d); renderProt(); return; }
+    const cup = e.target.closest('[data-cup]');
+    if(cup){ const d=getD(); d.water=parseInt(cup.dataset.cup); saveD(d); renderWater(); }
+  }, true);
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init, {once:true});
+  else init();
+  setTimeout(init, 600);
+})();
+</script>
 </section>
 
 
@@ -1886,315 +1251,9 @@ Si t'as de la fièvre, douleurs fortes, ou t'es vraiment KO : <strong>protocole 
 </section>
 
 
-<section class="page" id="p-flex">
-<div class="page-kicker">Souplesse · Mobilité</div>
-<h1 class="page-title">Du sol <em>au grand écart</em></h1>
-<p class="page-lead">Tu ne touches pas tes orteils. C'est OK — 90 % des hommes sédentaires sont là. La souplesse n'est <em>pas génétique</em>. En 12-18 mois de travail quotidien, tu peux atteindre le grand écart. En 24 mois, une souplesse que 99 % des gens n'auront jamais.</p>
-
-<div class="callout callout-note">
-<strong>🧬 La science</strong> — Le stretch ne « rallonge » pas tes muscles. Il augmente ta <strong>tolérance à l'étirement</strong> — ton système nerveux accepte d'aller plus loin. C'est pour ça que la régularité bat l'intensité : <em>15 min/jour &gt; 1h le dimanche</em>. Ne force JAMAIS dans la douleur. Inconfort 5-6/10 = bien. 7+/10 = blessure.
-</div>
-
-<h2 class="section-title violet">Ton <em>tracker</em> · mesures du mois</h2>
-<div class="flex-tracker">
-<h4>Entre tes mesures chaque 1er du mois. Prends aussi une photo.</h4>
-<div class="ft-row"><div class="ft-lbl">Forward fold · distance doigts-sol (cm, - si au-dessus)</div><input type="number" class="ft-input" data-m="fold" placeholder="—" inputmode="numeric" pattern="[0-9.]*"></div>
-<div class="ft-row"><div class="ft-lbl">Pike assis · distance poitrine-cuisses (cm)</div><input type="number" class="ft-input" data-m="pike" placeholder="—" inputmode="numeric" pattern="[0-9.]*"></div>
-<div class="ft-row"><div class="ft-lbl">Straddle · angle ouverture (°)</div><input type="number" class="ft-input" data-m="straddle" placeholder="—" inputmode="numeric" pattern="[0-9.]*"></div>
-<div class="ft-row"><div class="ft-lbl">Front split jambe D · bassin-sol (cm)</div><input type="number" class="ft-input" data-m="splitD" placeholder="—" inputmode="numeric" pattern="[0-9.]*"></div>
-<div class="ft-row"><div class="ft-lbl">Front split jambe G · bassin-sol (cm)</div><input type="number" class="ft-input" data-m="splitG" placeholder="—" inputmode="numeric" pattern="[0-9.]*"></div>
-<div class="ft-row"><div class="ft-lbl">Middle split · bassin-sol (cm)</div><input type="number" class="ft-input" data-m="middle" placeholder="—" inputmode="numeric" pattern="[0-9.]*"></div>
-<div class="ft-row"><div class="ft-lbl">Deep squat · temps tenu (sec, talons au sol)</div><input type="number" class="ft-input" data-m="squat" placeholder="—" inputmode="numeric" pattern="[0-9.]*"></div>
-<div class="ft-row"><div class="ft-lbl">Pont bras tendus ? (1=oui, 0=bras pliés, -1=non)</div><input type="number" class="ft-input" data-m="bridge" placeholder="—" inputmode="numeric" pattern="[0-9.]*"></div>
-</div>
-
-<h2 class="section-title jade">Niveau 0 · <em>Déverrouiller le corps</em></h2>
-<div class="level-card l0">
-<div class="level-head"><span class="level-title">Où tu es</span><span class="level-dur">6 SEMAINES</span></div>
-<div class="level-desc">Forward fold = doigts à +15-25cm du sol. Squat complet impossible (talons décollent). Hanches verrouillées. <strong>C'est normal.</strong></div>
-
-<div class="subsection-title jade" style="margin-top:10px">🎯 Milestones niveau 0</div>
-<ul class="dlist">
-<li><span class="k">Forward fold : doigts touchent les chevilles</span><span class="v pos">~5cm du sol</span></li>
-<li><span class="k">Deep squat tenu 60s (livre sous talons OK)</span><span class="v pos">Stable</span></li>
-<li><span class="k">Papillon : genoux à 25-30cm du sol</span><span class="v pos">Ouverture</span></li>
-<li><span class="k">Fente basse 45s sans douleur (chaque jambe)</span><span class="v pos">Hip flexors</span></li>
-<li><span class="k">Child's pose confortable + pigeon basique 30s</span><span class="v pos">Hanches</span></li>
-<li><span class="k">Neck + shoulder ROM complète, pas de craquements</span><span class="v pos">Haut corps</span></li>
-</ul>
-</div>
-
-<div class="card">
-<div class="card-title"><h3>📋 Routine niveau 0 · 15 min/jour</h3></div>
-<div class="subsection-title" style="margin-top:6px;color:var(--text-dim);font-size:11.5px"><strong>Bas du corps</strong> (10 min) — chaque posture 30-45s, respirer profondément</div>
-<ul class="dlist">
-<li><span class="k">Forward fold debout (jambes tendues, relâcher la tête, genoux pliés si besoin)</span><span class="v">45s</span></li>
-<li><span class="k">Fente basse droite (genou arrière au sol, pousser hanches en avant)</span><span class="v">45s</span></li>
-<li><span class="k">Fente basse gauche</span><span class="v">45s</span></li>
-<li><span class="k">Pigeon droit (si impossible : figure-4 sur le dos)</span><span class="v">45s</span></li>
-<li><span class="k">Pigeon gauche</span><span class="v">45s</span></li>
-<li><span class="k">Papillon assis (presser doucement les genoux vers le sol)</span><span class="v">60s</span></li>
-<li><span class="k">Deep squat hold (livre sous talons si besoin)</span><span class="v">60s</span></li>
-<li><span class="k">Calf stretch mur — chaque jambe</span><span class="v">30s ×2</span></li>
-</ul>
-<div class="subsection-title" style="margin-top:10px;color:var(--text-dim);font-size:11.5px"><strong>Haut du corps</strong> (3 min)</div>
-<ul class="dlist">
-<li><span class="k">Doorway chest stretch (encadrement, bras à 90°)</span><span class="v">30s ×2</span></li>
-<li><span class="k">Cross-body shoulder stretch — chaque bras</span><span class="v">20s ×2</span></li>
-<li><span class="k">Cat-Cow (4 pattes, alterner dos rond / creux)</span><span class="v">10 reps</span></li>
-<li><span class="k">Seated spinal twist — chaque côté</span><span class="v">30s ×2</span></li>
-</ul>
-<div class="subsection-title" style="margin-top:10px;color:var(--text-dim);font-size:11.5px"><strong>Mobilité</strong> (2 min)</div>
-<ul class="dlist">
-<li><span class="k">Ankle circles — chaque pied</span><span class="v">10 ×2</span></li>
-<li><span class="k">Hip circles (debout, grands cercles) — chaque sens</span><span class="v">10 ×2</span></li>
-<li><span class="k">Wrist circles + extensions (prévention si tu codes)</span><span class="v">10 ×2</span></li>
-</ul>
-</div>
-
-<h2 class="section-title blue">Niveau 1 · <em>Les fondations</em></h2>
-<div class="level-card l1">
-<div class="level-head"><span class="level-title">Prérequis · milestones N0 atteints</span><span class="level-dur">MOIS 2-3 · 20 MIN/J</span></div>
-<div class="level-desc">On passe à 20 min/jour + 30 min le dimanche. Le travail devient structuré.</div>
-<ul class="dlist">
-<li><span class="k">Forward fold : doigts touchent le SOL</span><span class="v pos">0 cm</span></li>
-<li><span class="k">Pike assis : mains attrapent les pieds (genoux tendus)</span><span class="v pos">Contact</span></li>
-<li><span class="k">Deep squat 3 min (talons au sol, sans support)</span><span class="v pos">Stable</span></li>
-<li><span class="k">Straddle assis : 110°+ d'ouverture</span><span class="v pos">Ouverture</span></li>
-<li><span class="k">Pigeon : poitrine touche presque le sol</span><span class="v pos">Profond</span></li>
-<li><span class="k">Lézard (lizard lunge) : stable sur les avant-bras</span><span class="v pos">Hanches</span></li>
-<li><span class="k">Half split 60s chaque jambe</span><span class="v pos">Ischio</span></li>
-<li><span class="k">Papillon : genoux à 15 cm du sol</span><span class="v pos">Adducteurs</span></li>
-</ul>
-</div>
-
-<div class="card">
-<div class="card-title"><h3>📋 Ajouts N1 · 20 min/j</h3></div>
-<ul class="dlist">
-<li><span class="k">Half split D (jambe avant tendue, genou arrière au sol, pencher)</span><span class="v">60s</span></li>
-<li><span class="k">Half split G</span><span class="v">60s</span></li>
-<li><span class="k">Lizard lunge D (fente profonde, mains puis avant-bras au sol)</span><span class="v">45s</span></li>
-<li><span class="k">Lizard lunge G</span><span class="v">45s</span></li>
-<li><span class="k">Straddle assis (pancake) — pencher en avant, mains loin</span><span class="v">60s</span></li>
-<li><span class="k">Pike assis — jambes devant, dos droit, attraper les pieds</span><span class="v">60s</span></li>
-<li><span class="k">Frog stretch (4 pattes, genoux écartés, hanches en arrière)</span><span class="v">60s</span></li>
-<li><span class="k">Chest opener (mains jointes derrière le dos, lever les bras)</span><span class="v">30s</span></li>
-<li><span class="k">Thread the needle — chaque côté</span><span class="v">30s ×2</span></li>
-</ul>
-</div>
-
-<h2 class="section-title violet">Niveau 2 · <em>Territoire intermédiaire</em></h2>
-<div class="level-card l2">
-<div class="level-head"><span class="level-title">Mois 4-6 · 25 min/j + 40 min dim</span><span class="level-dur">PNF ACTIF</span></div>
-<div class="level-desc">Paumes au sol en forward fold. On introduit le travail <strong>actif</strong> : PNF, contractions isométriques.</div>
-<ul class="dlist">
-<li><span class="k">Forward fold : paumes à PLAT au sol</span><span class="v pos">Complet</span></li>
-<li><span class="k">Pike assis : poitrine touche les cuisses</span><span class="v pos">Full pike</span></li>
-<li><span class="k">Straddle : 130°+ / pancake torse penché 45°</span><span class="v pos">Profond</span></li>
-<li><span class="k">Front split : bassin à 20-25 cm du sol (chaque jambe)</span><span class="v pos">En route</span></li>
-<li><span class="k">Middle split : bassin à 30 cm du sol</span><span class="v pos">En route</span></li>
-<li><span class="k">Pigeon complet : poitrine au sol</span><span class="v pos">Full pigeon</span></li>
-<li><span class="k">Deep squat 5 min</span><span class="v pos">Ancré</span></li>
-</ul>
-</div>
-
-<h2 class="section-title coral">Niveau 4 · <em>Élite</em></h2>
-<div class="level-card l4">
-<div class="level-head"><span class="level-title">Mois 12-18 · top 0.1%</span><span class="level-dur">GYMNASTE</span></div>
-<div class="level-desc">Front split complet les 2 côtés. Bridge bras tendus. Le niveau des danseurs, gymnastes, arts martiaux.</div>
-<ul class="dlist">
-<li><span class="k">Middle split COMPLET — bassin au sol</span><span class="v neg">LATÉRAL</span></li>
-<li><span class="k">Oversplit — pied surélevé sur bloc (au-delà de 180°)</span><span class="v neg">OVER</span></li>
-<li><span class="k">Standing split 180° (sans mur)</span><span class="v neg">Debout libre</span></li>
-<li><span class="k">Pont avec pieds proches des mains (scorpion bridge)</span><span class="v neg">Pont profond</span></li>
-<li><span class="k">Chest-to-floor pancake COMPLET</span><span class="v neg">Full pancake</span></li>
-<li><span class="k">Needle scale · attraper le pied au-dessus de la tête</span><span class="v neg">Extrême</span></li>
-<li><span class="k">Back ou front walkover (pont → debout)</span><span class="v neg">Gym</span></li>
-<li><span class="k">Deep squat 10 min continu</span><span class="v neg">Ancêtres</span></li>
-</ul>
-</div>
-
-<h2 class="section-title">Planning <em>hebdo</em></h2>
-<div class="card">
-<ul class="dlist">
-<li><span class="k"><strong>Lundi</strong> — hanches + ischios (front split focus)</span><span class="v">15-30 min</span></li>
-<li><span class="k"><strong>Mardi</strong> — haut du corps + colonne (pont, épaules, twist)</span><span class="v">15-30 min</span></li>
-<li><span class="k"><strong>Mercredi</strong> — adducteurs + middle split focus</span><span class="v">15-30 min</span></li>
-<li><span class="k"><strong>Jeudi</strong> — full body léger (toutes postures 30s)</span><span class="v">15-30 min</span></li>
-<li><span class="k"><strong>Vendredi</strong> — hanches + ischios (front split)</span><span class="v">15-30 min</span></li>
-<li><span class="k"><strong>Samedi</strong> — adducteurs + middle split</span><span class="v">15-30 min</span></li>
-<li><span class="k"><strong>Dimanche</strong> — SESSION LONGUE : tout le corps, PNF, loaded stretching</span><span class="v info">40-60 min</span></li>
-</ul>
-</div>
-
-<h2 class="section-title">⏰ Quand <em>dans la journée</em></h2>
-<div class="callout callout-note">
-<strong>Post-sport</strong> = le meilleur moment (muscles chauds). <strong>Le soir avant le coucher</strong> = 2ème meilleur (le corps se relâche + aide le sommeil). <strong>Le matin</strong> = le pire moment pour les gains (muscles froids + raides). Le stretch du matin dans ta routine = mobilité/réveil, <em>pas</em> progression.
-</div>
-
-<h2 class="section-title">🔧 Équipement</h2>
-<div class="card"><ul class="dlist">
-<li><span class="k">Blocs yoga ×2 (split assisté, bridge, support)</span><span class="v">~€12</span></li>
-<li><span class="k">Sangle/ceinture yoga (attraper les pieds, PNF assisté)</span><span class="v">~€8</span></li>
-<li><span class="k">Foam roller (récupération + IT band + auto-massage)</span><span class="v">~€15</span></li>
-<li><span class="k">Tapis fitness épais (genoux au sol = confort)</span><span class="v">~€20</span></li>
-<li><span class="k"><strong>Total une fois</strong></span><span class="v pos"><strong>~€55 à vie</strong></span></li>
-</ul></div>
-
-<h2 class="section-title">📚 Ressources</h2>
-<div class="card"><ul class="dlist">
-<li><span class="k"><strong>Tom Merrick</strong> (YT) — follow-along 15-30min, split tutorials</span><span class="v pos">GRATUIT</span><div class="note">Le meilleur sur YouTube. Commence par "20 Minute Full Body Flexibility Routine" et "Front Split Tutorial".</div></li>
-<li><span class="k"><strong>Antranik</strong> — antranik.org/flexibility (programme complet gratuit)</span><span class="v pos">GRATUIT</span></li>
-<li><span class="k"><strong>r/flexibility</strong> — Starting Stretching + routines</span><span class="v pos">GRATUIT</span></li>
-<li><span class="k"><strong>Kit Laughlin</strong> — YT + livre Stretching & Flexibility (anatomique)</span><span class="v info">~€25</span></li>
-<li><span class="k"><strong>Emmet Louis</strong> — YT + programmes (handstand, contorsion)</span><span class="v info">€€</span></li>
-<li><span class="k"><strong>Thomas Kurz</strong> — Stretching Scientifically (référence PNF)</span><span class="v info">~€30</span></li>
-</ul></div>
-
-<h2 class="section-title coral">Règles <em>d'or</em></h2>
-<div class="card"><ul class="dlist">
-<li><span class="k">❌ Ne jamais rebondir (micro-déchirures)</span><span class="v neg">DANGER</span></li>
-<li><span class="k">❌ Ne jamais forcer au-delà de 6/10 de douleur</span><span class="v neg">DANGER</span></li>
-<li><span class="k">❌ Ne jamais étirer à froid pour progresser (matin = mobilité)</span><span class="v neg">INUTILE</span></li>
-<li><span class="k">❌ Ne jamais comparer (génétique joue sur la vitesse, pas la destination)</span><span class="v neg">PIÈGE</span></li>
-<li><span class="k">✅ Toujours respirer (expire = muscle se relâche)</span><span class="v pos">CLÉ</span></li>
-<li><span class="k">✅ Toujours étirer les 2 côtés (asymétries = blessures)</span><span class="v pos">CLÉ</span></li>
-<li><span class="k">✅ Toujours combiner souplesse + force</span><span class="v pos">CLÉ</span></li>
-<li><span class="k">✅ Constance &gt; intensité (15 min/j 6 mois &gt; 1h/sem 2 ans)</span><span class="v pos">RÈGLE #1</span></li>
-</ul></div>
-
-<div class="callout callout-tip">
-<strong>🎯 Projection réaliste depuis "je ne touche pas mes orteils"</strong><br><br>
-<strong>M 1-2</strong> · doigts aux chevilles → au sol. Deep squat tenu. Tu te sens déjà différent.<br>
-<strong>M 3-4</strong> · paumes au sol. Half split confortable. Pigeon profond. Les gens remarquent.<br>
-<strong>M 5-7</strong> · pike poitrine-cuisses. Straddle 130°. Front split à 15-20cm. Pont basique. <em>Top 5 %.</em><br>
-<strong>M 8-12</strong> · front split complet (1 côté). Middle split à 10cm. Bridge bras tendus. <em>Top 1 %.</em><br>
-<strong>M 12-18</strong> · front split 2 côtés + oversplit. Middle split complet. Pancake au sol. <em>Top 0.1 %.</em><br>
-<strong>18+ mois</strong> · contorsion. Chin stand. Standing split libre. <em>Autre personne.</em>
-</div>
-
-</section>
 
 
 
-<section class="page" id="p-nutrition">
-<div class="page-kicker">Carburant</div>
-<h1 class="page-title">Nutrition · <em>Protéines + Eau</em></h1>
-<p class="page-lead">Deux métriques qui comptent : protéines et hydratation. Le reste suit naturellement.</p>
-
-<div class="stats stats-2">
-<div class="stat"><div class="stat-v flame mono">180g</div><div class="stat-l">Protéines / jour</div></div>
-<div class="stat"><div class="stat-v blue mono">3L</div><div class="stat-l">Eau minimum</div></div>
-</div>
-
-<h2 class="section-title flame">🥩 Protéines · <em>tracker quotidien</em></h2>
-<div class="card">
-<div class="subsection-title" style="margin-bottom:8px;color:var(--text-dim);font-size:12px">Objectif : 180g/j · note ton total du jour</div>
-<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-  <input type="number" id="nutr-prot-input" min="0" max="400" step="5" placeholder="g protéines aujourd'hui" inputmode="numeric"
-    style="flex:1;min-width:140px;min-height:44px;border-radius:12px;border:1px solid rgba(148,163,184,.35);background:#020617;color:#e5e7eb;padding:8px 12px;font:800 16px system-ui">
-  <button type="button" id="nutr-prot-save"
-    style="min-height:44px;padding:8px 18px;border-radius:12px;border:none;background:linear-gradient(135deg,#fb923c,#f59e0b);color:#0a0a10;font:900 13px system-ui;cursor:pointer">
-    Enregistrer
-  </button>
-</div>
-<div id="nutr-prot-bar-wrap" style="margin-top:12px;height:10px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.08)">
-  <div id="nutr-prot-bar" style="height:100%;border-radius:999px;background:linear-gradient(90deg,#fb923c,#f59e0b);transition:width .3s ease;width:0%"></div>
-</div>
-<div id="nutr-prot-label" style="margin-top:6px;font:800 12px var(--f-mono,monospace);color:#94a3b8">0 / 180g</div>
-</div>
-
-<h2 class="section-title blue">🚰 Eau · <em>tracker quotidien</em></h2>
-<div class="card">
-<div class="subsection-title" style="margin-bottom:8px;color:var(--text-dim);font-size:12px">Objectif : 3L minimum · chaque bouton = 250ml</div>
-<div id="nutr-water-cups" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px"></div>
-<div id="nutr-water-bar-wrap" style="height:10px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.08)">
-  <div id="nutr-water-bar" style="height:100%;border-radius:999px;background:linear-gradient(90deg,#38bdf8,#818cf8);transition:width .3s ease;width:0%"></div>
-</div>
-<div id="nutr-water-label" style="margin-top:6px;font:800 12px var(--f-mono,monospace);color:#94a3b8">0 / 12 verres (3L)</div>
-</div>
-
-<script>
-(function(){
-  if (window.__nutrTrackerBound) return;
-  window.__nutrTrackerBound = true;
-  const todayKey = () => new Date().toISOString().slice(0,10);
-  const NS2 = 'dashv2_nutr_';
-  const getD = () => { try { return JSON.parse(localStorage.getItem(NS2 + todayKey()) || '{}'); } catch(_){ return {}; } };
-  const saveD = d => { try { localStorage.setItem(NS2 + todayKey(), JSON.stringify(d)); } catch(_){} };
-
-  function renderProt(){
-    const d = getD();
-    const val = d.prot || 0;
-    const pct = Math.min(100, Math.round(val / 180 * 100));
-    const bar = document.getElementById('nutr-prot-bar');
-    const lbl = document.getElementById('nutr-prot-label');
-    const inp = document.getElementById('nutr-prot-input');
-    if (bar) bar.style.width = pct + '%';
-    if (lbl) lbl.textContent = val + ' / 180g (' + pct + '%)';
-    if (inp && document.activeElement !== inp) inp.value = val || '';
-  }
-
-  function renderWater(){
-    const d = getD();
-    const cups = d.water || 0;
-    const target = 12;
-    const pct = Math.min(100, Math.round(cups / target * 100));
-    const bar = document.getElementById('nutr-water-bar');
-    const lbl = document.getElementById('nutr-water-label');
-    const wrap = document.getElementById('nutr-water-cups');
-    if (bar) bar.style.width = pct + '%';
-    if (lbl) lbl.textContent = cups + ' / ' + target + ' verres (' + (cups * 250 / 1000).toFixed(2) + 'L)';
-    if (wrap && !wrap._bound){
-      wrap._bound = true;
-      function buildCups(c){
-        wrap.innerHTML = '';
-        for (let i = 0; i < target; i++){
-          const btn = document.createElement('button');
-          btn.type = 'button';
-          btn.textContent = i < c ? '💧' : '○';
-          btn.title = (i+1) * 250 + 'ml';
-          btn.style.cssText = 'width:38px;height:38px;border-radius:10px;border:1px solid rgba(56,189,248,' + (i < c ? '.5' : '.2') + ');background:rgba(56,189,248,' + (i < c ? '.18' : '.04') + ');font-size:18px;cursor:pointer;';
-          (function(idx){ btn.onclick = function(){
-            var nd = getD(); nd.water = (idx < (nd.water||0)) ? idx : idx + 1;
-            saveD(nd); buildCups(nd.water || 0);
-            var b2 = document.getElementById('nutr-water-bar');
-            var l2 = document.getElementById('nutr-water-label');
-            var p2 = Math.min(100, Math.round((nd.water||0) / target * 100));
-            if(b2) b2.style.width = p2 + '%';
-            if(l2) l2.textContent = (nd.water||0) + ' / ' + target + ' verres (' + ((nd.water||0) * 250 / 1000).toFixed(2) + 'L)';
-          }; })(i);
-          wrap.appendChild(btn);
-        }
-      }
-      buildCups(cups);
-    }
-  }
-
-  function init(){
-    renderProt();
-    renderWater();
-    const saveBtn = document.getElementById('nutr-prot-save');
-    if (saveBtn && !saveBtn._bound){
-      saveBtn._bound = true;
-      saveBtn.addEventListener('click', function(){
-        const inp = document.getElementById('nutr-prot-input');
-        const val = parseInt(inp ? inp.value : 0) || 0;
-        const nd = getD(); nd.prot = val; saveD(nd); renderProt();
-      });
-    }
-  }
-
-  if (document.readyState !== 'loading') init();
-  else document.addEventListener('DOMContentLoaded', init);
-
-  document.addEventListener('click', function(e){
-    if (e.target && e.target.closest && e.target.closest('.tab[data-tab="nutrition"]')) setTimeout(function(){ window.__nutrTrackerBound = false; init(); }, 80);
-  }, true);
-})();
-</script>
-
-</section>
 
 
 <section class="page" id="p-epfc">
@@ -2678,6 +1737,83 @@ Si t'as de la fièvre, douleurs fortes, ou t'es vraiment KO : <strong>protocole 
 </ul></div>
 </section>
 
+<section class="page" id="p-repair" data-page="repair">
+<div class="page-kicker">Réparation électronique</div>
+<h1 class="page-title">🔧 Réparation · <em>diagnostic + composants</em></h1>
+<p class="page-lead">Multimètre, circuits, composants passifs. Séparé de l'IoT. Source principale : Geier + O'Reilly. Labs REP0–REP3 à compléter dans l'ordre.</p>
+
+<div class="callout callout-focus"><strong>Règle :</strong> chaque session produit une mesure réelle ou un composant identifié. Sans preuve physique, la session ne compte pas.</div>
+
+<h2 class="section-title flame">📚 Livres · <em>progression</em></h2>
+<div id="repair-books-host"></div>
+
+<h2 class="section-title jade">🧪 Labs REP0–REP3</h2>
+<div class="card"><ul class="dlist">
+  <li><span class="k"><strong>REP0</strong> — Sécurité + matériel</span><span class="v pos">actif</span><div class="note">EPI, composants de base, identification résistances, condensateurs. 1 séance.</div></li>
+  <li><span class="k"><strong>REP1</strong> — Mesures multimètre</span><span class="v pos">actif</span><div class="note">Tension, courant, résistance, continuité. Identifier pannes simples.</div></li>
+  <li><span class="k"><strong>REP2</strong> — Circuits passifs</span><span class="v warn">après REP1</span><div class="note">Diviseur de tension, filtre RC, loi d'Ohm en pratique. Breadboard obligatoire.</div></li>
+  <li><span class="k"><strong>REP3</strong> — Diagnostic composant</span><span class="v warn">après REP2</span><div class="note">Tester diodes, transistors, caps ESR. Circuit défectueux → identifier la panne.</div></li>
+</ul></div>
+
+<h2 class="section-title cyan">📖 Références O'Reilly</h2>
+<div class="card"><ul class="dlist">
+  <li><span class="k">Make: Electronics</span><span class="v info">Charles Platt</span><div class="note">Base absolue. Expériences hands-on. Lire en parallèle des labs.</div></li>
+  <li><span class="k">Troubleshooting Electronic Circuits</span><span class="v info">Homer Davidson</span><div class="note">Techniques de debug réel sur circuits.</div></li>
+  <li><span class="k">Passive Components for Circuit Design</span><span class="v">Ian Hickman</span><div class="note">Résistances, condensateurs, inductances. Référence technique.</div></li>
+</ul></div>
+
+<script>
+(function(){
+  'use strict';
+  if (window.__repairBooksInit) return;
+  window.__repairBooksInit = true;
+  var NS = 'dashv2_repair_';
+  var BOOKS = [
+    { id:'geier', title:'How to Diagnose and Fix Everything Electronic', author:'Michael Jay Geier', total:416, unit:'pages' },
+    { id:'platt', title:'Make: Electronics', author:'Charles Platt', total:325, unit:'pages' },
+    { id:'davidson', title:'Troubleshooting Electronic Circuits', author:'Homer Davidson', total:384, unit:'pages' },
+    { id:'hickman', title:'Passive Components for Circuit Design', author:'Ian Hickman', total:300, unit:'pages' }
+  ];
+  function get(id){ try{ return parseInt(localStorage.getItem(NS+id)||'0',10)||0; }catch(e){ return 0; } }
+  function set(id,v){ try{ localStorage.setItem(NS+id,String(v)); }catch(e){} }
+  function pct(done,total){ return Math.min(100,Math.round(done/Math.max(1,total)*100)); }
+  function render(){
+    var host = document.getElementById('repair-books-host');
+    if (!host) return;
+    var html = '<div style="display:grid;gap:10px">';
+    BOOKS.forEach(function(b){
+      var done=get(b.id), p=pct(done,b.total);
+      html += '<div class="card" style="padding:12px">';
+      html += '<b style="display:block;margin-bottom:4px">'+b.title+'</b>';
+      html += '<span style="font:700 11px var(--f-mono,monospace);color:#94a3b8">'+b.author+' · '+b.unit+'</span>';
+      html += '<div style="height:7px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.08);margin:8px 0">';
+      html += '<div style="height:100%;border-radius:999px;background:linear-gradient(90deg,#fb923c,#f59e0b);width:'+p+'%"></div></div>';
+      html += '<span style="font:800 11px var(--f-mono,monospace);color:#94a3b8">'+done+' / '+b.total+' '+b.unit+' ('+p+'%)</span>';
+      html += ' <button type="button" data-repair-id="'+b.id+'" data-repair-step="10" style="margin-left:6px;padding:4px 10px;border-radius:8px;border:none;background:rgba(251,146,60,.18);color:#fb923c;font:900 11px system-ui;cursor:pointer">+10</button>';
+      html += ' <button type="button" data-repair-id="'+b.id+'" data-repair-step="25" style="margin-left:4px;padding:4px 10px;border-radius:8px;border:none;background:rgba(251,146,60,.18);color:#fb923c;font:900 11px system-ui;cursor:pointer">+25</button>';
+      html += '</div>';
+    });
+    html += '</div>';
+    host.innerHTML = html;
+  }
+  document.addEventListener('click', function(e){
+    var btn = e.target.closest('[data-repair-id]');
+    if (!btn) return;
+    e.preventDefault();
+    var id=btn.getAttribute('data-repair-id'), step=parseInt(btn.getAttribute('data-repair-step'),10)||10;
+    var book=BOOKS.find(function(b){ return b.id===id; });
+    if (!book) return;
+    var done=Math.min(book.total, get(id)+step);
+    set(id,done);
+    render();
+  }, true);
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',render,{once:true});
+  else render();
+  setTimeout(render,300);
+})();
+</script>
+</section>
+
 <section class="page" id="p-settings" data-page="settings">
 <h1 class="page-title">⚙️ Paramètres</h1>
 <div id="settings-content-host">
@@ -2686,11 +1822,6 @@ Si t'as de la fièvre, douleurs fortes, ou t'es vraiment KO : <strong>protocole 
   </div>
 </div>
 
-<div class="v75-force-card" id="v75-settings-selftest">
-  <h3>V75 Force Fix · Self-test</h3>
-  <div class="v75-sub">Ce bloc vérifie que les conteneurs existent vraiment dans le DOM après déploiement.</div>
-  <div id="v75-settings-selftest-list" style="margin-top:10px"></div>
-</div>
 
 </section>
 
@@ -6058,17 +5189,7 @@ const Cmd = {
   },
 
   confirmRemoveTab(name){
-    const target = name.toLowerCase().replace('paramètres','settings').replace('parametres','settings');
-    if (!confirm(`Supprimer l'onglet ${target} ? Les données restent en localStorage mais l'onglet sera caché.`)){
-      return { ok: false, msg: 'Annulé' };
-    }
-    const tab = document.querySelector(`.tab[data-tab="${target}"]`);
-    const sec = document.getElementById('p-' + target);
-    if (tab) tab.style.display = 'none';
-    if (sec) sec.style.display = 'none';
-    const hidden = sg('hidden_tabs', []);
-    if (!hidden.includes(target)){ hidden.push(target); ss('hidden_tabs', hidden); }
-    return { ok: true, msg: `✓ Onglet ${target} caché`, action: 'remove' };
+    return { ok: false, msg: 'Désactivé — suppression d\'onglets via voix désactivée.' };
   },
 
   startPomo(min){
@@ -6083,15 +5204,11 @@ const Cmd = {
 };
 
 // Reapply hidden tabs au load
-(function applyHidden(){
-  const hidden = sg('hidden_tabs', []);
-  hidden.forEach(t => {
-    const tab = document.querySelector(`.tab[data-tab="${t}"]`);
-    const sec = document.getElementById('p-' + t);
-    if (tab) tab.style.display = 'none';
-    if (sec) sec.style.display = 'none';
-  });
+(function cleanHiddenTabsLegacy(){
+  try { localStorage.removeItem('dashv2_hidden_tabs'); } catch(_){}
+  document.querySelectorAll('.tab[data-tab]').forEach(t => { t.style.removeProperty('display'); });
 })();
+window.__DEPLOY_MARKER = '2026-05-18-v4-surgical-cleanup';
 
 // ════════════════════════════════════════════════════════════
 // FIX 5 : Patcher Quick Capture pour gérer les commandes vocales
@@ -8097,7 +7214,7 @@ function ensureCriticalTabs(){
   if (!tabs) return;
   if (!document.querySelector('.tab[data-tab="trading"]')){
     const t = document.createElement('div');
-    t.className = 'tab'; t.dataset.tab = 'trading'; t.setAttribute('role','tab'); t.tabIndex = 0; t.textContent = '📈 Trading'; tabs.appendChild(t);
+    t.className = 'tab'; t.dataset.tab = 'trading'; t.setAttribute('role','tab'); t.tabIndex = 0; t.textContent = '🔌 Élec/IoT'; tabs.appendChild(t);
   }
   if (!document.querySelector('.tab[data-tab="settings"]')){
     const t = document.createElement('div');
@@ -14718,1131 +13835,6 @@ else boot();
 
 
 
-<script id="v75-forcefix-script">
-(function(){
-'use strict';
-if (window.__V75ForceFixInstalled) return;
-window.__V75ForceFixInstalled = true;
-
-var DOMAINS = ['epfc','code','nl','anki','read','sport','flex','chess','vinted'];
-var LABELS = {epfc:'EPFC',code:'Code',nl:'NL',anki:'Anki',read:'Lecture',sport:'Sport',flex:'Souplesse',chess:'Échecs',vinted:'Vinted'};
-var ICONS = {epfc:'🎓',code:'💻',nl:'🇳🇱',anki:'🎴',read:'📚',sport:'💪',flex:'🧘',chess:'♟️',vinted:'🛍️'};
-
-function $(s,r){ return (r||document).querySelector(s); }
-function $all(s,r){ return Array.prototype.slice.call((r||document).querySelectorAll(s)); }
-function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
-function read(k,d){ try{ var v=localStorage.getItem(k); return v == null || v === '' ? d : JSON.parse(v); }catch(_){ return d; } }
-function write(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch(_){ return false; } }
-function num(v){ var n=parseFloat(v); return isFinite(n)?n:0; }
-function pad(n){ return String(n).padStart(2,'0'); }
-function keyDate(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
-function today(){ return keyDate(new Date()); }
-function addDays(dateKey,delta){ var p=dateKey.split('-').map(Number); var d=new Date(p[0],p[1]-1,p[2],12,0,0); d.setDate(d.getDate()+delta); return keyDate(d); }
-function daysAgo(n){ var d=new Date(); d.setHours(12,0,0,0); d.setDate(d.getDate()-n); return keyDate(d); }
-function dateLabel(k){ try{ var p=k.split('-').map(Number); return pad(p[2])+'/'+pad(p[1]); }catch(_){ return k; } }
-
-function merge(a,b){
-  if (b && typeof b === 'object' && !Array.isArray(b)){
-    Object.keys(b).forEach(function(k){ if (b[k] !== undefined && b[k] !== null && b[k] !== '') a[k]=b[k]; });
-  }
-  return a;
-}
-function scanDated(kind, date){
-  var out = kind === 'tasks' ? [] : {};
-  try{
-    for(var i=0;i<localStorage.length;i++){
-      var k=localStorage.key(i)||'';
-      if(k.indexOf(date)===-1) continue;
-      var low=k.toLowerCase();
-      if(kind==='log' && low.indexOf('log')===-1) continue;
-      if(kind==='tasks' && low.indexOf('task')===-1) continue;
-      var v=read(k,null);
-      if(kind==='tasks'){
-        if(Array.isArray(v)) out=out.concat(v);
-        else if(v && Array.isArray(v.items)) out=out.concat(v.items);
-        else if(v && typeof v==='object') out=out.concat(Object.keys(v).map(function(id){ var x=v[id]; return typeof x==='object'?x:{title:String(x)}; }));
-      } else {
-        merge(out, v);
-      }
-    }
-  }catch(_){}
-  return out;
-}
-function getDayLog(date){
-  date = date || today();
-  var out = {};
-  merge(out, scanDated('log', date));
-  var logs = read('dashv2_logs', {});
-  if (logs && logs[date]) merge(out, logs[date]);
-  var state = read('state', {});
-  if (state && state.logs && state.logs[date]) merge(out, state.logs[date]);
-  merge(out, read('log_'+date, {}));
-  merge(out, read('logs_'+date, {}));
-  merge(out, read('dashv2_log_'+date, {}));
-  // Normalisations C7 / sommeil
-  if(out.c7 == null) out.c7 = out.c7Pain != null ? out.c7Pain : (out.neckPain != null ? out.neckPain : 0);
-  if(out.sleepStart == null) out.sleepStart = out.bedtime || out.sleep_start || '';
-  if(out.sleepEnd == null) out.sleepEnd = out.wakeup || out.sleep_end || '';
-  return out;
-}
-function getTasks(date){
-  date = date || today();
-  var arr = [];
-  function add(v){
-    if(!v) return;
-    if(Array.isArray(v)) arr = arr.concat(v);
-    else if(Array.isArray(v.items)) arr = arr.concat(v.items);
-    else if(typeof v === 'object') arr = arr.concat(Object.keys(v).map(function(id){ var x=v[id]; if(typeof x==='object'){ x.id=x.id||id; return x; } return {id:id,title:String(x)}; }));
-  }
-  add(scanDated('tasks', date));
-  add(read('dashv2_tasks_'+date, null));
-  add(read('tasks_'+date, null));
-  var all = read('dashv2_tasks', null); add(all && all[date] ? all[date] : all);
-  var state = read('state', null); if(state && state.tasks && state.tasks[date]) add(state.tasks[date]);
-  var seen = {};
-  return arr.filter(function(t){
-    if(!t || typeof t !== 'object') return false;
-    var title = t.title || t.text || t.name || t.label || '';
-    if(!title) return false;
-    var sig = [title,t.time||t.start||t.startTime||'',t.date||date].join('|');
-    if(seen[sig]) return false;
-    seen[sig]=1; return true;
-  });
-}
-function isDone(t){ return !!(t.done || t.completed || t.checked || t.status==='done' || t.isDone); }
-function taskTitle(t){ return t.title || t.text || t.name || t.label || 'Tâche'; }
-function taskTime(t){ return t.time || t.start || t.startTime || t.begin || ''; }
-function domainScore(log){
-  var active=0,total=0;
-  DOMAINS.forEach(function(k){
-    var v=log[k];
-    var ok=false;
-    if(typeof v==='boolean') ok=v;
-    else if(typeof v==='number') ok=v>0;
-    else if(v && typeof v==='object') ok=!!(v.done || v.minutes || v.value || v.count);
-    else ok=!!v;
-    if(ok) active++;
-    total++;
-  });
-  return total ? active/total : 0;
-}
-function scoreForDate(date){
-  var log=getDayLog(date), tasks=getTasks(date);
-  var done=tasks.filter(isDone).length, tscore=tasks.length?done/tasks.length:0.5;
-  var mood=num(log.mood||log.humeur||0)/5; if(!mood) mood=0.5;
-  var dscore=domainScore(log);
-  var c7=num(log.c7); var cscore=1-Math.min(10,Math.max(0,c7))/10;
-  var score=Math.round((tscore*.35 + mood*.20 + dscore*.30 + cscore*.15)*100);
-  return Math.max(0,Math.min(100,score));
-}
-function sleepDuration(start,end){
-  if(!start || !end) return '';
-  var a=start.split(':').map(Number), b=end.split(':').map(Number);
-  if(a.length<2 || b.length<2) return '';
-  var s=a[0]*60+a[1], e=b[0]*60+b[1]; if(e<s) e+=1440;
-  var m=e-s; return Math.floor(m/60)+'h'+pad(m%60);
-}
-function ensureContainers(){
-  var home=$('#p-home'), stats=$('#p-stats'), settings=$('#p-settings');
-  if(home && !$('#v75-home-modules')){
-    var anchor=home.querySelector('.stats.stats-3');
-    var div=document.createElement('div');
-    div.innerHTML='<div class="v75-version-badge" id="v75-version-badge">V75 FORCE FIX ACTIF · DOM visible</div><div class="v75-force-strip" id="v75-home-modules"><div class="v75-pre-rdv" id="v75-pre-rdv">🟣 Alerte pré-RDV : aucune tâche dans les 30 prochaines minutes.</div><div class="v75-force-grid"><div id="morning-card" class="v75-force-card" aria-live="polite"><h3>🌅 Morning card</h3><div id="v75-morning-body" class="v75-sub">Chargement…</div></div><div id="score-du-jour" class="v75-force-card" aria-live="polite"><h3>Score du jour</h3><div class="v75-big-score" id="v75-score-value">—</div><div class="v75-sub" id="v75-score-detail">Tâches + humeur + domaines + C7</div></div><div id="momentum-card" class="v75-force-card" aria-live="polite"><h3>Momentum 7j</h3><div class="v75-bar-wrap"><div class="v75-bar" id="momentum-bar"></div></div><div class="v75-sub" id="momentum-label">Momentum 7j : —/100</div></div></div></div>';
-    while(div.firstChild) home.insertBefore(div.firstChild, anchor || home.firstChild);
-  }
-  if(stats && !$('#v75-stats-modules')){
-    var anchor2=stats.querySelector('.stats-cards');
-    var box=document.createElement('div');
-    box.innerHTML='<div class="v76-section-label" id="v75-stats-badge">Pilotage avancé · 90j / 7j / C7 / tâches</div><div class="v75-stats-grid" id="v75-stats-modules"><div class="chart-card v75-force-card"><div class="chart-head"><span class="chart-title">Heatmap 90j · <em>domaines</em></span><span class="chart-legend" id="v75-heatmap-meta">—</span></div><div id="heatmap-90d" aria-label="Heatmap activité 90 jours"></div></div><div class="chart-card v75-force-card"><div class="chart-head"><span class="chart-title">Streaks 🔥 · <em>par domaine</em></span><span class="chart-legend">jours consécutifs</span></div><div id="domain-streaks-v39"></div></div><div class="chart-card v75-force-card"><div class="chart-head"><span class="chart-title">Radar 7j · <em>cohérence</em></span><span class="chart-legend">SVG fallback</span></div><div id="radar-wrap" class="v75-chart-box"><canvas id="radar-chart" height="220"></canvas><div id="radar-fallback" class="v75-chart-fallback"></div></div></div><div class="chart-card v75-force-card"><div class="chart-head"><span class="chart-title">Douleur C7 · <em>30j</em></span><span class="chart-legend">0 aucune · 10 critique</span></div><div id="c7-chart-wrap" class="v75-chart-box"><canvas id="chart-c7" height="220"></canvas><div id="c7-fallback" class="v75-chart-fallback"></div></div></div><div id="task-history-card" class="chart-card v75-force-card"><h3>Historique tâches · 10j</h3><div id="task-history-list" class="v75-sub">Chargement…</div></div><div id="v75-selftest-card" class="chart-card v75-force-card"><h3>Contrôle modules</h3><div id="v75-selftest-list"></div></div></div>';
-    while(box.firstChild) stats.insertBefore(box.firstChild, anchor2 || stats.firstChild);
-  }
-  if(settings && !$('#v75-settings-selftest')){
-    var sc=document.createElement('div');
-    sc.className='v75-force-card'; sc.id='v75-settings-selftest';
-    sc.innerHTML='<h3>Contrôle modules</h3><div class="v75-sub">Diagnostic rapide des modules actifs.</div><div id="v75-settings-selftest-list" style="margin-top:10px"></div>';
-    settings.appendChild(sc);
-  }
-}
-function renderMorning(){
-  var body=$('#v75-morning-body'); if(!body) return;
-  var now=new Date(), log=getDayLog(today()), tasks=getTasks(today()).slice(0,5);
-  var sleep=sleepDuration(log.sleepStart,log.sleepEnd) || 'non loggé';
-  var visible=now.getHours()<12;
-  var html='<b>'+ (visible?'Briefing matin':'Résumé jour') +'</b><br>Sommeil : <b>'+esc(sleep)+'</b>';
-  html += tasks.length?'<ul class="v75-morning-list">'+tasks.map(function(t){return '<li>'+esc(taskTime(t)?taskTime(t)+' · ':'')+esc(taskTitle(t))+'</li>';}).join('')+'</ul>':'<div class="v75-sub">Aucune tâche détectée pour aujourd’hui.</div>';
-  body.innerHTML=html;
-}
-function renderScore(){
-  var v=$('#v75-score-value'), d=$('#v75-score-detail'); if(!v||!d) return;
-  var score=scoreForDate(today()), log=getDayLog(today()), tasks=getTasks(today());
-  var done=tasks.filter(isDone).length;
-  v.textContent=score+'/100';
-  d.innerHTML='Tâches <b>'+done+'/'+tasks.length+'</b> · Humeur <b>'+(log.mood||log.humeur||'—')+'</b> · C7 <b>'+(log.c7==null?'—':log.c7)+'</b>';
-}
-function renderMomentum(){
-  var scores=[], sum=0;
-  for(var i=6;i>=0;i--){ var s=scoreForDate(daysAgo(i)); scores.push(s); sum+=s; }
-  var avg=Math.round(sum/7), bar=$('#momentum-bar'), lab=$('#momentum-label');
-  if(bar) bar.style.width=avg+'%';
-  if(lab) lab.textContent='Momentum 7j : '+avg+'/100 · '+scores.join(' · ');
-}
-function renderPreRDV(){
-  var el=$('#v75-pre-rdv'); if(!el) return;
-  var now=new Date(), nowM=now.getHours()*60+now.getMinutes(), hit=null;
-  getTasks(today()).forEach(function(t){
-    var tm=taskTime(t); if(!tm || isDone(t)) return;
-    var p=tm.split(':').map(Number); if(p.length<2) return;
-    var m=p[0]*60+p[1], diff=m-nowM;
-    if(diff>=0 && diff<=30 && (!hit || diff<hit.diff)) hit={task:t,diff:diff};
-  });
-  if(hit){ el.classList.add('show'); el.textContent='🟣 Alerte pré-RDV : '+taskTitle(hit.task)+' dans '+hit.diff+' min'; }
-  else { el.classList.remove('show'); }
-}
-function renderHeatmap(){
-  var grid=$('#heatmap-90d'), meta=$('#v75-heatmap-meta'); if(!grid) return;
-  var active=0, html='';
-  for(var i=89;i>=0;i--){
-    var d=daysAgo(i), log=getDayLog(d), s=scoreForDate(d);
-    var level=Math.max(0,Math.min(5,Math.ceil(s/20)));
-    if(domainScore(log)>0 || getTasks(d).length) active++;
-    html+='<div class="v75-heat-cell v75-heat-'+level+'" title="'+d+' · '+s+'/100"></div>';
-  }
-  grid.innerHTML=html;
-  if(meta) meta.textContent=active+' jours actifs / 90';
-}
-function streakForDomain(k){
-  var s=0;
-  for(var i=0;i<365;i++){
-    var log=getDayLog(daysAgo(i)), v=log[k], ok=false;
-    if(typeof v==='boolean') ok=v;
-    else if(typeof v==='number') ok=v>0;
-    else if(v && typeof v==='object') ok=!!(v.done||v.minutes||v.value||v.count);
-    else ok=!!v;
-    if(ok) s++; else break;
-  }
-  return s;
-}
-function renderStreaks(){
-  var el=$('#domain-streaks-v39'); if(!el) return;
-  el.innerHTML=DOMAINS.map(function(k){ return '<div class="v75-domain-row"><span>'+ICONS[k]+' '+LABELS[k]+'</span><span class="v75-pill">'+streakForDomain(k)+'j 🔥</span></div>'; }).join('');
-}
-function renderTaskHistory(){
-  var el=$('#task-history-list'); if(!el) return;
-  var html='';
-  for(var i=9;i>=0;i--){
-    var d=daysAgo(i), tasks=getTasks(d), done=tasks.filter(isDone).length;
-    html+='<div class="v75-task-row"><span>'+dateLabel(d)+'</span><span class="v75-pill">'+done+'/'+tasks.length+'</span></div>';
-  }
-  el.innerHTML=html;
-}
-function svgLine(values,max,label){
-  max=max||100;
-  var w=380,h=180,p=24;
-  var pts=values.map(function(v,i){ var x=p+(w-2*p)*(values.length<=1?0:i/(values.length-1)); var y=h-p-(h-2*p)*(Math.max(0,Math.min(max,v))/max); return [x,y]; });
-  var poly=pts.map(function(p){return p[0].toFixed(1)+','+p[1].toFixed(1);}).join(' ');
-  return '<svg viewBox="0 0 '+w+' '+h+'" role="img" aria-label="'+esc(label)+'"><rect width="'+w+'" height="'+h+'" rx="16" fill="rgba(2,6,23,.55)"/><polyline points="'+poly+'" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><text x="20" y="26" fill="currentColor" font-size="13" font-weight="900">'+esc(label)+'</text></svg>';
-}
-function renderC7(){
-  var fb=$('#c7-fallback'); if(!fb) return;
-  var vals=[]; for(var i=29;i>=0;i--) vals.push(num(getDayLog(daysAgo(i)).c7));
-  fb.innerHTML=svgLine(vals,10,'C7 30j');
-}
-function renderRadar(){
-  var fb=$('#radar-fallback'); if(!fb) return;
-  var vals=DOMAINS.slice(0,6).map(function(k){
-    var c=0; for(var i=0;i<7;i++){ var log=getDayLog(daysAgo(i)); var v=log[k]; if(typeof v==='boolean'?v:(typeof v==='number'?v>0:!!v)) c++; }
-    return Math.round(c/7*100);
-  });
-  fb.innerHTML=svgLine(vals,100,'Radar cohérence 7j');
-}
-function bindC7Sleep(){
-  var c7=$('#log-c7'), c7v=$('#log-c7-val'), ss=$('#log-sleep-start'), se=$('#log-sleep-end'), dur=$('#log-sleep-dur');
-  var log=getDayLog(today());
-  if(c7 && !c7.dataset.v75Bound){
-    if(log.c7!=null){ c7.value=log.c7; if(c7v)c7v.textContent=log.c7; }
-    c7.addEventListener('input',function(){ if(c7v)c7v.textContent=c7.value; saveDaily({c7:num(c7.value),c7Pain:num(c7.value)}); renderAllSoon(); });
-    c7.dataset.v75Bound='1';
-  }
-  if(ss && !ss.dataset.v75Bound){
-    if(log.sleepStart) ss.value=log.sleepStart;
-    if(se && log.sleepEnd) se.value=log.sleepEnd;
-    var h=function(){ var obj={sleepStart:ss.value,sleepEnd:se?se.value:''}; obj.sleepDuration=sleepDuration(obj.sleepStart,obj.sleepEnd); if(dur)dur.textContent=obj.sleepDuration||'—'; saveDaily(obj); renderAllSoon(); };
-    ss.addEventListener('change',h); if(se) se.addEventListener('change',h);
-    if(dur) dur.textContent=sleepDuration(ss.value, se?se.value:'')||'—';
-    ss.dataset.v75Bound='1';
-  }
-}
-function saveDaily(patch){
-  var d=today();
-  var a=read('dashv2_logs',{}); a[d]=merge(a[d]||{},patch); write('dashv2_logs',a);
-  var b=read('dashv2_log_'+d,{}); merge(b,patch); write('dashv2_log_'+d,b);
-  var c=read('log_'+d,{}); merge(c,patch); write('log_'+d,c);
-}
-var soonTimer=null;
-function renderAllSoon(){ clearTimeout(soonTimer); soonTimer=setTimeout(renderAll,80); }
-function renderSelfTest(){
-  var tests=[
-    ['morning-card',!!$('#morning-card')],
-    ['score-du-jour',!!$('#score-du-jour')],
-    ['momentum-card',!!$('#momentum-card')],
-    ['pre-RDV banner',!!$('#v75-pre-rdv')],
-    ['C7 slider',!!$('#log-c7')],
-    ['sleep tracker',!!$('#log-sleep-start') && !!$('#log-sleep-end')],
-    ['heatmap-90d',!!$('#heatmap-90d')],
-    ['domain-streaks-v39',!!$('#domain-streaks-v39')],
-    ['radar-chart',!!$('#radar-chart')],
-    ['chart-c7',!!$('#chart-c7')],
-    ['task-history-card',!!$('#task-history-card')],
-    ['UDV75 API',!!window.UDV75]
-  ];
-  var html=tests.map(function(t){return '<div class="v75-test-row '+(t[1]?'pass':'fail')+'"><span>'+esc(t[0])+'</span><span>'+(t[1]?'PASS':'FAIL')+'</span></div>';}).join('');
-  var a=$('#v75-selftest-list'), b=$('#v75-settings-selftest-list'); if(a)a.innerHTML=html; if(b)b.innerHTML=html;
-}
-function ensureFocus(){
-  return; // V76: bouton Focus 25 V75 supprimé, focus natif conservé.
-  if($('#v75-focus-fab')) return;
-  var btn=document.createElement('button'); btn.id='v75-focus-fab'; btn.className='v75-fixed-focus'; btn.textContent='🎯 Focus 25';
-  var ov=document.createElement('div'); ov.id='v75-focus-overlay'; ov.className='v75-focus-overlay'; ov.innerHTML='<div class="v75-focus-box"><h3>Focus mode</h3><div class="v75-focus-time" id="v75-focus-time">25:00</div><div class="v75-focus-task" id="v75-focus-task">Tâche courante</div><div class="v75-focus-actions"><button id="v75-focus-start">Démarrer</button><button id="v75-focus-reset">Reset</button><button id="v75-focus-close">Fermer</button></div></div>';
-  document.body.appendChild(btn); document.body.appendChild(ov);
-  var left=25*60,timer=null;
-  function draw(){ var m=Math.floor(left/60),s=left%60; var t=$('#v75-focus-time'); if(t)t.textContent=pad(m)+':'+pad(s); var task=getTasks(today()).filter(function(x){return !isDone(x);})[0]; var tt=$('#v75-focus-task'); if(tt)tt.textContent=task?taskTitle(task):'Aucune tâche active'; }
-  btn.onclick=function(){ ov.classList.add('open'); draw(); };
-  $('#v75-focus-close').onclick=function(){ ov.classList.remove('open'); };
-  $('#v75-focus-reset').onclick=function(){ clearInterval(timer); timer=null; left=25*60; draw(); };
-  $('#v75-focus-start').onclick=function(){ if(timer) return; timer=setInterval(function(){ left--; if(left<=0){clearInterval(timer);timer=null;left=0;} draw(); },1000); };
-  draw();
-}
-function renderAll(){
-  try{
-    ensureContainers(); bindC7Sleep(); ensureFocus();
-    renderMorning(); renderScore(); renderMomentum(); renderPreRDV();
-    renderHeatmap(); renderStreaks(); renderTaskHistory(); renderRadar(); renderC7(); renderSelfTest();
-  }catch(e){ try{ console.error('[V75 ForceFix]',e); }catch(_){} }
-}
-function boot(){
-  renderAll();
-  setInterval(function(){ renderPreRDV(); renderMorning(); renderScore(); renderMomentum(); },60000);
-  document.addEventListener('click',function(e){
-    if(e.target.closest('.tab,[data-tab],#log-save,#task-add,.task-add-btn,.task-check,.task-done,.meal-chip,.log-mood-btn')) setTimeout(renderAll,200);
-  },true);
-  document.addEventListener('input',function(e){
-    if(e.target.matches('.log-input,#task-title,#task-time,#task-end-time,#log-c7,#log-sleep-start,#log-sleep-end')) setTimeout(renderAll,200);
-  },true);
-}
-window.UDV75={renderAll:renderAll,getDayLog:getDayLog,getTasks:getTasks,scoreForDate:scoreForDate,version:'v75-forcefix'};
-if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot,{once:true}); else boot();
-})();
-</script>
-
-
-<script id="v76-visible-fix-script">
-(function(){
-'use strict';
-if (window.__V76VisibleFixInstalled) return;
-window.__V76VisibleFixInstalled = true;
-
-function $(s,r){ return (r||document).querySelector(s); }
-
-function killBadFocus(){
-  var bad = document.getElementById('v75-focus-fab');
-  if (bad) bad.remove();
-  var ov = document.getElementById('v75-focus-overlay');
-  if (ov) ov.remove();
-}
-
-function ensureVisibleHomeModules(){
-  var home = document.getElementById('p-home');
-  if (!home) return;
-
-  var modules = document.getElementById('v75-home-modules');
-  if (!modules){
-    modules = document.createElement('div');
-    modules.id = 'v75-home-modules';
-    modules.className = 'v76-top-modules';
-    modules.innerHTML =
-      '<div class="v75-pre-rdv" id="v75-pre-rdv">🟣 Alerte pré-RDV : aucune tâche dans les 30 prochaines minutes.</div>' +
-      '<div class="v76-grid">' +
-        '<div id="score-du-jour" class="v75-force-card v76-card-primary" aria-live="polite"><h3>Score du jour</h3><div class="v75-big-score" id="v75-score-value">—</div><div class="v75-sub" id="v75-score-detail">Tâches + humeur + domaines + C7</div></div>' +
-        '<div id="momentum-card" class="v75-force-card" aria-live="polite"><h3>Momentum 7j</h3><div class="v75-bar-wrap"><div class="v75-bar" id="momentum-bar"></div></div><div class="v75-sub" id="momentum-label">Momentum 7j : —/100</div></div>' +
-        '<div id="morning-card" class="v75-force-card" aria-live="polite"><h3>Morning card</h3><div id="v75-morning-body" class="v75-sub">Chargement sommeil + tâches du jour…</div></div>' +
-      '</div>';
-  }
-
-  modules.classList.add('v76-top-modules');
-
-  var grid = modules.querySelector('.v76-grid') || modules.querySelector('.v75-force-grid');
-  if (grid) grid.className = 'v76-grid';
-
-  // Remove debug badge from V75.
-  var badge = document.getElementById('v75-version-badge');
-  if (badge) badge.remove();
-
-  // Hard placement: immediately after search, before the huge "Mission maintenant" card.
-  var search = home.querySelector('.home-search');
-  var mission = document.getElementById('next-action');
-  if (search && search.nextSibling !== modules){
-    home.insertBefore(modules, search.nextSibling);
-  } else if (mission && mission.previousSibling !== modules){
-    home.insertBefore(modules, mission);
-  } else if (!modules.parentNode){
-    home.insertBefore(modules, home.firstChild);
-  }
-
-  modules.style.display = 'block';
-  modules.style.visibility = 'visible';
-  modules.style.opacity = '1';
-}
-
-function forceRender(){
-  try{
-    if (window.UDV75 && typeof window.UDV75.renderAll === 'function'){
-      window.UDV75.renderAll();
-    }
-  }catch(e){
-    console.error('[V76 visible fix] render failed', e);
-  }
-}
-
-function boot(){
-  killBadFocus();
-  ensureVisibleHomeModules();
-  forceRender();
-
-  setTimeout(function(){ killBadFocus(); ensureVisibleHomeModules(); forceRender(); }, 250);
-  setTimeout(function(){ killBadFocus(); ensureVisibleHomeModules(); forceRender(); }, 900);
-  setTimeout(function(){ killBadFocus(); ensureVisibleHomeModules(); forceRender(); }, 1800);
-  // V79: MutationObserver global désactivé pour éviter freeze mobile.
-  // V79: click global V76 désactivé. Rendu uniquement au boot.
-}
-
-window.UDV76 = {boot:boot, ensureVisibleHomeModules:ensureVisibleHomeModules, killBadFocus:killBadFocus, version:'v76-visible-fix'};
-
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, {once:true});
-else boot();
-})();
-</script>
-
-
-<script id="v77-ops-fix-script">
-(function(){
-'use strict';
-if (window.__V77OpsFixInstalled) return;
-window.__V77OpsFixInstalled = true;
-
-const NS = 'dashv2_';
-const LEVELS = {
-  critical:{label:'C1 Vital', short:'C1', icon:'🔴', cls:'critical'},
-  high:{label:'P1 Haut', short:'P1', icon:'🟠', cls:'high'},
-  normal:{label:'P2 Normal', short:'P2', icon:'🔵', cls:'normal'},
-  low:{label:'P3 Bonus', short:'P3', icon:'🟢', cls:'low'}
-};
-
-function $(s,r){ return (r||document).querySelector(s); }
-function $$(s,r){ return Array.from((r||document).querySelectorAll(s)); }
-function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-function todayKey(offset=0){
-  const d = new Date();
-  d.setDate(d.getDate()+offset);
-  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-}
-function readRaw(key, fallback){
-  try{
-    const raw = localStorage.getItem(key);
-    return raw == null ? fallback : JSON.parse(raw);
-  }catch(_){ return fallback; }
-}
-function writeRaw(key, val){
-  try{ localStorage.setItem(key, JSON.stringify(val)); }catch(e){ console.warn('[V77] storage failed', e); }
-}
-function read(key, fallback){ return readRaw(NS+key, fallback); }
-function write(key, val){ return writeRaw(NS+key, val); }
-function toMin(s){
-  if (!s) return null;
-  const m = String(s).trim().match(/(\d{1,2})(?:h|:)(\d{0,2})?/i);
-  if (!m) return null;
-  return Math.min(1439, Math.max(0, Number(m[1])*60 + Number((m[2]||'0').padEnd(2,'0'))));
-}
-function fmtMin(min){
-  if (min == null) return '—';
-  min = ((Math.round(min)%1440)+1440)%1440;
-  return String(Math.floor(min/60)).padStart(2,'0')+':'+String(min%60).padStart(2,'0');
-}
-function normId(s){
-  return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\w]+/g,'_').replace(/^_+|_+$/g,'').slice(0,80) || ('item_'+Date.now());
-}
-function prioId(el, idx){
-  const text = (el.querySelector('.prio-text')?.textContent || el.textContent || '').replace(/\s+/g,' ').trim();
-  const id = el.dataset.p || el.dataset.id || el.dataset.v77pid || ('prio_'+idx+'_'+normId(text));
-  el.dataset.v77pid = id;
-  return id;
-}
-function inferLevel(el, idx){
-  if (el.classList.contains('prio-critical') || idx === 0) return 'critical';
-  if (el.classList.contains('prio-high') || el.classList.contains('prio-hi') || idx < 3) return 'high';
-  if (el.classList.contains('prio-low')) return 'low';
-  return 'normal';
-}
-
-/* ───────────────────── Priorités niveau + code couleur ───────────────────── */
-function ensurePrioCommand(){
-  return; /* P1_03: priority legend removed from Home */
-  const list = $('#prio-list');
-  if (!list) return;
-  if (!$('#v77-prio-command')){
-    const box = document.createElement('div');
-    box.id = 'v77-prio-command';
-    box.innerHTML = `
-      <div class="v77-card-head">
-        <div class="v77-card-title">Priorités · niveau + code couleur</div>
-        <span class="v77-badge">V77</span>
-      </div>
-      <div class="v77-prio-legend">
-        <div class="v77-prio-chip critical">🔴 C1 Vital<small>à faire aujourd’hui, zéro débat</small></div>
-        <div class="v77-prio-chip high">🟠 P1 Haut<small>impact fort, à placer vite</small></div>
-        <div class="v77-prio-chip normal">🔵 P2 Normal<small>important mais contrôlé</small></div>
-        <div class="v77-prio-chip low">🟢 P3 Bonus<small>optionnel si énergie</small></div>
-      </div>`;
-    list.parentNode.insertBefore(box, list);
-  }
-}
-function decoratePrioritiesV77(){
-  ensurePrioCommand();
-  const levels = read('prio_levels', {});
-  $$('#prio-list .prio-item').forEach((el, idx) => {
-    const id = prioId(el, idx);
-    const level = levels[id] || inferLevel(el, idx);
-    Object.keys(LEVELS).forEach(k => {
-      el.classList.remove('v77-level-'+k, 'prio-'+k);
-    });
-    el.classList.add('v77-level-'+level, 'prio-'+level);
-    el.dataset.level = level;
-
-    let ctrl = el.querySelector('.v77-prio-control');
-    if (!ctrl){
-      ctrl = document.createElement('div');
-      ctrl.className = 'v77-prio-control';
-      ctrl.innerHTML = `
-        <span class="v77-level-badge"></span>
-        <select class="v77-prio-level" aria-label="Niveau de priorité">
-          <option value="critical">🔴 C1 Vital</option>
-          <option value="high">🟠 P1 Haut</option>
-          <option value="normal">🔵 P2 Normal</option>
-          <option value="low">🟢 P3 Bonus</option>
-        </select>`;
-      const del = el.querySelector('.prio-del,[data-act="del"]');
-      if (del) el.insertBefore(ctrl, del);
-      else el.appendChild(ctrl);
-      ctrl.addEventListener('click', e => e.stopPropagation(), true);
-      ctrl.querySelector('select').addEventListener('change', e => {
-        const cur = read('prio_levels', {});
-        cur[id] = e.target.value;
-        write('prio_levels', cur);
-        decoratePrioritiesV77();
-        renderOverdueV77();
-      });
-    }
-    const select = ctrl.querySelector('select');
-    const badge = ctrl.querySelector('.v77-level-badge');
-    if (select) select.value = level;
-    if (badge) badge.textContent = LEVELS[level].icon + ' ' + LEVELS[level].short;
-  });
-}
-
-/* ───────────────────── Activités en retard ───────────────────── */
-function taskTitle(t){ return t.title || t.text || t.name || 'Tâche'; }
-function taskStart(t){ return t.time || t.startTime || t.start || ''; }
-function taskEnd(t){ return t.endTime || t.end || ''; }
-function getTasks(date=todayKey()){
-  const all = [];
-  const add = v => { if (Array.isArray(v)) all.push(...v); };
-  add(read('tasks_'+date, []));
-  add(readRaw(NS+'tasks_'+date, []));
-  const bag = read('tasks', null);
-  if (Array.isArray(bag)) add(bag.filter(t => !t.date || t.date === date));
-  else if (bag && Array.isArray(bag[date])) add(bag[date]);
-  const seen = new Set();
-  return all.filter(t => {
-    const k = (t.id || '')+'|'+taskTitle(t)+'|'+taskStart(t);
-    if (seen.has(k)) return false;
-    seen.add(k);
-    return true;
-  });
-}
-function routineLateItems(){
-  const now = new Date().getHours()*60 + new Date().getMinutes();
-  const out = [];
-  const view = $('.shift-view:not(.hidden)') || $('#p-routine .shift-view');
-  if (!view) return out;
-  const items = $$('.tl-item[data-time]', view);
-  items.forEach((item, idx) => {
-    if (item.classList.contains('done-early-v35') || item.classList.contains('is-done') || item.style.display === 'none') return;
-    const timeText = (item.querySelector('.tl-time')?.dataset.orig || item.querySelector('.tl-time')?.textContent || item.dataset.time || '').trim();
-    const parts = timeText.split(/[–\-→]/);
-    const start = toMin(parts[0]);
-    let end = toMin(parts[1]);
-    if (start == null) return;
-    if (end == null) end = start + 30;
-    const title = (item.querySelector('.tl-name')?.textContent || 'Bloc routine').replace(/\s+/g,' ').trim();
-    if (end + 5 < now){
-      out.push({type:'routine', time:fmtMin(start), title, lateBy:now-end});
-    }
-  });
-  return out;
-}
-function taskLateItems(){
-  const now = new Date().getHours()*60 + new Date().getMinutes();
-  return getTasks(todayKey()).filter(t => !t.done && taskStart(t) && toMin(taskStart(t)) != null && toMin(taskStart(t)) + 5 < now)
-    .map(t => ({type:'tâche', time:taskStart(t), title:taskTitle(t), lateBy:now-toMin(taskStart(t))}));
-}
-function priorityLateItems(){
-  const out = [];
-  $$('#prio-list .prio-item').forEach((el, idx) => {
-    if (el.classList.contains('done')) return;
-    const level = el.dataset.level || inferLevel(el, idx);
-    if (level !== 'critical') return;
-    const txt = (el.querySelector('.prio-text')?.textContent || el.textContent || '').replace(/\s+/g,' ').trim();
-    if (txt) out.push({type:'priorité C1', time:'NOW', title:txt.slice(0,140), lateBy:0});
-  });
-  return out.slice(0,3);
-}
-function ensureOverdueCard(){
-  const home = $('#p-home');
-  if (!home) return null;
-  let card = $('#v77-overdue-card');
-  if (!card){
-    card = document.createElement('div');
-    card.id = 'v77-overdue-card';
-  }
-  const modules = $('#v75-home-modules');
-  const mission = $('#next-action');
-  if (modules && modules.nextSibling !== card) home.insertBefore(card, modules.nextSibling);
-  else if (mission && mission.previousSibling !== card) home.insertBefore(card, mission);
-  else if (!card.parentNode) home.insertBefore(card, home.firstChild);
-  return card;
-}
-function renderOverdueV77(){
-  const card = ensureOverdueCard();
-  if (!card) return;
-  const items = [...priorityLateItems(), ...taskLateItems(), ...routineLateItems()]
-    .sort((a,b) => (b.lateBy||0)-(a.lateBy||0))
-    .slice(0,8);
-  card.classList.toggle('is-empty', !items.length);
-  if (!items.length){
-    card.innerHTML = `
-      <div class="v77-card-head">
-        <div class="v77-card-title">Activités en retard</div>
-        <span class="v77-badge">0</span>
-      </div>
-      <div class="v75-sub">RAS. Aucun bloc critique détecté en retard.</div>`;
-    return;
-  }
-  card.innerHTML = `
-    <div class="v77-card-head">
-      <div class="v77-card-title">Activités en retard</div>
-      <span class="v77-badge">${items.length}</span>
-    </div>
-    <div class="v77-overdue-list">
-      ${items.map(it => `
-        <div class="v77-overdue-item">
-          <div class="v77-overdue-time">${esc(it.time)}</div>
-          <div class="v77-overdue-name">${esc(it.title)}</div>
-          <div class="v77-overdue-type">${esc(it.type)}</div>
-        </div>`).join('')}
-    </div>`;
-}
-
-/* ───────────────────── Échecs opérationnel ───────────────────── */
-function chessBand(elo){
-  elo = Number(elo||0);
-  if (elo < 800) return {band:'N0', label:'Fondations', next:'Ne donne plus les pièces'};
-  if (elo < 1200) return {band:'N1', label:'Tactique propre', next:'Fourchettes, clouages, finales simples'};
-  if (elo < 1600) return {band:'N2', label:'Club solide', next:'Calcul + plans + répertoire'};
-  return {band:'N3', label:'Avancé', next:'Analyse profonde et finales'};
-}
-function chessState(){
-  return {
-    global: read('chess_state', {elo:800,target:1200}),
-    day: read('chess_'+todayKey(), {puzzles:false, finales:false, partie:false, analyse:false})
-  };
-}
-function saveChessGlobal(g){ write('chess_state', g); }
-function saveChessDay(d){ write('chess_'+todayKey(), d); }
-function chessScore(day){
-  return ['puzzles','finales','partie','analyse'].filter(k => day[k]).length;
-}
-function ensureChessHomeCard(){
-  const grid = $('#v75-home-modules .v76-grid') || $('#v75-home-modules .v75-force-grid');
-  if (!grid) return null;
-  let card = $('#v77-chess-card');
-  if (!card){
-    card = document.createElement('div');
-    card.id = 'v77-chess-card';
-    card.className = 'v75-force-card';
-    grid.appendChild(card);
-  }
-  return card;
-}
-function renderChessHomeV77(){
-  const card = ensureChessHomeCard();
-  if (!card) return;
-  const st = chessState();
-  const band = chessBand(st.global.elo);
-  const done = chessScore(st.day);
-  card.innerHTML = `
-    <h3>Échecs · ${band.band}</h3>
-    <div class="v75-sub">${esc(band.label)} · Elo ${Number(st.global.elo||0)} → cible ${Number(st.global.target||1200)}</div>
-    <div class="v77-chess-line"><span>Progression jour</span><b>${done}/4</b></div>
-    <div class="v77-chess-line"><span>Ordre</span><b>${esc(band.next)}</b></div>
-    <div class="v77-chess-actions">
-      ${['puzzles','finales','partie','analyse'].map(k => `<button class="v77-mini-btn ${st.day[k]?'done':''}" data-v77-chess="${k}">${st.day[k]?'✓ ':''}${k}</button>`).join('')}
-    </div>`;
-}
-function ensureChessPanel(){
-  const page = $('#p-chess');
-  if (!page) return null;
-  let panel = $('#v77-chess-panel');
-  if (!panel){
-    panel = document.createElement('div');
-    panel.id = 'v77-chess-panel';
-    const after = page.querySelector('.callout') || page.querySelector('.page-header');
-    if (after && after.nextSibling) page.insertBefore(panel, after.nextSibling);
-    else page.appendChild(panel);
-  }
-  return panel;
-}
-function renderChessPanelV77(){
-  const panel = ensureChessPanel();
-  if (!panel) return;
-  const st = chessState();
-  const band = chessBand(st.global.elo);
-  const done = chessScore(st.day);
-  panel.innerHTML = `
-    <div class="v77-card-head">
-      <div class="v77-card-title">Échecs · tracker opérationnel</div>
-      <span class="v77-badge">${band.band} · ${done}/4</span>
-    </div>
-    <div class="v77-chess-grid">
-      <div class="v77-field"><label>Elo actuel</label><input id="v77-chess-elo" type="number" min="100" max="3000" step="1" value="${Number(st.global.elo||800)}"></div>
-      <div class="v77-field"><label>Objectif Elo</label><input id="v77-chess-target" type="number" min="100" max="3000" step="1" value="${Number(st.global.target||1200)}"></div>
-    </div>
-    <div class="v77-chess-line"><span>Niveau</span><b>${esc(band.label)}</b></div>
-    <div class="v77-chess-line"><span>Focus tactique</span><b>${esc(band.next)}</b></div>
-    <div class="v77-chess-actions">
-      ${['puzzles','finales','partie','analyse'].map(k => `<button class="v77-mini-btn ${st.day[k]?'done':''}" data-v77-chess="${k}">${st.day[k]?'✓ ':''}${k}</button>`).join('')}
-    </div>
-    <div class="v75-sub" style="margin-top:9px">Règle : puzzles lents, finales de base, une partie rapide, analyse avant de rejouer.</div>`;
-}
-function bindChess(){
-  if (window.__V77ChessBound) return;
-  window.__V77ChessBound = true;
-  document.addEventListener('click', e => {
-    const btn = e.target.closest('[data-v77-chess]');
-    if (!btn) return;
-    e.preventDefault();
-    const key = btn.dataset.v77Chess;
-    const st = chessState();
-    st.day[key] = !st.day[key];
-    saveChessDay(st.day);
-    // also update main daily log chess count so stats see chess activity
-    const logKey = 'log_'+todayKey();
-    const dailyLog = read(logKey, {});
-    dailyLog.chess = chessScore(st.day);
-    write(logKey, dailyLog);
-    renderAllV77();
-  }, true);
-  document.addEventListener('change', e => {
-    if (e.target.id === 'v77-chess-elo' || e.target.id === 'v77-chess-target'){
-      const st = chessState();
-      st.global.elo = Number($('#v77-chess-elo')?.value || st.global.elo || 800);
-      st.global.target = Number($('#v77-chess-target')?.value || st.global.target || 1200);
-      saveChessGlobal(st.global);
-      renderAllV77();
-    }
-  }, true);
-}
-
-/* ───────────────────── Boot ───────────────────── */
-function renderAllV77(){
-  decoratePrioritiesV77();
-  renderOverdueV77();
-  renderChessHomeV77();
-  renderChessPanelV77();
-}
-function observe(){
-  const prio = $('#prio-list');
-  if (prio && !prio.dataset.v77obs){
-    prio.dataset.v77obs = '1';
-    /* V79: observer prio désactivé pour éviter boucle de rendu */
-  }
-  const task = $('#task-list');
-  if (task && !task.dataset.v77obs){
-    task.dataset.v77obs = '1';
-    /* V79: observer task désactivé pour éviter boucle de rendu */
-  }
-}
-function boot(){
-  bindChess();
-  renderAllV77();
-  observe();
-  setTimeout(renderAllV77, 250);
-  setTimeout(renderAllV77, 900);
-  setTimeout(renderAllV77, 1800);
-  setInterval(renderOverdueV77, 60000);
-  /* V79: click global V77 désactivé */
-}
-window.UDV77 = {version:'v77-ops-fix', renderAll:renderAllV77, renderOverdue:renderOverdueV77, decoratePriorities:decoratePrioritiesV77};
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, {once:true});
-else boot();
-})();
-</script>
-
-
-
-
-<script id="v79-freeze-guard-script">
-(function(){
-'use strict';
-if (window.__V79FreezeGuardInstalled) return;
-window.__V79FreezeGuardInstalled = true;
-
-const NS='dashv2_';
-const $=(s,r=document)=>r.querySelector(s);
-const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const clamp=(n,a,b)=>Math.max(a,Math.min(b,Number(n)||0));
-const pct=(a,b)=>b?clamp(Math.round((a/b)*100),0,100):0;
-function today(offset=0){const d=new Date;d.setDate(d.getDate()+offset);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
-function keyDate(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
-function rr(k,f){try{const r=localStorage.getItem(k);return r==null?f:JSON.parse(r)}catch(_){return f}}
-function wr(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){console.warn('[V79]',e)}}
-function read(k,f){return rr(NS+k,f)}
-function write(k,v){wr(NS+k,v)}
-function log(date){
-  const out={};
-  [rr(NS+'log_'+date,null),rr('dashv2_log_'+date,null)].forEach(v=>{if(v&&typeof v==='object'&&!Array.isArray(v))Object.assign(out,v)});
-  [rr(NS+'logs',null),rr('dashv2_logs',null)].forEach(b=>{if(b&&typeof b==='object'&&b[date])Object.assign(out,b[date])});
-  return out;
-}
-function range(days){
-  const arr=[],d=new Date;
-  for(let i=days-1;i>=0;i--){const x=new Date(d);x.setDate(x.getDate()-i);const k=keyDate(x);arr.push({date:k,log:log(k)})}
-  return arr;
-}
-function sum(days,fields){return range(days).reduce((a,r)=>a+fields.reduce((s,f)=>s+Number(r.log[f]||0),0),0)}
-function active(days,fields){return range(days).reduce((a,r)=>a+(fields.some(f=>Number(r.log[f]||0)>0||r.log[f]===true)?1:0),0)}
-
-const CONFIG={
- epfc:{page:'p-epfc',title:'EPFC · grades de maîtrise',icon:'🎓',fields:['epfc'],actions:[['math','Maths financières'],['droit','Droit civil'],['rc','Responsabilité civile'],['assu','Assurance'],['exam','Mode examen']],grades:[[0,'N0 Recrue','Orientation','Comprendre le programme.'],[500,'N1 Base','Fondations','Notes propres.'],[1200,'N2 Opérationnel','Exercices','Refaire avec modèle.'],[2500,'N3 Autonome','Cas pratiques','Résoudre sans regarder.'],[4500,'N4 Examen','Performance','Chrono et séries.'],[7500,'N5 Avancé','Domination','Expliquer et maîtriser.']]},
- code:{page:'p-code',title:'Code · grades de compétence',icon:'🧪',fields:['code'],actions:[['python','Python base'],['functions','Fonctions'],['collections','Collections'],['debug','Debug'],['kata','10 exercices']],grades:[[0,'N0 Recrue','Syntaxe','Comprendre la base.'],[300,'N1 Débutant','Fondations','Conditions/boucles.'],[900,'N2 Junior','Fonctions','Découper proprement.'],[1800,'N3 Opérationnel','Problèmes','Katas faciles seul.'],[3600,'N4 Builder','Projet','Petit outil utile.'],[6500,'N5 Autonome','Qualité','Tester/refactoriser.']]},
- trading:{page:'p-trading',title:'Élec/IoT · grades techniques',icon:'🔌',fields:['iot','elec','trading'],actions:[['ohm','Loi d’Ohm'],['multimeter','Multimètre'],['arduino','Arduino/ESP'],['breadboard','Breadboard'],['project','Mini-projet']],grades:[[0,'N0 Recrue','Sécurité','Risques et composants.'],[3,'N1 Base','Mesure','Mesurer sans cramer.'],[8,'N2 Technicien','Montage','Circuit simple.'],[15,'N3 Opérationnel','Microcontrôleur','Capteur + sortie.'],[25,'N4 Maker','Projet','Boîtier + code.'],[40,'N5 Intégrateur','Système','Tester/fiabiliser.']]},
- nl:{page:'p-nl',title:'Néerlandais · grades CEFR',icon:'🇳🇱',fields:['nl','anki'],actions:[['anki','Anki régulier'],['grammar','Grammaire'],['listening','Écoute'],['speaking','Oral'],['writing','Écrit']],grades:[[0,'A0 Recrue','Survie','Mots isolés.'],[450,'A1 Stable','Base','Questions simples.'],[1200,'A2 Opérationnel','Vie courante','Tâches simples.'],[2600,'B1 Combat','Autonomie','Expliquer/raconter.'],[5200,'B2 Pro','Travail','Argumenter.'],[9000,'C1 Elite','Précision','Fluide/pro.']]}
-};
-const CHESS=[[0,'G0 Recrue','Pièces en prise','Ne plus donner de pièces.'],[800,'G1 Soldat','Tactiques','Fourchette/clouage.'],[1000,'G2 Caporal','Ouvertures','Développer/roquer.'],[1200,'G3 Sergent','Calcul','2-3 coups.'],[1400,'G4 Lieutenant','Plans','Plans par structure.'],[1600,'G5 Capitaine','Conversion','Transformer avantage.'],[1800,'G6 Commandant','Précision','Calcul + prophylaxie.'],[2000,'G7 Colonel','Club','Préparation/analyse.'],[2200,'G8 Elite','Expert','Répertoire + finales.']];
-
-function grade(points,grades){
-  points=Number(points)||0;let cur=grades[0],next=null;
-  for(let i=0;i<grades.length;i++){if(points>=grades[i][0])cur=grades[i];if(points<grades[i][0]){next=grades[i];break}}
-  if(!next)next=[cur[0]+1000,'MAX','Maintien','Consolider.'];
-  return{cur,next,points,progress:pct(points-cur[0],next[0]-cur[0])};
-}
-function manual(domain){return read('v79_'+domain+'_manual', read('v78_'+domain+'_manual',{}))}
-function saveManual(domain,data){write('v79_'+domain+'_manual',data);write('v78_'+domain+'_manual',data)}
-function domainPoints(domain){
-  const c=CONFIG[domain],base=domain==='trading'?sum(90,c.fields):sum(365,c.fields);
-  const done=c.actions.filter(a=>manual(domain)[a[0]]).length;
-  return Math.round(base + done*(domain==='trading'?4:240));
-}
-function renderDomain(domain){
-  const c=CONFIG[domain],page=document.getElementById(c.page); if(!page)return;
-  let p=document.getElementById('v79-grade-'+domain);
-  if(!p){p=document.createElement('div');p.id='v79-grade-'+domain;p.className='v79-grade-panel';const h=page.querySelector('.page-header')||page.querySelector('.page-title')||page.firstElementChild;h&&h.nextSibling?page.insertBefore(p,h.nextSibling):page.insertBefore(p,page.firstChild)}
-  const pts=domainPoints(domain),g=grade(pts,c.grades),m=manual(domain),done=c.actions.filter(a=>m[a[0]]).length;
-  p.innerHTML=`<div id="v79-freeze-badge">✅ V79 Freeze Guard actif</div>
-  <div class="v79-grade-top"><div class="v79-emblem">${c.icon}</div><div><h2 class="v79-title">${esc(c.title)}</h2><div class="v79-sub"><b>Ordre actuel :</b> ${esc(g.cur[3])}</div></div><div class="v79-rank"><b>${esc(g.cur[1])}</b><span>${esc(g.cur[2])}</span></div></div>
-  <div class="v79-bar-wrap"><div class="v79-bar" style="width:${g.progress}%"></div></div>
-  <div class="v79-meta"><span>${pts} pts</span><span>Prochain : ${esc(g.next[1])} · ${g.next[0]} pts</span></div>
-  <div class="v79-grid"><div class="v79-stat"><span>7 jours</span><b>${Math.round(sum(7,c.fields))}</b></div><div class="v79-stat"><span>30 jours</span><b>${Math.round(sum(30,c.fields))}</b></div><div class="v79-stat"><span>Validés</span><b>${done}/${c.actions.length}</b></div></div>
-  <div class="v79-actions">${c.actions.map(([k,l])=>`<button type="button" class="v79-btn ${m[k]?'done':''}" data-v79-domain="${domain}" data-v79-action="${k}">${m[k]?'✓ ':''}${esc(l)}</button>`).join('')}</div>
-  <div class="v79-road">${c.grades.map((r,i)=>{const ok=pts>=r[0];return`<div class="v79-step ${ok?'done':''}"><div class="v79-step-dot">${ok?'✓':i}</div><div><div class="v79-step-name">${esc(r[1])} · ${esc(r[2])}</div><div class="v79-step-sub">${esc(r[3])}</div></div><div class="v79-step-tag">${r[0]} pts</div></div>`}).join('')}</div>`;
-}
-function chessState(){return read('chess_state',{elo:800,target:1200})}
-function chessDay(){return read('chess_'+today(),{puzzles:false,finales:false,partie:false,analyse:false})}
-function chessScore(d){return['puzzles','finales','partie','analyse'].filter(k=>d[k]).length}
-function renderChess(){
-  const page=document.getElementById('p-chess'); if(!page)return;
-  let p=document.getElementById('v79-grade-chess');
-  if(!p){p=document.createElement('div');p.id='v79-grade-chess';p.className='v79-grade-panel';const h=page.querySelector('.page-header')||page.querySelector('.page-title')||page.firstElementChild;h&&h.nextSibling?page.insertBefore(p,h.nextSibling):page.insertBefore(p,page.firstChild)}
-  const s=chessState(),d=chessDay(),elo=Number(s.elo||800),g=grade(elo,CHESS),done=chessScore(d);
-  p.innerHTML=`<div id="v79-freeze-badge">✅ V79 Freeze Guard actif</div>
-  <div class="v79-grade-top"><div class="v79-emblem">♟️</div><div><h2 class="v79-title">Échecs · grades par Elo</h2><div class="v79-sub"><b>Ordre actuel :</b> ${esc(g.cur[3])}</div></div><div class="v79-rank"><b>${esc(g.cur[1])}</b><span>${esc(g.cur[2])}</span></div></div>
-  <div class="v79-bar-wrap"><div class="v79-bar" style="width:${g.progress}%"></div></div>
-  <div class="v79-meta"><span>Elo ${elo}</span><span>Prochain : ${esc(g.next[1])} · ${g.next[0]} Elo</span></div>
-  <div class="v79-grid"><div class="v79-stat"><span>Elo actuel</span><b>${elo}</b></div><div class="v79-stat"><span>Objectif</span><b>${Number(s.target||1200)}</b></div><div class="v79-stat"><span>Drill jour</span><b>${done}/4</b></div></div>
-  <div class="v79-actions">${['puzzles','finales','partie','analyse'].map(k=>`<button type="button" class="v79-btn ${d[k]?'done':''}" data-v79-chess="${k}">${d[k]?'✓ ':''}${k}</button>`).join('')}</div>
-  <div class="v79-grid"><label class="v79-stat"><span>Elo actuel</span><input id="v79-chess-elo" type="number" value="${elo}" style="width:100%;margin-top:6px;background:rgba(2,6,23,.5);border:1px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;padding:9px"></label><label class="v79-stat"><span>Objectif Elo</span><input id="v79-chess-target" type="number" value="${Number(s.target||1200)}" style="width:100%;margin-top:6px;background:rgba(2,6,23,.5);border:1px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;padding:9px"></label><div class="v79-stat"><span>Règle</span><b>Analyse avant replay</b></div></div>
-  <div class="v79-road">${CHESS.map((r,i)=>{const ok=elo>=r[0];return`<div class="v79-step ${ok?'done':''}"><div class="v79-step-dot">${ok?'✓':i}</div><div><div class="v79-step-name">${esc(r[1])} · ${esc(r[2])}</div><div class="v79-step-sub">${esc(r[3])}</div></div><div class="v79-step-tag">${r[0]} Elo</div></div>`}).join('')}</div>`;
-}
-function renderAllSafe(){Object.keys(CONFIG).forEach(renderDomain);renderChess()}
-function boot(){
-  renderAllSafe();
-  setTimeout(renderAllSafe,400);
-
-  // Event delegation limité : pas de rerender global après chaque clic.
-  document.addEventListener('click',function(e){
-    const a=e.target.closest && e.target.closest('[data-v79-domain]');
-    if(a){
-      e.preventDefault(); e.stopPropagation();
-      const domain=a.dataset.v79Domain,k=a.dataset.v79Action,m=manual(domain);
-      m[k]=!m[k]; saveManual(domain,m); renderDomain(domain); return;
-    }
-    const c=e.target.closest && e.target.closest('[data-v79-chess]');
-    if(c){
-      e.preventDefault(); e.stopPropagation();
-      const k=c.dataset.v79Chess,d=chessDay(); d[k]=!d[k]; write('chess_'+today(),d);
-      const lg=log(today()); lg.chess=chessScore(d); write('log_'+today(),lg);
-      renderChess(); return;
-    }
-  },true);
-
-  document.addEventListener('change',function(e){
-    if(e.target.id==='v79-chess-elo'||e.target.id==='v79-chess-target'){
-      const s=chessState();
-      s.elo=Number($('#v79-chess-elo')?.value||s.elo||800);
-      s.target=Number($('#v79-chess-target')?.value||s.target||1200);
-      write('chess_state',s); renderChess();
-    }
-  },true);
-}
-window.UDV79={version:'v79-freeze-guard',renderAll:renderAllSafe,renderDomain,renderChess};
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
-})();
-</script>
-
-
-<script id="v80-epfc-display-fix-script">
-(function(){
-'use strict';
-if (window.__V80EpfcDisplayFixInstalled) return;
-window.__V80EpfcDisplayFixInstalled = true;
-
-const NS = 'dashv2_';
-const $ = (s,r=document) => r.querySelector(s);
-const $$ = (s,r=document) => Array.from(r.querySelectorAll(s));
-const esc = s => String(s ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-function read(k,f){ try{ const r=localStorage.getItem(NS+k); return r==null?f:JSON.parse(r); }catch(_){ return f; } }
-function write(k,v){ try{ localStorage.setItem(NS+k,JSON.stringify(v)); }catch(e){ console.warn('[V80]',e); } }
-function clamp(n,a,b){ return Math.max(a, Math.min(b, Number(n)||0)); }
-
-const EPFC_Y1 = [
-  {code:'MAP4', name:'Mathématique appliquée à l’informatique', periods:60, ects:5, focus:'Logique, fonctions, bases utiles pour algorithmique.'},
-  {code:'BNE2', name:'Bases des réseaux', periods:80, ects:6, focus:'Modèle réseau, IP, adressage, notions serveur/client.'},
-  {code:'BDO1', name:'Initiation aux bases de données', periods:60, ects:5, focus:'Modèle relationnel, SQL de base, tables, clés.'},
-  {code:'PRM3', name:'Principes algorithmiques et programmation', periods:120, ects:8, focus:'Variables, conditions, boucles, fonctions, logique de résolution.'},
-  {code:'WEB1', name:'Web : principes de base', periods:40, ects:3, focus:'HTML, CSS, structure d’une page, bases web.'},
-  {code:'STO4', name:'Structure des ordinateurs', periods:60, ects:5, focus:'Architecture, composants, mémoire, processeur, OS de base.'},
-  {code:'STA1', name:'Éléments de statistique', periods:40, ects:3, focus:'Statistiques descriptives, probabilités simples, lecture de données.'},
-  {code:'PAN2', name:'Analyse informatique', periods:60, ects:4, focus:'Analyser un besoin, formaliser, préparer une solution.'}
-];
-
-const EXAM_ORDER = [
-  'PRM3 : 20 exercices courts sans solution — conditions, boucles, fonctions.',
-  'BDO1 : créer un schéma simple + 10 requêtes SQL SELECT/WHERE/JOIN.',
-  'WEB1 : refaire une page propre HTML/CSS sur mobile.',
-  'MAP4/STA1 : séries calculatoires + interprétation sans tricher.',
-  'BNE2/STO4 : fiches ultra courtes + QCM technique.'
-];
-
-function progressState(){ return read('v80_epfc_y1_progress', {}); }
-function saveProgress(st){ write('v80_epfc_y1_progress', st); }
-
-function ueScore(ue, st){
-  const s = st[ue.code] || {};
-  return ['course','exos','exam'].filter(k => s[k]).length;
-}
-function totalScore(st){
-  const max = EPFC_Y1.length * 3;
-  const done = EPFC_Y1.reduce((a,ue)=>a+ueScore(ue,st),0);
-  return {done,max,pct:max ? Math.round(done/max*100) : 0};
-}
-function gradeFromPct(p){
-  if (p >= 90) return ['N4 Examen','Prêt test blanc'];
-  if (p >= 65) return ['N3 Autonome','Exercices sans modèle'];
-  if (p >= 40) return ['N2 Opérationnel','Cours + exercices guidés'];
-  if (p >= 15) return ['N1 Base','Fondations en cours'];
-  return ['N0 Recrue','Démarrage première année'];
-}
-
-function ensureEpfcPanel(){
-  const page = document.getElementById('p-epfc');
-  if (!page) return null;
-
-  // Cache les anciens panneaux faux/génériques.
-  ['v78-grade-epfc','v79-grade-epfc'].forEach(id => {
-    const old = document.getElementById(id);
-    if (old) old.style.display = 'none';
-  });
-
-  let panel = document.getElementById('v80-epfc-panel');
-  if (!panel){
-    panel = document.createElement('div');
-    panel.id = 'v80-epfc-panel';
-    const header = page.querySelector('.page-header') || page.querySelector('.page-title') || page.firstElementChild;
-    if (header && header.nextSibling) page.insertBefore(panel, header.nextSibling);
-    else page.insertBefore(panel, page.firstChild);
-  }
-  return panel;
-}
-
-function renderEpfcV80(){
-  const panel = ensureEpfcPanel();
-  if (!panel) return;
-
-  const st = progressState();
-  const sc = totalScore(st);
-  const [grade, label] = gradeFromPct(sc.pct);
-  const ectsDone = EPFC_Y1.reduce((a,ue)=>{
-    const s = st[ue.code] || {};
-    return a + (s.exam ? ue.ects : 0);
-  },0);
-  const ectsTotal = EPFC_Y1.reduce((a,ue)=>a+ue.ects,0);
-
-  panel.innerHTML = `
-    <div id="v80-fix-badge">✅ V80 affichage priorités + EPFC informatique</div>
-    <div class="v80-epfc-top">
-      <div class="v80-epfc-icon">🎓</div>
-      <div>
-        <h2 class="v80-epfc-title">EPFC · Informatique — Développement d’applications</h2>
-        <div class="v80-epfc-sub">
-          Priorité actuelle : <b>niveau 1 / première année</b>.
-          Tu valides par matière : cours compris → exercices → test blanc.
-        </div>
-      </div>
-      <div class="v80-epfc-rank">
-        <b>${esc(grade)}</b>
-        <span>${esc(label)}</span>
-      </div>
-    </div>
-    <div class="v80-bar-wrap"><div class="v80-bar" style="width:${sc.pct}%"></div></div>
-    <div class="v80-epfc-meta">
-      <span>${sc.done}/${sc.max} validations · ${sc.pct}%</span>
-      <span>ECTS sécurisés par test blanc : ${ectsDone}/${ectsTotal}</span>
-    </div>
-
-    <div class="v80-ue-grid">
-      ${EPFC_Y1.map(ue => {
-        const s = st[ue.code] || {};
-        const score = ueScore(ue,st);
-        return `
-          <div class="v80-ue-card ${score===3?'done':''}" data-v80-ue-card="${ue.code}">
-            <div class="v80-ue-head">
-              <div class="v80-ue-code">${ue.code}</div>
-              <div class="v80-ue-ects">${ue.ects} ECTS · ${ue.periods}p</div>
-            </div>
-            <div class="v80-ue-name">${esc(ue.name)}</div>
-            <div class="v80-ue-sub">${esc(ue.focus)}</div>
-            <div class="v80-ue-actions">
-              <button type="button" class="v80-ue-btn ${s.course?'done':''}" data-v80-ue="${ue.code}" data-v80-step="course">${s.course?'✓ ':''}Cours compris</button>
-              <button type="button" class="v80-ue-btn ${s.exos?'done':''}" data-v80-ue="${ue.code}" data-v80-step="exos">${s.exos?'✓ ':''}Exercices</button>
-              <button type="button" class="v80-ue-btn ${s.exam?'done':''}" data-v80-ue="${ue.code}" data-v80-step="exam">${s.exam?'✓ ':''}Mode examen</button>
-            </div>
-          </div>`;
-      }).join('')}
-    </div>
-
-    <div class="v80-exam-box">
-      <div class="v80-exam-title">Mode examen informatique — pas assurance</div>
-      <ol class="v80-exam-list">
-        ${EXAM_ORDER.map(x=>`<li>${esc(x)}</li>`).join('')}
-      </ol>
-    </div>
-  `;
-}
-
-function fixPriorityLayoutV80(){
-  const cmd = document.getElementById('v77-prio-command');
-  if (cmd){
-    const badge = cmd.querySelector('.v77-badge');
-    if (badge) badge.textContent = 'V80';
-  }
-
-  $$('#prio-list .prio-item').forEach((el, idx) => {
-    el.classList.add('v80-prio-fixed');
-    el.style.writingMode = 'horizontal-tb';
-    el.style.textOrientation = 'mixed';
-    el.style.minWidth = '0';
-    el.style.width = '100%';
-    el.style.maxWidth = '100%';
-
-    // Sécurité : si un ancien script a réduit le texte à une colonne, on force tous les enfants en horizontal.
-    $$('*', el).forEach(child => {
-      child.style.writingMode = 'horizontal-tb';
-      child.style.textOrientation = 'mixed';
-      child.style.wordBreak = 'normal';
-    });
-
-    // Si aucun vrai .prio-text n'existe, on ne reconstruit pas pour éviter de casser le handler.
-    const txt = el.querySelector('.prio-text,.prio-title,.prio-label,[contenteditable]');
-    if (txt){
-      txt.style.display = 'block';
-      txt.style.width = 'auto';
-      txt.style.minWidth = '0';
-      txt.style.maxWidth = '100%';
-      txt.style.whiteSpace = 'normal';
-      txt.style.overflowWrap = 'anywhere';
-      txt.style.lineHeight = '1.35';
-    }
-  });
-}
-
-function bindV80(){
-  if (window.__V80Bound) return;
-  window.__V80Bound = true;
-
-  document.addEventListener('click', e => {
-    const btn = e.target.closest && e.target.closest('[data-v80-ue]');
-    if (!btn) return;
-    e.preventDefault();
-    e.stopPropagation();
-
-    const code = btn.dataset.v80Ue;
-    const step = btn.dataset.v80Step;
-    const st = progressState();
-    st[code] = st[code] || {};
-    st[code][step] = !st[code][step];
-    saveProgress(st);
-    renderEpfcV80();
-  }, true);
-}
-
-function boot(){
-  bindV80();
-  renderEpfcV80();
-  fixPriorityLayoutV80();
-
-  // L’ancien rendu priorités peut se faire après boot : on repasse 3 fois, sans boucle permanente.
-  setTimeout(fixPriorityLayoutV80, 250);
-  setTimeout(fixPriorityLayoutV80, 900);
-  setTimeout(fixPriorityLayoutV80, 1800);
-
-  // Quand tu changes d’onglet ou ajoutes une priorité : correction ponctuelle seulement.
-  document.addEventListener('click', function(e){
-    if (e.target.closest && (e.target.closest('.tab,[data-go],#prio-new-btn,#prio-list'))){
-      setTimeout(fixPriorityLayoutV80, 120);
-      if (e.target.closest('.tab[data-tab="epfc"],[data-go="epfc"]')) setTimeout(renderEpfcV80, 120);
-    }
-  }, true);
-}
-
-window.UDV80 = {
-  version:'v80-epfc-display-fix',
-  renderEpfc:renderEpfcV80,
-  fixPriorityLayout:fixPriorityLayoutV80,
-  epfcYear1:EPFC_Y1
-};
-
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, {once:true});
-else boot();
-})();
-</script>
 
 <style id="study-tracker-css">
 #study-resources-host{margin:0}
