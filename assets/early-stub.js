@@ -33,6 +33,12 @@ window.__udV64StudyCheckin               = true;
 window.__udV67FullCleanCore              = true;
 window.__udV69EpfcLab                    = true;
 window.__enhV38                          = true;
+window.__udV60RoutineCardClickFix        = true;
+window.__udV61RoutineCleanPolicy         = true;
+window.__udV71MatiereFix                 = true;
+window.__udV73Command                    = true;
+window.__UD_ROUTINE_CHECKIN_ENGINE_V1__  = true;
+window.__UD_INTAKE_BUTTONS_V48           = true;
 
 (function(){
   'use strict';
