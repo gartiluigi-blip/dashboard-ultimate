@@ -16,6 +16,24 @@ window.__V79FreezeGuardInstalled = true;
 window.__V80EpfcDisplayFixInstalled = true;
 window.__V79FreezeGuardBypassedByFinal = true;
 
+/* Kill all competing routine/study engine patches (v49–v73).
+   These scripts check their own guard flag on load and exit immediately if set.
+   Setting them here (before DOMContentLoaded) neutralises every inline engine
+   that was overwriting Routine, EPFC, and study pages. */
+window.__ULTIMATE_ROUTINE_V49_PATCH__    = true;
+window.__ULTIMATE_ROUTINE_V50_MOBILE_OVERLAP__ = true;
+window.__ULTIMATE_ROUTINE_V52_CHESS_TRACKER__  = true;
+window.__UD_V54_CLEANUP_CONSOLIDATOR__   = true;
+window.__UD_V55_MOBILE_LOG_CHESS_ELO__   = true;
+window.__UD_V57_RESCUE__                 = true;
+window.__udV59CleanRoutine               = true;
+window.__udV62RoutineOneEngine           = true;
+window.__udV63SmartRoutine               = true;
+window.__udV64StudyCheckin               = true;
+window.__udV67FullCleanCore              = true;
+window.__udV69EpfcLab                    = true;
+window.__enhV38                          = true;
+
 (function(){
   'use strict';
   if (window.__EarlyStubMinimal) return;

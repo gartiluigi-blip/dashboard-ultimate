@@ -217,7 +217,7 @@ body.ud-v54-clean .tl-desc{overflow-wrap:anywhere;word-break:normal;}
 <div class="brand-text">
 <div class="brand-title">Protocole <em class="serif">Ultimate</em></div>
 <div class="brand-sub" id="brand-sub">Chargement…</div>
-<div style="font:900 10px ui-monospace,monospace;color:#22c55e;margin-top:2px;letter-spacing:.04em">v2026-05-18-v5 · etudes-unified · ✓</div>
+<div style="font:900 10px ui-monospace,monospace;color:#22c55e;margin-top:2px;letter-spacing:.04em">v2026-05-18-v6 · kill-engines · ✓</div>
 </div>
 </div>
 <div class="masthead-meta" id="meta">
@@ -5201,7 +5201,7 @@ const Cmd = {
   try { localStorage.removeItem('dashv2_hidden_tabs'); } catch(_){}
   document.querySelectorAll('.tab[data-tab]').forEach(t => { t.style.removeProperty('display'); });
 })();
-window.__DEPLOY_MARKER = '2026-05-18-v5-etudes-unified';
+window.__DEPLOY_MARKER = '2026-05-18-v6-kill-engines';
 
 // ════════════════════════════════════════════════════════════
 // FIX 5 : Patcher Quick Capture pour gérer les commandes vocales
@@ -13953,65 +13953,6 @@ document.addEventListener('click', function(e){
 })();
 </script>
 
-<div id="sr-modal-bg" role="dialog" aria-modal="true">
-  <div id="sr-modal">
-    <h3 id="sr-modal-title">Ajouter une ressource</h3>
-    <label>Titre</label><input id="sr-f-title" type="text" placeholder="Python Crash Course 3rd Ed.">
-    <label>Domaine</label>
-    <select id="sr-f-domain">
-      <option value="EPFC">EPFC Informatique</option>
-      <option value="Code">Code / Exercices</option>
-      <option value="Cybersecurity">Cybersécurité</option>
-      <option value="ElectronicsRepair">Élec / IoT</option>
-      <option value="AI">IA</option>
-      <option value="Dutch">Néerlandais</option>
-      <option value="Chess">Échecs</option>
-      <option value="Other">Autre</option>
-    </select>
-    <label>Type</label>
-    <select id="sr-f-type">
-      <option value="book">Livre</option>
-      <option value="course">Cours / Formation</option>
-      <option value="lab_path">Labs / Parcours pratique</option>
-      <option value="video">Vidéo / Série</option>
-      <option value="exercise_set">Exercices</option>
-      <option value="article">Article / Doc</option>
-    </select>
-    <label>Fournisseur</label>
-    <select id="sr-f-provider">
-      <option value="OReilly">O'Reilly</option>
-      <option value="TryHackMe">TryHackMe</option>
-      <option value="PortSwigger">PortSwigger Web Academy</option>
-      <option value="HTB">HTB Academy</option>
-      <option value="OverTheWire">OverTheWire</option>
-      <option value="picoCTF">picoCTF</option>
-      <option value="EPFC">EPFC</option>
-      <option value="YouTube">YouTube</option>
-      <option value="Other">Autre</option>
-    </select>
-    <label>Total unités</label><input id="sr-f-total" type="number" min="1" placeholder="416">
-    <label>Type d'unité</label>
-    <select id="sr-f-unit">
-      <option value="pages">Pages</option>
-      <option value="minutes">Minutes</option>
-      <option value="labs">Labs</option>
-      <option value="chapters">Chapitres</option>
-      <option value="exercises">Exercices</option>
-    </select>
-    <label>Priorité</label>
-    <select id="sr-f-prio">
-      <option value="P1">P1 — Haute</option>
-      <option value="P2">P2 — Normale</option>
-      <option value="P3">P3 — Basse</option>
-      <option value="P0">P0 — Critique</option>
-    </select>
-    <label>Notes (optionnel)</label><textarea id="sr-f-notes" placeholder="Lien, contexte, prochain chapitre…"></textarea>
-    <div class="sr-modal-actions">
-      <button class="sr-btn" id="sr-modal-cancel">Annuler</button>
-      <button class="sr-btn primary" id="sr-modal-save">Sauvegarder</button>
-    </div>
-  </div>
-</div>
 
 
 </body>
