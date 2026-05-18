@@ -186,7 +186,7 @@
 <div class="brand-text">
 <div class="brand-title">Protocole <em class="serif">Ultimate</em></div>
 <div class="brand-sub" id="brand-sub">Chargement…</div>
-<div style="font:900 10px ui-monospace,monospace;color:#22c55e;margin-top:2px;letter-spacing:.04em">v2026-05-18-v8 · purge-complete · ✓</div>
+<div style="font:900 10px ui-monospace,monospace;color:#22c55e;margin-top:2px;letter-spacing:.04em">v2026-05-18-v9 · flex-purge · ✓</div>
 </div>
 </div>
 <div class="masthead-meta" id="meta">
@@ -417,12 +417,6 @@ Bachelor dev en septembre. Bilingue NL+FR d'ici 2 ans. Corps robuste malgré la 
 <div class="log-row-label"><b>Sport</b><em>machine · pas de C7</em></div>
 </div>
 
-<div class="log-row log-check-row" data-log="flex" data-log-toggle="flex">
-<span class="log-checkbox">✓</span>
-<span class="log-row-icon">🧘</span>
-<div class="log-row-label"><b>Souplesse</b><em>routine du soir</em></div>
-</div>
-
 <div class="log-row" data-log="chess">
 <span class="log-row-icon">♟️</span>
 <div class="log-row-label"><b>Échecs</b><em>puzzles + parties</em></div>
@@ -517,16 +511,6 @@ Bachelor dev en septembre. Bilingue NL+FR d'ici 2 ans. Corps robuste malgré la 
 </div>
 
 <div class="quick-row">
-<div class="ring"><svg viewBox="0 0 36 36"><circle class="ring-bg" cx="18" cy="18" r="15.5"/><circle class="ring-fill" cx="18" cy="18" r="15.5" stroke-dasharray="97.4" stroke-dashoffset="97.4" data-ring="flex" style="stroke:var(--violet)"/></svg><div class="ring-val" data-ring-val="flex">0%</div></div>
-<div class="quick-row-text">
-<div class="quick-row-label">Souplesse · Niveau 0</div>
-<div class="quick-row-big">Déverrouiller <em>le corps</em></div>
-<div class="quick-row-desc">Cible : <b>5 séances / semaine</b> · routine courte du soir suffit.</div>
-<span class="quick-row-meta"><b data-week-val="flex">0 / 5</b> cette semaine</span>
-</div>
-</div>
-
-<div class="quick-row">
 <div class="ring"><svg viewBox="0 0 36 36"><circle class="ring-bg" cx="18" cy="18" r="15.5"/><circle class="ring-fill" cx="18" cy="18" r="15.5" stroke-dasharray="97.4" stroke-dashoffset="97.4" data-ring="sport" style="stroke:var(--gold)"/></svg><div class="ring-val" data-ring-val="sport">0%</div></div>
 <div class="quick-row-text">
 <div class="quick-row-label">Sport · PPL allégé</div>
@@ -596,7 +580,6 @@ Bachelor dev en septembre. Bilingue NL+FR d'ici 2 ans. Corps robuste malgré la 
 <div id="review-stats">
 <div class="review-stat"><span>Temps d'étude total</span><b data-rev="study">0 min</b></div>
 <div class="review-stat"><span>Séances sport</span><b data-rev="sport">0 / 3</b></div>
-<div class="review-stat"><span>Séances souplesse</span><b data-rev="flex">0 / 5</b></div>
 <div class="review-stat"><span>Pages lues</span><b data-rev="pages">0</b></div>
 <div class="review-stat"><span>Parties échecs</span><b data-rev="chess">0</b></div>
 <div class="review-stat"><span>Actions Vinted</span><b data-rev="vinted">0</b></div>
@@ -627,7 +610,6 @@ Bachelor dev en septembre. Bilingue NL+FR d'ici 2 ans. Corps robuste malgré la 
 <div class="m-review-grid">
 <div class="m-stat"><div class="m-stat-lbl">Étude totale</div><div class="m-stat-val" data-mrev="study">0h</div></div>
 <div class="m-stat"><div class="m-stat-lbl">Séances sport</div><div class="m-stat-val" data-mrev="sport">0 / 12</div></div>
-<div class="m-stat"><div class="m-stat-lbl">Séances flex</div><div class="m-stat-val" data-mrev="flex">0 / 20</div></div>
 <div class="m-stat"><div class="m-stat-lbl">Pages lues</div><div class="m-stat-val" data-mrev="pages">0</div></div>
 <div class="m-stat"><div class="m-stat-lbl">Cartes Anki</div><div class="m-stat-val" data-mrev="anki">0</div></div>
 <div class="m-stat"><div class="m-stat-lbl">Jours actifs</div><div class="m-stat-val" data-mrev="active">0 / 30</div></div>
@@ -656,7 +638,7 @@ Bachelor dev en septembre. Bilingue NL+FR d'ici 2 ans. Corps robuste malgré la 
 
 <div class="stats stats-3">
 <button aria-label="Action" class="stat" data-go="sport" style="cursor:pointer"><div class="stat-v flame" style="font-size:22px">💪</div><div class="stat-l">Séance du jour</div></button>
-<button aria-label="Action" class="stat" data-go="routine" style="cursor:pointer"><div class="stat-v amber" style="font-size:22px">🥩</div><div class="stat-l">Protéines/Eau</div></button>
+<button aria-label="Action" class="stat" data-go="repair" style="cursor:pointer"><div class="stat-v amber" style="font-size:22px">🔧</div><div class="stat-l">Réparation</div></button>
 <button aria-label="Action" class="stat" data-go="stats" style="cursor:pointer"><div class="stat-v jade" style="font-size:22px">📊</div><div class="stat-l">Mes stats</div></button>
 </div>
 
@@ -747,7 +729,6 @@ Bachelor dev en septembre. Bilingue NL+FR d'ici 2 ans. Corps robuste malgré la 
 <div class="stats-card"><div class="stats-card-lbl">Pages lues · total</div><div class="stats-card-val" id="sv-pages">0</div><div class="stats-card-sub">livres · cumul</div></div>
 <div class="stats-card"><div class="stats-card-lbl">Parties échecs</div><div class="stats-card-val" id="sv-chess">0</div><div class="stats-card-sub">toutes-périodes</div></div>
 <div class="stats-card"><div class="stats-card-lbl">Séances sport · 30j</div><div class="stats-card-val" id="sv-sport30">0</div><div class="stats-card-sub">cible 12 (3 ×/sem)</div></div>
-<div class="stats-card"><div class="stats-card-lbl">Séances souplesse · 30j</div><div class="stats-card-val" id="sv-flex30">0</div><div class="stats-card-sub">cible 20 (5 ×/sem)</div></div>
 </div>
 
 <div class="chart-card">
@@ -1880,7 +1861,7 @@ Si t'as de la fièvre, douleurs fortes, ou t'es vraiment KO : <strong>protocole 
       const d = new Date(key.replace('log_', ''));
       return !isNaN(d) && d.getFullYear() === now.getFullYear();
     });
-    let studyMin = 0, pages = 0, sport = 0, flex = 0, chess = 0, anki = 0, vinted = 0;
+    let studyMin = 0, pages = 0, sport = 0, chess = 0, anki = 0, vinted = 0;
     let moodSum = 0, moodCount = 0, activeDays = 0;
     const dowCount = [0,0,0,0,0,0,0];
     const dowScore = [0,0,0,0,0,0,0];
@@ -1890,14 +1871,13 @@ Si t'as de la fièvre, douleurs fortes, ou t'es vraiment KO : <strong>protocole 
       studyMin += (log.epfc||0) + (log.code||0) + (log.nl||0);
       pages += log.read || 0;
       if (log.sport) sport++;
-      if (log.flex) flex++;
       chess += log.chess || 0;
       anki += log.anki || 0;
       vinted += log.vinted || 0;
       if (log.mood){ moodSum += log.mood; moodCount++; }
       let doms = 0;
       ['epfc','code','nl','read','chess','vinted'].forEach(k => { if (log[k]) doms++; });
-      if (log.sport) doms++; if (log.flex) doms++;
+      if (log.sport) doms++;
       if (doms >= 4) activeDays++;
       const dow = d.getDay();
       dowCount[dow]++;
@@ -1927,7 +1907,7 @@ Si t'as de la fièvre, douleurs fortes, ou t'es vraiment KO : <strong>protocole 
       logCount: logsYear.length,
       studyHours: Math.round(studyMin / 60),
       pages,
-      sport, flex, chess, anki, vinted,
+      sport, chess, anki, vinted,
       avgMood: avgMood ? avgMood.toFixed(1) : '—',
       activeDays,
       bestDow: daysNames[bestDow],
@@ -1940,7 +1920,7 @@ Si t'as de la fièvre, douleurs fortes, ou t'es vraiment KO : <strong>protocole 
     return [
       { icon:'🎬', title:'Ton '+d.year, subtitle:d.logCount+' jours loggés', big:d.logCount, bigSub:'jours de discipline trackée', color:'flame' },
       { icon:'🎓', title:'Tu as étudié', subtitle:'EPFC + Code + NL', big:d.studyHours+'h', bigSub:d.studyHours >= 300 ? 'équivalent d\'un bachelor intensif 💪' : d.studyHours >= 100 ? 'des bases solides posées' : 'le début de la fondation', color:'jade' },
-      { icon:'💪', title:'Ton corps', subtitle:d.sport+' séances sport · '+d.flex+' séances souplesse', big:d.sport+d.flex, bigSub:'fois où tu as mis ton corps en mouvement', color:'flame' },
+      { icon:'💪', title:'Ton corps', subtitle:d.sport+' séances sport · machine & mobilité', big:d.sport, bigSub:'fois où tu as mis ton corps en mouvement', color:'flame' },
       { icon:'📚', title:'Ce que tu as lu', subtitle:'pages tournées cette année', big:d.pages, bigSub:d.pages >= 1000 ? 'bibliophile confirmé' : d.pages >= 300 ? 'de belles lectures derrière toi' : 'des premières pages', color:'pink' },
       { icon:'🎴', title:'Néerlandais', subtitle:'cartes Anki revues', big:d.anki, bigSub:'chaque carte = 1 pas vers B2', color:'sapphire' },
       { icon:'♟️', title:'Échecs', subtitle:'parties jouées', big:d.chess, bigSub:d.chess >= 100 ? 'un joueur régulier' : 'le plateau prend forme', color:'sapphire' },
