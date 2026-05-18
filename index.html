@@ -175,7 +175,7 @@ window.__UD_INTAKE_BUTTONS_V48                 = true;
 <meta name="robots" content="noindex,nofollow,noarchive,noimageindex">
 <meta name="googlebot" content="noindex,nofollow,noarchive,noimageindex">
 <meta name="ai-robots" content="noai,noimageai">
-<title>Dashboard Ultimate · 8tabs · 2026-05-18</title>
+<title>Dashboard · IPPO · 8tabs</title>
 <!-- PWA manifest (inline data-URI so single-file still works) -->
 <link rel="manifest" href='data:application/manifest+json,{"name":"Dashboard Ultimate","short_name":"Dashboard","description":"Ton dashboard personnel · routine · priorités · stats","start_url":".","display":"standalone","orientation":"portrait","theme_color":"%230a0a10","background_color":"%2308080d","icons":[{"src":"data:image/svg%2Bxml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 192 192%22%3E%3Crect width=%22192%22 height=%22192%22 rx=%2236%22 fill=%22%23ff6b35%22/%3E%3Ctext x=%2296%22 y=%22130%22 font-size=%22110%22 text-anchor=%22middle%22 fill=%22%230a0a10%22 font-family=%22sans-serif%22 font-weight=%22900%22%3E%E2%9A%A1%3C/text%3E%3C/svg%3E","sizes":"192x192","type":"image/svg+xml"},{"src":"data:image/svg%2Bxml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 512 512%22%3E%3Crect width=%22512%22 height=%22512%22 rx=%2296%22 fill=%22%23ff6b35%22/%3E%3Ctext x=%22256%22 y=%22346%22 font-size=%22292%22 text-anchor=%22middle%22 fill=%22%230a0a10%22 font-family=%22sans-serif%22 font-weight=%22900%22%3E%E2%9A%A1%3C/text%3E%3C/svg%3E","sizes":"512x512","type":"image/svg+xml"}]}'>
 <link rel="apple-touch-icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180"><rect width="180" height="180" rx="34" fill="%23ff6b35"/><text x="90" y="122" font-size="102" text-anchor="middle" fill="%230a0a10" font-family="sans-serif" font-weight="900">%E2%9A%A1</text></svg>'>
@@ -189,6 +189,285 @@ window.__UD_INTAKE_BUTTONS_V48                 = true;
 <noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500..700;1,500..700&family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet"></noscript>
 <link rel="stylesheet" href="/assets/styles/font-fallbacks.css" data-extracted="font-fallbacks">
 <link rel="stylesheet" href="/assets/main.b19fca0a.css">
+
+<style id="ippo-theme">
+/* ============================================================
+   HAJIME NO IPPO THEME — pure black, burning orange, raw power
+   ============================================================ */
+
+/* 1. ROOT VARIABLES — FULL OVERRIDE */
+:root {
+  --bg:           #050508;
+  --bg-deep:      #000000;
+  --surface:      #0c0c10;
+  --surface-2:    #121218;
+  --surface-3:    #1a1a22;
+  --text:         #f5f5f5;
+  --text-dim:     #c0c0cc;
+  --text-faint:   #707088;
+  --text-ghost:   #3a3a55;
+  --border:       rgba(255,255,255,.1);
+  --flame:        #FF4500;
+  --flame-2:      #FF6B35;
+  --flame-3:      #FF9060;
+  --gold:         #FFB800;
+  --gold-2:       #FFD700;
+  --jade:         #00DD77;
+  --jade-2:       #55EEA0;
+  --sapphire:     #3388FF;
+  --sapphire-2:   #66AAFF;
+  --coral:        #FF2244;
+  --coral-2:      #FF5577;
+  --amber:        #FFC200;
+  --amber-2:      #FFD966;
+  --violet:       #CC44FF;
+  --sh:           0 4px 24px rgba(0,0,0,.7);
+  --radius:       4px;
+}
+
+/* 2. GLOBAL BASE */
+html, body {
+  background: var(--bg-deep) !important;
+  color: var(--text) !important;
+}
+
+/* 3. MASTHEAD / HEADER */
+header, .masthead, [class*="masthead"], .app-header, #app-header {
+  background: #000 !important;
+  border-bottom: 2px solid var(--flame) !important;
+}
+.brand-name, .app-brand, [class*="brand"] {
+  text-transform: uppercase !important;
+  font-weight: 900 !important;
+  letter-spacing: .08em !important;
+}
+.badge, .app-badge, [class*="badge"] {
+  font-size: 9px !important;
+}
+
+/* 4. TAB BAR */
+#tabs, [role="tablist"], .tab-bar, nav.tabs {
+  background: #000 !important;
+  border-bottom: 2px solid var(--flame) !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  scrollbar-width: none !important;
+  white-space: nowrap !important;
+}
+#tabs::-webkit-scrollbar,
+[role="tablist"]::-webkit-scrollbar,
+.tab-bar::-webkit-scrollbar {
+  display: none !important;
+}
+#tabs button, #tabs [role="tab"],
+[role="tablist"] button, [role="tablist"] [role="tab"],
+.tab-bar button, .tab-bar [role="tab"] {
+  font-family: var(--f-sans, 'Outfit', sans-serif) !important;
+  text-transform: uppercase !important;
+  font-weight: 800 !important;
+  letter-spacing: .08em !important;
+  font-size: 10px !important;
+  color: #666 !important;
+  background: transparent !important;
+  border: none !important;
+  position: relative !important;
+  padding-bottom: 4px !important;
+}
+#tabs button.active, #tabs [role="tab"][aria-selected="true"],
+#tabs button[class*="active"], #tabs [aria-selected="true"],
+[role="tablist"] button.active, [role="tablist"] [aria-selected="true"],
+.tab-bar button.active {
+  color: var(--flame) !important;
+  background: transparent !important;
+  border: none !important;
+}
+#tabs button.active::after, #tabs [aria-selected="true"]::after,
+#tabs button[class*="active"]::after,
+[role="tablist"] button.active::after, [role="tablist"] [aria-selected="true"]::after {
+  content: '' !important;
+  position: absolute !important;
+  bottom: -2px !important;
+  left: 0 !important;
+  right: 0 !important;
+  height: 2px !important;
+  background: var(--flame) !important;
+  display: block !important;
+}
+
+/* 5. CARDS */
+.card {
+  background: #0c0c10 !important;
+  border: 1px solid rgba(255,255,255,.08) !important;
+  border-left: 3px solid var(--flame) !important;
+  border-radius: 2px !important;
+  box-shadow: 4px 0 20px rgba(255,69,0,.08) !important;
+}
+
+/* 6. SECTION TITLES */
+.section-title {
+  text-transform: uppercase !important;
+  font-weight: 900 !important;
+  font-size: 10px !important;
+  letter-spacing: .15em !important;
+  color: #fff !important;
+}
+.section-title::before {
+  background: var(--flame) !important;
+  width: 14px !important;
+  height: 3px !important;
+  clip-path: polygon(0 0, 100% 0, 85% 100%, 0 100%) !important;
+}
+.section-title.jade::before   { background: var(--jade) !important; }
+.section-title.gold::before   { background: var(--gold) !important; }
+.section-title.sapphire::before { background: var(--sapphire) !important; }
+.section-title.coral::before  { background: var(--coral) !important; }
+.section-title.amber::before  { background: var(--amber) !important; }
+.section-title.violet::before { background: var(--violet) !important; }
+
+/* 7. PAGE TITLES */
+.page-title {
+  font-weight: 900 !important;
+  font-size: 22px !important;
+  text-transform: uppercase !important;
+  letter-spacing: -.01em !important;
+  line-height: 1.1 !important;
+}
+.page-title em {
+  font-style: italic !important;
+  color: var(--flame) !important;
+  text-transform: none !important;
+}
+
+/* 8. BUTTONS */
+.trd-btn, .btn-primary, button.save-btn {
+  background: var(--flame) !important;
+  color: #000 !important;
+  border: none !important;
+  border-radius: 2px !important;
+  font-weight: 900 !important;
+  text-transform: uppercase !important;
+  letter-spacing: .08em !important;
+  transition: background .15s, transform .15s !important;
+}
+.trd-btn:hover, .btn-primary:hover, button.save-btn:hover {
+  background: var(--coral) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* 9. CALLOUT BOXES */
+.callout, [class*="callout"] {
+  border-radius: 2px !important;
+  background: rgba(255,69,0,.06) !important;
+  border-left: 3px solid var(--flame) !important;
+  border-top: none !important;
+  border-right: none !important;
+  border-bottom: none !important;
+}
+.callout.jade, [class*="callout"].jade     { background: rgba(0,221,119,.06) !important; border-left-color: var(--jade) !important; }
+.callout.gold, [class*="callout"].gold     { background: rgba(255,184,0,.06) !important; border-left-color: var(--gold) !important; }
+.callout.sapphire, [class*="callout"].sapphire { background: rgba(51,136,255,.06) !important; border-left-color: var(--sapphire) !important; }
+.callout.coral, [class*="callout"].coral   { background: rgba(255,34,68,.06) !important; border-left-color: var(--coral) !important; }
+
+/* 10. LOG WIDGET */
+.log-widget, [class*="log-widget"] {
+  background: #0c0c10 !important;
+  border-left: 3px solid var(--flame) !important;
+  border-radius: 2px !important;
+}
+.log-row, [class*="log-row"] {
+  border-bottom: 1px solid rgba(255,255,255,.05) !important;
+}
+.log-widget input, .log-widget textarea,
+[class*="log-widget"] input, [class*="log-widget"] textarea {
+  background: #0a0a0f !important;
+  border: none !important;
+  border-bottom: 1px solid rgba(255,255,255,.2) !important;
+  border-radius: 0 !important;
+  color: #fff !important;
+  font-weight: 600 !important;
+}
+
+/* 11. PROGRESS RING LABELS */
+.ring-label, [class*="ring-label"], .ring-value, [class*="ring-value"] {
+  font-weight: 900 !important;
+}
+
+/* 12. STATS CARDS */
+.stats-card, [class*="stats-card"] {
+  background: #000 !important;
+  border: none !important;
+  border-top: 3px solid var(--flame) !important;
+  border-radius: 0 !important;
+}
+.stats-card .value, [class*="stats-card"] .value,
+.stats-card [class*="value"] {
+  font-size: 32px !important;
+  font-weight: 900 !important;
+}
+.stats-card .label, [class*="stats-card"] .label,
+.stats-card [class*="label"] {
+  text-transform: uppercase !important;
+  font-size: 9px !important;
+  font-weight: 700 !important;
+  letter-spacing: .1em !important;
+}
+
+/* 13. HEATMAP */
+.heatmap-cell, [class*="heatmap"] rect, [class*="heatmap"] td {
+  border-radius: 1px !important;
+}
+
+/* 14. MINI TRACKERS */
+.mini-card, [class*="mini-card"] {
+  background: #0c0c10 !important;
+  border: 1px solid rgba(255,255,255,.07) !important;
+  border-left: 3px solid var(--flame) !important;
+  border-radius: 2px !important;
+}
+
+/* 15. QUICK ROWS */
+.quick-row, [class*="quick-row"] {
+  background: #0c0c10 !important;
+  border: 1px solid rgba(255,255,255,.07) !important;
+  border-left: 3px solid var(--flame) !important;
+  border-radius: 2px !important;
+}
+
+/* 16. LOG MOOD BUTTONS */
+.log-mood-btn, [class*="mood-btn"], [class*="log-mood"] {
+  border-radius: 2px !important;
+  border: 1px solid rgba(255,255,255,.2) !important;
+}
+
+/* 17. GLOBAL INPUT FIELDS */
+input, textarea, select {
+  background: #0a0a0f !important;
+  border: none !important;
+  border-bottom: 1px solid rgba(255,255,255,.2) !important;
+  border-radius: 0 !important;
+  color: #fff !important;
+  font-weight: 600 !important;
+}
+input:focus, textarea:focus, select:focus {
+  outline: none !important;
+  border-bottom-color: var(--flame) !important;
+}
+
+/* 18. WEEKLY REVIEW CARD */
+.weekly-review, [class*="weekly-review"] {
+  background: #0c0c10 !important;
+  border-left: 3px solid var(--gold) !important;
+  border-radius: 2px !important;
+}
+
+/* 19. SEPARATORS — diagonal slash feel */
+hr, .divider, [class*="divider"] {
+  border: none !important;
+  height: 1px !important;
+  background: linear-gradient(90deg, var(--flame) 0%, transparent 100%) !important;
+  opacity: .3 !important;
+}
+</style>
 
 <link rel="stylesheet" href="/assets/styles/index-performance-mobile.css" data-extracted="ud-performance-step1-style">
 <script id="ud-performance-step1-boot">
@@ -220,7 +499,7 @@ window.__UD_INTAKE_BUTTONS_V48                 = true;
 <div class="brand-text">
 <div class="brand-title">Protocole <em class="serif">Ultimate</em></div>
 <div class="brand-sub" id="brand-sub">Chargement…</div>
-<div style="font:900 10px ui-monospace,monospace;color:#22c55e;margin-top:2px;letter-spacing:.04em">v2026-05-18-v14 · 8tabs · inline-kills · ✓</div>
+<div style="font:900 10px ui-monospace,monospace;color:#22c55e;margin-top:2px;letter-spacing:.04em">v2026-05-18-v15 · IPPO THEME · ✓</div>
 </div>
 </div>
 <div class="masthead-meta" id="meta">
@@ -8947,7 +9226,7 @@ var LECTURE_BOOKS = [
   { id:'lec_cerveau', title:'Le cerveau à tous les âges', author:'Lionel Naccache', total:272, unit:'pages', theme:'Neuroscience', note:'Comment fonctionne le cerveau. Base scientifique solide.' },
   { id:'lec_psychomoney', title:"La psychologie de l'argent", author:'Morgan Housel', total:256, unit:'pages', theme:'Finance', note:"Études empiriques sur comment les humains pensent (et se plantent) avec l'argent." },
   { id:'lec_investisseur', title:"L'investisseur intelligent", author:'Benjamin Graham', total:640, unit:'pages', theme:'Finance', note:"Fondation de l'investissement rationnel. Buffett s'en inspire." },
-  { id:'lec_influence', title:'Influence et manipulation', author:'Robert Cialdini', total:352, unit:'pages', theme:'Psychologie', note:'6 principes d'influence validés scientifiquement. Incontournable.' },
+  { id:'lec_influence', title:'Influence et manipulation', author:'Robert Cialdini', total:352, unit:'pages', theme:'Psychologie', note:"6 principes d'influence validés scientifiquement. Incontournable." },
   { id:'lec_7habitudes', title:'Les 7 habitudes des gens très efficaces', author:'Stephen Covey', total:416, unit:'pages', theme:'Développement', note:'Un des livres de management les plus validés. Principes durables.' },
   { id:'lec_stoic', title:'Réflexions de Marc Aurèle', author:'Marc Aurèle', total:224, unit:'pages', theme:'Philosophie', note:'Stoïcisme appliqué. Résilience et clarté mentale prouvés par les neurosciences.' },
   { id:'lec_nutrition', title:'Manger pour performer', author:'John Berardi', total:384, unit:'pages', theme:'Santé', note:'Nutrition sportive basée sur des études. Appliqué aux objectifs de composition corporelle.' },
