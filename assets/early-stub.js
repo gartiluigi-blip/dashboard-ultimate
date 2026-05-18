@@ -7,7 +7,6 @@ if (typeof window.Notification === 'undefined') {
   window.Notification.requestPermission = function(){ return Promise.resolve('denied'); };
 }
 
-/* Disable late legacy inline patchers that previously rewrote visible UI. */
 window.__V75ForceFixInstalled = true;
 window.__V76VisibleFixInstalled = true;
 window.__V77OpsFixInstalled = true;
@@ -15,8 +14,6 @@ window.__V78GradeSystemInstalled = true;
 window.__V79FreezeGuardInstalled = true;
 window.__V80EpfcDisplayFixInstalled = true;
 window.__V79FreezeGuardBypassedByFinal = true;
-
-/* Kill all competing routine/study engine patches. */
 window.__ULTIMATE_ROUTINE_V49_PATCH__ = true;
 window.__ULTIMATE_ROUTINE_V50_MOBILE_OVERLAP__ = true;
 window.__ULTIMATE_ROUTINE_V52_CHESS_TRACKER__ = true;
@@ -36,8 +33,6 @@ window.__udV71MatiereFix = true;
 window.__udV73Command = true;
 window.__UD_ROUTINE_CHECKIN_ENGINE_V1__ = true;
 window.__UD_INTAKE_BUTTONS_V48 = true;
-
-/* Kill old feature packs that inject stale UI. */
 window.__UD_ULTIMATE_20_FEATURES_PACK__ = true;
 window.__ultimateV3 = true;
 
@@ -46,7 +41,7 @@ window.__ultimateV3 = true;
   if (window.__EarlyStubMinimal) return;
   window.__EarlyStubMinimal = true;
 
-  var VERSION = '20260518c-user-request';
+  var VERSION = '20260518d-v17-clean';
   var debugMode = /[?&]uddebug=1\b/.test(location.search);
   var loadStatus = {};
 
@@ -60,7 +55,7 @@ window.__ultimateV3 = true;
       'v75-forcefix-style','v76-visible-fix-style','v77-ops-fix-style','v78-grade-system-style',
       'v75-home-modules','v75-focus-fab','v75-focus-overlay','v77-overdue-card','v77-chess-card',
       'v77-prio-command','v77-chess-panel','v78-grade-panel','v79-freeze-panel','v80-epfc-display-fix',
-      'u20-cockpit','u20-fab'
+      'u20-cockpit','u20-fab','ud-v16-focus','ud-v16-routine','ud-v16-sport','ud-v16-study','ud-v16-chess'
     ].forEach(function(id){ removeNode(byId(id)); });
 
     $('[id^="v75-"], [id^="v76-"], [id^="v77-"], [id^="v78-"], [id^="v79-"], [id^="v80-"]').forEach(function(node){
@@ -69,12 +64,6 @@ window.__ultimateV3 = true;
     });
 
     $('script[id*="v75"],script[id*="v76"],script[id*="v77"],script[id*="v78"],script[id*="v79"],script[id*="v80"],style[id*="v75"],style[id*="v76"],style[id*="v77"],style[id*="v78"],style[id*="v79"],style[id*="v80"]').forEach(removeNode);
-
-    ['nutrition','souplesse','trading-old','legacy','cleanup','final'].forEach(function(tab){
-      $('[data-tab="' + tab + '"]').forEach(removeNode);
-      removeNode(page(tab));
-    });
-
     $('[id="p-nutrition"],[id="p-souplesse"],.nutrition-tab,.nutrition-page,.souplesse-tab,.souplesse-page,[class*="u20-resume-card"]').forEach(removeNode);
   }
 
@@ -105,12 +94,9 @@ window.__ultimateV3 = true;
     return {
       version: VERSION,
       loadStatus: loadStatus,
-      pages: {
-        home: !!page('home'), routine: !!page('routine'), stats: !!page('stats'),
-        etude: !!page('etude'), sport: !!page('sport'), loisir: !!page('loisir')
-      },
+      pages: { home: !!page('home'), routine: !!page('routine'), stats: !!page('stats'), etude: !!page('etude'), sport: !!page('sport'), loisir: !!page('loisir') },
       userPatch: !!window.__UD_USER_REQUEST_20260518__,
-      legacyLeft: $('[id^="v75-"], [id^="v76-"], [id^="v77-"], [id^="v78-"], [id^="v79-"], [id^="v80-"]').map(function(n){ return n.id; }).filter(Boolean),
+      v17: !!window.__UD_V17_CLEAN__,
       runAt: new Date().toISOString()
     };
   }
@@ -127,6 +113,10 @@ window.__ultimateV3 = true;
     panel.textContent = JSON.stringify(snapshot(), null, 2);
   }
 
+  function loadV17(){
+    loadScript('ud-v17-clean-integration', '/assets/ud-v17-clean-integration.js?v=' + VERSION, 'v17');
+  }
+
   function boot(){
     purgeLegacyInlinePatches();
     disableServiceWorkers();
@@ -134,12 +124,14 @@ window.__ultimateV3 = true;
       purgeLegacyInlinePatches();
       loadScript('ud-user-request-20260518', '/assets/ud-user-request-20260518.js?v=' + VERSION, 'userPatch', function(){
         purgeLegacyInlinePatches();
+        loadV17();
       });
     });
     setTimeout(purgeLegacyInlinePatches, 100);
     setTimeout(purgeLegacyInlinePatches, 500);
     setTimeout(purgeLegacyInlinePatches, 1500);
-    setTimeout(function(){ loadScript('ud-user-request-20260518', '/assets/ud-user-request-20260518.js?v=' + VERSION, 'userPatchFallback'); }, 2000);
+    setTimeout(function(){ loadScript('ud-user-request-20260518', '/assets/ud-user-request-20260518.js?v=' + VERSION, 'userPatchFallback'); loadV17(); }, 2000);
+    setTimeout(loadV17, 3000);
     setTimeout(renderDebug, 500);
     setTimeout(renderDebug, 1500);
     setTimeout(renderDebug, 3000);
