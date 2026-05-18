@@ -1,7 +1,41 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<script src="/assets/early-stub.js" id="early-stub" data-extracted="early-stub"></script>
+<!-- KILL FLAGS — inline so they're always fresh (never cached separately like external .js files).
+     These MUST be the first thing that executes. Every legacy script checks its guard and exits
+     immediately if the flag is set. -->
+<script id="kill-flags">
+window.__UD_ULTIMATE_20_FEATURES_PACK__        = true; // ud-ultimate-20-features-pack: cockpit/FAB/resume cards
+window.__ultimateV3                            = true; // ultimate-v3: old IDB migration layer
+window.__hotfix31                              = true; // hotfix-v3-1: now superseded by nav-v42
+window.__V75ForceFixInstalled                  = true;
+window.__V76VisibleFixInstalled                = true;
+window.__V77OpsFixInstalled                    = true;
+window.__V78GradeSystemInstalled               = true;
+window.__V79FreezeGuardInstalled               = true;
+window.__V80EpfcDisplayFixInstalled            = true;
+window.__V79FreezeGuardBypassedByFinal         = true;
+window.__ULTIMATE_ROUTINE_V49_PATCH__          = true;
+window.__ULTIMATE_ROUTINE_V50_MOBILE_OVERLAP__ = true;
+window.__ULTIMATE_ROUTINE_V52_CHESS_TRACKER__  = true;
+window.__UD_V54_CLEANUP_CONSOLIDATOR__         = true;
+window.__UD_V55_MOBILE_LOG_CHESS_ELO__         = true;
+window.__UD_V57_RESCUE__                       = true;
+window.__udV59CleanRoutine                     = true;
+window.__udV62RoutineOneEngine                 = true;
+window.__udV63SmartRoutine                     = true;
+window.__udV64StudyCheckin                     = true;
+window.__udV67FullCleanCore                    = true;
+window.__udV69EpfcLab                          = true;
+window.__enhV38                                = true;
+window.__udV60RoutineCardClickFix              = true;
+window.__udV61RoutineCleanPolicy               = true;
+window.__udV71MatiereFix                       = true;
+window.__udV73Command                          = true;
+window.__UD_ROUTINE_CHECKIN_ENGINE_V1__        = true;
+window.__UD_INTAKE_BUTTONS_V48                 = true;
+</script>
+<script src="/assets/early-stub.js?v=20260518b" id="early-stub" data-extracted="early-stub"></script>
 <script id="audit-private-mode-check">
 (function(){
   var ok = false;
@@ -141,7 +175,7 @@
 <meta name="robots" content="noindex,nofollow,noarchive,noimageindex">
 <meta name="googlebot" content="noindex,nofollow,noarchive,noimageindex">
 <meta name="ai-robots" content="noai,noimageai">
-<title>Dashboard Ultimate · v80 EPFC Display Fix</title>
+<title>Dashboard Ultimate · 8tabs · 2026-05-18</title>
 <!-- PWA manifest (inline data-URI so single-file still works) -->
 <link rel="manifest" href='data:application/manifest+json,{"name":"Dashboard Ultimate","short_name":"Dashboard","description":"Ton dashboard personnel · routine · priorités · stats","start_url":".","display":"standalone","orientation":"portrait","theme_color":"%230a0a10","background_color":"%2308080d","icons":[{"src":"data:image/svg%2Bxml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 192 192%22%3E%3Crect width=%22192%22 height=%22192%22 rx=%2236%22 fill=%22%23ff6b35%22/%3E%3Ctext x=%2296%22 y=%22130%22 font-size=%22110%22 text-anchor=%22middle%22 fill=%22%230a0a10%22 font-family=%22sans-serif%22 font-weight=%22900%22%3E%E2%9A%A1%3C/text%3E%3C/svg%3E","sizes":"192x192","type":"image/svg+xml"},{"src":"data:image/svg%2Bxml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 512 512%22%3E%3Crect width=%22512%22 height=%22512%22 rx=%2296%22 fill=%22%23ff6b35%22/%3E%3Ctext x=%22256%22 y=%22346%22 font-size=%22292%22 text-anchor=%22middle%22 fill=%22%230a0a10%22 font-family=%22sans-serif%22 font-weight=%22900%22%3E%E2%9A%A1%3C/text%3E%3C/svg%3E","sizes":"512x512","type":"image/svg+xml"}]}'>
 <link rel="apple-touch-icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180"><rect width="180" height="180" rx="34" fill="%23ff6b35"/><text x="90" y="122" font-size="102" text-anchor="middle" fill="%230a0a10" font-family="sans-serif" font-weight="900">%E2%9A%A1</text></svg>'>
@@ -186,7 +220,7 @@
 <div class="brand-text">
 <div class="brand-title">Protocole <em class="serif">Ultimate</em></div>
 <div class="brand-sub" id="brand-sub">Chargement…</div>
-<div style="font:900 10px ui-monospace,monospace;color:#22c55e;margin-top:2px;letter-spacing:.04em">v2026-05-18-v13 · 8tabs+engines+jsfix · ✓</div>
+<div style="font:900 10px ui-monospace,monospace;color:#22c55e;margin-top:2px;letter-spacing:.04em">v2026-05-18-v14 · 8tabs · inline-kills · ✓</div>
 </div>
 </div>
 <div class="masthead-meta" id="meta">
@@ -9079,6 +9113,28 @@ else boot();
 })();
 </script>
 
+<!-- FINAL DOM PURGE — runs on DOMContentLoaded to nuke any u20/legacy elements
+     that might have survived from a stale service-worker cache or a script that
+     slipped past the kill flags. Safe to run every time, idempotent. -->
+<script id="final-dom-purge">
+(function(){
+  function purge(){
+    var ids = ['u20-cockpit','u20-fab','u20-drawer','u20-modal','ud-runtime-debug-panel'];
+    ids.forEach(function(id){ var el=document.getElementById(id); if(el) el.parentNode.removeChild(el); });
+    document.querySelectorAll('[class*="u20-resume-card"],[id^="v75-"],[id^="v76-"],[id^="v77-"],[id^="v78-"],[id^="v79-"],[id^="v80-"]').forEach(function(el){
+      if(el.id==='v75-score-value'||el.id==='v75-score-detail'||el.id==='v75-morning-body') return;
+      el.parentNode && el.parentNode.removeChild(el);
+    });
+    document.querySelectorAll('.tab[data-tab="today"],.tab[data-tab="trading"],.tab[data-tab="epfc"],.tab[data-tab="chess"],.tab[data-tab="vinted"],.tab[data-tab="finance"],.tab[data-tab="nl"],.tab[data-tab="plan"],.tab[data-tab="ia"],.tab[data-tab="repair"],.tab[data-tab="iot"]').forEach(function(el){
+      el.parentNode && el.parentNode.removeChild(el);
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', purge, {once:true});
+  else purge();
+  setTimeout(purge, 300);
+  setTimeout(purge, 1200);
+})();
+</script>
+
 </body>
 </html>
-<!-- V51 hotfix: Vinted validation bypasses study modal. -->

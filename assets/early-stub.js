@@ -49,7 +49,7 @@ window.__ultimateV3                      = true;
   if (window.__EarlyStubMinimal) return;
   window.__EarlyStubMinimal = true;
 
-  var VERSION = '20260518-legacy-purge';
+  var VERSION = '20260518b-inline-kills';
   var debugMode = /[?&]uddebug=1\b/.test(location.search);
   var loadStatus = {};
 
