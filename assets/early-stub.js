@@ -40,6 +40,10 @@ window.__udV73Command                    = true;
 window.__UD_ROUTINE_CHECKIN_ENGINE_V1__  = true;
 window.__UD_INTAKE_BUTTONS_V48           = true;
 
+/* Kill old feature packs that inject stale UI (cockpit, trading panel, resume cards) */
+window.__UD_ULTIMATE_20_FEATURES_PACK__  = true;
+window.__ultimateV3                      = true;
+
 (function(){
   'use strict';
   if (window.__EarlyStubMinimal) return;
@@ -77,6 +81,11 @@ window.__UD_INTAKE_BUTTONS_V48           = true;
 
     // Nutrition/Flex legacy pages sometimes returned with old IDs/classes rather than tabs.
     $('[id="p-nutrition"],[id="p-souplesse"],.nutrition-tab,.nutrition-page,.souplesse-tab,.souplesse-page').forEach(removeNode);
+
+    // Kill u20 cockpit + FAB injected by ud-ultimate-20-features-pack
+    removeNode(byId('u20-cockpit'));
+    removeNode(byId('u20-fab'));
+    $('[class*="u20-resume-card"]').forEach(removeNode);
   }
 
   function disableServiceWorkers(){
