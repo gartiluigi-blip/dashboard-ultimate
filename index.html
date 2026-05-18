@@ -6119,17 +6119,11 @@ const Cmd = {
   },
 
   confirmRemoveTab(name){
-    const target = name.toLowerCase().replace('paramètres','settings').replace('parametres','settings');
-    if (!confirm(`Supprimer l'onglet ${target} ? Les données restent en localStorage mais l'onglet sera caché.`)){
-      return { ok: false, msg: 'Annulé' };
-    }
-    const tab = document.querySelector(`.tab[data-tab="${target}"]`);
-    const sec = document.getElementById('p-' + target);
-    if (tab) tab.style.display = 'none';
-    if (sec) sec.style.display = 'none';
-    const hidden = sg('hidden_tabs', []);
-    if (!hidden.includes(target)){ hidden.push(target); ss('hidden_tabs', hidden); }
-    return { ok: true, msg: `✓ Onglet ${target} caché`, action: 'remove' };
+    /* DISABLED 2026-05-18: this voice command used to push tabs into
+       localStorage['dashv2_hidden_tabs'], which then masked them across reloads
+       — including new tabs (Réparation/IoT) added later. There is no UI to
+       unhide a tab once removed, so the feature is now a no-op. */
+    return { ok: false, msg: 'Suppression d\'onglet désactivée. Tabs gérés via le code.' };
   },
 
   startPomo(min){
@@ -6143,14 +6137,30 @@ const Cmd = {
   }
 };
 
-// Reapply hidden tabs au load
-(function applyHidden(){
-  const hidden = sg('hidden_tabs', []);
-  hidden.forEach(t => {
-    const tab = document.querySelector(`.tab[data-tab="${t}"]`);
-    const sec = document.getElementById('p-' + t);
-    if (tab) tab.style.display = 'none';
-    if (sec) sec.style.display = 'none';
+// DEPLOY MARKER 2026-05-18-v3 — visible in page source so user can verify fresh load
+window.__DEPLOY_MARKER = '2026-05-18-v3-split-tabs-no-hidden';
+
+// applyHidden NEUTRALISED 2026-05-18: was reading localStorage['dashv2_hidden_tabs']
+// and hiding any tab listed there. If the user had previously hidden "trading" or
+// "nutrition" via the old voice-command feature, those entries would mask the new
+// 🔌 IoT / 🥩 Nutrition tabs after our refactor. We also pre-clear the legacy key
+// once so a stale value can't haunt the next reload.
+(function cleanHiddenTabsLegacy(){
+  try {
+    var key = 'dashv2_hidden_tabs';
+    if (localStorage.getItem(key)) {
+      localStorage.setItem(key, '[]');
+    }
+    /* Defensive: also clear potential variants used by older builds. */
+    ['dashv2_hidden_tabs_v2','dashv2_tabs_hidden','dashv2_tab_hidden'].forEach(function(k){
+      if (localStorage.getItem(k)) localStorage.setItem(k, '[]');
+    });
+  } catch(_) {}
+  /* Force ALL .tab elements visible (page-level display is managed by the tab
+     router — don't touch sections). This only un-hides tabs that applyHidden
+     would have masked in a prior session. */
+  document.querySelectorAll('.tab[data-tab]').forEach(function(el){
+    if (el.style && el.style.display === 'none') el.style.removeProperty('display');
   });
 })();
 
