@@ -41,3 +41,32 @@
     nl2br
   });
 })();
+
+(function(){
+  'use strict';
+  function boot(){
+    try {
+      window.UDRuntimeDiag = {
+        version: 'diag-2026-05-18',
+        host: !!document.getElementById('study-resources-host'),
+        study: !!(window.__studyTracker && window.__studyTracker.render),
+        plan: !!document.getElementById('p-plan'),
+        epfc: !!document.getElementById('p-epfc')
+      };
+      if (window.__studyTracker && window.__studyTracker.render) {
+        window.__studyTracker.render();
+      }
+      document.addEventListener('click', function(e){
+        var target = e.target && e.target.closest && e.target.closest('.tab,[data-tab],[data-go]');
+        if (!target) return;
+        setTimeout(function(){
+          if (window.__studyTracker && window.__studyTracker.render) window.__studyTracker.render();
+        }, 150);
+      }, true);
+    } catch (error) {
+      console.warn('[UDRuntimeDiag]', error);
+    }
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });
+  else boot();
+})();
