@@ -47,6 +47,130 @@
 
   function fmtEur(v) { return parseFloat(v || 0).toFixed(2) + ' €'; }
 
+  /* ═══════════════════════════════════════════
+     MODAL SYSTEM
+  ═══════════════════════════════════════════ */
+  var Modal = (function () {
+    function getOverlay() { return document.getElementById('modal-overlay'); }
+    function getBox()     { return document.getElementById('modal-box'); }
+
+    function open(html, afterInsert) {
+      var ov = getOverlay(); var box = getBox();
+      if (!ov || !box) return;
+      box.innerHTML = html;
+      ov.style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+      if (afterInsert) afterInsert(box);
+    }
+
+    function close() {
+      var ov = getOverlay();
+      if (ov) ov.style.display = 'none';
+      document.body.style.overflow = '';
+    }
+
+    function escListener(e) { if (e.key === 'Escape') close(); }
+    document.addEventListener('keydown', escListener);
+
+    function alert(msg) {
+      open(
+        '<div class="modal-title">ℹ️ Info</div>' +
+        '<div class="modal-body">' + String(msg) + '</div>' +
+        '<div class="modal-actions"><button class="btn btn-primary modal-ok" type="button">OK</button></div>'
+      , function(box) {
+        box.querySelector('.modal-ok').addEventListener('click', close);
+      });
+    }
+
+    function confirm(msg, onConfirm) {
+      open(
+        '<div class="modal-title">Confirmation</div>' +
+        '<div class="modal-body">' + String(msg) + '</div>' +
+        '<div class="modal-actions">' +
+          '<button class="btn btn-secondary modal-cancel" type="button">Annuler</button>' +
+          '<button class="btn btn-primary modal-confirm" type="button">Confirmer</button>' +
+        '</div>'
+      , function(box) {
+        box.querySelector('.modal-cancel').addEventListener('click', close);
+        box.querySelector('.modal-confirm').addEventListener('click', function () { close(); if (onConfirm) onConfirm(); });
+      });
+    }
+
+    function destroy(msg, confirmWord, onConfirm) {
+      open(
+        '<div class="modal-title" style="color:var(--red)">⚠️ Action destructive</div>' +
+        '<div class="modal-body">' + String(msg) + '</div>' +
+        '<div class="modal-field">' +
+          '<label style="font-size:11px;color:var(--muted);font-weight:700">Tapez <b style="color:var(--red)">' + String(confirmWord) + '</b> pour confirmer :</label>' +
+          '<input id="modal-destroy-input" type="text" placeholder="' + String(confirmWord) + '" autocomplete="off">' +
+        '</div>' +
+        '<div class="modal-actions">' +
+          '<button class="btn btn-secondary modal-cancel" type="button">Annuler</button>' +
+          '<button class="btn btn-danger modal-destroy" type="button" disabled>Supprimer</button>' +
+        '</div>'
+      , function(box) {
+        var inp = box.querySelector('#modal-destroy-input');
+        var destroyBtn = box.querySelector('.modal-destroy');
+        box.querySelector('.modal-cancel').addEventListener('click', close);
+        inp.addEventListener('input', function () {
+          destroyBtn.disabled = inp.value !== confirmWord;
+        });
+        destroyBtn.addEventListener('click', function () { close(); if (onConfirm) onConfirm(); });
+      });
+    }
+
+    function form(title, fields, onSubmit) {
+      var fieldsHtml = (fields || []).map(function (f) {
+        var inp = '';
+        if (f.type === 'select') {
+          inp = '<select id="mf_' + f.id + '">' +
+            (f.options || []).map(function (o) {
+              return '<option value="' + o.value + '">' + o.label + '</option>';
+            }).join('') + '</select>';
+        } else if (f.type === 'textarea') {
+          inp = '<textarea id="mf_' + f.id + '" placeholder="' + (f.placeholder || '') + '" rows="3"></textarea>';
+        } else {
+          inp = '<input id="mf_' + f.id + '" type="' + (f.type || 'text') + '" placeholder="' + (f.placeholder || '') + '"' +
+            (f.required ? ' required' : '') + '>';
+        }
+        return '<div class="modal-field"><label>' + (f.label || f.id) + (f.required ? ' *' : '') + '</label>' + inp + '</div>';
+      }).join('');
+
+      open(
+        '<div class="modal-title">' + String(title) + '</div>' +
+        '<div class="modal-form">' + fieldsHtml + '</div>' +
+        '<div class="modal-actions">' +
+          '<button class="btn btn-secondary modal-cancel" type="button">Annuler</button>' +
+          '<button class="btn btn-primary modal-submit" type="button">Enregistrer</button>' +
+        '</div>'
+      , function(box) {
+        box.querySelector('.modal-cancel').addEventListener('click', close);
+        box.querySelector('.modal-submit').addEventListener('click', function () {
+          var data = {};
+          var valid = true;
+          (fields || []).forEach(function (f) {
+            var el2 = document.getElementById('mf_' + f.id);
+            if (!el2) return;
+            var val = el2.value.trim ? el2.value.trim() : el2.value;
+            if (f.required && !val) { el2.style.borderColor = 'var(--red)'; valid = false; return; }
+            data[f.id] = val;
+          });
+          if (!valid) return;
+          close();
+          if (onSubmit) onSubmit(data);
+        });
+      });
+    }
+
+    /* Click outside to close */
+    document.addEventListener('click', function (e) {
+      var ov = getOverlay();
+      if (ov && e.target === ov) close();
+    });
+
+    return { alert: alert, confirm: confirm, destroy: destroy, form: form, close: close, open: open };
+  })();
+
   /* ─── Header date ─── */
   function initHeader() {
     var d = qs('#header-date');
@@ -426,13 +550,15 @@
   }
 
   function showAddObjectiveModal() {
-    var label = prompt('Objectif :');
-    if (!label) return;
-    var target = parseInt(prompt('Cible (nombre) :') || '0', 10);
-    var objs = Store.getObjectives();
-    objs.push({ id: Date.now(), label: label, target: target, current: 0 });
-    Store.setObjectives(objs);
-    renderAujourdhui();
+    Modal.form('Nouvel objectif', [
+      { id:'label', label:'Objectif', type:'text', placeholder:'Ex: Lire 300 pages...', required:true },
+      { id:'target', label:'Cible (nombre)', type:'number', placeholder:'100', required:true }
+    ], function (data) {
+      var objs = Store.getObjectives();
+      objs.push({ id: Date.now(), label: data.label, target: parseInt(data.target,10)||0, current: 0 });
+      Store.setObjectives(objs);
+      renderAujourdhui();
+    });
   }
 
   /* ─── Streaks card ─── */
@@ -1839,13 +1965,15 @@
     cHead.innerHTML = '<div class="card-title">📋 Charges fixes</div>';
     var addChrBtn = el('button', { class:'btn btn-secondary btn-sm', type:'button' }, '+ Charge');
     addChrBtn.addEventListener('click', function () {
-      var label = prompt('Nom de la charge :');
-      if (!label) return;
-      var amount = parseFloat(prompt('Montant (€) :') || '0');
-      var f2 = Store.getFinanceMonth(selectedMonth);
-      var c2 = (f2.charges || []).concat([{ label: label, amount: amount }]);
-      Store.setFinanceMonth(selectedMonth, { charges: c2 });
-      buildBudgetPanel(panel);
+      Modal.form('Nouvelle charge fixe', [
+        { id:'label', label:'Nom de la charge', type:'text', placeholder:'Ex: Loyer, Netflix...', required:true },
+        { id:'amount', label:'Montant (€)', type:'number', placeholder:'0', required:true }
+      ], function (data) {
+        var f2 = Store.getFinanceMonth(selectedMonth);
+        var c2 = (f2.charges || []).concat([{ label: data.label, amount: parseFloat(data.amount)||0 }]);
+        Store.setFinanceMonth(selectedMonth, { charges: c2 });
+        buildBudgetPanel(panel);
+      });
     });
     cHead.appendChild(addChrBtn);
     cCard.appendChild(cHead);
@@ -1879,14 +2007,16 @@
     dHead.innerHTML = '<div class="card-title">📉 Dettes</div>';
     var addDebtBtn = el('button', { class:'btn btn-secondary btn-sm', type:'button' }, '+ Dette');
     addDebtBtn.addEventListener('click', function () {
-      var label = prompt('Nom de la dette :');
-      if (!label) return;
-      var total = parseFloat(prompt('Montant total (€) :') || '0');
-      var paid  = parseFloat(prompt('Déjà remboursé (€) :') || '0');
-      var f2 = Store.getFinanceMonth(selectedMonth);
-      var d2 = (f2.debts || []).concat([{ label: label, total: total, paid: paid }]);
-      Store.setFinanceMonth(selectedMonth, { debts: d2 });
-      buildBudgetPanel(panel);
+      Modal.form('Nouvelle dette', [
+        { id:'label', label:'Nom de la dette', type:'text', placeholder:'Ex: Prêt voiture...', required:true },
+        { id:'total', label:'Montant total (€)', type:'number', placeholder:'0', required:true },
+        { id:'paid', label:'Déjà remboursé (€)', type:'number', placeholder:'0' }
+      ], function (data) {
+        var f2 = Store.getFinanceMonth(selectedMonth);
+        var d2 = (f2.debts || []).concat([{ label: data.label, total: parseFloat(data.total)||0, paid: parseFloat(data.paid)||0 }]);
+        Store.setFinanceMonth(selectedMonth, { debts: d2 });
+        buildBudgetPanel(panel);
+      });
     });
     dHead.appendChild(addDebtBtn);
     dCard.appendChild(dHead);
@@ -1942,13 +2072,15 @@
     /* Add article button */
     var addBtn = el('button', { class:'btn btn-primary', type:'button', style:'width:100%;margin-bottom:14px' }, '+ Ajouter article');
     addBtn.addEventListener('click', function () {
-      var name = prompt('Nom de l\'article :');
-      if (!name) return;
-      var buyPrice = parseFloat(prompt('Prix d\'achat (€) :') || '0');
-      var sellPrice = parseFloat(prompt('Prix de vente prévu (€) :') || '0');
-      Store.addVintedItem({ name: name, buyPrice: buyPrice, sellPrice: sellPrice, status: 'En vente' });
-      buildVintedPanel(panel);
-      toast('Article ajouté ✓');
+      Modal.form('Ajouter article Vinted', [
+        { id:'name', label:'Nom de l\'article', type:'text', placeholder:'Ex: Veste Nike...', required:true },
+        { id:'buyPrice', label:'Prix d\'achat (€)', type:'number', placeholder:'0' },
+        { id:'sellPrice', label:'Prix de vente prévu (€)', type:'number', placeholder:'0' }
+      ], function (data) {
+        Store.addVintedItem({ name: data.name, buyPrice: parseFloat(data.buyPrice)||0, sellPrice: parseFloat(data.sellPrice)||0, status: 'En vente' });
+        buildVintedPanel(panel);
+        toast('Article ajouté ✓');
+      });
     });
     panel.appendChild(addBtn);
 
@@ -1988,10 +2120,14 @@
       if (item.status !== 'Vendu') {
         var sellBtn = el('button', { class:'btn btn-green btn-xs', type:'button' }, '✓ Vendu');
         sellBtn.addEventListener('click', function () {
-          var sp = parseFloat(prompt('Prix de vente réel (€) :', item.sellPrice) || item.sellPrice);
-          Store.updateVintedItem(item.id, { status: 'Vendu', sellPrice: sp });
-          toast('Vendu ' + fmtEur(sp) + ' · Profit: ' + fmtEur(sp - (item.buyPrice||0)));
-          buildVintedPanel(panel);
+          Modal.form('Prix de vente réel', [
+            { id:'sp', label:'Prix de vente (€)', type:'number', placeholder: String(item.sellPrice || '0'), required:true }
+          ], function (data) {
+            var sp = parseFloat(data.sp) || parseFloat(item.sellPrice) || 0;
+            Store.updateVintedItem(item.id, { status: 'Vendu', sellPrice: sp });
+            toast('Vendu ' + fmtEur(sp) + ' · Profit: ' + fmtEur(sp - (item.buyPrice||0)));
+            buildVintedPanel(panel);
+          });
         });
         actEl.appendChild(sellBtn);
 
@@ -2005,9 +2141,10 @@
 
       var delBtn = el('button', { class:'btn-icon', type:'button', title:'Supprimer' }, '×');
       delBtn.addEventListener('click', function () {
-        if (!confirm('Supprimer "' + item.name + '" ?')) return;
-        Store.deleteVintedItem(item.id);
-        buildVintedPanel(panel);
+        Modal.confirm('Supprimer "' + item.name + '" ?', function () {
+          Store.deleteVintedItem(item.id);
+          buildVintedPanel(panel);
+        });
       });
       actEl.appendChild(delBtn);
 
@@ -2062,22 +2199,24 @@
       {
         label:'Vider le cache', sub:'Supprimer le cache du navigateur',
         action: function () {
-          if (!confirm('Vider le cache ?')) return;
-          if (window.caches) {
-            caches.keys().then(function (keys) {
-              keys.forEach(function (k) { caches.delete(k); });
-              toast('Cache vidé ✓');
-            });
-          } else { toast('Cache API non disponible'); }
+          Modal.confirm('Vider le cache du navigateur ?', function () {
+            if (window.caches) {
+              caches.keys().then(function (keys) {
+                keys.forEach(function (k) { caches.delete(k); });
+                toast('Cache vidé ✓');
+              });
+            } else { toast('Cache API non disponible'); }
+          });
         }
       },
       {
         label:'Réinitialiser les données', sub:'⚠️ Supprime TOUTES les données',
         action: function () {
-          if (!confirm('Supprimer TOUTES les données du dashboard ?')) return;
-          Store.clearAll();
-          toast('Données supprimées · rechargement...');
-          setTimeout(function () { location.reload(); }, 1200);
+          Modal.destroy('Supprimer TOUTES les données du dashboard ? Cette action est irréversible.', 'SUPPRIMER', function () {
+            Store.clearAll();
+            toast('Données supprimées · rechargement...');
+            setTimeout(function () { location.reload(); }, 1200);
+          });
         }
       }
     ];
@@ -2136,10 +2275,1615 @@
   }
 
   /* ═══════════════════════════════════════════
+     V4 : CERTIFICATIONS (Étude tab)
+  ═══════════════════════════════════════════ */
+  function seedCertificationsIfEmpty() {
+    try {
+      var existing = Store.getCertifications();
+      if (existing && existing.length > 0) return;
+      if (!window.D || !D.CERTIFICATION_SEED) return;
+      var now = new Date().toISOString();
+      var seeded = D.CERTIFICATION_SEED.map(function (c, i) {
+        return Object.assign({}, c, {
+          id: 'cert_' + Date.now() + '_' + i,
+          status: 'planned',
+          readinessPct: 0,
+          mockScores: [],
+          createdAt: now
+        });
+      });
+      Store.setCertifications(seeded);
+    } catch(e) {}
+  }
+
+  function computeReadiness(cert) {
+    if (!cert) return 0;
+    if (cert.status === 'passed') return 100;
+    var base = 0;
+    var scores = cert.mockScores || [];
+    if (scores.length > 0) {
+      var last = scores[scores.length - 1];
+      base = (parseFloat(last.score) || 0) * 0.6;
+    }
+    var statusBonus = cert.status === 'active' ? 10 : cert.status === 'exam_ready' ? 20 : 0;
+    var proofsCount = (cert.proofsRequired || []).length;
+    var proofFactor = proofsCount > 0 ? Math.min(10, proofsCount * 2) : 0;
+    var total = base + statusBonus + proofFactor;
+    return Math.min(99, Math.round(total));
+  }
+
+  function renderCertifications() {
+    seedCertificationsIfEmpty();
+    var certs = Store.getCertifications() || [];
+    var tracks = (window.D && D.CERT_TRACKS) ? D.CERT_TRACKS : [{ id:'all', label:'Tous' }];
+    var statuses = (window.D && D.CERT_STATUSES) ? D.CERT_STATUSES : [];
+
+    var wrap = el('div', { class:'cert-panel' });
+
+    /* Header */
+    var header = el('div', { class:'cert-panel-header' });
+    header.innerHTML = '<div class="card-title">📜 Certifications</div>';
+    wrap.appendChild(header);
+
+    /* Stats bar */
+    var total = certs.length;
+    var active = certs.filter(function(c){ return c.status === 'active'; }).length;
+    var passed = certs.filter(function(c){ return c.status === 'passed'; }).length;
+    var statsBar = el('div', { class:'cert-stats-bar' });
+    statsBar.innerHTML =
+      '<div class="cert-stat"><div class="cert-stat-val">' + total + '</div><div class="cert-stat-lbl">Total</div></div>' +
+      '<div class="cert-stat"><div class="cert-stat-val" style="color:var(--violet3)">' + active + '</div><div class="cert-stat-lbl">Actives</div></div>' +
+      '<div class="cert-stat"><div class="cert-stat-val" style="color:var(--green)">' + passed + '</div><div class="cert-stat-lbl">Passées</div></div>';
+    wrap.appendChild(statsBar);
+
+    /* Track filter tabs */
+    var filterRow = el('div', { class:'cert-filter-row' });
+    var activeTFilter = Store.get('cert_track_filter', 'all');
+    var activeOnly = !!Store.get('cert_active_only', false);
+
+    tracks.forEach(function (tr) {
+      var btn = el('button', { class:'cert-track-btn' + (activeTFilter === tr.id ? ' active' : ''), type:'button' }, tr.label);
+      btn.addEventListener('click', function () {
+        Store.set('cert_track_filter', tr.id);
+        var cp = qs('#cert-panel-inner');
+        if (cp) cp.parentElement.replaceChild(renderCertifications(), cp.parentElement.querySelector('.cert-panel'));
+      });
+      filterRow.appendChild(btn);
+    });
+    wrap.appendChild(filterRow);
+
+    /* Active only toggle */
+    var toggleRow = el('div', { style:'display:flex;align-items:center;gap:10px;margin:8px 0' });
+    var toggleBtn = el('button', { class:'btn btn-secondary btn-sm' + (activeOnly ? ' active' : ''), type:'button' }, activeOnly ? '✓ Active seulement' : 'Active seulement');
+    toggleBtn.addEventListener('click', function () {
+      Store.set('cert_active_only', !activeOnly);
+      var cp = qs('.cert-panel');
+      if (cp && cp.parentElement) cp.parentElement.replaceChild(renderCertifications(), cp);
+    });
+    toggleRow.appendChild(toggleBtn);
+    wrap.appendChild(toggleRow);
+
+    /* Timeline collapsible */
+    var timelineCard = el('div', { class:'card card-l-blue', style:'margin-bottom:12px' });
+    var tlHead = el('div', { class:'card-head', style:'cursor:pointer;margin-bottom:0' });
+    tlHead.innerHTML = '<div class="card-title">📅 Séquence recommandée</div><span class="cert-expand-btn">▾</span>';
+    var tlBody = el('div', { class:'cert-timeline', style:'display:none;margin-top:12px' });
+    var phases = ['0-3m', '3-6m', '6-12m', '12-24m'];
+    var phaseColors = ['var(--green)', 'var(--cyan)', 'var(--violet3)', 'var(--amber2)'];
+    phases.forEach(function (ph, pi) {
+      var phaseCerts = certs.filter(function(c){ return c.sequence === ph; });
+      if (!phaseCerts.length) return;
+      var phEl = el('div', { class:'cert-timeline-phase' });
+      phEl.innerHTML = '<div class="cert-phase-label" style="color:' + phaseColors[pi] + '">' + ph + '</div>';
+      phaseCerts.forEach(function (c) {
+        var chip = el('div', { class:'cert-phase-chip' }, c.name);
+        phEl.appendChild(chip);
+      });
+      tlBody.appendChild(phEl);
+    });
+    tlHead.addEventListener('click', function () {
+      var open = tlBody.style.display !== 'none';
+      tlBody.style.display = open ? 'none' : 'block';
+      tlHead.querySelector('.cert-expand-btn').textContent = open ? '▾' : '▴';
+    });
+    timelineCard.appendChild(tlHead);
+    timelineCard.appendChild(tlBody);
+    wrap.appendChild(timelineCard);
+
+    /* Cert cards */
+    var innerWrap = el('div', { id:'cert-panel-inner' });
+    var filtered = certs.filter(function (c) {
+      if (activeOnly && c.status !== 'active' && c.status !== 'exam_ready') return false;
+      if (activeTFilter !== 'all' && c.track !== activeTFilter) return false;
+      return true;
+    });
+
+    if (!filtered.length) {
+      innerWrap.appendChild(el('div', { class:'empty-state' },
+        el('div', { class:'empty-state-text text-muted' }, 'Aucune certification pour ce filtre')));
+    }
+
+    filtered.forEach(function (cert) {
+      var readiness = computeReadiness(cert);
+      var statusCycleOrder = ['planned','active','paused','exam_ready','passed','failed','skipped'];
+      var statusColors = { planned:'var(--muted)', active:'var(--violet3)', paused:'var(--amber2)',
+        exam_ready:'var(--cyan)', passed:'var(--green)', failed:'var(--red)', skipped:'var(--dim)' };
+
+      var card = el('div', { class:'card cert-card', style:'border-left:4px solid ' + (statusColors[cert.status] || 'var(--border2)') });
+
+      /* Card header row */
+      var head = el('div', { class:'cert-card-head' });
+      var nameEl = el('div', { class:'cert-card-name' }, cert.name);
+      var trackChip = el('span', { class:'cert-track-chip track-' + (cert.track || '') }, (cert.track || '').replace(/_/g,' '));
+      var statusBadge = el('span', {
+        class:'cert-status-badge status-' + cert.status,
+        title:'Cliquer pour changer',
+        style:'cursor:pointer'
+      }, cert.status);
+      statusBadge.addEventListener('click', function () {
+        var idx = statusCycleOrder.indexOf(cert.status);
+        var next = statusCycleOrder[(idx + 1) % statusCycleOrder.length];
+        Store.updateCertification(cert.id, { status: next });
+        statusBadge.textContent = next;
+        statusBadge.className = 'cert-status-badge status-' + next;
+        card.style.borderLeftColor = statusColors[next] || 'var(--border2)';
+        var rd2 = computeReadiness(Object.assign({}, cert, { status: next }));
+        var pf = card.querySelector('.cert-progress-fill');
+        var pt = card.querySelector('.cert-readiness-pct');
+        if (pf) pf.style.width = rd2 + '%';
+        if (pt) pt.textContent = rd2 + '%';
+      });
+      head.appendChild(nameEl);
+      var chips = el('div', { style:'display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;align-items:center' });
+      chips.appendChild(trackChip);
+      if (cert.level) chips.appendChild(el('span', { class:'cert-level-badge' }, cert.level));
+      chips.appendChild(statusBadge);
+      var certInfo = el('div', { style:'flex:1' });
+      certInfo.appendChild(nameEl);
+      certInfo.appendChild(chips);
+      head.appendChild(certInfo);
+
+      /* Expand toggle */
+      var expandBtn = el('button', { class:'routine-expand-btn', type:'button' }, '▾');
+      head.appendChild(expandBtn);
+      card.appendChild(head);
+
+      /* Readiness bar */
+      var readRow = el('div', { class:'cert-readiness-row' });
+      var pct2El = el('span', { class:'cert-readiness-pct' }, readiness + '%');
+      var pb = el('div', { class:'progress-bar', style:'flex:1;height:6px' });
+      var pf = el('div', { class:'progress-fill cert-progress-fill', style:'width:' + readiness + '%;background:linear-gradient(90deg,var(--violet),var(--cyan))' });
+      pb.appendChild(pf);
+      readRow.appendChild(el('span', { class:'cert-readiness-lbl' }, 'Préparation'));
+      readRow.appendChild(pb);
+      readRow.appendChild(pct2El);
+      card.appendChild(readRow);
+
+      /* Next action inline */
+      var naRow = el('div', { class:'cert-next-action-row' });
+      naRow.appendChild(el('span', { class:'cert-na-lbl' }, '→'));
+      var naInp = el('input', { type:'text', placeholder:'Prochaine action...', value: cert.nextAction || '', class:'cert-na-input' });
+      naInp.addEventListener('change', function () { Store.updateCertification(cert.id, { nextAction: naInp.value.trim() }); });
+      naRow.appendChild(naInp);
+      card.appendChild(naRow);
+
+      /* Expand panel */
+      var expandPanel = el('div', { class:'cert-expand-panel', style:'display:none' });
+
+      /* Target date + Cost */
+      var metaGrid = el('div', { class:'cert-meta-grid' });
+      var tdWrap = el('div', { class:'log-field' });
+      tdWrap.appendChild(el('label', {}, '📅 Date cible'));
+      var tdInp = el('input', { type:'date', value: cert.targetDate || '' });
+      tdInp.addEventListener('change', function () { Store.updateCertification(cert.id, { targetDate: tdInp.value }); });
+      tdWrap.appendChild(tdInp);
+      metaGrid.appendChild(tdWrap);
+      if (cert.costEstimate) {
+        var costEl = el('div', { class:'log-field' });
+        costEl.appendChild(el('label', {}, '💰 Coût estimé'));
+        costEl.appendChild(el('div', { style:'color:var(--amber2);font-weight:700;padding:6px 0' }, cert.costEstimate));
+        metaGrid.appendChild(costEl);
+      }
+      expandPanel.appendChild(metaGrid);
+
+      /* Mock scores */
+      var msCard = el('div', { class:'cert-mock-section' });
+      msCard.appendChild(el('div', { class:'cert-section-title' }, '🎯 Scores mock'));
+      var scores = cert.mockScores || [];
+      if (!scores.length) {
+        msCard.appendChild(el('div', { class:'text-muted text-xs' }, 'Aucun score mock enregistré'));
+      } else {
+        var msList = el('div', { class:'cert-mock-list' });
+        scores.slice(-5).forEach(function (s) {
+          var item = el('div', { class:'cert-mock-item' });
+          var scoreVal = parseFloat(s.score) || 0;
+          var scoreColor = scoreVal >= 80 ? 'var(--green)' : scoreVal >= 65 ? 'var(--amber2)' : 'var(--red)';
+          item.innerHTML =
+            '<span class="cert-mock-date">' + (s.date || '') + '</span>' +
+            '<span class="cert-mock-score" style="color:' + scoreColor + '">' + scoreVal + '%</span>';
+          if (s.weakDomains) item.innerHTML += '<span class="cert-mock-weak">Faible: ' + s.weakDomains + '</span>';
+          msList.appendChild(item);
+        });
+        msCard.appendChild(msList);
+      }
+      var addScoreBtn = el('button', { class:'btn btn-secondary btn-sm', type:'button', style:'margin-top:8px' }, '+ Ajouter score mock');
+      addScoreBtn.addEventListener('click', function () {
+        Modal.form('Ajouter score mock', [
+          { id:'date', label:'Date', type:'date', required:true },
+          { id:'score', label:'Score (%)', type:'number', placeholder:'0-100', required:true },
+          { id:'weakDomains', label:'Domaines faibles', type:'text', placeholder:'Ex: Sécurité, TCP/IP...' },
+          { id:'notes', label:'Notes', type:'textarea', placeholder:'Observations...' }
+        ], function (data) {
+          Store.addMockScore(cert.id, data);
+          toast('Score mock ajouté ✓');
+          var cp = qs('.cert-panel');
+          if (cp && cp.parentElement) cp.parentElement.replaceChild(renderCertifications(), cp);
+        });
+      });
+      msCard.appendChild(addScoreBtn);
+      expandPanel.appendChild(msCard);
+
+      /* Proofs required */
+      if (cert.proofsRequired && cert.proofsRequired.length) {
+        var proofsEl = el('div', { class:'cert-section-title', style:'margin-top:12px' }, '✅ Preuves requises');
+        expandPanel.appendChild(proofsEl);
+        cert.proofsRequired.forEach(function (p) {
+          var pItem = el('div', { class:'cert-proof-item' });
+          pItem.innerHTML = '• ' + p;
+          expandPanel.appendChild(pItem);
+        });
+      }
+
+      /* Skills */
+      if (cert.skills && cert.skills.length) {
+        var skillsEl = el('div', { class:'cert-section-title', style:'margin-top:12px' }, '🧠 Compétences');
+        expandPanel.appendChild(skillsEl);
+        var skillsList = el('div', { style:'display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px' });
+        cert.skills.forEach(function (s) {
+          skillsList.appendChild(el('span', { class:'cert-skill-chip' }, s));
+        });
+        expandPanel.appendChild(skillsList);
+      }
+
+      /* Resources */
+      if (cert.resources && cert.resources.length) {
+        var resEl = el('div', { class:'cert-section-title', style:'margin-top:8px' }, '📚 Ressources');
+        expandPanel.appendChild(resEl);
+        cert.resources.forEach(function (r) {
+          expandPanel.appendChild(el('div', { class:'cert-proof-item' }, '• ' + r));
+        });
+      }
+
+      card.appendChild(expandPanel);
+
+      expandBtn.addEventListener('click', function () {
+        var isOpen = expandPanel.style.display !== 'none';
+        expandPanel.style.display = isOpen ? 'none' : 'block';
+        expandBtn.textContent = isOpen ? '▾' : '▴';
+      });
+
+      innerWrap.appendChild(card);
+    });
+
+    wrap.appendChild(innerWrap);
+    return wrap;
+  }
+
+  /* ═══════════════════════════════════════════
+     V4 : PROOFS (Étude tab)
+  ═══════════════════════════════════════════ */
+  function renderProofs() {
+    var proofs = Store.getProofs() || [];
+    var wrap = el('div', { class:'proofs-panel' });
+
+    /* Header + add button */
+    var head = el('div', { class:'card-head' });
+    head.innerHTML = '<div class="card-title">📋 Preuves EPFC</div>';
+    var addBtn = el('button', { class:'btn btn-primary btn-sm', type:'button' }, '➕ Nouvelle preuve');
+    addBtn.addEventListener('click', function () {
+      Modal.form('Nouvelle preuve de compétence', [
+        { id:'title', label:'Titre', type:'text', placeholder:'Ex: Projet Python CRUD', required:true },
+        { id:'course', label:'Cours / Module', type:'text', placeholder:'Ex: EPFC Python L1' },
+        { id:'domain', label:'Domaine', type:'select', options:[
+          {value:'programmation',label:'Programmation'},{value:'reseau',label:'Réseau'},
+          {value:'base_donnees',label:'Base de données'},{value:'web',label:'Web'},
+          {value:'securite',label:'Sécurité'},{value:'systeme',label:'Système'},
+          {value:'ia',label:'IA/Data'},{value:'projet',label:'Gestion projet'},{value:'autre',label:'Autre'}
+        ]},
+        { id:'type', label:'Type', type:'select', options:[
+          {value:'projet',label:'Projet'},{value:'exercice',label:'Exercice'},
+          {value:'certification',label:'Certification'},{value:'rapport',label:'Rapport'},
+          {value:'presentation',label:'Présentation'},{value:'autre',label:'Autre'}
+        ]},
+        { id:'dueDate', label:'Date limite', type:'date' },
+        { id:'evidenceUrl', label:'Lien preuve (URL)', type:'url', placeholder:'https://github.com/...' },
+        { id:'nextAction', label:'Prochaine action', type:'text', placeholder:'Ce que je dois faire...' },
+        { id:'notes', label:'Notes', type:'textarea', placeholder:'Notes libres...' }
+      ], function (data) {
+        Store.addProof(Object.assign({ status: 'not_started' }, data));
+        toast('Preuve ajoutée ✓');
+        var pp = qs('.proofs-panel');
+        if (pp && pp.parentElement) pp.parentElement.replaceChild(renderProofs(), pp);
+      });
+    });
+    head.appendChild(addBtn);
+    wrap.appendChild(head);
+
+    /* Stats bar */
+    var total = proofs.length;
+    var validated = proofs.filter(function(p){ return p.status === 'validated'; }).length;
+    var inProgress = proofs.filter(function(p){ return p.status === 'in_progress'; }).length;
+    var statsBar = el('div', { class:'cert-stats-bar' });
+    statsBar.innerHTML =
+      '<div class="cert-stat"><div class="cert-stat-val">' + total + '</div><div class="cert-stat-lbl">Total</div></div>' +
+      '<div class="cert-stat"><div class="cert-stat-val" style="color:var(--violet3)">' + inProgress + '</div><div class="cert-stat-lbl">En cours</div></div>' +
+      '<div class="cert-stat"><div class="cert-stat-val" style="color:var(--green)">' + validated + '</div><div class="cert-stat-lbl">Validées</div></div>';
+    wrap.appendChild(statsBar);
+
+    if (!proofs.length) {
+      wrap.appendChild(el('div', { class:'empty-state' },
+        el('div', { class:'empty-state-text text-muted' }, 'Aucune preuve enregistrée')));
+      return wrap;
+    }
+
+    var statusCycle = ['not_started','in_progress','blocked','validated','archived'];
+    var statusColors = { not_started:'var(--dim)', in_progress:'var(--violet3)',
+      blocked:'var(--red)', validated:'var(--green)', archived:'var(--muted)' };
+    var statusLabels = { not_started:'Non démarré', in_progress:'En cours',
+      blocked:'Bloqué', validated:'Validé ✓', archived:'Archivé' };
+    var domainColors = { programmation:'var(--violet3)', reseau:'var(--cyan)',
+      base_donnees:'var(--amber2)', web:'var(--blue2)', securite:'var(--red)',
+      systeme:'var(--muted)', ia:'var(--green)', projet:'var(--pink)', autre:'var(--dim)' };
+
+    proofs.slice().reverse().forEach(function (proof) {
+      var today = Store.today();
+      var isOverdue = proof.dueDate && proof.dueDate < today && proof.status !== 'validated' && proof.status !== 'archived';
+      var card = el('div', { class:'card proof-card' + (proof.status === 'validated' ? ' proof-validated' : '') });
+
+      var pHead = el('div', { class:'proof-card-head' });
+      var titleEl = el('div', { class:'proof-title' },
+        (proof.status === 'validated' ? '✅ ' : '') + (proof.title || 'Sans titre'));
+      var domainChip = el('span', { class:'proof-domain-chip', style:'background:' + ((domainColors[proof.domain] || 'var(--dim)') + '22') + ';color:' + (domainColors[proof.domain] || 'var(--dim)') }, proof.domain || 'autre');
+      var statusBadge = el('span', {
+        class:'proof-status-badge',
+        style:'cursor:pointer;color:' + (statusColors[proof.status] || 'var(--dim)'),
+        title:'Cliquer pour changer'
+      }, statusLabels[proof.status] || proof.status);
+      statusBadge.addEventListener('click', function () {
+        var idx = statusCycle.indexOf(proof.status);
+        var next = statusCycle[(idx + 1) % statusCycle.length];
+        Store.updateProof(proof.id, { status: next });
+        statusBadge.textContent = statusLabels[next] || next;
+        statusBadge.style.color = statusColors[next] || 'var(--dim)';
+        if (next === 'validated') { card.classList.add('proof-validated'); titleEl.textContent = '✅ ' + proof.title; }
+        else { card.classList.remove('proof-validated'); titleEl.textContent = proof.title; }
+      });
+      pHead.appendChild(titleEl);
+      var pMeta = el('div', { style:'display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;align-items:center' });
+      pMeta.appendChild(domainChip);
+      if (proof.type) pMeta.appendChild(el('span', { class:'cert-level-badge' }, proof.type));
+      pMeta.appendChild(statusBadge);
+      if (isOverdue) pMeta.appendChild(el('span', { style:'color:var(--red);font-size:10px;font-weight:900' }, '⚠️ En retard'));
+      var pInfo = el('div', { style:'flex:1' });
+      pInfo.appendChild(titleEl);
+      if (proof.course) pInfo.appendChild(el('div', { class:'text-muted', style:'font-size:11px;margin-top:2px' }, proof.course));
+      pInfo.appendChild(pMeta);
+      pHead.appendChild(pInfo);
+
+      /* Edit + delete buttons */
+      var pActions = el('div', { style:'display:flex;flex-direction:column;gap:6px;flex-shrink:0' });
+      var editBtn = el('button', { class:'btn-icon', type:'button', title:'Modifier' }, '✏️');
+      editBtn.addEventListener('click', function () {
+        Modal.form('Modifier preuve', [
+          { id:'title', label:'Titre', type:'text', placeholder:proof.title || '', required:true },
+          { id:'nextAction', label:'Prochaine action', type:'text', placeholder:proof.nextAction || '' },
+          { id:'dueDate', label:'Date limite', type:'date' },
+          { id:'notes', label:'Notes', type:'textarea', placeholder:proof.notes || '' }
+        ], function (data) {
+          Store.updateProof(proof.id, data);
+          var pp = qs('.proofs-panel');
+          if (pp && pp.parentElement) pp.parentElement.replaceChild(renderProofs(), pp);
+        });
+      });
+      var delBtn2 = el('button', { class:'btn-icon', type:'button', title:'Supprimer' }, '×');
+      delBtn2.addEventListener('click', function () {
+        Modal.confirm('Supprimer cette preuve ?', function () {
+          Store.deleteProof(proof.id);
+          var pp = qs('.proofs-panel');
+          if (pp && pp.parentElement) pp.parentElement.replaceChild(renderProofs(), pp);
+        });
+      });
+      pActions.appendChild(editBtn);
+      pActions.appendChild(delBtn2);
+      pHead.appendChild(pActions);
+      card.appendChild(pHead);
+
+      /* Due date */
+      if (proof.dueDate) {
+        var dateEl = el('div', { style:'font-size:11px;margin-top:6px;color:' + (isOverdue ? 'var(--red)' : 'var(--muted)') }, '📅 ' + proof.dueDate);
+        card.appendChild(dateEl);
+      }
+
+      /* Evidence URL */
+      if (proof.evidenceUrl) {
+        var linkEl = el('a', { href: proof.evidenceUrl, target:'_blank', class:'proof-link' }, '🔗 Voir la preuve');
+        card.appendChild(linkEl);
+      }
+
+      /* Next action */
+      if (proof.nextAction) {
+        card.appendChild(el('div', { class:'cert-next-action-row' }, '→ ' + proof.nextAction));
+      }
+
+      /* Notes */
+      if (proof.notes) {
+        card.appendChild(el('div', { class:'text-muted', style:'font-size:11px;margin-top:4px' }, proof.notes));
+      }
+
+      wrap.appendChild(card);
+    });
+
+    return wrap;
+  }
+
+  /* ═══════════════════════════════════════════
+     V4 : MISSION NOW (Aujourd'hui tab)
+  ═══════════════════════════════════════════ */
+  function renderMissionNow(today) {
+    var card = el('div', { class:'card card-mission-now card-glow-v' });
+    try {
+      var mn = Store.getMissionNow();
+      var mission = null;
+      var todayStr = today || Store.today();
+
+      /* Try to find active mission from history */
+      var history = mn.history || [];
+      var todayMissions = history.filter(function (h) {
+        return h.createdAt && h.createdAt.indexOf(todayStr) === 0 && h.status !== 'done' && h.status !== 'postponed';
+      });
+      if (todayMissions.length > 0) {
+        mission = todayMissions[todayMissions.length - 1];
+      } else {
+        mission = Store.selectNextMission(todayStr);
+      }
+
+      var head = el('div', { class:'card-head' });
+      head.innerHTML = '<div class="card-title">⚡ Mission Maintenant</div>';
+      card.appendChild(head);
+
+      if (!mission) {
+        card.appendChild(el('div', { class:'mission-done-state' }, '✓ Toutes missions terminées'));
+        /* Last 3 completed */
+        var doneMissions = history.filter(function (h) { return h.status === 'done'; }).slice(-3).reverse();
+        if (doneMissions.length) {
+          var histEl = el('div', { class:'mission-history' });
+          doneMissions.forEach(function (h) {
+            histEl.appendChild(el('div', { class:'mission-history-chip' }, '✓ ' + (h.title || 'Mission')));
+          });
+          card.appendChild(histEl);
+        }
+        return card;
+      }
+
+      /* Mission info */
+      var mInfo = el('div', { class:'mission-info' });
+      var mTitle = el('div', { class:'mission-title' }, mission.title || 'Mission');
+      var mMeta = el('div', { class:'mission-meta' });
+      mMeta.appendChild(el('span', { class:'cert-track-chip' }, mission.domain || 'ÉTUDE'));
+      mMeta.appendChild(el('span', { class:'time-est' }, '⏱ ' + (mission.durationMin || 25) + ' min'));
+      if (mission.sourceLabel) mMeta.appendChild(el('span', { class:'mission-source-label' }, mission.sourceLabel));
+      mInfo.appendChild(mTitle);
+      mInfo.appendChild(mMeta);
+      card.appendChild(mInfo);
+
+      /* Buttons */
+      var btnRow = el('div', { class:'mission-actions' });
+
+      var startBtn = el('button', { class:'btn btn-primary', type:'button' }, '⚡ Démarrer 25 min');
+      startBtn.addEventListener('click', function () {
+        if (mission.source === 'routine' && window.launchTimer) launchTimer(mission.domain);
+        else if (typeof launchTimer === 'function') launchTimer(mission.domain);
+        Store.addMissionHistory(Object.assign({}, mission, { status: 'started', startedAt: new Date().toISOString() }));
+        toast('Mission démarrée → ' + mission.title);
+      });
+
+      var doneBtn = el('button', { class:'btn btn-secondary', type:'button' }, '✅ Terminé');
+      doneBtn.addEventListener('click', function () {
+        Store.addMissionHistory(Object.assign({}, mission, { status: 'done', doneAt: new Date().toISOString() }));
+        if (mission.source === 'routine') Store.toggleDailyPractice(mission.id.replace('dp_','').split('_')[0], todayStr);
+        toast('Mission terminée ✓');
+        var mc = card.parentElement;
+        if (mc) mc.replaceChild(renderMissionNow(todayStr), card);
+      });
+
+      var postponeBtn = el('button', { class:'btn btn-ghost btn-sm', type:'button' }, '→ Reporter');
+      postponeBtn.addEventListener('click', function () {
+        Store.addMissionHistory(Object.assign({}, mission, { status: 'postponed', postponedAt: new Date().toISOString() }));
+        var mc = card.parentElement;
+        if (mc) mc.replaceChild(renderMissionNow(todayStr), card);
+      });
+
+      var minBtn = el('button', { class:'btn btn-ghost btn-sm', type:'button' }, '🎯 Minimum vital');
+      minBtn.addEventListener('click', function () {
+        mTitle.textContent = '(Min) ' + mission.title;
+        var timeEl = mMeta.querySelector('.time-est');
+        if (timeEl) timeEl.textContent = '⏱ 15 min (minimum)';
+        toast('Mode minimum vital activé');
+      });
+
+      btnRow.appendChild(startBtn);
+      btnRow.appendChild(doneBtn);
+      btnRow.appendChild(postponeBtn);
+      btnRow.appendChild(minBtn);
+      card.appendChild(btnRow);
+
+      /* History chips */
+      var doneMissions2 = history.filter(function (h) { return h.status === 'done'; }).slice(-3).reverse();
+      if (doneMissions2.length) {
+        var histEl2 = el('div', { class:'mission-history' });
+        doneMissions2.forEach(function (h) {
+          histEl2.appendChild(el('div', { class:'mission-history-chip' }, '✓ ' + (h.title || 'Mission')));
+        });
+        card.appendChild(histEl2);
+      }
+    } catch(e) {
+      card.innerHTML = '<div class="card-head"><div class="card-title">⚡ Mission Maintenant</div></div><div class="text-muted text-xs">Erreur de chargement</div>';
+    }
+    return card;
+  }
+
+  /* ═══════════════════════════════════════════
+     V4 : DAILY OPS BRIEFING (Aujourd'hui tab)
+  ═══════════════════════════════════════════ */
+  function renderDailyBriefing(today) {
+    var todayStr = today || Store.today();
+    var card = el('div', { class:'card card-briefing card-l-blue' });
+
+    try {
+      var briefing = Store.getOpsBriefing(todayStr);
+      if (!briefing) briefing = Store.generateBriefing(todayStr);
+
+      var modeColors = { full:'var(--green)', reduced:'var(--amber2)', survival:'var(--red)' };
+      var modeLabels = { full:'FULL', reduced:'RÉDUIT', survival:'SURVIE' };
+
+      var head = el('div', { class:'card-head' });
+      var titleEl = el('div', { class:'card-title' }, '📋 Briefing du jour');
+      var modeBadge = el('span', {
+        class:'cert-status-badge',
+        style:'color:' + (modeColors[briefing.mode] || 'var(--muted)')
+      }, modeLabels[briefing.mode] || briefing.mode);
+      var regenBtn = el('button', { class:'btn btn-ghost btn-xs', type:'button' }, '↺ Regénérer');
+      regenBtn.addEventListener('click', function () {
+        Store.setOpsBriefing(todayStr, null);
+        var bc = card.parentElement;
+        if (bc) bc.replaceChild(renderDailyBriefing(todayStr), card);
+      });
+      head.appendChild(titleEl);
+      var headRight = el('div', { style:'display:flex;gap:6px;align-items:center' });
+      headRight.appendChild(modeBadge);
+      headRight.appendChild(regenBtn);
+      head.appendChild(headRight);
+
+      /* Collapsible body */
+      var isOpen = !!Store.get('briefing_open_' + todayStr, false);
+      var body = el('div', { class:'briefing-body', style: isOpen ? '' : 'display:none' });
+
+      var toggleBtn = el('button', { class:'routine-expand-btn', type:'button', style:'position:absolute;right:16px;top:16px' }, isOpen ? '▴' : '▾');
+      toggleBtn.addEventListener('click', function () {
+        var open = body.style.display !== 'none';
+        body.style.display = open ? 'none' : 'block';
+        toggleBtn.textContent = open ? '▾' : '▴';
+        Store.set('briefing_open_' + todayStr, !open);
+      });
+      card.style.position = 'relative';
+
+      card.appendChild(head);
+      card.appendChild(toggleBtn);
+
+      /* Shift */
+      if (briefing.shift) {
+        body.appendChild(el('div', { class:'text-muted text-xs', style:'margin-bottom:8px' }, '💼 Shift : ' + briefing.shift));
+      }
+
+      /* Top missions */
+      if (briefing.topMissions && briefing.topMissions.length) {
+        body.appendChild(el('div', { class:'cert-section-title', style:'margin:8px 0 4px' }, '🎯 Top missions'));
+        briefing.topMissions.forEach(function (m) {
+          var mEl = el('div', { class:'briefing-mission-item' });
+          mEl.innerHTML = '<span class="cert-track-chip">' + m.domain + '</span> ' + m.title +
+            (m.min ? ' <span class="time-est">⏱ ' + m.min + 'min</span>' : '');
+          body.appendChild(mEl);
+        });
+      }
+
+      /* Risks */
+      if (briefing.risks && briefing.risks.length) {
+        body.appendChild(el('div', { class:'cert-section-title', style:'margin:8px 0 4px;color:var(--red)' }, '⚠️ Risques'));
+        briefing.risks.forEach(function (r) {
+          body.appendChild(el('div', { class:'briefing-risk-item' }, '• ' + r));
+        });
+      }
+
+      /* Fallback plans */
+      var plansRow = el('div', { class:'briefing-plans-row' });
+      var plans = [
+        { label:'Full', color:'var(--green)', text:'Routine complète + pratique + certif' },
+        { label:'Réduit', color:'var(--amber2)', text:'Pratique quotidienne + 1 certif 30min' },
+        { label:'Survie', color:'var(--red)', text:'1 exercice code (15min), noter les tâches' }
+      ];
+      plans.forEach(function (p) {
+        var planCard = el('div', { class:'briefing-plan-card' });
+        planCard.innerHTML = '<div style="font-weight:900;color:' + p.color + ';font-size:11px;margin-bottom:4px">' + p.label + '</div>' +
+          '<div style="font-size:10px;color:var(--muted)">' + p.text + '</div>';
+        plansRow.appendChild(planCard);
+      });
+      body.appendChild(plansRow);
+
+      card.appendChild(body);
+    } catch(e) {
+      card.innerHTML = '<div class="card-head"><div class="card-title">📋 Briefing du jour</div></div><div class="text-muted text-xs">Erreur de génération</div>';
+    }
+    return card;
+  }
+
+  /* ═══════════════════════════════════════════
+     V4 : PERFORMANCE TRACKING (Aujourd'hui)
+  ═══════════════════════════════════════════ */
+  function renderPerformanceLog(today) {
+    var todayStr = today || Store.today();
+    var perf = Store.getPerformance(todayStr) || {};
+    var card = el('div', { class:'card card-l-green' });
+
+    var head = el('div', { class:'card-head' });
+    head.innerHTML = '<div class="card-title">⚡ Performance <span style="font-size:9px;font-weight:600;color:var(--muted);text-transform:none;margin-left:6px">pas un suivi médical</span></div>';
+    card.appendChild(head);
+
+    var grid = el('div', { class:'log-grid' });
+
+    /* Sleep hours */
+    var sleepWrap = el('div', { class:'log-field' });
+    sleepWrap.appendChild(el('label', {}, '😴 Sommeil (h)'));
+    var sleepInp = el('input', { type:'number', min:'0', max:'24', step:'0.5', placeholder:'7', value: perf.sleepHours || '' });
+    sleepInp.addEventListener('change', function () { Store.setPerformance(todayStr, { sleepHours: parseFloat(sleepInp.value)||0 }); checkAlert(); });
+    sleepWrap.appendChild(sleepInp);
+    grid.appendChild(sleepWrap);
+
+    /* Wake time */
+    var wakeWrap = el('div', { class:'log-field' });
+    wakeWrap.appendChild(el('label', {}, '⏰ Réveil'));
+    var wakeInp = el('input', { type:'time', value: perf.wakeTime || '' });
+    wakeInp.addEventListener('change', function () { Store.setPerformance(todayStr, { wakeTime: wakeInp.value }); });
+    wakeWrap.appendChild(wakeInp);
+    grid.appendChild(wakeWrap);
+
+    card.appendChild(grid);
+
+    /* Energy dots 1-5 */
+    function makeDots(label, key, color) {
+      var row = el('div', { class:'perf-dots-row' });
+      row.appendChild(el('span', { class:'unit-label', style:'min-width:80px' }, label));
+      var dotsWrap = el('div', { class:'perf-dots' });
+      var cur = parseInt(perf[key]) || 0;
+      for (var i = 1; i <= 5; i++) {
+        (function (n) {
+          var dot = el('div', { class:'perf-dot' + (cur >= n ? ' active' : ''), style:'--dot-color:' + color });
+          dot.addEventListener('click', function () {
+            var upd = {}; upd[key] = n;
+            Store.setPerformance(todayStr, upd);
+            dotsWrap.querySelectorAll('.perf-dot').forEach(function (d, di) {
+              d.classList.toggle('active', di < n);
+            });
+            perf[key] = n;
+            checkAlert();
+          });
+          dotsWrap.appendChild(dot);
+        })(i);
+      }
+      row.appendChild(dotsWrap);
+      return row;
+    }
+
+    card.appendChild(makeDots('⚡ Énergie', 'energy', 'var(--amber2)'));
+    card.appendChild(makeDots('🧘 Stress', 'stress', 'var(--red)'));
+
+    /* Body warning slider */
+    var bwRow = el('div', { class:'perf-dots-row', style:'margin-top:10px' });
+    bwRow.appendChild(el('span', { class:'unit-label', style:'min-width:80px' }, '🏥 Corps (0-10)'));
+    var bwInp = el('input', { type:'range', min:'0', max:'10', value: perf.bodyWarning || 0, style:'flex:1' });
+    var bwVal = el('span', { class:'time-est', style:'min-width:24px;text-align:right' }, String(perf.bodyWarning || 0));
+    bwInp.addEventListener('input', function () {
+      bwVal.textContent = bwInp.value;
+      Store.setPerformance(todayStr, { bodyWarning: parseInt(bwInp.value)||0 });
+      perf.bodyWarning = parseInt(bwInp.value)||0;
+      checkAlert();
+    });
+    bwRow.appendChild(bwInp);
+    bwRow.appendChild(bwVal);
+    card.appendChild(bwRow);
+
+    /* Notes */
+    var notesWrap = el('div', { class:'log-field', style:'margin-top:10px' });
+    notesWrap.appendChild(el('label', {}, 'Notes'));
+    var notesTA = el('textarea', { placeholder:'Comment je me sens...', style:'height:60px' });
+    notesTA.value = perf.notes || '';
+    notesTA.addEventListener('change', function () { Store.setPerformance(todayStr, { notes: notesTA.value }); });
+    notesWrap.appendChild(notesTA);
+    card.appendChild(notesWrap);
+
+    /* Alert */
+    var alertEl = el('div', { class:'perf-alert', style:'display:none' }, '⚠️ Plan réduit recommandé (faible énergie ou douleur corporelle)');
+    card.appendChild(alertEl);
+
+    function checkAlert() {
+      var energy = parseInt(perf.energy)||5;
+      var bw = parseInt(perf.bodyWarning)||0;
+      alertEl.style.display = (bw >= 7 || energy <= 2) ? 'block' : 'none';
+    }
+    checkAlert();
+
+    return card;
+  }
+
+  /* ═══════════════════════════════════════════
+     V4 : VINTED V2 (Argent tab)
+  ═══════════════════════════════════════════ */
+  function renderVintedV2() {
+    var v = Store.getVintedV2();
+    var items = v.items || [];
+    var wrap = el('div', { class:'vinted-v2-panel' });
+
+    /* Portfolio stats */
+    var invested = 0, capitalBloque = 0, revenus = 0, netProfit = 0, roi = [], sold = 0;
+    items.forEach(function (it) {
+      var bp = parseFloat(it.buyPrice)||0;
+      var sp = parseFloat(it.soldPrice)||0;
+      var lp = parseFloat(it.listingPrice)||0;
+      var sh = parseFloat(it.shippingCost)||0;
+      var bo = parseFloat(it.boostCost)||0;
+      var pl = parseFloat(it.platformCost)||0;
+      invested += bp;
+      if (it.status === 'listed') capitalBloque += lp;
+      if (it.status === 'sold') { revenus += sp; netProfit += sp - bp - sh - bo - pl; sold++; }
+      if (it.status === 'sold' && sp > 0 && (bp + sh) > 0) roi.push(Math.round((sp - bp - sh - bo - pl) / (bp + sh) * 100));
+    });
+    var roiMoyen = roi.length ? Math.round(roi.reduce(function(a,b){return a+b;},0) / roi.length) : 0;
+    var tauxVente = items.length > 0 ? Math.round(sold / items.length * 100) : 0;
+
+    var statsCard = el('div', { class:'card card-glow-o card-spotlight' });
+    statsCard.innerHTML =
+      '<div class="card-head"><div class="card-title">🛍 Vinted Pro</div></div>' +
+      '<div class="vinted-v2-stats">' +
+        '<div class="vinted-v2-stat"><div class="vinted-v2-stat-val" style="color:var(--muted)">' + fmtEur(invested) + '</div><div class="cert-stat-lbl">Investi</div></div>' +
+        '<div class="vinted-v2-stat"><div class="vinted-v2-stat-val" style="color:var(--amber2)">' + fmtEur(capitalBloque) + '</div><div class="cert-stat-lbl">Bloqué</div></div>' +
+        '<div class="vinted-v2-stat"><div class="vinted-v2-stat-val" style="color:var(--cyan)">' + fmtEur(revenus) + '</div><div class="cert-stat-lbl">Revenus</div></div>' +
+        '<div class="vinted-v2-stat"><div class="vinted-v2-stat-val" style="color:' + (netProfit >= 0 ? 'var(--green)' : 'var(--red)') + '">' + (netProfit >= 0 ? '+' : '') + fmtEur(netProfit) + '</div><div class="cert-stat-lbl">Profit net</div></div>' +
+        '<div class="vinted-v2-stat"><div class="vinted-v2-stat-val" style="color:var(--violet3)">' + roiMoyen + '%</div><div class="cert-stat-lbl">ROI moy.</div></div>' +
+        '<div class="vinted-v2-stat"><div class="vinted-v2-stat-val" style="color:var(--green)">' + tauxVente + '%</div><div class="cert-stat-lbl">Taux vente</div></div>' +
+      '</div>';
+    wrap.appendChild(statsCard);
+
+    /* Actions bar */
+    var actBar = el('div', { style:'display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px' });
+    var addV2Btn = el('button', { class:'btn btn-primary', type:'button' }, '➕ Ajouter article');
+    addV2Btn.addEventListener('click', function () {
+      Modal.form('Ajouter article Vinted', [
+        { id:'name', label:'Nom', type:'text', placeholder:'Ex: Veste The North Face', required:true },
+        { id:'brand', label:'Marque', type:'text', placeholder:'Ex: Nike' },
+        { id:'buyPrice', label:'Prix achat (€)', type:'number', placeholder:'0' },
+        { id:'listingPrice', label:'Prix annonce (€)', type:'number', placeholder:'0' },
+        { id:'shippingCost', label:'Frais envoi (€)', type:'number', placeholder:'0' },
+        { id:'boostCost', label:'Boost (€)', type:'number', placeholder:'0' },
+        { id:'platformCost', label:'Commission plateforme (€)', type:'number', placeholder:'0' }
+      ], function (data) {
+        Store.addVintedV2Item({
+          name: data.name, brand: data.brand || '',
+          buyPrice: parseFloat(data.buyPrice)||0, listingPrice: parseFloat(data.listingPrice)||0,
+          shippingCost: parseFloat(data.shippingCost)||0, boostCost: parseFloat(data.boostCost)||0,
+          platformCost: parseFloat(data.platformCost)||0, status:'listed'
+        });
+        toast('Article ajouté ✓');
+        var vp = qs('.vinted-v2-panel');
+        if (vp && vp.parentElement) vp.parentElement.replaceChild(renderVintedV2(), vp);
+      });
+    });
+    actBar.appendChild(addV2Btn);
+
+    /* CSV Export */
+    var csvBtn = el('button', { class:'btn btn-secondary', type:'button' }, '📥 Export CSV');
+    csvBtn.addEventListener('click', function () {
+      var rows = ['Nom,Marque,Statut,Achat,Annonce,Vendu,Envoi,Boost,Plateforme,Profit net,ROI%'];
+      items.forEach(function (it) {
+        var bp = parseFloat(it.buyPrice)||0, sp = parseFloat(it.soldPrice)||0;
+        var sh = parseFloat(it.shippingCost)||0, bo = parseFloat(it.boostCost)||0, pl = parseFloat(it.platformCost)||0;
+        var np2 = it.status === 'sold' ? sp - bp - sh - bo - pl : 0;
+        var roi2 = it.status === 'sold' && sp > 0 && (bp+sh)>0 ? Math.round(np2/(bp+sh)*100) : 0;
+        rows.push([it.name||'',it.brand||'',it.status,bp,parseFloat(it.listingPrice)||0,sp,sh,bo,pl,np2.toFixed(2),roi2].join(','));
+      });
+      var blob = new Blob([rows.join('\n')], { type:'text/csv' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url; a.download = 'vinted-' + Store.today() + '.csv'; a.click();
+      URL.revokeObjectURL(url);
+      toast('Export CSV ✓');
+    });
+    actBar.appendChild(csvBtn);
+    wrap.appendChild(actBar);
+
+    /* Filter chips */
+    var filterRow2 = el('div', { style:'display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px' });
+    var activeStatusFilter = Store.get('vinted_v2_filter', 'all');
+    ['all','listed','sold','archived'].forEach(function (s) {
+      var fb = el('button', { class:'cert-track-btn' + (activeStatusFilter === s ? ' active' : ''), type:'button' }, s === 'all' ? 'Tous' : s === 'listed' ? 'En vente' : s === 'sold' ? 'Vendus' : 'Archivés');
+      fb.addEventListener('click', function () {
+        Store.set('vinted_v2_filter', s);
+        var vp = qs('.vinted-v2-panel');
+        if (vp && vp.parentElement) vp.parentElement.replaceChild(renderVintedV2(), vp);
+      });
+      filterRow2.appendChild(fb);
+    });
+    wrap.appendChild(filterRow2);
+
+    /* Items */
+    var filteredItems = items.filter(function (it) {
+      return activeStatusFilter === 'all' || it.status === activeStatusFilter;
+    }).slice().reverse();
+
+    if (!filteredItems.length) {
+      wrap.appendChild(el('div', { class:'empty-state' }, el('div', { class:'empty-state-text text-muted' }, 'Aucun article')));
+      return wrap;
+    }
+
+    var today2 = Store.today();
+    filteredItems.forEach(function (it) {
+      var bp = parseFloat(it.buyPrice)||0, sp = parseFloat(it.soldPrice)||0;
+      var sh = parseFloat(it.shippingCost)||0, bo = parseFloat(it.boostCost)||0, pl = parseFloat(it.platformCost)||0;
+      var np2 = it.status === 'sold' ? sp - bp - sh - bo - pl : 0;
+      var roi2 = it.status === 'sold' && sp > 0 && (bp+sh)>0 ? Math.round(np2/(bp+sh)*100) : 0;
+      var daysListed = it.listedAt ? Math.floor((Date.now() - new Date(it.listedAt).getTime()) / 86400000) : 0;
+      var isStale = it.status === 'listed' && daysListed > 14;
+
+      var statusColors2 = { listed:'var(--amber2)', sold:'var(--green)', archived:'var(--muted)' };
+      var itemCard = el('div', { class:'card vinted-v2-item' + (isStale ? ' vinted-stale' : '') });
+
+      var iHead = el('div', { class:'vinted-v2-item-head' });
+      var iName = el('div', { class:'vinted-item-name' }, (it.name || 'Sans nom') + (it.brand ? ' · ' + it.brand : ''));
+      var iStatus = el('span', { class:'vinted-item-status', style:'color:' + (statusColors2[it.status] || 'var(--muted)') }, it.status);
+      iHead.appendChild(iName);
+      iHead.appendChild(iStatus);
+
+      var iActions = el('div', { style:'display:flex;gap:6px;align-items:center;flex-shrink:0' });
+      if (it.status === 'listed') {
+        var markSoldBtn = el('button', { class:'btn btn-green btn-xs', type:'button' }, '✓ Vendu');
+        markSoldBtn.addEventListener('click', function () {
+          Modal.form('Prix de vente réel', [
+            { id:'soldPrice', label:'Prix vendu (€)', type:'number', placeholder: String(it.listingPrice || '0'), required:true }
+          ], function (data) {
+            Store.updateVintedV2Item(it.id, { status: 'sold', soldPrice: parseFloat(data.soldPrice)||0 });
+            var vp = qs('.vinted-v2-panel');
+            if (vp && vp.parentElement) vp.parentElement.replaceChild(renderVintedV2(), vp);
+          });
+        });
+        iActions.appendChild(markSoldBtn);
+      }
+      var delV2Btn = el('button', { class:'btn-icon', type:'button', title:'Supprimer' }, '×');
+      delV2Btn.addEventListener('click', function () {
+        Modal.destroy('Supprimer "' + it.name + '" ?', 'SUPPRIMER', function () {
+          Store.deleteVintedV2Item(it.id);
+          var vp = qs('.vinted-v2-panel');
+          if (vp && vp.parentElement) vp.parentElement.replaceChild(renderVintedV2(), vp);
+        });
+      });
+      iActions.appendChild(delV2Btn);
+
+      var iInfo = el('div', { style:'flex:1' });
+      iInfo.appendChild(iHead);
+
+      var iPrices = el('div', { class:'vinted-item-prices', style:'margin-top:4px' });
+      iPrices.innerHTML = 'Achat: ' + fmtEur(bp) + ' · Annonce: ' + fmtEur(parseFloat(it.listingPrice)||0);
+      if (it.status === 'sold') {
+        iPrices.innerHTML += ' · Vendu: ' + fmtEur(sp) +
+          ' · <span style="color:' + (np2 >= 0 ? 'var(--green)' : 'var(--red)') + ';font-weight:900">' +
+          (np2 >= 0 ? '+' : '') + fmtEur(np2) + ' (' + roi2 + '%)</span>';
+      }
+      if (daysListed > 0 && it.status === 'listed') {
+        iPrices.innerHTML += ' · <span style="color:' + (isStale ? 'var(--amber2)' : 'var(--muted)') + '">' + daysListed + 'j en vente</span>';
+      }
+      iInfo.appendChild(iPrices);
+
+      /* Stale warning */
+      if (isStale) {
+        var staleWarn = el('div', { class:'vinted-stale-warn' }, '💡 Baisser prix / Relister / Booster / Abandonner');
+        iInfo.appendChild(staleWarn);
+      }
+
+      itemCard.appendChild(iInfo);
+      itemCard.appendChild(iActions);
+      wrap.appendChild(itemCard);
+    });
+
+    return wrap;
+  }
+
+  /* ═══════════════════════════════════════════
+     V4 : FINANCE CASHFLOW COMMAND (Argent tab)
+  ═══════════════════════════════════════════ */
+  function renderFinanceCommand(month) {
+    var m = month || Store.currentMonth();
+    var fc = Store.getFinanceCommand(m);
+    var wrap = el('div', { class:'finance-command-panel' });
+
+    var head = el('div', { class:'card-head' });
+    head.innerHTML = '<div class="card-title">💰 Cashflow ' + m + '</div>';
+    wrap.appendChild(head);
+
+    /* Overview */
+    var income = parseFloat(fc.income)||0;
+    var fixed = parseFloat(fc.fixedCharges)||0;
+    var variable = parseFloat(fc.variableSpent)||0;
+    var projected = income - fixed - variable;
+    var riskPct = income > 0 ? projected / income * 100 : 0;
+    var riskColor = riskPct > 20 ? 'var(--green)' : riskPct > 10 ? 'var(--amber2)' : 'var(--red)';
+    var riskLabel = riskPct > 20 ? 'SAIN' : riskPct > 10 ? 'ATTENTION' : 'RISQUE';
+
+    var overviewCard = el('div', { class:'card card-l-green', style:'margin-bottom:10px' });
+    overviewCard.innerHTML =
+      '<div class="cert-stats-bar">' +
+        '<div class="cert-stat"><div class="cert-stat-val" style="color:var(--green)">' + fmtEur(income) + '</div><div class="cert-stat-lbl">Revenus</div></div>' +
+        '<div class="cert-stat"><div class="cert-stat-val" style="color:var(--red)">' + fmtEur(fixed) + '</div><div class="cert-stat-lbl">Fixes</div></div>' +
+        '<div class="cert-stat"><div class="cert-stat-val" style="color:var(--amber2)">' + fmtEur(variable) + '</div><div class="cert-stat-lbl">Variables</div></div>' +
+        '<div class="cert-stat"><div class="cert-stat-val" style="color:' + riskColor + '">' + (projected >= 0 ? '+' : '') + fmtEur(projected) + '</div><div class="cert-stat-lbl">Projeté</div></div>' +
+      '</div>' +
+      '<div style="margin-top:8px;text-align:center"><span class="cert-status-badge" style="color:' + riskColor + '">' + riskLabel + ' · ' + Math.round(riskPct) + '% libre</span></div>';
+    wrap.appendChild(overviewCard);
+
+    /* Form fields */
+    var fgrid = el('div', { class:'log-grid' });
+    var fcFields = [
+      { id:'income', label:'Revenus (€)', ph:'2500' },
+      { id:'fixedCharges', label:'Charges fixes (€)', ph:'1200' },
+      { id:'variableSpent', label:'Dépenses variables (€)', ph:'300' },
+      { id:'savingsTarget', label:'Épargne cible (%)', ph:'20' },
+      { id:'debtRemaining', label:'Dettes restantes (€)', ph:'0' }
+    ];
+    fcFields.forEach(function (f) {
+      var w2 = el('div', { class:'log-field' });
+      w2.appendChild(el('label', {}, f.label));
+      var inp = el('input', { type:'number', min:'0', placeholder:f.ph, value: fc[f.id] || '' });
+      inp.addEventListener('change', function () {
+        var upd = {}; upd[f.id] = parseFloat(inp.value)||0;
+        Store.setFinanceCommand(m, upd);
+        /* Refresh overview without full re-render */
+      });
+      w2.appendChild(inp);
+      fgrid.appendChild(w2);
+    });
+    wrap.appendChild(fgrid);
+
+    /* Project buckets */
+    var bucketsCard = el('div', { class:'card', style:'margin-top:10px' });
+    var bHead = el('div', { class:'card-head' });
+    bHead.innerHTML = '<div class="card-title">🪣 Objectifs épargne</div>';
+    var addBucketBtn = el('button', { class:'btn btn-secondary btn-sm', type:'button' }, '+ Projet');
+    addBucketBtn.addEventListener('click', function () {
+      Modal.form('Nouveau projet d\'épargne', [
+        { id:'name', label:'Nom', type:'text', placeholder:'Ex: Vacances, PC...', required:true },
+        { id:'target', label:'Objectif (€)', type:'number', placeholder:'1000', required:true },
+        { id:'current', label:'Épargné (€)', type:'number', placeholder:'0' }
+      ], function (data) {
+        var updated = Store.getFinanceCommand(m);
+        updated.projectBuckets = (updated.projectBuckets || []).concat([{
+          name: data.name, target: parseFloat(data.target)||0, current: parseFloat(data.current)||0
+        }]);
+        Store.setFinanceCommand(m, updated);
+        var fp = qs('.finance-command-panel');
+        if (fp && fp.parentElement) fp.parentElement.replaceChild(renderFinanceCommand(m), fp);
+      });
+    });
+    bHead.appendChild(addBucketBtn);
+    bucketsCard.appendChild(bHead);
+
+    (fc.projectBuckets || []).forEach(function (b, bi) {
+      var bItem = el('div', { class:'finance-item' });
+      var bPct = b.target > 0 ? pct(b.current||0, b.target) : 0;
+      bItem.innerHTML =
+        '<div style="flex:1">' +
+          '<div class="flex justify-between"><span>' + b.name + '</span><span class="font-bold">' + fmtEur(b.current||0) + ' / ' + fmtEur(b.target) + '</span></div>' +
+          '<div class="progress-bar mt-8"><div class="progress-fill" style="width:' + bPct + '%"></div></div>' +
+        '</div>' +
+        '<button class="btn-icon" style="margin-left:8px" data-bi="' + bi + '">×</button>';
+      bItem.querySelector('[data-bi]').addEventListener('click', function () {
+        var upd = Store.getFinanceCommand(m);
+        upd.projectBuckets = (upd.projectBuckets||[]).filter(function(_,i){return i!==bi;});
+        Store.setFinanceCommand(m, upd);
+        var fp = qs('.finance-command-panel');
+        if (fp && fp.parentElement) fp.parentElement.replaceChild(renderFinanceCommand(m), fp);
+      });
+      bucketsCard.appendChild(bItem);
+    });
+    wrap.appendChild(bucketsCard);
+
+    /* Notes + correction plan */
+    var notesCard = el('div', { class:'card', style:'margin-top:10px' });
+    notesCard.innerHTML = '<div class="card-head"><div class="card-title">📝 Notes</div></div>';
+    var notesTA2 = el('textarea', { placeholder:'Notes du mois...', style:'width:100%;height:70px;margin-bottom:8px' });
+    notesTA2.value = fc.notes || '';
+    notesTA2.addEventListener('change', function () { Store.setFinanceCommand(m, { notes: notesTA2.value }); });
+    var corrTA = el('textarea', { placeholder:'Plan de correction...', style:'width:100%;height:60px' });
+    corrTA.value = fc.correctionPlan || '';
+    corrTA.addEventListener('change', function () { Store.setFinanceCommand(m, { correctionPlan: corrTA.value }); });
+    notesCard.appendChild(el('label', { style:'font-size:11px;color:var(--muted)' }, 'Notes'));
+    notesCard.appendChild(notesTA2);
+    notesCard.appendChild(el('label', { style:'font-size:11px;color:var(--muted)' }, 'Plan correction'));
+    notesCard.appendChild(corrTA);
+    wrap.appendChild(notesCard);
+
+    return wrap;
+  }
+
+  /* ═══════════════════════════════════════════
+     V4 : TASK HISTORY (Stats tab)
+  ═══════════════════════════════════════════ */
+  function renderTaskHistory(days) {
+    var nDays = days || 10;
+    var wrap = el('div', { class:'card task-history-card' });
+
+    var head = el('div', { class:'card-head' });
+    head.innerHTML = '<div class="card-title">📊 Historique</div>';
+    var toggleRow = el('div', { style:'display:flex;gap:6px' });
+    [10, 30].forEach(function (n) {
+      var tb = el('button', { class:'cert-track-btn' + (nDays === n ? ' active' : ''), type:'button' }, n + 'j');
+      tb.addEventListener('click', function () {
+        var hw = qs('.task-history-card');
+        if (hw && hw.parentElement) hw.parentElement.replaceChild(renderTaskHistory(n), hw);
+      });
+      toggleRow.appendChild(tb);
+    });
+    head.appendChild(toggleRow);
+    wrap.appendChild(head);
+
+    var days2 = Math.min(nDays, 30);
+    var domainTotals2 = {};
+    var domainCounts = {};
+    var bestDay = null, worstDay = null, bestPct = -1, worstPct = 101;
+    var dayRows = el('div', { class:'task-history-rows' });
+
+    for (var i = days2 - 1; i >= 0; i--) {
+      var dd3 = new Date(); dd3.setDate(dd3.getDate() - i);
+      var dk3 = dd3.getFullYear() + '-' + String(dd3.getMonth()+1).padStart(2,'0') + '-' + String(dd3.getDate()).padStart(2,'0');
+      var checks3 = Store.getRoutineChecks(dk3);
+      var dp3 = Store.getDailyPractice(dk3);
+      var rotation3 = D.todayRotation ? D.todayRotation() : { tasks:[] };
+      var total3 = (window.D && D.DAILY_PRACTICE ? D.DAILY_PRACTICE.length : 0) + rotation3.tasks.length;
+      var done3 = Object.values(checks3).filter(Boolean).length +
+        (window.D && D.DAILY_PRACTICE ? D.DAILY_PRACTICE.filter(function(dp){ return dp3[dp.id]; }).length : 0);
+      var p3 = total3 > 0 ? Math.round(done3 / total3 * 100) : 0;
+      if (p3 > bestPct) { bestPct = p3; bestDay = dk3; }
+      if (p3 < worstPct) { worstPct = p3; worstDay = dk3; }
+
+      /* Track domain sessions that day */
+      var sessions3 = Store.getFocusSessions().filter(function(s){ return s.date === dk3; });
+      sessions3.forEach(function(s) {
+        domainTotals2[s.domain] = (domainTotals2[s.domain] || 0) + Math.round(s.seconds/60);
+        domainCounts[s.domain] = (domainCounts[s.domain] || 0) + 1;
+      });
+
+      var dayName = ['D','L','M','Me','J','V','S'][dd3.getDay()];
+      var dotColor = p3 >= 80 ? 'var(--green)' : p3 >= 50 ? 'var(--amber2)' : p3 > 0 ? 'var(--violet3)' : 'var(--dim)';
+      var row = el('div', { class:'task-history-row' });
+      row.innerHTML =
+        '<span class="task-hist-day">' + dayName + ' ' + dk3.slice(5) + '</span>' +
+        '<div class="progress-bar" style="flex:1;height:8px"><div class="progress-fill" style="width:' + p3 + '%;background:' + dotColor + '"></div></div>' +
+        '<span class="task-hist-pct" style="color:' + dotColor + '">' + p3 + '%</span>';
+      dayRows.appendChild(row);
+    }
+    wrap.appendChild(dayRows);
+
+    /* Summary */
+    var sumEl = el('div', { class:'task-history-summary' });
+    if (bestDay) sumEl.appendChild(el('div', { class:'text-xs text-muted', style:'margin-bottom:4px' }, '🏆 Meilleur: ' + bestDay + ' (' + bestPct + '%)'));
+    if (worstDay) sumEl.appendChild(el('div', { class:'text-xs text-muted', style:'margin-bottom:8px' }, '📉 Pire: ' + worstDay + ' (' + worstPct + '%)'));
+
+    /* Domain bars */
+    var domSorted2 = Object.keys(domainTotals2).sort(function(a,b){ return domainTotals2[b]-domainTotals2[a]; });
+    var maxDom = Math.max.apply(null, Object.values(domainTotals2).concat([1]));
+    if (domSorted2.length) {
+      sumEl.appendChild(el('div', { class:'cert-section-title', style:'margin:8px 0 6px' }, 'Par domaine'));
+      domSorted2.forEach(function (d) {
+        var v = domainTotals2[d];
+        var p4 = pct(v, maxDom);
+        var dRow = el('div', { style:'margin-bottom:6px' });
+        dRow.innerHTML =
+          '<div class="flex justify-between text-xs text-muted" style="margin-bottom:3px">' +
+            '<span>' + d + '</span><span>' + v + ' min</span>' +
+          '</div>' +
+          '<div class="progress-bar" style="height:6px"><div class="progress-fill" style="width:' + p4 + '%"></div></div>';
+        sumEl.appendChild(dRow);
+      });
+    }
+    wrap.appendChild(sumEl);
+    return wrap;
+  }
+
+  /* ═══════════════════════════════════════════
+     V4 : WEEKLY REVIEW (Stats tab)
+  ═══════════════════════════════════════════ */
+  function renderWeeklyReview() {
+    var wrap = el('div', { class:'card weekly-review-card' });
+    var isoWeek = Store.currentIsoWeek();
+    var review = Store.getWeeklyReview(isoWeek) || {};
+
+    var head = el('div', { class:'card-head' });
+    head.innerHTML = '<div class="card-title">📝 Revue hebdo <span style="font-size:10px;color:var(--muted);font-weight:600">' + isoWeek + '</span></div>';
+
+    /* Export button */
+    var exportBtn = el('button', { class:'btn btn-secondary btn-sm', type:'button' }, '📤 Export MD');
+    exportBtn.addEventListener('click', function () {
+      var md = '# Revue hebdomadaire — ' + isoWeek + '\n\n' +
+        '## Victoires\n' + (review.victories || '') + '\n\n' +
+        '## Échecs\n' + (review.failures || '') + '\n\n' +
+        '## Causes\n' + (review.causes || '') + '\n\n' +
+        '## Corrections\n' + (review.corrections || '') + '\n\n' +
+        '## 3 Non-négociables semaine prochaine\n' + (review.nonNegotiables || '') + '\n';
+      var blob = new Blob([md], { type:'text/markdown' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url; a.download = 'revue-' + isoWeek + '.md'; a.click();
+      URL.revokeObjectURL(url);
+      toast('Export MD ✓');
+    });
+    head.appendChild(exportBtn);
+    wrap.appendChild(head);
+
+    /* Auto-summary */
+    var today3 = Store.today();
+    var sessions7 = Store.getFocusSessions().filter(function(s) {
+      var d = new Date(s.date); var now = new Date();
+      return (now - d) < 7 * 86400000;
+    });
+    var focusTotal = Math.round(sessions7.reduce(function(a,s){return a+s.seconds;},0)/60);
+    var vinted2 = Store.getVintedV2();
+    var vintedSales = (vinted2.items||[]).filter(function(it){
+      return it.status === 'sold' && it.updatedAt && ((new Date() - new Date(it.updatedAt)) < 7*86400000);
+    }).length;
+
+    var autoSummary = el('div', { class:'card card-l-blue', style:'margin-bottom:12px' });
+    autoSummary.innerHTML =
+      '<div class="card-head" style="margin-bottom:8px"><div class="card-title" style="font-size:11px">📊 Auto-résumé semaine</div></div>' +
+      '<div class="cert-stats-bar">' +
+        '<div class="cert-stat"><div class="cert-stat-val">' + focusTotal + '</div><div class="cert-stat-lbl">Min focus</div></div>' +
+        '<div class="cert-stat"><div class="cert-stat-val" style="color:var(--green)">' + vintedSales + '</div><div class="cert-stat-lbl">Ventes Vinted</div></div>' +
+      '</div>';
+    wrap.appendChild(autoSummary);
+
+    /* Guided questions */
+    var questions = [
+      { key:'victories', label:'🏆 Victoires de la semaine' },
+      { key:'failures', label:'❌ Échecs / ratés' },
+      { key:'causes', label:'🔍 Causes identifiées' },
+      { key:'corrections', label:'🛠 Corrections à apporter' },
+      { key:'nonNegotiables', label:'🎯 3 non-négociables semaine prochaine' }
+    ];
+    questions.forEach(function (q) {
+      var qWrap = el('div', { class:'log-field', style:'margin-bottom:10px' });
+      qWrap.appendChild(el('label', {}, q.label));
+      var ta = el('textarea', { placeholder:'...', style:'height:70px;resize:vertical' });
+      ta.value = review[q.key] || '';
+      ta.addEventListener('change', function () {
+        review[q.key] = ta.value;
+        Store.setWeeklyReview(isoWeek, review);
+      });
+      qWrap.appendChild(ta);
+      wrap.appendChild(qWrap);
+    });
+
+    /* Previous reviews */
+    var prevTitle = el('div', { class:'cert-section-title', style:'margin-top:16px' }, '🗓 Revues précédentes');
+    wrap.appendChild(prevTitle);
+    for (var pw = 1; pw <= 4; pw++) {
+      (function (wOffset) {
+        var d4 = new Date(); d4.setDate(d4.getDate() - wOffset * 7);
+        d4.setHours(0,0,0,0);
+        d4.setDate(d4.getDate() + 3 - ((d4.getDay() + 6) % 7));
+        var week1b = new Date(d4.getFullYear(), 0, 4);
+        var weekNum2 = 1 + Math.round(((d4.getTime() - week1b.getTime()) / 86400000 - 3 + (week1b.getDay() + 6) % 7) / 7);
+        var prevIso = d4.getFullYear() + '-W' + String(weekNum2).padStart(2,'0');
+        var prevRev = Store.getWeeklyReview(prevIso);
+        if (!prevRev) return;
+        var prevCard = el('div', { class:'card card-sm', style:'margin-bottom:8px' });
+        var prevHead = el('div', { class:'cert-section-title', style:'cursor:pointer;margin:0' }, prevIso + ' ▾');
+        var prevBody = el('div', { style:'display:none;margin-top:8px;font-size:11px;color:var(--muted)' });
+        prevBody.innerHTML = '<b>Victoires:</b> ' + (prevRev.victories || '—') + '<br>' +
+          '<b>Non-négociables:</b> ' + (prevRev.nonNegotiables || '—');
+        prevHead.addEventListener('click', function () {
+          var open = prevBody.style.display !== 'none';
+          prevBody.style.display = open ? 'none' : 'block';
+          prevHead.textContent = prevIso + ' ' + (open ? '▾' : '▴');
+        });
+        prevCard.appendChild(prevHead);
+        prevCard.appendChild(prevBody);
+        wrap.appendChild(prevCard);
+      })(pw);
+    }
+
+    return wrap;
+  }
+
+  /* ═══════════════════════════════════════════
+     V4 : PERFORMANCE TREND (Stats tab)
+  ═══════════════════════════════════════════ */
+  function renderPerformanceTrend() {
+    var data7 = Store.getPerformanceRange(7);
+    var hasData = data7.some(function(d){ return d.data !== null; });
+    if (!hasData) return null;
+
+    var card = el('div', { class:'card', style:'margin-bottom:12px' });
+    card.innerHTML = '<div class="card-head"><div class="card-title">📈 Performance 7j</div></div>';
+
+    var chartWrap = el('div', { class:'perf-trend-chart' });
+    data7.forEach(function (d) {
+      var perf2 = d.data || {};
+      var energy = parseInt(perf2.energy)||0;
+      var sleep = Math.min(10, parseFloat(perf2.sleepHours)||0);
+      var dayLbl = ['D','L','M','Me','J','V','S'][new Date(d.date + 'T12:00:00').getDay()];
+
+      var col = el('div', { class:'perf-trend-col' });
+      var energyDot = el('div', { class:'perf-trend-dot', style:'background:var(--amber2);height:' + (energy * 20) + 'px;opacity:' + (energy > 0 ? 1 : 0.2) });
+      var sleepDot = el('div', { class:'perf-trend-dot', style:'background:var(--cyan);height:' + (sleep * 10) + 'px;opacity:' + (sleep > 0 ? 1 : 0.2) });
+      col.appendChild(el('div', { class:'perf-trend-bars', style:'display:flex;gap:2px;align-items:flex-end;height:100px' },
+        energyDot, sleepDot));
+      col.appendChild(el('div', { class:'perf-trend-lbl' }, dayLbl));
+      chartWrap.appendChild(col);
+    });
+    card.appendChild(chartWrap);
+    card.innerHTML += '<div style="display:flex;gap:12px;margin-top:6px;font-size:10px;color:var(--muted)">' +
+      '<span><span style="background:var(--amber2);width:8px;height:8px;border-radius:50%;display:inline-block"></span> Énergie</span>' +
+      '<span><span style="background:var(--cyan);width:8px;height:8px;border-radius:50%;display:inline-block"></span> Sommeil</span>' +
+    '</div>';
+    return card;
+  }
+
+  /* ═══════════════════════════════════════════
+     V4 : DAY TEMPLATES (Routine tab)
+  ═══════════════════════════════════════════ */
+  function renderDayTemplateSelector(today) {
+    var wrap = el('div', { class:'card card-l-orange day-template-card' });
+    var head = el('div', { class:'card-head' });
+    head.innerHTML = '<div class="card-title">📅 Template du jour</div>';
+    wrap.appendChild(head);
+
+    var currentTemplate = Store.getDayTemplate(today);
+    var selected = currentTemplate ? currentTemplate.template : null;
+
+    var templates = [
+      { id:'travail-matin', label:'☀️ Travail matin' },
+      { id:'travail-aprem', label:'🌤 Travail aprem' },
+      { id:'travail-soir',  label:'🌙 Travail soir' },
+      { id:'repos',         label:'😴 Repos' },
+      { id:'weekend-enfants', label:'👨‍👩‍👧 Weekend enfants' },
+      { id:'malade',        label:'🤒 Malade' },
+      { id:'examen',        label:'📝 Examen' },
+      { id:'full-etude',    label:'📚 Full étude' },
+      { id:'famille',       label:'👪 Famille' }
+    ];
+
+    var pills = el('div', { class:'day-template-pills' });
+    templates.forEach(function (t) {
+      var pill = el('button', { class:'day-template-pill' + (selected === t.id ? ' active' : ''), type:'button' }, t.label);
+      pill.addEventListener('click', function () {
+        Store.setDayTemplate(today, t.id, '');
+        qsa('.day-template-pill', pills).forEach(function (p) { p.classList.remove('active'); });
+        pill.classList.add('active');
+        toast('Template : ' + t.label + ' ✓');
+      });
+      pills.appendChild(pill);
+    });
+    wrap.appendChild(pills);
+
+    if (currentTemplate && currentTemplate.template) {
+      wrap.appendChild(el('div', { class:'text-muted text-xs', style:'margin-top:8px' }, 'Défini à ' + (currentTemplate.setAt ? currentTemplate.setAt.slice(11,16) : '')));
+    }
+
+    return wrap;
+  }
+
+  /* ═══════════════════════════════════════════
+     V4 : COMMAND PALETTE (Global)
+  ═══════════════════════════════════════════ */
+  function initCommandPalette() {
+    var palette = document.getElementById('cmd-palette');
+    var input = document.getElementById('cmd-input');
+    var results = document.getElementById('cmd-results');
+    if (!palette || !input || !results) return;
+
+    var allCommands = [
+      { label:'Aujourd\'hui', icon:'🏠', action:function(){ Router.navigate('aujourdhui'); } },
+      { label:'Routine', icon:'⚡', action:function(){ Router.navigate('routine'); } },
+      { label:'Étude', icon:'📚', action:function(){ Router.navigate('etude'); } },
+      { label:'Argent', icon:'💰', action:function(){ Router.navigate('argent'); } },
+      { label:'Stats', icon:'📊', action:function(){ Router.navigate('stats'); } },
+      { label:'Sport', icon:'💪', action:function(){ Router.navigate('sport'); } },
+      { label:'Loisir', icon:'🎮', action:function(){ Router.navigate('loisir'); } },
+      { label:'Réglages', icon:'⚙️', action:function(){ Router.navigate('reglages'); } },
+      { label:'Ajouter preuve', icon:'➕', action:function(){ Router.navigate('etude'); setTimeout(function(){ var btn = document.querySelector('.proofs-panel .btn-primary'); if(btn) btn.click(); },300); } },
+      { label:'Ajouter article Vinted', icon:'🛍', action:function(){ Router.navigate('argent'); setTimeout(function(){ var btn = document.querySelector('.vinted-v2-panel .btn-primary'); if(btn) btn.click(); },300); } },
+      { label:'Démarrer focus', icon:'⏱', action:function(){ Router.navigate('aujourdhui'); } },
+      { label:'Export données', icon:'💾', action:function(){ Router.navigate('reglages'); setTimeout(function(){ var items=document.querySelectorAll('.settings-item'); if(items[0]) items[0].querySelector('button').click(); },300); } },
+      { label:'Certifications', icon:'📜', action:function(){ Router.navigate('etude'); } }
+    ];
+
+    var selectedIndex = 0;
+
+    function open() {
+      palette.style.display = 'flex';
+      input.value = '';
+      input.focus();
+      renderResults('');
+    }
+
+    function close() {
+      palette.style.display = 'none';
+    }
+
+    function renderResults(query) {
+      var q = (query || '').toLowerCase().trim();
+      var filtered = q ? allCommands.filter(function(c){ return c.label.toLowerCase().indexOf(q) >= 0; }) : allCommands;
+      results.innerHTML = '';
+      selectedIndex = 0;
+      filtered.forEach(function (c, i) {
+        var item = el('div', { class:'cmd-result-item' + (i === 0 ? ' selected' : ''), 'data-idx': String(i) });
+        item.innerHTML = '<span class="cmd-result-icon">' + c.icon + '</span><span>' + c.label + '</span>';
+        item.addEventListener('click', function () {
+          close();
+          c.action();
+        });
+        item.addEventListener('mouseenter', function () {
+          qsa('.cmd-result-item', results).forEach(function(x){ x.classList.remove('selected'); });
+          item.classList.add('selected');
+          selectedIndex = i;
+        });
+        results.appendChild(item);
+      });
+      return filtered;
+    }
+
+    var lastFiltered = allCommands;
+    input.addEventListener('input', function () {
+      lastFiltered = renderResults(input.value);
+    });
+
+    input.addEventListener('keydown', function (e) {
+      var items = qsa('.cmd-result-item', results);
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        selectedIndex = Math.max(selectedIndex - 1, 0);
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (lastFiltered[selectedIndex]) { close(); lastFiltered[selectedIndex].action(); }
+      } else if (e.key === 'Escape') {
+        close();
+      }
+      items.forEach(function(x, i){ x.classList.toggle('selected', i === selectedIndex); });
+    });
+
+    /* Keyboard shortcut Ctrl+K */
+    document.addEventListener('keydown', function (e) {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); if (palette.style.display === 'none') open(); else close(); }
+    });
+
+    /* Click overlay to close */
+    palette.addEventListener('click', function (e) { if (e.target === palette) close(); });
+
+    /* Mobile button */
+    var mobileBtn = el('button', { id:'cmd-mobile-btn', class:'cmd-mobile-btn', type:'button', title:'Palette de commandes (Ctrl+K)' }, '⌘');
+    mobileBtn.addEventListener('click', open);
+    document.body.appendChild(mobileBtn);
+  }
+
+  /* ═══════════════════════════════════════════
+     V4 : BOTTOM NAV (Mobile)
+  ═══════════════════════════════════════════ */
+  function initBottomNav() {
+    var nav = document.getElementById('bottom-nav');
+    var drawer = document.getElementById('bnav-drawer');
+    if (!nav) return;
+
+    qsa('.bnav-item[data-tab]', nav).forEach(function (item) {
+      item.addEventListener('click', function () {
+        Router.navigate(item.dataset.tab);
+      });
+    });
+
+    var moreBtn = document.getElementById('bnav-more');
+    if (moreBtn && drawer) {
+      moreBtn.addEventListener('click', function () {
+        drawer.style.display = drawer.style.display === 'none' ? 'flex' : 'none';
+      });
+      qsa('.bnav-drawer-item', drawer).forEach(function (item) {
+        item.addEventListener('click', function () {
+          drawer.style.display = 'none';
+          Router.navigate(item.dataset.tab);
+        });
+      });
+      var drawerOverlay = drawer.querySelector('.bnav-drawer-overlay');
+      if (drawerOverlay) drawerOverlay.addEventListener('click', function () { drawer.style.display = 'none'; });
+    }
+
+    /* Update active state on navigation */
+    Router.onNavigate(function (tabId) {
+      qsa('.bnav-item', nav).forEach(function (item) {
+        item.classList.toggle('active', item.dataset.tab === tabId);
+      });
+    });
+  }
+
+  /* ═══════════════════════════════════════════
+     V4 : UPDATED PAGE RENDERERS
+  ═══════════════════════════════════════════ */
+  /* Override renderAujourdhui to add v4 features at top */
+  var _origRenderAujourdhui = renderAujourdhui;
+  function renderAujourdhui() {
+    _origRenderAujourdhui();
+    var page = qs('#page-aujourdhui');
+    if (!page) return;
+    var today = Store.today();
+
+    /* Prepend mission now + briefing + performance log to top (after hero) */
+    var hero = page.querySelector('.hero-card');
+    var insertAfter = hero || page.firstChild;
+
+    var missionCard = renderMissionNow(today);
+    var briefingCard = renderDailyBriefing(today);
+    var perfCard = renderPerformanceLog(today);
+
+    /* Insert after hero card */
+    if (insertAfter && insertAfter.nextSibling) {
+      page.insertBefore(perfCard, insertAfter.nextSibling);
+      page.insertBefore(briefingCard, insertAfter.nextSibling);
+      page.insertBefore(missionCard, insertAfter.nextSibling);
+    } else {
+      page.appendChild(missionCard);
+      page.appendChild(briefingCard);
+      page.appendChild(perfCard);
+    }
+  }
+
+  /* Override renderRoutine to add day template selector at top */
+  var _origRenderRoutine = renderRoutine;
+  function renderRoutine() {
+    _origRenderRoutine();
+    var page = qs('#page-routine');
+    if (!page) return;
+    var today = Store.today();
+    var templateCard = renderDayTemplateSelector(today);
+    if (page.firstChild) {
+      page.insertBefore(templateCard, page.firstChild);
+    } else {
+      page.appendChild(templateCard);
+    }
+  }
+
+  /* Override renderEtude to add certifications + proofs sub-panels */
+  var _origRenderEtude = renderEtude;
+  function renderEtude() {
+    _origRenderEtude();
+    var page = qs('#page-etude');
+    if (!page) return;
+
+    /* Add sub-panel toggle buttons at top */
+    var btnRow = el('div', { class:'etude-sub-panel-row' });
+    var certsBtn = el('button', { class:'cert-track-btn', type:'button' }, '📜 Certifications');
+    var proofsBtn = el('button', { class:'cert-track-btn', type:'button' }, '📋 Preuves');
+    btnRow.appendChild(certsBtn);
+    btnRow.appendChild(proofsBtn);
+    if (page.firstChild) {
+      page.insertBefore(btnRow, page.firstChild);
+    } else {
+      page.appendChild(btnRow);
+    }
+
+    /* Panel containers */
+    var certsContainer = el('div', { id:'etude-certs-panel', style:'display:none' });
+    var proofsContainer = el('div', { id:'etude-proofs-panel', style:'display:none' });
+    page.insertBefore(certsContainer, btnRow.nextSibling);
+    page.insertBefore(proofsContainer, certsContainer.nextSibling);
+
+    certsBtn.addEventListener('click', function () {
+      var isOpen = certsContainer.style.display !== 'none';
+      certsContainer.style.display = isOpen ? 'none' : 'block';
+      proofsContainer.style.display = 'none';
+      if (!isOpen && !certsContainer.children.length) {
+        certsContainer.appendChild(renderCertifications());
+      }
+      certsBtn.classList.toggle('active', !isOpen);
+      proofsBtn.classList.remove('active');
+    });
+
+    proofsBtn.addEventListener('click', function () {
+      var isOpen = proofsContainer.style.display !== 'none';
+      proofsContainer.style.display = isOpen ? 'none' : 'block';
+      certsContainer.style.display = 'none';
+      if (!isOpen && !proofsContainer.children.length) {
+        proofsContainer.appendChild(renderProofs());
+      }
+      proofsBtn.classList.toggle('active', !isOpen);
+      certsBtn.classList.remove('active');
+    });
+
+    /* Auto-open proofs if exist */
+    var proofs = Store.getProofs();
+    if (proofs && proofs.length) {
+      proofsContainer.style.display = 'block';
+      proofsContainer.appendChild(renderProofs());
+      proofsBtn.classList.add('active');
+    }
+  }
+
+  /* Override renderArgent to add Vinted v2 + cashflow panels */
+  var _origRenderArgent = renderArgent;
+  function renderArgent() {
+    _origRenderArgent();
+    var page = qs('#page-argent');
+    if (!page) return;
+
+    var innerTabs = page.querySelector('.inner-tabs');
+    if (!innerTabs) return;
+
+    /* Add Vinted v2 tab */
+    var vTab = el('div', { class:'inner-tab', 'data-itab':'vinted_v2' }, '🛍 Vinted+');
+    var cfTab = el('div', { class:'inner-tab', 'data-itab':'cashflow' }, '💰 Cashflow');
+    innerTabs.appendChild(vTab);
+    innerTabs.appendChild(cfTab);
+
+    var vPanel = el('div', { class:'inner-panel', id:'argent-panel-vinted_v2' });
+    var cfPanel = el('div', { class:'inner-panel', id:'argent-panel-cashflow' });
+    page.appendChild(vPanel);
+    page.appendChild(cfPanel);
+
+    var allArgentTabs = qsa('.inner-tab', innerTabs);
+    var allArgentPanels = page.querySelectorAll('.inner-panel');
+
+    function activateArgentTab(tabId) {
+      allArgentTabs.forEach(function(t){ t.classList.toggle('active', t.dataset.itab === tabId); });
+      allArgentPanels.forEach(function(p){ p.classList.toggle('active', p.id === 'argent-panel-' + tabId); });
+    }
+
+    vTab.addEventListener('click', function () {
+      activateArgentTab('vinted_v2');
+      if (!vPanel.children.length) vPanel.appendChild(renderVintedV2());
+    });
+    cfTab.addEventListener('click', function () {
+      activateArgentTab('cashflow');
+      if (!cfPanel.children.length) cfPanel.appendChild(renderFinanceCommand(Store.currentMonth()));
+    });
+  }
+
+  /* Override renderStats to add task history + weekly review + perf trend */
+  var _origRenderStats = renderStats;
+  function renderStats() {
+    _origRenderStats();
+    var page = qs('#page-stats');
+    if (!page) return;
+
+    /* Add performance trend */
+    var trend = renderPerformanceTrend();
+    if (trend) page.appendChild(trend);
+
+    /* Add task history */
+    page.appendChild(renderTaskHistory(10));
+
+    /* Add weekly review */
+    page.appendChild(renderWeeklyReview());
+  }
+
+  /* ═══════════════════════════════════════════
      INIT
   ═══════════════════════════════════════════ */
   function init() {
     initHeader();
+    Store.migrateVintedToV2();
     Router.init();
 
     renderAujourdhui();
@@ -2153,6 +3897,9 @@
       if (tab === 'argent')     renderArgent();
       if (tab === 'reglages')   renderReglages();
     });
+
+    initBottomNav();
+    initCommandPalette();
   }
 
   if (document.readyState === 'loading') {

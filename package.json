@@ -1,9 +1,15 @@
 {
   "name": "dashboard-ultimate",
   "private": true,
-  "version": "3.0.0",
+  "version": "4.0.0",
   "description": "Dashboard personnel — vanilla JS, mobile-first.",
   "engines": {
     "node": ">=18"
+  },
+  "scripts": {
+    "check": "node scripts/check.js",
+    "check:syntax": "for f in assets/*.js; do node --check \"$f\" && echo \"OK: $f\"; done",
+    "check:no-trading": "! grep -r 'Trading\\|trading' --include='*.js' --include='*.html' --include='*.css' assets/ index.html",
+    "check:no-native-prompts": "! grep -n 'prompt(\\|alert(\\|confirm(' assets/app.js"
   }
 }
