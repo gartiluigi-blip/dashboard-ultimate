@@ -469,34 +469,6 @@ window.Store = (function () {
 
   pruneOldKeys();
 
-  /* ── Forme du matin (humeur, sommeil, eau, intention) ── */
-  function getMorningCheck(date) { return get('morning_' + (date || today()), {}); }
-  function setMorningCheck(date, data) {
-    var cur = getMorningCheck(date);
-    set('morning_' + (date || today()), Object.assign({}, cur, data));
-  }
-
-  /* ── Tracker domaine spécifique par bloc quotidien ── */
-  function getDomainTracker(blockId, date) {
-    return get('dtrack_' + blockId + '_' + (date || today()), {});
-  }
-  function setDomainTracker(blockId, date, data) {
-    var cur = getDomainTracker(blockId, date);
-    /* Persist fields: keep 'device' and 'problem' from previous entry if not overridden */
-    set('dtrack_' + blockId + '_' + (date || today()), Object.assign({}, cur, data));
-  }
-  /* Load last persistent field value (e.g. repair device across days) */
-  function getLastDomainField(blockId, fieldId) {
-    var td = today();
-    for (var i = 0; i < 7; i++) {
-      var dd = new Date(); dd.setDate(dd.getDate() - i);
-      var dk = dd.getFullYear() + '-' + String(dd.getMonth()+1).padStart(2,'0') + '-' + String(dd.getDate()).padStart(2,'0');
-      var data = get('dtrack_' + blockId + '_' + dk, {});
-      if (data[fieldId]) return data[fieldId];
-    }
-    return '';
-  }
-
   /* ── Priorité par bloc (persistante, pas par jour) ── */
   function getBlockPriority(blockId) { return get('blkprio_' + blockId, null); }
   function setBlockPriority(blockId, priority) {
@@ -544,6 +516,339 @@ window.Store = (function () {
   function getBlockRating(key) { return get('brating_' + key, 0); }
   function setBlockRating(key, stars) { set('brating_' + key, parseInt(stars)||0); }
 
+  /* ══════════════════════════════════════════════════════════════
+     CERTIFICATIONS (v4)
+  ══════════════════════════════════════════════════════════════ */
+  function getCertifications() {
+    try { return get('certifications', []); }
+    catch(e) { return []; }
+  }
+  function setCertifications(arr) {
+    try { set('certifications', arr); } catch(e) {}
+  }
+  function getCertification(id) {
+    try {
+      return getCertifications().find(function(c){ return c.id === id; }) || null;
+    } catch(e) { return null; }
+  }
+  function updateCertification(id, patch) {
+    try {
+      var certs = getCertifications();
+      certs = certs.map(function(c){
+        return c.id === id ? Object.assign({}, c, patch) : c;
+      });
+      setCertifications(certs);
+    } catch(e) {}
+  }
+  function addMockScore(certId, scoreObj) {
+    try {
+      var cert = getCertification(certId);
+      if (!cert) return;
+      cert.mockScores = cert.mockScores || [];
+      cert.mockScores.push(scoreObj);
+      updateCertification(certId, { mockScores: cert.mockScores });
+    } catch(e) {}
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     PROOFS (v4)
+  ══════════════════════════════════════════════════════════════ */
+  function getProofs() {
+    try { return get('proofs', []); }
+    catch(e) { return []; }
+  }
+  function setProofs(arr) {
+    try { set('proofs', arr); } catch(e) {}
+  }
+  function addProof(proof) {
+    try {
+      var proofs = getProofs();
+      var now = new Date().toISOString();
+      proofs.push(Object.assign({}, proof, { id: Date.now().toString(), createdAt: now, updatedAt: now }));
+      setProofs(proofs);
+    } catch(e) {}
+  }
+  function updateProof(id, patch) {
+    try {
+      var proofs = getProofs();
+      proofs = proofs.map(function(p){
+        return p.id === id ? Object.assign({}, p, patch, { updatedAt: new Date().toISOString() }) : p;
+      });
+      setProofs(proofs);
+    } catch(e) {}
+  }
+  function deleteProof(id) {
+    try {
+      setProofs(getProofs().filter(function(p){ return p.id !== id; }));
+    } catch(e) {}
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     MISSION NOW (v4)
+  ══════════════════════════════════════════════════════════════ */
+  function getMissionNow() {
+    try { return get('mission_now', { activeMissionId: null, history: [] }); }
+    catch(e) { return { activeMissionId: null, history: [] }; }
+  }
+  function setMissionNow(data) {
+    try { set('mission_now', data); } catch(e) {}
+  }
+  function addMissionHistory(entry) {
+    try {
+      var mn = getMissionNow();
+      mn.history = mn.history || [];
+      mn.history.push(entry);
+      if (mn.history.length > 50) mn.history = mn.history.slice(-50);
+      setMissionNow(mn);
+    } catch(e) {}
+  }
+  function selectNextMission(dateStr) {
+    try {
+      var d = dateStr || today();
+      var dp = getDailyPractice(d);
+      var now = new Date().toISOString();
+
+      // 1. A-priority daily practice not done today
+      if (window.D && D.DAILY_PRACTICE) {
+        for (var i = 0; i < D.DAILY_PRACTICE.length; i++) {
+          var practice = D.DAILY_PRACTICE[i];
+          var prio = getBlockPriority('daily_' + practice.id);
+          if (prio === 'A' && !dp[practice.id]) {
+            return { id: 'dp_' + practice.id + '_' + d, domain: practice.cat.toUpperCase(),
+              title: practice.label, durationMin: practice.min, source: 'routine',
+              sourceLabel: 'Priorité A — pratique quotidienne', status: 'pending', createdAt: now };
+          }
+        }
+      }
+      // 2. Overdue proof
+      var proofs = getProofs();
+      for (var j = 0; j < proofs.length; j++) {
+        var proof = proofs[j];
+        if (proof.dueDate && proof.dueDate < d && proof.status !== 'validated' && proof.status !== 'archived') {
+          return { id: 'proof_' + proof.id, domain: 'ÉTUDE', title: 'Preuve en retard: ' + proof.title,
+            durationMin: 30, source: 'proof', sourceLabel: 'Preuve en retard', status: 'pending', createdAt: now };
+        }
+      }
+      // 3. Active certification
+      var certs = getCertifications();
+      for (var k = 0; k < certs.length; k++) {
+        var cert = certs[k];
+        if (cert.status === 'active') {
+          return { id: 'cert_' + cert.id, domain: 'ÉTUDE', title: 'Certif: ' + cert.name,
+            durationMin: 60, source: 'cert', sourceLabel: 'Certification active', status: 'pending', createdAt: now };
+        }
+      }
+      // 4. Daily practice not done
+      if (window.D && D.DAILY_PRACTICE) {
+        for (var m = 0; m < D.DAILY_PRACTICE.length; m++) {
+          var dp2 = D.DAILY_PRACTICE[m];
+          if (!dp[dp2.id]) {
+            return { id: 'dp_' + dp2.id + '_' + d, domain: dp2.cat.toUpperCase(),
+              title: dp2.label, durationMin: dp2.min, source: 'routine',
+              sourceLabel: 'Pratique quotidienne', status: 'pending', createdAt: now };
+          }
+        }
+      }
+      return null;
+    } catch(e) { return null; }
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     OPS BRIEFING (v4)
+  ══════════════════════════════════════════════════════════════ */
+  function getOpsBriefing(date) {
+    try { return get('ops_briefing_' + (date || today()), null); }
+    catch(e) { return null; }
+  }
+  function setOpsBriefing(date, data) {
+    try { set('ops_briefing_' + (date || today()), data); } catch(e) {}
+  }
+  function generateBriefing(date) {
+    try {
+      var d = date || today();
+      var rtData = get('routine_work_' + d, {});
+      var log = getLog(d);
+      var dp = getDailyPractice(d);
+      var proofs = getProofs();
+      var certs = getCertifications();
+
+      var overdueProofs = proofs.filter(function(p){
+        return p.dueDate && p.dueDate < d && p.status !== 'validated' && p.status !== 'archived';
+      });
+      var activeCerts = certs.filter(function(c){ return c.status === 'active'; });
+
+      var risks = [];
+      if (overdueProofs.length) risks.push(overdueProofs.length + ' preuve(s) en retard');
+      var vv2 = get('vinted_v2', { items: [] });
+      var staleItems = (vv2.items || []).filter(function(it){
+        if (it.status === 'sold' || it.status === 'archived') return false;
+        if (!it.listedAt) return false;
+        var daysListed = Math.floor((Date.now() - new Date(it.listedAt).getTime()) / 86400000);
+        return daysListed > 14;
+      });
+      if (staleItems.length) risks.push(staleItems.length + ' article(s) Vinted stale');
+
+      var shift = rtData.shift || '';
+      var mode = 'full';
+      var dayTemplate = get('day_template_' + d, null);
+      if (dayTemplate && dayTemplate.template) {
+        var t = dayTemplate.template;
+        if (t === 'malade' || t === 'repos') mode = 'survival';
+        else if (t === 'travail-soir' || t === 'famille') mode = 'reduced';
+      } else if (shift === 'Soir') { mode = 'reduced'; }
+
+      var topMissions = [];
+      if (window.D && D.DAILY_PRACTICE) {
+        D.DAILY_PRACTICE.forEach(function(practice){
+          if (!dp[practice.id]) topMissions.push({ title: practice.label, domain: practice.cat, min: practice.min });
+        });
+      }
+      topMissions = topMissions.slice(0, 3);
+
+      var briefing = { mode: mode, shift: shift, risks: risks, topMissions: topMissions,
+        activeCerts: activeCerts.length, overdueProofs: overdueProofs.length, generatedAt: new Date().toISOString() };
+      setOpsBriefing(d, briefing);
+      return briefing;
+    } catch(e) { return { mode:'full', risks:[], topMissions:[], generatedAt: new Date().toISOString() }; }
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     VINTED V2 (v4)
+  ══════════════════════════════════════════════════════════════ */
+  function getVintedV2() {
+    try { return get('vinted_v2', { items: [] }); }
+    catch(e) { return { items: [] }; }
+  }
+  function setVintedV2(data) {
+    try { set('vinted_v2', data); } catch(e) {}
+  }
+  function migrateVintedToV2() {
+    try {
+      if (get('vinted_v2', null) !== null) return; // already migrated
+      var old = get('vinted', null);
+      if (!old || !old.items || !old.items.length) return;
+      var newItems = old.items.map(function(item){
+        return {
+          id: String(item.id || Date.now()),
+          name: item.name || '',
+          brand: item.brand || '',
+          buyPrice: parseFloat(item.buyPrice)||0,
+          listingPrice: parseFloat(item.sellPrice)||0,
+          soldPrice: item.status === 'Vendu' ? parseFloat(item.sellPrice)||0 : 0,
+          shippingCost: 0, boostCost: 0, platformCost: 0,
+          status: item.status === 'Vendu' ? 'sold' : item.status === 'Non vendu' ? 'archived' : 'listed',
+          listedAt: item.createdAt || new Date().toISOString(),
+          createdAt: item.createdAt || new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+      });
+      setVintedV2({ items: newItems });
+    } catch(e) {}
+  }
+  function addVintedV2Item(item) {
+    try {
+      var v = getVintedV2();
+      var now = new Date().toISOString();
+      v.items = v.items || [];
+      v.items.push(Object.assign({ id: Date.now().toString(), status:'listed', shippingCost:0, boostCost:0, platformCost:0 }, item, { createdAt:now, updatedAt:now, listedAt: item.listedAt || now }));
+      setVintedV2(v);
+    } catch(e) {}
+  }
+  function updateVintedV2Item(id, patch) {
+    try {
+      var v = getVintedV2();
+      v.items = (v.items||[]).map(function(it){
+        return it.id === id ? Object.assign({}, it, patch, { updatedAt: new Date().toISOString() }) : it;
+      });
+      setVintedV2(v);
+    } catch(e) {}
+  }
+  function deleteVintedV2Item(id) {
+    try {
+      var v = getVintedV2();
+      v.items = (v.items||[]).filter(function(it){ return it.id !== id; });
+      setVintedV2(v);
+    } catch(e) {}
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     FINANCE COMMAND (v4)
+  ══════════════════════════════════════════════════════════════ */
+  function getFinanceCommand(month) {
+    try {
+      return get('finance_command_' + (month || currentMonth()), {
+        income: 0, fixedCharges: 0, variableSpent: 0,
+        savingsTarget: 20, debtRemaining: 0,
+        projectBuckets: [], notes: '', correctionPlan: ''
+      });
+    } catch(e) { return { income:0, fixedCharges:0, variableSpent:0, savingsTarget:20, debtRemaining:0, projectBuckets:[], notes:'', correctionPlan:'' }; }
+  }
+  function setFinanceCommand(month, data) {
+    try {
+      var existing = getFinanceCommand(month);
+      set('finance_command_' + (month || currentMonth()), Object.assign({}, existing, data));
+    } catch(e) {}
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     HEALTH / PERFORMANCE (v4)
+  ══════════════════════════════════════════════════════════════ */
+  function getPerformance(date) {
+    try { return get('performance_' + (date || today()), null); }
+    catch(e) { return null; }
+  }
+  function setPerformance(date, data) {
+    try {
+      var existing = getPerformance(date) || {};
+      set('performance_' + (date || today()), Object.assign({}, existing, data));
+    } catch(e) {}
+  }
+  function getPerformanceRange(days) {
+    try {
+      var result = [];
+      for (var i = days - 1; i >= 0; i--) {
+        var d = new Date(); d.setDate(d.getDate() - i);
+        var dk = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+        var perf = getPerformance(dk);
+        result.push({ date: dk, data: perf });
+      }
+      return result;
+    } catch(e) { return []; }
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     WEEKLY REVIEW (v4)
+  ══════════════════════════════════════════════════════════════ */
+  function currentIsoWeek() {
+    try {
+      var d = new Date();
+      d.setHours(0,0,0,0);
+      d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
+      var week1 = new Date(d.getFullYear(), 0, 4);
+      var weekNum = 1 + Math.round(((d.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+      return d.getFullYear() + '-W' + String(weekNum).padStart(2, '0');
+    } catch(e) { return ''; }
+  }
+  function getWeeklyReview(isoWeek) {
+    try { return get('weekly_review_' + (isoWeek || currentIsoWeek()), null); }
+    catch(e) { return null; }
+  }
+  function setWeeklyReview(isoWeek, data) {
+    try { set('weekly_review_' + (isoWeek || currentIsoWeek()), data); } catch(e) {}
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     DAY TEMPLATES (v4)
+  ══════════════════════════════════════════════════════════════ */
+  function getDayTemplate(date) {
+    try { return get('day_template_' + (date || today()), null); }
+    catch(e) { return null; }
+  }
+  function setDayTemplate(date, template, notes) {
+    try { set('day_template_' + (date || today()), { template: template, notes: notes || '', setAt: new Date().toISOString() }); }
+    catch(e) {}
+  }
+
   return {
     get: get, set: set, remove: remove, today: today, currentMonth: currentMonth,
     getBookmarks: getBookmarks, setBookmark: setBookmark,
@@ -572,13 +877,23 @@ window.Store = (function () {
     computeDayScore: computeDayScore, getScoreTier: getScoreTier,
     getStreaks: getStreaks, updateStreak: updateStreak,
     getObjectives: getObjectives, setObjectives: setObjectives,
-    getMorningCheck: getMorningCheck, setMorningCheck: setMorningCheck,
-    getDomainTracker: getDomainTracker, setDomainTracker: setDomainTracker, getLastDomainField: getLastDomainField,
     getBlockPriority: getBlockPriority, setBlockPriority: setBlockPriority, cyclePriority: cyclePriority,
     getDailyPractice: getDailyPractice, toggleDailyPractice: toggleDailyPractice, getDailyWeekStats: getDailyWeekStats,
     getDailyNote: getDailyNote, setDailyNote: setDailyNote,
     getBlockTimeSpent: getBlockTimeSpent, setBlockTimeSpent: setBlockTimeSpent, addBlockTimeSpent: addBlockTimeSpent,
     getBlockRating: getBlockRating, setBlockRating: setBlockRating,
-    exportAll: exportAll, importAll: importAll, clearAll: clearAll
+    exportAll: exportAll, importAll: importAll, clearAll: clearAll,
+    /* v4 */
+    getCertifications: getCertifications, setCertifications: setCertifications,
+    getCertification: getCertification, updateCertification: updateCertification, addMockScore: addMockScore,
+    getProofs: getProofs, setProofs: setProofs, addProof: addProof, updateProof: updateProof, deleteProof: deleteProof,
+    getMissionNow: getMissionNow, setMissionNow: setMissionNow, addMissionHistory: addMissionHistory, selectNextMission: selectNextMission,
+    getOpsBriefing: getOpsBriefing, setOpsBriefing: setOpsBriefing, generateBriefing: generateBriefing,
+    getVintedV2: getVintedV2, setVintedV2: setVintedV2, migrateVintedToV2: migrateVintedToV2,
+    addVintedV2Item: addVintedV2Item, updateVintedV2Item: updateVintedV2Item, deleteVintedV2Item: deleteVintedV2Item,
+    getFinanceCommand: getFinanceCommand, setFinanceCommand: setFinanceCommand,
+    getPerformance: getPerformance, setPerformance: setPerformance, getPerformanceRange: getPerformanceRange,
+    currentIsoWeek: currentIsoWeek, getWeeklyReview: getWeeklyReview, setWeeklyReview: setWeeklyReview,
+    getDayTemplate: getDayTemplate, setDayTemplate: setDayTemplate
   };
 })();
