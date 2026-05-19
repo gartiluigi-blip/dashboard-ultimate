@@ -1,50 +1,13 @@
 import * as Store from '../assets/js/store.js';
 import { el, card, subTabs, toast } from '../assets/js/ui.js';
 let panel='vinted';
-export function renderMoney(root, refresh){
-  root.append(subTabs([{id:'vinted',label:'Vinted'},{id:'finance',label:'Finance'},{id:'stock',label:'Stock'}], panel, id=>{panel=id;refresh();}));
-  const box=el('div'); root.append(box);
-  if(panel==='finance') return finance(box, refresh);
-  if(panel==='stock') return stock(box, refresh);
-  vinted(box, refresh);
-}
-function input(p,t='text',v=''){return el('input',{class:'input',placeholder:p,type:t,value:v});}
-function vinted(root, rr){
-  const list=Store.get('vinted_items',[]);
-  const c=card('Vinted Profit Command','Ajout article, prix achat, frais, vente, profit, ROI.');
-  const name=input('article'); const brand=input('marque'); const buy=input('achat €','number'); const ship=input('frais €','number'); const boost=input('boost €','number'); const ask=input('prix annonce €','number');
-  c.append(el('div',{class:'row'},[name,brand,buy,ship,boost,ask]));
-  c.append(el('button',{class:'btn green',onclick:()=>{Store.push('vinted_items',{name:name.value,brand:brand.value,buy:+buy.value||0,shipping:+ship.value||0,boost:+boost.value||0,asking:+ask.value||0,sold:0,status:'listed',listedAt:Store.today()});toast('Article ajoute');rr();}},'Ajouter article'));
-  root.append(c);
-  root.append(summary(list));
-  list.slice().reverse().forEach(x=>root.append(item(x,rr)));
-}
-function summary(list){
-  const invested=list.reduce((s,x)=>s+(+x.buy||0)+(+x.shipping||0)+(+x.boost||0),0);
-  const revenue=list.reduce((s,x)=>s+(+x.sold||0),0);
-  const profit=revenue-invested;
-  return card('Résumé Vinted','Investi: '+money(invested)+' · Ventes: '+money(revenue)+' · Profit net: '+money(profit)+' · Articles: '+list.length);
-}
-function item(x,rr){
-  const cost=(+x.buy||0)+(+x.shipping||0)+(+x.boost||0); const profit=(+x.sold||0)-cost; const roi=cost?Math.round(profit/cost*100):0;
-  const c=card((x.brand?x.brand+' · ':'')+(x.name||'Article'), 'Statut: '+x.status+' · coût '+money(cost)+' · vente '+money(x.sold||0)+' · profit '+money(profit)+' · ROI '+roi+'%');
-  const sold=input('prix vendu €','number',x.sold||'');
-  c.append(el('div',{class:'row'},[sold,el('button',{class:'btn green',onclick:()=>{Store.updateList('vinted_items',x.id,{sold:+sold.value||0,status:'sold',soldAt:Store.today()});toast('Vente enregistree');rr();}},'Marquer vendu'),el('button',{class:'btn',onclick:()=>{Store.updateList('vinted_items',x.id,{status:'stale'});toast('Marque stale');rr();}},'Stale'),el('button',{class:'btn',onclick:()=>{Store.updateList('vinted_items',x.id,{status:'abandoned'});toast('Abandonne');rr();}},'Abandon') ]));
-  return c;
-}
-function stock(root,rr){
-  const list=Store.get('vinted_items',[]).filter(x=>x.status!=='sold');
-  root.append(card('Stock actif','Articles non vendus: '+list.length));
-  list.forEach(x=>root.append(card(x.name||'Article',(x.brand||'-')+' · annonce '+money(x.asking||0)+' · achat '+money(x.buy||0)+' · statut '+x.status)));
-}
-function finance(root,rr){
-  const d=Store.get('finance_month',{income:2300,rent:665,energy:100,internet:70,phone:15,gym:30,insurance:115,contribution:500,other:0,savingsGoalPct:20});
-  const c=card('Finance War Room','Charges fixes, reste à vivre, objectif épargne.');
-  const fields=['income','rent','energy','internet','phone','gym','insurance','contribution','other','savingsGoalPct']; const inputs={};
-  fields.forEach(f=>{inputs[f]=input(f,'number',d[f]||0); c.append(inputs[f]);});
-  c.append(el('button',{class:'btn green',onclick:()=>{fields.forEach(f=>d[f]=+inputs[f].value||0);Store.set('finance_month',d);toast('Finance sauvee');rr();}},'Sauver finance'));
-  root.append(c);
-  const charges=d.rent+d.energy+d.internet+d.phone+d.gym+d.insurance+d.contribution+d.other; const savings=Math.round(d.income*d.savingsGoalPct/100); const left=d.income-charges-savings;
-  root.append(card('Mensuel','Revenu '+money(d.income)+' · charges '+money(charges)+' · épargne cible '+money(savings)+' · reste après épargne '+money(left)));
-}
-function money(n){return (Number(n)||0).toFixed(2)+' €';}
+const STATUS=['listed','sold','stale','boosted','price_drop','abandoned'];
+export function renderMoney(root, refresh){root.append(subTabs([{id:'vinted',label:'Vinted'},{id:'actions',label:'Actions'},{id:'stock',label:'Stock'},{id:'finance',label:'Finance'}],panel,id=>{panel=id;refresh();}));const box=el('div');root.append(box);if(panel==='actions')return actions(box,refresh);if(panel==='stock')return stock(box,refresh);if(panel==='finance')return finance(box,refresh);vinted(box,refresh)}
+function input(p,t='text',v=''){return el('input',{class:'input',placeholder:p,type:t,value:v})}function select(items,v=''){const s=el('select',{class:'input'});items.forEach(x=>s.append(el('option',{value:x},x)));s.value=v;return s}
+function vinted(root,rr){const list=items();root.append(summary(list));const c=card('Ajouter article Vinted','Prix conseillé basé sur coût total + marge cible.');const name=input('article'),brand=input('marque'),cat=input('catégorie'),cond=select(['neuf','excellent','bon','correct'],'excellent'),buy=input('achat €','number'),ship=input('frais €','number'),boost=input('boost initial €','number'),ask=input('prix annonce €','number'),roi=input('ROI cible %','number',100),floor=input('prix plancher €','number');c.append(el('div',{class:'row'},[name,brand,cat,cond,buy,ship,boost,ask,roi,floor]));c.append(el('button',{class:'btn green',onclick:()=>{const cost=(+buy.value||0)+(+ship.value||0)+(+boost.value||0),target=round(cost*(1+(+roi.value||100)/100));Store.push('vinted_items',{name:name.value,brand:brand.value,category:cat.value,condition:cond.value,buy:+buy.value||0,shipping:+ship.value||0,boost:+boost.value||0,asking:+ask.value||target,floor:+floor.value||Math.ceil(cost*1.25),targetRoi:+roi.value||100,sold:0,status:'listed',listedAt:Store.today(),boosts:(+boost.value||0)?[{date:Store.today(),amount:+boost.value}]:[],priceDrops:[]});toast('Article ajouté');rr()}},'Ajouter article'));root.append(c);list.slice().reverse().forEach(x=>root.append(itemCard(x,rr)))}
+function items(){return Store.get('vinted_items',[])}function cost(x){return(+x.buy||0)+(+x.shipping||0)+(+x.boost||0)+(x.boosts||[]).reduce((a,b)=>a+(+b.amount||0),0)}function profit(x){return(+x.sold||0)-cost(x)}function roi(x){const c=cost(x);return c?Math.round(profit(x)/c*100):0}function days(x){return Math.max(0,Math.floor((new Date(Store.today())-new Date(x.listedAt||Store.today()))/86400000))}function suggested(x){const c=cost(x),target=round(c*(1+(+x.targetRoi||100)/100));const age=days(x);if(age>=30)return Math.max(+x.floor||0,round((+x.asking||target)*0.85));if(age>=14)return Math.max(+x.floor||0,round((+x.asking||target)*0.9));return target}function risk(x){if(x.status==='sold')return'ok';if(days(x)>=30)return'danger';if(days(x)>=14)return'warn';return''}function round(n){return Math.round((+n||0)*100)/100}function euro(n){return round(n).toFixed(2)+' €'}
+function summary(list){const invested=list.reduce((s,x)=>s+cost(x),0),revenue=list.reduce((s,x)=>s+(+x.sold||0),0),sold=list.filter(x=>x.status==='sold').length,active=list.filter(x=>x.status!=='sold'&&x.status!=='abandoned').length,stale=list.filter(x=>x.status!=='sold'&&days(x)>=14).length;return card('Résumé Vinted','Actifs '+active+' · vendus '+sold+' · stale '+stale+' · investi '+euro(invested)+' · ventes '+euro(revenue)+' · profit '+euro(revenue-invested)+' · total '+list.length)}
+function itemCard(x,rr){const s=suggested(x),c=card((x.brand?x.brand+' · ':'')+(x.name||'Article'),'Statut '+x.status+' · âge '+days(x)+'j · coût '+euro(cost(x))+' · annonce '+euro(x.asking||0)+' · conseillé '+euro(s)+' · plancher '+euro(x.floor||0)+' · profit si vente '+euro((+x.asking||0)-cost(x)), 'span-4');c.className+=' '+risk(x);c.append(el('div',{class:'small muted'},(x.category||'-')+' · '+(x.condition||'-')+' · ROI vendu '+roi(x)+'%'));const sold=input('vendu €','number',x.sold||''),newAsk=input('nouveau prix €','number',s),boost=input('boost €','number','');c.append(el('div',{class:'row'},[sold,el('button',{class:'btn green',onclick:()=>{Store.updateList('vinted_items',x.id,{sold:+sold.value||0,status:'sold',soldAt:Store.today()});toast('Vente enregistrée');rr()}},'Vendu'),newAsk,el('button',{class:'btn',onclick:()=>{const drops=[...(x.priceDrops||[]),{date:Store.today(),from:+x.asking||0,to:+newAsk.value||0}];Store.updateList('vinted_items',x.id,{asking:+newAsk.value||0,status:'price_drop',priceDrops:drops});toast('Prix baissé');rr()}},'Baisser prix'),boost,el('button',{class:'btn',onclick:()=>{const amount=+boost.value||0;Store.updateList('vinted_items',x.id,{boost:(+x.boost||0)+amount,status:'boosted',boosts:[...(x.boosts||[]),{date:Store.today(),amount}]});toast('Boost loggé');rr()}},'Log boost')]));c.append(el('div',{class:'row'},[el('button',{class:'btn',onclick:()=>{Store.updateList('vinted_items',x.id,{status:'stale'});toast('Stale');rr()}},'Stale'),el('button',{class:'btn danger',onclick:()=>{Store.updateList('vinted_items',x.id,{status:'abandoned'});toast('Abandonné');rr()}},'Abandon') ]));return c}
+function actions(root,rr){const list=items().filter(x=>x.status!=='sold'&&x.status!=='abandoned');root.append(card('Actions Vinted du jour','Priorité: stale ≥14j, baisse de prix, boost ciblé, abandon si marge morte.'));list.sort((a,b)=>days(b)-days(a)).forEach(x=>{if(days(x)<7)return;const s=suggested(x);const c=card((days(x)>=30?'N1 · ':'N2 · ')+(x.brand?x.brand+' · ':'')+(x.name||'Article'),'Âge '+days(x)+'j · prix actuel '+euro(x.asking||0)+' · conseillé '+euro(s)+' · plancher '+euro(x.floor||0));c.className+=' '+risk(x);c.append(el('button',{class:'btn green',onclick:()=>{Store.updateList('vinted_items',x.id,{asking:s,status:'price_drop',priceDrops:[...(x.priceDrops||[]),{date:Store.today(),from:+x.asking||0,to:s}]});toast('Action faite');rr()}},'Appliquer prix conseillé'));root.append(c)})}
+function stock(root,rr){const list=items().filter(x=>x.status!=='sold');root.append(summary(list));list.sort((a,b)=>days(b)-days(a)).forEach(x=>root.append(card((x.brand?x.brand+' · ':'')+(x.name||'Article'),'âge '+days(x)+'j · statut '+x.status+' · annonce '+euro(x.asking||0)+' · conseillé '+euro(suggested(x))+' · coût '+euro(cost(x)),'span-4')))}
+function finance(root,rr){const d=Store.get('finance_month',{income:2300,rent:665,energy:100,internet:70,phone:15,gym:30,insurance:115,contribution:500,other:0,savingsGoalPct:20});const c=card('Finance War Room','Charges fixes, reste à vivre, objectif épargne.');const fields=['income','rent','energy','internet','phone','gym','insurance','contribution','other','savingsGoalPct'];const inputs={};fields.forEach(f=>{inputs[f]=input(f,'number',d[f]||0);c.append(inputs[f])});c.append(el('button',{class:'btn green',onclick:()=>{fields.forEach(f=>d[f]=+inputs[f].value||0);Store.set('finance_month',d);toast('Finance sauvée');rr()}},'Sauver finance'));root.append(c);const charges=d.rent+d.energy+d.internet+d.phone+d.gym+d.insurance+d.contribution+d.other,savings=Math.round(d.income*d.savingsGoalPct/100),left=d.income-charges-savings;root.append(card('Mensuel','Revenu '+euro(d.income)+' · charges '+euro(charges)+' · épargne cible '+euro(savings)+' · reste après épargne '+euro(left)))}
