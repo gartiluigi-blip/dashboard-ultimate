@@ -4,69 +4,17 @@ import { BOOKS, EXERCISE_PACKS } from '../assets/js/study-catalog.js';
 import { SPORT_CYCLE } from '../assets/js/data.js';
 import * as Store from '../assets/js/store.js';
 import { el, card, toast } from '../assets/js/ui.js';
-
-export function renderHome(root, refresh){
-  const day = Store.get('home_' + Store.today(), { done: {}, notes: '' });
-  const plan = buildPlan();
-  const done = Object.values(day.done || {}).filter(Boolean).length;
-  const score = Math.round((done / plan.length) * 100);
-  const top = card('Aujourd’hui · cockpit', 'Score: ' + done + '/' + plan.length + ' · ' + score + '%');
-  top.append(el('div', { class: 'progress' }, el('div', { class: 'bar', style: 'width:' + score + '%' })));
-  root.append(top);
-  const grid = el('div', { class: 'grid' });
-  plan.forEach(item => grid.append(tile(item, day, refresh)));
-  root.append(grid);
-  const notes = card('Notes reprise', 'Sauvegarde locale du jour.');
-  const txt = el('textarea', { class: 'input', rows: '4', placeholder: 'ou je me suis arrete, blocage, prochaine action' }, day.notes || '');
-  notes.append(txt);
-  notes.append(el('button', { class: 'btn green', onclick: () => { day.notes = txt.value; save(day); toast('Notes sauvegardees'); refresh(); } }, 'Sauver notes'));
-  root.append(notes);
-}
-
-function save(day){ Store.set('home_' + Store.today(), day); }
-function tile(item, day, refresh){
-  const ok = !!day.done[item.id];
-  const c = card(item.title, item.desc, item.big ? 'span-6' : 'span-4');
-  c.className += ' ' + (ok ? 'ok' : '');
-  c.append(el('button', { class: 'btn ' + (ok ? 'green' : ''), onclick: () => { day.done[item.id] = !ok; save(day); toast(day.done[item.id] ? 'Valide' : 'Rouvert'); refresh(); } }, ok ? 'Valide' : 'Valider'));
-  return c;
-}
-function buildPlan(){
-  const ep = epfcToday();
-  return [
-    { id:'mission', title:'Mission maintenant', desc:'Commencer par le premier bloc non valide.', big:true },
-    { id:'epfc', title:'EPFC du jour', desc: ep.code + ' · ' + ep.title + ' → ' + epfcResume(ep.code), big:true },
-    { id:'coding', title:'Coding', desc: trackResume('coding') },
-    { id:'ai', title:'IA', desc: trackResume('ai') },
-    { id:'iot', title:'IoT', desc: trackResume('iot') },
-    { id:'repair', title:'Reparation', desc: trackResume('repair') },
-    { id:'nl', title:'NL / SELOR', desc: nlResume() },
-    { id:'sport', title:'Sport', desc: 'Seance: ' + sportToday() },
-    { id:'proof', title:'Preuve du jour', desc:'Une preuve: exercice, note, lien, capture.' },
-    { id:'review', title:'Review soir', desc:'Erreur, reprise, prochaine action.' }
-  ];
-}
-function epfcToday(){ return byCode(EPFC_DAILY_ROTATION[dayIndex(new Date()) % EPFC_DAILY_ROTATION.length]); }
-function dayIndex(d){ return Math.floor((d - new Date(d.getFullYear(), 0, 1)) / 86400000); }
-function byCode(code){ return EPFC_YEAR1.find(c => c.code === code) || EPFC_YEAR1[0]; }
-function epfcResume(code){
-  const st = Store.get('epfc_y1_state', {})[code] || {};
-  const c = byCode(code);
-  const r = c.resources[st.activeIndex || 0];
-  if (!r) return 'termine';
-  const p = (st.progress || {})[r[0]] || {};
-  return r[1] + ' · ' + (p.current || 0) + '/' + (p.total || '?') + ' ' + r[3];
-}
-function trackResume(track){
-  const st = Store.get('track_state', {})[track] || {};
-  const book = (BOOKS[track] || [])[st.bookIndex || 0] || 'livres termines';
-  const ex = (EXERCISE_PACKS[track] || [])[st.exerciseIndex || 0] || 'exercices termines';
-  return 'Livre: ' + book + ' · Exercice: ' + ex;
-}
-function nlResume(){ const d = Store.get('nl_program', { level:'A1', target:'SELOR' }); return d.level + ' → ' + d.target; }
-function sportToday(){
-  const c = Store.sportCycle();
-  const diff = Math.floor((new Date(Store.today()) - new Date(c.anchorDate)) / 86400000);
-  const start = SPORT_CYCLE.indexOf(c.anchorType);
-  return SPORT_CYCLE[((start < 0 ? 0 : start) + diff % SPORT_CYCLE.length + SPORT_CYCLE.length) % SPORT_CYCLE.length];
-}
+export function renderHome(root, refresh){const day=Store.get('home_'+Store.today(),{done:{},notes:''});const plan=buildPlan();const done=Object.values(day.done||{}).filter(Boolean).length;const score=Math.round(done/plan.length*100);const top=card('Aujourd’hui · cockpit','Score: '+done+'/'+plan.length+' · '+score+'%');top.append(el('div',{class:'progress'},el('div',{class:'bar',style:'width:'+score+'%'})));root.append(top);const grid=el('div',{class:'grid'});plan.forEach(x=>grid.append(tile(x,day,refresh)));root.append(grid);root.append(vintedUrgent());root.append(savingsStatus());const notes=card('Notes reprise','Sauvegarde locale du jour.');const txt=el('textarea',{class:'input',rows:'4',placeholder:'où je me suis arrêté, blocage, prochaine action'},day.notes||'');notes.append(txt);notes.append(el('button',{class:'btn green',onclick:()=>{day.notes=txt.value;save(day);toast('Notes sauvegardées');refresh()}},'Sauver notes'));root.append(notes)}
+function save(day){Store.set('home_'+Store.today(),day)}
+function tile(x,day,refresh){const ok=!!day.done[x.id];const c=card(x.title,x.desc,x.big?'span-6':'span-4');c.className+=' '+(ok?'ok':'');c.append(el('button',{class:'btn '+(ok?'green':''),onclick:()=>{day.done[x.id]=!ok;save(day);toast(day.done[x.id]?'Validé':'Rouvert');refresh()}},ok?'Validé':'Valider'));return c}
+function buildPlan(){const ep=epfcToday();const v=vintedNeed();const s=savingsNeed();return[{id:'mission',title:'Mission maintenant',desc:'Commencer par le premier bloc non validé.',big:true},{id:'epfc',title:'EPFC du jour',desc:ep.code+' · '+ep.title+' → '+epfcResume(ep.code),big:true},{id:'coding',title:'Coding',desc:trackResume('coding')},{id:'ai',title:'IA',desc:trackResume('ai')},{id:'iot',title:'IoT',desc:trackResume('iot')},{id:'repair',title:'Réparation',desc:trackResume('repair')},{id:'nl',title:'NL / SELOR',desc:nlResume()},{id:'sport',title:'Sport',desc:'Séance: '+sportToday()},{id:'vinted',title:'Vinted urgent',desc:v},{id:'savings',title:'Épargne',desc:s},{id:'proof',title:'Preuve du jour',desc:'Une preuve: exercice, note, lien, capture.'},{id:'review',title:'Review soir',desc:'Erreur, reprise, prochaine action.'}]}
+function vintedUrgent(){const list=Store.get('vinted_items',[]).filter(x=>x.status!=='sold'&&x.status!=='abandoned');const stale=list.filter(x=>age(x)>=14).sort((a,b)=>age(b)-age(a));const c=card('Vinted urgent',stale.length?stale.length+' articles à traiter':'Rien d’urgent.');stale.slice(0,5).forEach(x=>c.append(el('div',{class:'exercise '+(age(x)>=30?'danger':'warn')},(x.brand?x.brand+' · ':'')+(x.name||'Article')+' · '+age(x)+'j · prix '+euro(x.asking)+' · coût '+euro(vcost(x)))));return c}
+function savingsStatus(){const d=Store.get('finance_month',{income:2300,savingsGoalPct:20});const target=Math.round((+d.income||0)*(+d.savingsGoalPct||0)/100);const month=new Date().toISOString().slice(0,7);const done=Store.get('savings_history',[]).filter(x=>x.month===month).reduce((a,x)=>a+(+x.amount||0),0);const c=card('Épargne du mois','Cible '+euro(target)+' · fait '+euro(done)+' · reste '+euro(Math.max(0,target-done)));c.className+=' '+(done>=target?'ok':done>0?'warn':'danger');return c}
+function vintedNeed(){const list=Store.get('vinted_items',[]).filter(x=>x.status!=='sold'&&x.status!=='abandoned');const n14=list.filter(x=>age(x)>=14).length,n30=list.filter(x=>age(x)>=30).length;return n30?'N1: '+n30+' articles ≥30j à décider':n14?'N2: '+n14+' articles ≥14j à baisser':'Rien d’urgent'}
+function savingsNeed(){const d=Store.get('finance_month',{income:2300,savingsGoalPct:20});const target=Math.round((+d.income||0)*(+d.savingsGoalPct||0)/100);const month=new Date().toISOString().slice(0,7);const done=Store.get('savings_history',[]).filter(x=>x.month===month).reduce((a,x)=>a+(+x.amount||0),0);return done>=target?'Objectif atteint':'Reste '+euro(Math.max(0,target-done))}
+function age(x){return Math.max(0,Math.floor((new Date(Store.today())-new Date(x.listedAt||Store.today()))/86400000))}function vcost(x){return(+x.buy||0)+(+x.shipping||0)+(+x.boost||0)+(x.boosts||[]).reduce((a,b)=>a+(+b.amount||0),0)}function euro(n){return(Number(n)||0).toFixed(2)+' €'}
+function epfcToday(){return byCode(EPFC_DAILY_ROTATION[dayIndex(new Date())%EPFC_DAILY_ROTATION.length])}function dayIndex(d){return Math.floor((d-new Date(d.getFullYear(),0,1))/86400000)}function byCode(code){return EPFC_YEAR1.find(c=>c.code===code)||EPFC_YEAR1[0]}
+function epfcResume(code){const st=Store.get('epfc_y1_state',{})[code]||{};const c=byCode(code);const r=c.resources[st.activeIndex||0];if(!r)return 'terminé';const p=(st.progress||{})[r[0]]||{};return r[1]+' · '+(p.current||0)+'/'+(p.total||'?')+' '+r[3]}
+function trackResume(track){const st=Store.get('track_state',{})[track]||{};const book=(BOOKS[track]||[])[st.bookIndex||0]||'livres terminés';const ex=(EXERCISE_PACKS[track]||[])[st.exerciseIndex||0]||'exercices terminés';return'Livre: '+book+' · Exercice: '+ex}
+function nlResume(){const d=Store.get('nl_program',{level:'A1',target:'SELOR'});return d.level+' → '+d.target}
+function sportToday(){const c=Store.sportCycle();const diff=Math.floor((new Date(Store.today())-new Date(c.anchorDate))/86400000);const start=SPORT_CYCLE.indexOf(c.anchorType);return SPORT_CYCLE[((start<0?0:start)+diff%SPORT_CYCLE.length+SPORT_CYCLE.length)%SPORT_CYCLE.length]}
