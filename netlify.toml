@@ -1,30 +1,9 @@
-# ============================================================
-# Netlify configuration — Dashboard Ultimate
-# Doc: https://docs.netlify.com/configure-builds/file-based-configuration/
-# ============================================================
-
 [build]
-  command = ""
   publish = "."
-  functions = "netlify/functions"
 
-[build.environment]
-  NODE_VERSION = "20"
-  NPM_CONFIG_LOGLEVEL = "warn"
-
-[functions]
-  node_bundler = "esbuild"
-
-[context.production]
-  [context.production.environment]
-    NODE_ENV = "production"
-
-[context.deploy-preview]
-  [context.deploy-preview.environment]
-    NODE_ENV = "preview"
-
-[context.branch-deploy]
-  [context.branch-deploy.environment]
-    NODE_ENV = "preview"
-
-# Headers are defined in _headers. Keep CSP there to avoid duplicate rules.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"

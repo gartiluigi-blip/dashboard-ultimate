@@ -1,70 +1,19 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#09090f">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Dashboard</title>
-<link rel="stylesheet" href="/assets/app.css">
-<script>
-/* Unregister any old service worker so it can't serve stale cached pages */
-if (navigator.serviceWorker) {
-  navigator.serviceWorker.getRegistrations().then(function(regs) {
-    regs.forEach(function(r) { r.unregister(); });
-  }).catch(function(){});
-}
-/* Clear any old caches from previous versions */
-if (window.caches) {
-  caches.keys().then(function(keys) {
-    keys.forEach(function(k) { caches.delete(k); });
-  }).catch(function(){});
-}
-</script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ultimate Dashboard v5</title>
+  <link rel="stylesheet" href="assets/css/app.css">
 </head>
 <body>
-
-<div id="app">
-  <header id="app-header">
-    <div class="header-top">
-      <div class="brand">
-        <div class="brand-icon">🥊</div>
-        <div class="brand-name">FIGHT<span>BOARD</span></div>
-      </div>
-      <div id="header-date" class="header-date"></div>
-    </div>
-    <nav id="tab-nav" role="tablist">
-      <div class="tab" data-tab="aujourdhui" role="tab">Aujourd'hui</div>
-      <div class="tab" data-tab="stats"      role="tab">Stats</div>
-      <div class="tab" data-tab="routine"    role="tab">Routine</div>
-      <div class="tab" data-tab="sport"      role="tab">Sport</div>
-      <div class="tab" data-tab="etude"      role="tab">Étude</div>
-      <div class="tab" data-tab="loisir"     role="tab">Loisir</div>
-      <div class="tab" data-tab="argent"     role="tab">Argent</div>
-      <div class="tab" data-tab="reglages"   role="tab">Réglages</div>
-    </nav>
+  <header class="topbar">
+    <div><div class="kicker">FIGHT BOARD · V5 CLEAN</div><h1>Ultimate Dashboard</h1></div>
+    <div class="clock" id="clock">--:--</div>
   </header>
-
-  <main id="page-container">
-    <div id="page-aujourdhui" class="page"></div>
-    <div id="page-stats"      class="page"></div>
-    <div id="page-routine"    class="page"></div>
-    <div id="page-sport"      class="page"></div>
-    <div id="page-etude"      class="page"></div>
-    <div id="page-loisir"     class="page"></div>
-    <div id="page-argent"     class="page"></div>
-    <div id="page-reglages"   class="page"></div>
-  </main>
-</div>
-
-<div id="toast"></div>
-
-<script src="/assets/store.js"></script>
-<script src="/assets/data.js"></script>
-<script src="/assets/router.js"></script>
-<script src="/assets/app.js"></script>
-
+  <nav class="tabs" id="tabs"></nav>
+  <main id="app" class="app"></main>
+  <div id="toast" class="toast"></div>
+  <script type="module" src="assets/js/app.js"></script>
 </body>
 </html>
