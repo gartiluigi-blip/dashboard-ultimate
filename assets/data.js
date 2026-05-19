@@ -393,57 +393,71 @@ window.D = (function () {
     pull1: {
       label: 'Pull 1',
       focus: 'Dos · biceps · arrière épaules',
-      warmup: ['Rotations épaules 2 min','Scapular pulls légers 2x8','Band pull-aparts 2x15','1 série légère tirage vertical'],
+      warmup: ['Rotations épaules 2 min','Scapular pulls légers 2x8','Band pull-aparts 2x15','Rotation externe élastique 2x12','1 série légère tirage vertical'],
       exercises: [
-        { id:'pull1_assisted_pullup', name:'Tractions assistées ou tirage vertical', category:'back', type:'kg_or_reps', sets:4, reps:'6-10', restSec:90, targetRPE:7, equipment:'machine/bodyweight', c7Risk:'medium', safeAlternative:'Tirage vertical machine prise neutre', progressionRule:'Reduce assistance or add reps.' },
-        { id:'pull1_chest_supported_row', name:'Rowing machine poitrine appuyée', category:'back', type:'kg', sets:4, reps:'8-12', restSec:90, targetRPE:7, equipment:'machine', c7Risk:'low', safeAlternative:'Rowing poulie basse prise neutre', progressionRule:'Prefer chest-supported to protect neck/lower back.' },
-        { id:'pull1_facepull', name:'Face pulls', category:'rear_delts', type:'kg', sets:3, reps:'15-20', restSec:60, targetRPE:7, equipment:'cable', c7Risk:'low', safeAlternative:'Band face pulls', progressionRule:'Slow control, squeeze rear delts.' },
-        { id:'pull1_biceps_curl', name:'Curl biceps', category:'biceps', type:'kg', sets:3, reps:'10-12', restSec:60, targetRPE:8, equipment:'dumbbells', c7Risk:'low', safeAlternative:'Curl câble', progressionRule:'No swinging.' },
-        { id:'pull1_dead_hang', name:'Dead hang assisté', category:'grip', type:'sec', sets:3, reps:'10-30 sec', restSec:60, targetRPE:6, equipment:'bar', c7Risk:'medium', safeAlternative:'Farmer hold léger sans tension cervicale', progressionRule:'Stop if nerve symptoms or neck tension.' }
+        { id:'pull1_assisted_pullup', name:'Tractions assistées ou tirage vertical', category:'back', type:'kg_or_reps', sets:4, reps:'6-10', restSec:90, targetRPE:7, equipment:'machine/bodyweight', c7Risk:'medium', safeAlternative:'Tirage vertical machine prise neutre', progressionRule:'Réduire l\'assistance de 5 kg quand 4x10 propres.' },
+        { id:'pull1_chest_supported_row', name:'Rowing poitrine appuyée machine', category:'back', type:'kg', sets:4, reps:'8-12', restSec:90, targetRPE:7, equipment:'machine', c7Risk:'low', safeAlternative:'Rowing poulie basse prise neutre', progressionRule:'Chest-supported protège le cou et les lombaires — préférer à tout rowing debout.' },
+        { id:'pull1_db_row', name:'Rowing haltère unilatéral', category:'back', type:'kg', sets:3, reps:'8-12/bras', restSec:75, targetRPE:7, equipment:'dumbbells', c7Risk:'low', safeAlternative:'Rowing machine poitrine appuyée', progressionRule:'Coude vers le plafond, ne pas tourner le torse excessivement.' },
+        { id:'pull1_facepull', name:'Face pulls câble', category:'rear_delts', type:'kg', sets:3, reps:'15-20', restSec:60, targetRPE:7, equipment:'cable', c7Risk:'low', safeAlternative:'Band face pulls', progressionRule:'Rotation externe en fin de mouvement, léger et contrôlé.' },
+        { id:'pull1_biceps_curl', name:'Curl biceps haltères', category:'biceps', type:'kg', sets:3, reps:'10-12', restSec:60, targetRPE:8, equipment:'dumbbells', c7Risk:'low', safeAlternative:'Curl câble poulie basse', progressionRule:'Pas de balancement, coudes fixes.' },
+        { id:'pull1_incline_curl', name:'Curl incliné haltères', category:'biceps', type:'kg', sets:2, reps:'10-12', restSec:60, targetRPE:8, equipment:'dumbbells', c7Risk:'low', safeAlternative:'Curl concentration', progressionRule:'Position inclinée isole le chef long — poids léger.' },
+        { id:'pull1_dead_hang', name:'Dead hang assisté', category:'grip', type:'sec', sets:3, reps:'15-30 sec', restSec:60, targetRPE:6, equipment:'bar', c7Risk:'medium', safeAlternative:'Farmer hold léger haltères', progressionRule:'Arrêter immédiatement si symptômes nerveux ou tension cervicale.' }
       ]
     },
     legs1: {
       label: 'Legs 1',
-      focus: 'Quads · fessiers · gainage',
-      warmup: ['Mobilité hanches 2 min','Squat poids du corps 2x10','Fentes arrière 1x8/jambe','1 série légère leg press'],
+      focus: 'Quads · fessiers · ischio · gainage',
+      warmup: ['Mobilité hanches 2 min','Hip circles 10 x2','Squat poids du corps 2x10','Glute bridge 2x12','Fentes arrière 1x8/jambe','1 série légère leg press'],
       exercises: [
-        { id:'legs1_leg_press', name:'Leg press', category:'quads', type:'kg', sets:4, reps:'10-15', restSec:90, targetRPE:7, equipment:'machine', c7Risk:'low', safeAlternative:'Goblet squat léger', progressionRule:'Add reps then weight.' },
-        { id:'legs1_split_squat', name:'Split squat', category:'legs', type:'reps_or_kg', sets:3, reps:'8-12/jambe', restSec:75, targetRPE:7, equipment:'bodyweight/dumbbells', c7Risk:'low', safeAlternative:'Fentes arrière', progressionRule:'Bodyweight first, then dumbbells.' },
-        { id:'legs1_leg_curl', name:'Leg curl', category:'hamstrings', type:'kg', sets:3, reps:'10-15', restSec:75, targetRPE:7, equipment:'machine', c7Risk:'low', safeAlternative:'Hip bridge', progressionRule:'Controlled eccentric.' },
-        { id:'legs1_calves', name:'Mollets', category:'calves', type:'kg_or_reps', sets:4, reps:'15-25', restSec:45, targetRPE:8, equipment:'machine/bodyweight', c7Risk:'low', safeAlternative:'Mollets debout poids du corps', progressionRule:'Pause at top and bottom.' }
+        { id:'legs1_leg_press', name:'Leg press', category:'quads', type:'kg', sets:4, reps:'10-15', restSec:90, targetRPE:7, equipment:'machine', c7Risk:'low', safeAlternative:'Goblet squat léger', progressionRule:'Ajouter reps jusqu\'à 15 propres puis augmenter la charge.' },
+        { id:'legs1_goblet_squat', name:'Goblet squat haltère', category:'quads', type:'kg', sets:3, reps:'10-12', restSec:75, targetRPE:7, equipment:'dumbbells', c7Risk:'low', safeAlternative:'Box squat poids du corps', progressionRule:'Haltère contre la poitrine, descente profonde, genou sur le pied.' },
+        { id:'legs1_split_squat', name:'Split squat bulgare haltères', category:'legs', type:'reps_or_kg', sets:3, reps:'8-10/jambe', restSec:90, targetRPE:8, equipment:'dumbbells', c7Risk:'low', safeAlternative:'Fentes arrière poids du corps', progressionRule:'Pied arrière sur banc, haltères neutres, descente contrôlée.' },
+        { id:'legs1_leg_curl', name:'Leg curl couché machine', category:'hamstrings', type:'kg', sets:3, reps:'10-15', restSec:75, targetRPE:7, equipment:'machine', c7Risk:'low', safeAlternative:'Hip bridge au sol', progressionRule:'Excentrique lent (3s), pas de rotation du bassin.' },
+        { id:'legs1_hip_thrust_light', name:'Hip thrust haltère léger', category:'glutes', type:'kg', sets:3, reps:'12-15', restSec:75, targetRPE:7, equipment:'dumbbells', c7Risk:'low', safeAlternative:'Glute bridge au sol', progressionRule:'Squeeze fessiers en haut, hanche complète.' },
+        { id:'legs1_calves', name:'Mollets machine ou debout', category:'calves', type:'kg_or_reps', sets:4, reps:'15-20', restSec:45, targetRPE:8, equipment:'machine/bodyweight', c7Risk:'low', safeAlternative:'Mollets debout poids du corps', progressionRule:'Pause 1s en haut et en bas.' },
+        { id:'legs1_dead_bug', name:'Dead bug', category:'core', type:'reps', sets:3, reps:'8/côté', restSec:45, targetRPE:6, equipment:'bodyweight', c7Risk:'low', safeAlternative:'Planche genoux', progressionRule:'Dos plat au sol, bras et jambe opposés, expirer lentement.' }
       ]
     },
     push2: {
       label: 'Push 2',
       focus: 'Épaules safe · pecs · triceps · poids du corps',
-      warmup: ['Rotations épaules','Band external rotation 2x15','Pompes inclinées 2x10'],
+      warmup: ['Rotations articulaires épaules 2 min','Band external rotation 2x15','Scapular push-ups 2x10','Band pull-aparts 2x15','Pompes inclinées 2x10'],
       exercises: [
-        { id:'push2_strict_pushups', name:'Pompes strictes', category:'bodyweight', type:'reps', sets:4, reps:'max propre', restSec:75, targetRPE:8, equipment:'bodyweight', c7Risk:'low', safeAlternative:'Pompes inclinées', progressionRule:'Progress to decline push-ups after 4x20.' },
-        { id:'push2_seated_press', name:'Développé machine ou haltères assis', category:'shoulders', type:'kg', sets:3, reps:'8-12', restSec:90, targetRPE:7, equipment:'machine/dumbbells', c7Risk:'medium', safeAlternative:'Machine convergente ou landmine press léger', progressionRule:'No overhead barbell press.' },
-        { id:'push2_diamond_or_rope', name:'Pompes diamant ou triceps pushdown', category:'triceps', type:'reps_or_kg', sets:3, reps:'8-15', restSec:75, targetRPE:8, equipment:'bodyweight/cable', c7Risk:'low', safeAlternative:'Extension triceps corde', progressionRule:'Use cable if wrists/shoulders complain.' },
-        { id:'push2_lateral_raise', name:'Élévations latérales', category:'shoulders', type:'kg', sets:4, reps:'15-20', restSec:60, targetRPE:8, equipment:'dumbbells', c7Risk:'low', safeAlternative:'Poulie basse unilatérale', progressionRule:'Strict form.' }
+        { id:'push2_strict_pushups', name:'Pompes strictes', category:'bodyweight', type:'reps', sets:4, reps:'max propre', restSec:75, targetRPE:8, equipment:'bodyweight', c7Risk:'low', safeAlternative:'Pompes inclinées ou genoux', progressionRule:'Après 4x20 propres : pompes déclinées ou archer push-ups.' },
+        { id:'push2_machine_press', name:'Développé machine convergent', category:'chest', type:'kg', sets:3, reps:'8-12', restSec:90, targetRPE:7, equipment:'machine', c7Risk:'low', safeAlternative:'Développé haltères neutre', progressionRule:'Serrer les poignées vers le centre, contraction maximale en haut.' },
+        { id:'push2_seated_press', name:'Développé épaules machine ou haltères assis', category:'shoulders', type:'kg', sets:3, reps:'8-12', restSec:90, targetRPE:7, equipment:'machine/dumbbells', c7Risk:'medium', safeAlternative:'Landmine press ou machine convergente', progressionRule:'Pas de développé militaire barre. Amplitude partielle si inconfort épaule.' },
+        { id:'push2_pec_deck', name:'Pec deck ou fly câble', category:'chest', type:'kg', sets:3, reps:'12-15', restSec:60, targetRPE:7, equipment:'machine/cable', c7Risk:'low', safeAlternative:'Fly haltères sur banc plat', progressionRule:'Isolation, léger et contrôlé. Légère flexion des coudes fixe.' },
+        { id:'push2_lateral_raise', name:'Élévations latérales', category:'shoulders', type:'kg', sets:4, reps:'15-20', restSec:60, targetRPE:8, equipment:'dumbbells', c7Risk:'low', safeAlternative:'Élévations câble unilatéral', progressionRule:'Strict, pas de balancement, monter jusqu\'à hauteur épaules max.' },
+        { id:'push2_diamond_or_rope', name:'Pompes diamant ou extension triceps', category:'triceps', type:'reps_or_kg', sets:3, reps:'8-15', restSec:75, targetRPE:8, equipment:'bodyweight/cable', c7Risk:'low', safeAlternative:'Extension triceps bande élastique', progressionRule:'Câble préféré si douleur poignets.' },
+        { id:'push2_side_plank', name:'Gainage latéral', category:'core', type:'sec', sets:3, reps:'30-45 sec/côté', restSec:45, targetRPE:7, equipment:'bodyweight', c7Risk:'low', safeAlternative:'Planche genoux', progressionRule:'Corps droit, hanche haute, ne pas affaisser les lombaires.' }
       ]
     },
     pull2: {
       label: 'Pull 2',
-      focus: 'Dos · biceps · posture',
-      warmup: ['Scapular activation','Band pull-aparts','Tirage léger 1 série'],
+      focus: 'Dos large · biceps · posture cervicale',
+      warmup: ['Scapular activation 2x10','Band pull-aparts 2x20','External rotation élastique 2x12','Dead hang léger 20 sec','1 série légère tirage supination'],
       exercises: [
-        { id:'pull2_chinups', name:'Chin-ups assistés ou tirage supination', category:'back', type:'kg_or_reps', sets:4, reps:'6-10', restSec:90, targetRPE:7, equipment:'machine/bodyweight', c7Risk:'medium', safeAlternative:'Tirage supination machine', progressionRule:'Reduce assistance slowly.' },
-        { id:'pull2_low_row', name:'Rowing poulie basse', category:'back', type:'kg', sets:4, reps:'8-12', restSec:90, targetRPE:7, equipment:'cable', c7Risk:'low', safeAlternative:'Rowing machine poitrine appuyée', progressionRule:'Neutral neck.' },
-        { id:'pull2_reverse_pecdeck', name:'Oiseau ou reverse pec deck', category:'rear_delts', type:'kg', sets:3, reps:'12-20', restSec:60, targetRPE:7, equipment:'machine/dumbbells', c7Risk:'low', safeAlternative:'Band pull-aparts', progressionRule:'Posture work.' },
-        { id:'pull2_hammer_curl', name:'Curl marteau', category:'biceps', type:'kg', sets:3, reps:'10-12', restSec:60, targetRPE:8, equipment:'dumbbells', c7Risk:'low', safeAlternative:'Curl câble corde', progressionRule:'No swinging.' }
+        { id:'pull2_chinups', name:'Chin-ups assistés ou tirage supination machine', category:'back', type:'kg_or_reps', sets:4, reps:'6-10', restSec:90, targetRPE:7, equipment:'machine/bodyweight', c7Risk:'medium', safeAlternative:'Tirage supination machine prise étroite', progressionRule:'Réduire assistance progressivement, full hang en bas.' },
+        { id:'pull2_low_row', name:'Rowing poulie basse prise neutre', category:'back', type:'kg', sets:4, reps:'8-12', restSec:90, targetRPE:7, equipment:'cable', c7Risk:'low', safeAlternative:'Rowing machine poitrine appuyée', progressionRule:'Coudes proches du corps, retraction scapulaire, cou neutre.' },
+        { id:'pull2_pulldown_wide', name:'Tirage vertical prise large', category:'back', type:'kg', sets:3, reps:'10-12', restSec:75, targetRPE:7, equipment:'machine', c7Risk:'low', safeAlternative:'Tirage prise neutre', progressionRule:'Tirer vers la poitrine, omoplate en rétraction/dépression.' },
+        { id:'pull2_reverse_pecdeck', name:'Reverse pec deck ou oiseau haltères', category:'rear_delts', type:'kg', sets:3, reps:'15-20', restSec:60, targetRPE:7, equipment:'machine/dumbbells', c7Risk:'low', safeAlternative:'Band pull-aparts', progressionRule:'Travail postural — léger et contrôlé, retraction scapulaire.' },
+        { id:'pull2_hammer_curl', name:'Curl marteau haltères', category:'biceps', type:'kg', sets:3, reps:'10-12', restSec:60, targetRPE:8, equipment:'dumbbells', c7Risk:'low', safeAlternative:'Curl câble corde neutre', progressionRule:'Prise neutre sollicite le brachio-radial.' },
+        { id:'pull2_cable_curl', name:'Curl câble poulie basse', category:'biceps', type:'kg', sets:2, reps:'12-15', restSec:60, targetRPE:7, equipment:'cable', c7Risk:'low', safeAlternative:'Curl concentration haltère', progressionRule:'Tension constante tout le trajet.' },
+        { id:'pull2_hollow_hold', name:'Hollow hold ou crunch anti-flexion', category:'core', type:'sec', sets:3, reps:'20-40 sec', restSec:45, targetRPE:7, equipment:'bodyweight', c7Risk:'low', safeAlternative:'Dead bug', progressionRule:'Dos plat, lombaires au sol, jambes tendues progressivement.' }
       ]
     },
     legs2: {
       label: 'Legs 2',
-      focus: 'Posterior chain · fessiers · mobilité',
-      warmup: ['Hip circles','Glute bridge 2x12','Good morning poids du corps 1x12'],
+      focus: 'Posterior chain · fessiers · gainage anti-rotation',
+      warmup: ['Hip circles 10 x2','Glute bridge 2x15','Good morning poids du corps 1x12','Mobilité cheville 1 min','Hip hinge drill 1x10'],
       exercises: [
-        { id:'legs2_hip_thrust', name:'Hip thrust machine ou haltère', category:'glutes', type:'kg', sets:4, reps:'8-12', restSec:90, targetRPE:7, equipment:'machine/dumbbell', c7Risk:'low', safeAlternative:'Glute bridge au sol', progressionRule:'Add reps then kg.' },
-        { id:'legs2_rdl_light', name:'Romanian deadlift haltères léger', category:'hamstrings', type:'kg', sets:3, reps:'8-12', restSec:90, targetRPE:6, equipment:'dumbbells', c7Risk:'medium', safeAlternative:'Leg curl machine', progressionRule:'Only if neutral spine and no nerve symptoms.' },
-        { id:'legs2_stepups', name:'Step-ups', category:'legs', type:'reps_or_kg', sets:3, reps:'10/jambe', restSec:75, targetRPE:7, equipment:'bodyweight/dumbbells', c7Risk:'low', safeAlternative:'Fentes arrière', progressionRule:'Control knee tracking.' },
-        { id:'legs2_pallof', name:'Pallof press anti-rotation', category:'core', type:'kg', sets:3, reps:'10-15/côté', restSec:45, targetRPE:7, equipment:'cable/band', c7Risk:'low', safeAlternative:'Side plank', progressionRule:'Core stability.' }
+        { id:'legs2_hip_thrust', name:'Hip thrust machine ou haltère', category:'glutes', type:'kg', sets:4, reps:'8-12', restSec:90, targetRPE:7, equipment:'machine/dumbbell', c7Risk:'low', safeAlternative:'Glute bridge bilateral au sol', progressionRule:'Squeeze fessiers en haut, hanche complète, ne pas cambrer les lombaires.' },
+        { id:'legs2_rdl_light', name:'Romanian deadlift haltères léger', category:'hamstrings', type:'kg', sets:3, reps:'8-12', restSec:90, targetRPE:6, equipment:'dumbbells', c7Risk:'medium', safeAlternative:'Leg curl machine couché', progressionRule:'Uniquement si colonne neutre et aucun symptôme neurologique. Charges légères.' },
+        { id:'legs2_leg_press_narrow', name:'Leg press prise étroite (hack squat)', category:'quads', type:'kg', sets:3, reps:'10-12', restSec:90, targetRPE:7, equipment:'machine', c7Risk:'low', safeAlternative:'Goblet squat', progressionRule:'Pieds rapprochés et hauts pour isoler les quads.' },
+        { id:'legs2_leg_curl_seated', name:'Leg curl assis machine', category:'hamstrings', type:'kg', sets:3, reps:'10-15', restSec:75, targetRPE:7, equipment:'machine', c7Risk:'low', safeAlternative:'Hip bridge isométrique', progressionRule:'Version assise étire mieux l\'ischio-jambier proximal.' },
+        { id:'legs2_stepups', name:'Step-ups avec haltères', category:'legs', type:'reps_or_kg', sets:3, reps:'10/jambe', restSec:75, targetRPE:7, equipment:'bodyweight/dumbbells', c7Risk:'low', safeAlternative:'Fentes arrière poids du corps', progressionRule:'Monter en poussant sur le talon, contrôler la descente.' },
+        { id:'legs2_calves_seated', name:'Mollets assis machine', category:'calves', type:'kg', sets:4, reps:'15-20', restSec:45, targetRPE:8, equipment:'machine', c7Risk:'low', safeAlternative:'Mollets debout mur', progressionRule:'Version assise isole le soléaire. Pause 1s en bas.' },
+        { id:'legs2_pallof', name:'Pallof press anti-rotation', category:'core', type:'kg', sets:3, reps:'10-12/côté', restSec:45, targetRPE:7, equipment:'cable/band', c7Risk:'low', safeAlternative:'Side plank statique', progressionRule:'Résister à la rotation, bras tendus devant soi.' }
       ]
     },
     rest: {
