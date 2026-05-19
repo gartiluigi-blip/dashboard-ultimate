@@ -849,6 +849,83 @@ window.Store = (function () {
     catch(e) {}
   }
 
+  /* ══════════════════════════════════════════════════════════════
+     SPORT COMMAND CENTER (v5)
+  ══════════════════════════════════════════════════════════════ */
+  function getSportCycle() {
+    try { return get('sport_cycle', { anchorDate: today(), anchorType: 'push1', currentDeload: false, lastResetAt: null }); }
+    catch(e) { return { anchorDate: today(), anchorType: 'push1', currentDeload: false, lastResetAt: null }; }
+  }
+  function setSportCycle(data) { try { set('sport_cycle', data); } catch(e) {} }
+
+  function getSportSessions() {
+    try { return get('sport_sessions', []); }
+    catch(e) { return []; }
+  }
+  function addSportSession(session) {
+    try {
+      var sessions = getSportSessions();
+      session.id = session.id || Date.now().toString();
+      session.createdAt = session.createdAt || new Date().toISOString();
+      session.updatedAt = new Date().toISOString();
+      sessions.push(session);
+      set('sport_sessions', sessions);
+      return session;
+    } catch(e) { return session; }
+  }
+  function updateSportSession(id, patch) {
+    try {
+      var sessions = getSportSessions();
+      sessions = sessions.map(function(s) { return s.id === id ? Object.assign({}, s, patch, { updatedAt: new Date().toISOString() }) : s; });
+      set('sport_sessions', sessions);
+    } catch(e) {}
+  }
+  function getSessionForDate(date) {
+    try {
+      var sessions = getSportSessions();
+      return sessions.filter(function(s) { return s.date === date; }).pop() || null;
+    } catch(e) { return null; }
+  }
+  function getPreviousExerciseLog(exerciseId) {
+    try {
+      var sessions = getSportSessions();
+      for (var i = sessions.length - 1; i >= 0; i--) {
+        var s = sessions[i];
+        if (!s.exercises) continue;
+        for (var j = 0; j < s.exercises.length; j++) {
+          if (s.exercises[j].exerciseId === exerciseId) return s.exercises[j];
+        }
+      }
+      return null;
+    } catch(e) { return null; }
+  }
+
+  function getBodyweightProgress() {
+    try {
+      return get('bodyweight_progress', { pushups:{level:0,best:0,lastTestDate:null,notes:''}, pullups:{level:0,best:0,lastTestDate:null,notes:''}, dips:{level:0,best:0,lastTestDate:null,notes:''}, legs:{level:0,best:0,lastTestDate:null,notes:''}, core:{level:0,best:0,lastTestDate:null,notes:''}, mobility:{level:0,best:0,lastTestDate:null,notes:''} });
+    } catch(e) { return { pushups:{level:0,best:0,lastTestDate:null,notes:''}, pullups:{level:0,best:0,lastTestDate:null,notes:''}, dips:{level:0,best:0,lastTestDate:null,notes:''}, legs:{level:0,best:0,lastTestDate:null,notes:''}, core:{level:0,best:0,lastTestDate:null,notes:''}, mobility:{level:0,best:0,lastTestDate:null,notes:''} }; }
+  }
+  function setBodyweightProgress(data) { try { set('bodyweight_progress', data); } catch(e) {} }
+
+  function getFlexibilityProgress() {
+    try { return get('flexibility_progress', { currentLevel:0, measurements:[], dailyChecks:{} }); }
+    catch(e) { return { currentLevel:0, measurements:[], dailyChecks:{} }; }
+  }
+  function setFlexibilityProgress(data) { try { set('flexibility_progress', data); } catch(e) {} }
+
+  function getSportMonthlyTests() {
+    try { return get('sport_monthly_tests', []); }
+    catch(e) { return []; }
+  }
+  function addSportMonthlyTest(test) {
+    try {
+      var tests = getSportMonthlyTests();
+      test.date = test.date || today();
+      tests.push(test);
+      set('sport_monthly_tests', tests);
+    } catch(e) {}
+  }
+
   return {
     get: get, set: set, remove: remove, today: today, currentMonth: currentMonth,
     getBookmarks: getBookmarks, setBookmark: setBookmark,
@@ -894,6 +971,14 @@ window.Store = (function () {
     getFinanceCommand: getFinanceCommand, setFinanceCommand: setFinanceCommand,
     getPerformance: getPerformance, setPerformance: setPerformance, getPerformanceRange: getPerformanceRange,
     currentIsoWeek: currentIsoWeek, getWeeklyReview: getWeeklyReview, setWeeklyReview: setWeeklyReview,
-    getDayTemplate: getDayTemplate, setDayTemplate: setDayTemplate
+    getDayTemplate: getDayTemplate, setDayTemplate: setDayTemplate,
+    /* v5 Sport */
+    getSportCycle: getSportCycle, setSportCycle: setSportCycle,
+    getSportSessions: getSportSessions, addSportSession: addSportSession,
+    updateSportSession: updateSportSession, getSessionForDate: getSessionForDate,
+    getPreviousExerciseLog: getPreviousExerciseLog,
+    getBodyweightProgress: getBodyweightProgress, setBodyweightProgress: setBodyweightProgress,
+    getFlexibilityProgress: getFlexibilityProgress, setFlexibilityProgress: setFlexibilityProgress,
+    getSportMonthlyTests: getSportMonthlyTests, addSportMonthlyTest: addSportMonthlyTest
   };
 })();

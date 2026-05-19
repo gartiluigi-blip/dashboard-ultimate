@@ -27,23 +27,27 @@ Productivity apps (Notion, Todoist, Strava…) are great in isolation but fragme
 
 ## Features
 
-- 🏠 **Today** — next action, priorities, current shift, training of the day
-- 📊 **Stats** — streak, heatmap, weekly review, monthly aggregates
-- 📅 **Routine** — rotating shift planner with conflict detection
-- 💪 **Sport** — push/pull/legs cycle, C7-cervical-safe
-- 🧘 **Flexibility** — progressive stretching protocol
-- 🥩 **Nutrition** — supplements + macros tracker
-- 🎓 **EPFC** — full Bachelor curriculum mapped to certifications
-- 💻 **Code** — coding platforms progression (Codewars, LeetCode, etc.)
-- 🤖 **AI** — learning path (post-Python foundations)
-- 🛍️ **Vinted** — reseller business tracker (DAC7 compliant)
-- 🇳🇱 **Dutch** — language learning timeline
-- ♟️ **Chess** — ELO tracking + study plan
-- 💰 **Finance** — debt killer + ETF investing plan
-- 🤝 **Social** — relationship maintenance reminders
-- 📋 **Plan** — exports + backups
-- 📈 **Trading** — journaling for prop firm prep
-- ⚙️ **Settings** — themes, AI key, perf mode
+### Core dashboard
+- **Today** — next action, priorities, current shift, training of the day, day templates
+- **Stats** — streak, heatmap, weekly review, monthly aggregates
+- **Routine** — rotating shift planner with task completion and conflict detection
+- **Command Palette** — keyboard-driven navigation across all modules
+- **Bottom nav** — mobile-optimised quick-access navigation
+
+### v4 modules
+- **Sport Command Center** — 9-day PPL cycle (push1/pull1/rest/legs1/push2/rest/pull2/legs2/rest), C7-cervical-safe protocol, per-exercise logging with RPE + pain tracking, deload weeks, bodyweight progressions (6 movements × 6 levels), souplesse protocol (5 levels, PNF at level 2+), monthly tests, 30-day consistency stats, full session history
+- **Certifications** — full cert roadmap across 7 tracks (PC/IT, Coding, AI, IoT, Linux/Network, Data/Cloud, PM), mock exam scores, status tracking
+- **Proofs** — skill proof vault, link/file references, due dates, validation workflow
+- **Mission Now** — single-focus mission selector (A-priority → overdue proofs → active certs)
+- **Ops Briefing** — daily situation report: mode (full/reduced/survival), risks, top missions
+- **Vinted v2** — full reseller P&L (buy price, listing price, sold price, shipping, boost, platform fees), item lifecycle, migration from v1
+- **Finance Command** — monthly income/charges/savings dashboard with project buckets
+- **Health/Performance** — daily performance logging (energy, sleep, mood, etc.)
+- **Weekly Review** — ISO-week structured review form with persistent storage
+- **Etude** — 12 study subjects with resource tracking, position/total progress bars
+- **Loisir** — chess ELO tracking, book reading progress, bookmarks per subject
+- **Argent** — monthly finance with charges and debts, multi-month history
+- **Reglages** — export/import, data management, performance settings
 
 ## Run locally
 
@@ -53,6 +57,31 @@ cd dashboard-ultimate
 # Just open index.html in a browser, or:
 npx serve .
 ```
+
+## Check / lint
+
+```bash
+node scripts/check.js
+```
+
+Runs: JS syntax check on all four assets, no Trading references, no native prompt/alert/confirm.
+
+## localStorage
+
+All data is stored under the `dashv3_` prefix. Key conventions:
+- `dashv3_log_YYYY-MM-DD` — daily log
+- `dashv3_sport_YYYY-MM-DD` — legacy sport log (kept for backward compat)
+- `dashv3_sport_cycle` — 9-day PPL cycle anchor
+- `dashv3_sport_sessions` — full session history
+- `dashv3_bodyweight_progress` — bodyweight movement levels and bests
+- `dashv3_flexibility_progress` — souplesse level, measurements, daily checks
+- `dashv3_sport_monthly_tests` — monthly test records
+- `dashv3_certifications` — cert list
+- `dashv3_proofs` — skill proof vault
+- `dashv3_vinted_v2` — Vinted v2 items
+- `dashv3_finance_command_YYYY-MM` — monthly finance
+
+No service worker. No backend. No medical claims.
 
 For the AI coach to work, you need either:
 - A `CLAUDE_API_KEY` env var on the Netlify deployment (recommended), OR

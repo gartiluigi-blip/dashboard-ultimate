@@ -1296,146 +1296,729 @@
   /* ═══════════════════════════════════════════
      PAGE : SPORT
   ═══════════════════════════════════════════ */
+  /* ═══════════════════════════════════════════
+     SPORT COMMAND CENTER (v5)
+  ═══════════════════════════════════════════ */
+  var _sportSubSection = 'programme';
+  var _c7Dismissed = false;
+  var _sportWarmupChecks = {};
+
   function renderSport() {
-    var page = qs('#page-sport');
-    if (!page) return;
-    page.innerHTML = '';
+    try {
+      var page = qs('#page-sport');
+      if (!page) return;
+      page.innerHTML = '';
 
-    var today = Store.today();
-    var todaySport = D.todaySportDay();
-    var sportOff = Store.getSportOff(today);
-    var sportLog = Store.getSportLog(today);
+      var today = Store.today();
+      var cycle = Store.getSportCycle();
+      var sessionType = D.computeSportSessionType(cycle.anchorDate, cycle.anchorType, today);
+      var prog = D.SPORT_PROGRAM[sessionType] || D.SPORT_PROGRAM['push1'];
+      var existingSession = Store.getSessionForDate(today);
 
-    /* Today's session badge */
-    var topRow = el('div', { style:'display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px' });
-    var dayBadge = el('div', { class:'sport-day-badge' },
-      todaySport.emoji + ' Séance du jour : ' + todaySport.label);
-    topRow.appendChild(dayBadge);
+      /* ── Sub-nav ── */
+      var subnav = el('div', { class:'sport-subnav' });
+      var subSections = [
+        { id:'programme', label:'Programme' },
+        { id:'poids', label:'Poids du corps' },
+        { id:'souplesse', label:'Souplesse' },
+        { id:'historique', label:'Historique' },
+        { id:'tests', label:'Tests' }
+      ];
+      subSections.forEach(function(s) {
+        var btn = el('button', { class:'sport-subnav-btn' + (_sportSubSection === s.id ? ' active' : ''), type:'button' }, s.label);
+        btn.addEventListener('click', function() {
+          _sportSubSection = s.id;
+          renderSport();
+        });
+        subnav.appendChild(btn);
+      });
+      page.appendChild(subnav);
 
-    var offBtn = el('button', { class:'btn btn-secondary btn-sm', type:'button' },
-      sportOff ? '😴 OFF aujourd\'hui' : '😴 Jour OFF');
-    offBtn.style.marginLeft = 'auto';
-    if (sportOff) offBtn.style.opacity = '.6';
-    offBtn.addEventListener('click', function () {
-      if (!sportOff) {
-        Store.setSportOff(today, true);
-        Store.markSportDone(today);
-        toast('Jour OFF enregistré');
-        renderSport();
+      /* ── C7 Warning ── */
+      if (!_c7Dismissed) {
+        var c7Card = el('div', { class:'c7-warning' });
+        var c7Head = el('div', { style:'display:flex;align-items:center;justify-content:space-between' });
+        c7Head.appendChild(el('div', { class:'c7-warning-title' }, '⚠️ Protocole cervical C7'));
+        var c7Close = el('button', { type:'button', style:'background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:0' }, '×');
+        c7Close.addEventListener('click', function() { _c7Dismissed = true; renderSport(); });
+        c7Head.appendChild(c7Close);
+        c7Card.appendChild(c7Head);
+        c7Card.appendChild(el('div', { class:'c7-warning-body' }, 'Pas de presse militaire barre. Pas de shrugs lourds. Pas de squat nuque. Alternatives machine ou haltères préférées. Arrêt si symptômes neurologiques.'));
+        page.appendChild(c7Card);
       }
-    });
-    topRow.appendChild(offBtn);
-    page.appendChild(topRow);
 
-    /* Save session button */
-    if (!sportOff && todaySport.type !== 'off') {
-      var doneBtn = el('button', { class:'btn btn-green w-full', type:'button', style:'margin-bottom:14px' },
-        sportLog.sessionDone ? '✓ Séance enregistrée' : '✅ Marquer séance terminée');
-      if (sportLog.sessionDone) doneBtn.style.opacity = '.7';
-      doneBtn.addEventListener('click', function () {
-        Store.markSportDone(today);
-        toast('Séance sport ✓ — Bloc routine mis à jour !');
+      /* ── Deload Banner ── */
+      if (cycle.currentDeload) {
+        page.appendChild(el('div', { class:'deload-banner' }, '🔄 Semaine DELOAD — réduire poids de 40-50%'));
+      }
+
+      /* ── Today's session card ── */
+      var sessionCard = el('div', { class:'session-type-card' });
+      var sessionHeader = el('div', { style:'display:flex;align-items:center;justify-content:space-between;margin-bottom:6px' });
+      sessionHeader.appendChild(el('div', { class:'session-type-label' }, prog.label));
+      if (existingSession) {
+        var statusBadge = el('span', { class:'session-status-badge status-' + (existingSession.status || 'started') }, existingSession.status || 'En cours');
+        sessionHeader.appendChild(statusBadge);
+      }
+      sessionCard.appendChild(sessionHeader);
+      sessionCard.appendChild(el('div', { class:'session-type-focus' }, prog.focus));
+
+      /* Start button */
+      if (!existingSession || existingSession.status === 'started') {
+        var startBtn = el('button', { class:'btn btn-violet w-full', type:'button', style:'margin-top:10px' },
+          existingSession ? '⚡ Continuer séance' : '⚡ Démarrer séance');
+        startBtn.addEventListener('click', function() {
+          if (!existingSession) {
+            Store.addSportSession({ date: today, sessionType: sessionType, status: 'started', exercises: [] });
+          }
+          _sportSubSection = 'programme';
+          renderSport();
+        });
+        sessionCard.appendChild(startBtn);
+      }
+
+      /* Cycle reset pills */
+      var resetRow = el('div', { class:'cycle-reset-row' });
+      var cyclePattern = ['push1','pull1','rest','legs1','push2','pull2','legs2'];
+      cyclePattern.forEach(function(type) {
+        var pill = el('button', {
+          class:'cycle-pill' + (sessionType === type ? ' today' : ''),
+          type:'button'
+        }, (D.SPORT_PROGRAM[type] ? D.SPORT_PROGRAM[type].label : type));
+        pill.addEventListener('click', function() {
+          Store.setSportCycle({ anchorDate: today, anchorType: type, currentDeload: cycle.currentDeload, lastResetAt: new Date().toISOString() });
+          renderSport();
+        });
+        resetRow.appendChild(pill);
+      });
+      /* Deload toggle */
+      var deloadPill = el('button', { class:'cycle-pill' + (cycle.currentDeload ? ' today' : ''), type:'button' }, 'DELOAD');
+      deloadPill.addEventListener('click', function() {
+        Store.setSportCycle(Object.assign({}, cycle, { currentDeload: !cycle.currentDeload }));
         renderSport();
       });
-      page.appendChild(doneBtn);
+      resetRow.appendChild(deloadPill);
+      sessionCard.appendChild(resetRow);
+      page.appendChild(sessionCard);
+
+      /* ── Content by sub-section ── */
+      if (_sportSubSection === 'programme') {
+        renderSportProgramme(page, sessionType, today, existingSession, cycle);
+      } else if (_sportSubSection === 'poids') {
+        renderBodyweight(page);
+      } else if (_sportSubSection === 'souplesse') {
+        renderSouplesse(page, today);
+      } else if (_sportSubSection === 'historique') {
+        renderSportHistory(page);
+      } else if (_sportSubSection === 'tests') {
+        renderSportTests(page, today);
+      }
+    } catch(e) {
+      try { qs('#page-sport').innerHTML = '<div class="card" style="color:var(--red2)">Erreur Sport: ' + e.message + '</div>'; } catch(e2) {}
     }
+  }
 
-    /* Inner tabs */
-    var tabs = [
-      { id:'push', label:'Push' },
-      { id:'pull', label:'Pull' },
-      { id:'legs', label:'Legs' },
-      { id:'core', label:'Core' },
-      { id:'souplesse', label:'Souplesse' },
-      { id:'fullbody', label:'Full Body' }
-    ];
+  function renderSportProgramme(page, sessionType, today, existingSession, cycle) {
+    try {
+      var prog = D.SPORT_PROGRAM[sessionType];
+      if (!prog) return;
 
-    var innerTabRow = el('div', { class:'inner-tabs' });
-    var panels = {};
+      /* Warmup checklist */
+      if (prog.warmup && prog.warmup.length) {
+        var warmupCard = el('div', { class:'card', style:'margin-bottom:12px' });
+        warmupCard.appendChild(el('div', { style:'font-size:12px;font-weight:900;color:var(--amber2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.07em' }, '🔥 Échauffement'));
+        prog.warmup.forEach(function(item, idx) {
+          var key = sessionType + '_warmup_' + idx;
+          var checked = _sportWarmupChecks[key] || false;
+          var row = el('div', { style:'display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)' });
+          var chk = el('input', { type:'checkbox', id:'wu_' + key });
+          chk.checked = checked;
+          chk.addEventListener('change', function() { _sportWarmupChecks[key] = chk.checked; });
+          var lbl = el('label', { 'for':'wu_' + key, style:'font-size:13px;color:var(--dim);cursor:pointer;flex:1' }, item);
+          row.appendChild(chk);
+          row.appendChild(lbl);
+          warmupCard.appendChild(row);
+        });
+        page.appendChild(warmupCard);
+      }
 
-    /* Default to today's type */
-    var defaultTab = todaySport.type === 'off' ? 'push' : todaySport.type;
-    if (!D.SPORT[defaultTab]) defaultTab = 'push';
+      /* Exercises */
+      var sessionExercises = (existingSession && existingSession.exercises) ? existingSession.exercises : [];
+      var exerciseData = {};
+      sessionExercises.forEach(function(e) { exerciseData[e.exerciseId] = e; });
 
-    tabs.forEach(function (t) {
-      var isActive = t.id === defaultTab;
-      var tab = el('div', { class:'inner-tab' + (isActive ? ' active' : ''), 'data-itab': t.id }, t.label);
-      innerTabRow.appendChild(tab);
-      var panel = el('div', { class:'inner-panel' + (isActive ? ' active' : ''), id:'sport-panel-' + t.id });
-      panels[t.id] = panel;
-    });
+      prog.exercises.forEach(function(ex) {
+        try {
+          var card = el('div', { class:'exercise-card' });
+          var prev = Store.getPreviousExerciseLog(ex.id);
 
-    page.appendChild(innerTabRow);
+          /* Header */
+          card.appendChild(el('div', { class:'exercise-name' }, ex.name));
 
-    qsa('.inner-tab', innerTabRow).forEach(function (t) {
-      t.addEventListener('click', function () {
-        qsa('.inner-tab', innerTabRow).forEach(function (x) { x.classList.remove('active'); });
-        t.classList.add('active');
-        var tid = t.dataset.itab;
-        Object.keys(panels).forEach(function (k) {
-          panels[k].classList.toggle('active', k === tid);
+          /* Meta row */
+          var meta = el('div', { class:'exercise-meta' });
+          meta.appendChild(el('span', { style:'background:rgba(6,182,212,.15);color:var(--cyan2);padding:2px 8px;border-radius:8px;font-size:10px;font-weight:800' }, ex.category));
+          meta.appendChild(el('span', { style:'font-size:11px;color:var(--dim)' }, ex.sets + '×' + ex.reps));
+          if (ex.restSec > 0) meta.appendChild(el('span', { style:'font-size:11px;color:var(--muted)' }, 'repos ' + ex.restSec + 's'));
+          meta.appendChild(el('span', { style:'background:rgba(124,58,237,.15);color:var(--violet2);padding:2px 8px;border-radius:8px;font-size:10px;font-weight:800' }, 'RPE ' + ex.targetRPE));
+          var c7Class = 'c7-badge-' + (ex.c7Risk || 'low');
+          meta.appendChild(el('span', { class:c7Class }, 'C7:' + (ex.c7Risk || 'low')));
+          card.appendChild(meta);
+
+          /* Previous best */
+          if (prev) {
+            var prevText = 'Précédent: ';
+            if (prev.kg) prevText += prev.sets + '×' + prev.reps + ' @ ' + prev.kg + 'kg';
+            else if (prev.sec) prevText += prev.sec + 's';
+            else if (prev.min) prevText += prev.min + ' min';
+            else if (prev.reps) prevText += prev.sets + '×' + prev.reps;
+            prevText += ' (RPE ' + (prev.rpe || '?') + ')';
+            card.appendChild(el('div', { class:'exercise-prev-best' }, prevText));
+          }
+
+          /* Safe alternative (collapsible) */
+          var altBtn = el('button', { type:'button', style:'font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer;padding:0;text-align:left;margin-bottom:4px' }, '▸ Alternative : ' + ex.safeAlternative);
+          var altDetail = el('div', { style:'display:none;font-size:11px;color:var(--dim);padding:4px 0 4px 12px' });
+          altDetail.textContent = ex.progressionRule;
+          altBtn.addEventListener('click', function() {
+            var shown = altDetail.style.display !== 'none';
+            altDetail.style.display = shown ? 'none' : 'block';
+            altBtn.textContent = (shown ? '▸' : '▾') + ' Alternative : ' + ex.safeAlternative;
+          });
+          card.appendChild(altBtn);
+          card.appendChild(altDetail);
+
+          /* Log inputs */
+          var saved = exerciseData[ex.id] || {};
+          var grid = el('div', { class:'exercise-log-grid' });
+
+          var setsInp = el('input', { type:'number', min:'0', value: saved.sets||'', placeholder:'Séries' });
+          var repsInp = el('input', { type:'text', value: saved.reps||'', placeholder:'Reps/sec/min' });
+          grid.appendChild(wrapLogField('Séries', setsInp));
+          grid.appendChild(wrapLogField('Reps/durée', repsInp));
+
+          var kgInp = null;
+          if (ex.type === 'kg' || ex.type === 'kg_or_reps' || ex.type === 'reps_or_kg') {
+            kgInp = el('input', { type:'number', min:'0', step:'0.5', value: saved.kg||'', placeholder:'kg' });
+            grid.appendChild(wrapLogField('Kg', kgInp));
+          }
+
+          var rpeInp = el('input', { type:'number', min:'1', max:'10', value: saved.rpe||'', placeholder:'1-10' });
+          grid.appendChild(wrapLogField('RPE', rpeInp));
+
+          var painInp = el('input', { type:'number', min:'0', max:'10', value: saved.pain||'', placeholder:'0-10' });
+          grid.appendChild(wrapLogField('Douleur', painInp));
+
+          var painWarn = el('div', { class:'pain-warning' }, '⚠️ Douleur élevée — arrêtez cet exercice et consultez un professionnel.');
+          painInp.addEventListener('input', function() {
+            var v = parseInt(painInp.value, 10) || 0;
+            painWarn.classList.toggle('visible', v >= 7);
+          });
+
+          card.appendChild(grid);
+          card.appendChild(painWarn);
+          page.appendChild(card);
+
+          /* Track inputs in exerciseData for save */
+          (function(exId) {
+            function getExData() {
+              var d = { exerciseId: exId, sets: setsInp.value, reps: repsInp.value, rpe: rpeInp.value, pain: painInp.value };
+              if (kgInp) d.kg = kgInp.value;
+              return d;
+            }
+            [setsInp, repsInp, rpeInp, painInp].forEach(function(inp) {
+              inp.addEventListener('change', function() { exerciseData[exId] = getExData(); });
+            });
+            if (kgInp) kgInp.addEventListener('change', function() { exerciseData[exId] = getExData(); });
+          })(ex.id);
+        } catch(exErr) {}
+      });
+
+      /* Session footer — energy, notes, global pain, save */
+      var footer = el('div', { class:'card', style:'margin-top:14px' });
+      footer.appendChild(el('div', { style:'font-size:12px;font-weight:800;color:var(--dim);margin-bottom:10px;text-transform:uppercase;letter-spacing:.07em' }, '📊 Bilan séance'));
+
+      var footGrid = el('div', { style:'display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px' });
+      var energyInp = el('input', { type:'number', min:'1', max:'10', placeholder:'1-10', value: (existingSession && existingSession.energy) || '' });
+      var globalPainInp = el('input', { type:'number', min:'0', max:'10', placeholder:'0-10', value: (existingSession && existingSession.globalPain) || '' });
+      footGrid.appendChild(wrapLogField('Énergie (1-10)', energyInp));
+      footGrid.appendChild(wrapLogField('Douleur globale (0-10)', globalPainInp));
+      footer.appendChild(footGrid);
+
+      var notesWrap = el('div', { class:'log-field' });
+      notesWrap.appendChild(el('label', {}, 'Notes séance'));
+      var notesInp = el('textarea', { placeholder:'Observations, sensations...', style:'width:100%;min-height:60px;background:var(--panel4);border:1px solid var(--border2);border-radius:6px;padding:6px 8px;font-size:13px;color:var(--fg);box-sizing:border-box;resize:vertical' });
+      notesInp.value = (existingSession && existingSession.notes) || '';
+      notesWrap.appendChild(notesInp);
+      footer.appendChild(notesWrap);
+
+      var saveBtn = el('button', { class:'btn btn-green w-full', type:'button', style:'margin-top:10px' }, '💾 Sauvegarder séance');
+      saveBtn.addEventListener('click', function() {
+        try {
+          var exercises = prog.exercises.map(function(ex) {
+            return exerciseData[ex.id] || { exerciseId: ex.id };
+          });
+          var globalPain = parseInt(globalPainInp.value, 10) || 0;
+          var status = globalPain >= 7 ? 'pain_stop' : 'completed';
+          var sessionData = {
+            date: today,
+            sessionType: sessionType,
+            status: status,
+            energy: energyInp.value,
+            globalPain: globalPainInp.value,
+            notes: notesInp.value,
+            exercises: exercises,
+            durationMin: existingSession ? Math.round((Date.now() - new Date(existingSession.createdAt).getTime()) / 60000) : 0
+          };
+          if (existingSession) {
+            Store.updateSportSession(existingSession.id, sessionData);
+          } else {
+            Store.addSportSession(sessionData);
+          }
+          if (status === 'completed') {
+            Store.markSportDone(today);
+          }
+          toast('Séance sauvegardée ✓');
+          renderSport();
+        } catch(saveErr) { toast('Erreur sauvegarde'); }
+      });
+      footer.appendChild(saveBtn);
+      page.appendChild(footer);
+    } catch(e) {
+      page.appendChild(el('div', { class:'card' }, 'Erreur programme: ' + e.message));
+    }
+  }
+
+  function wrapLogField(labelText, inputEl) {
+    var wrap = el('div', { class:'log-field' });
+    wrap.appendChild(el('label', { style:'font-size:10px;color:var(--muted);font-weight:800;text-transform:uppercase;display:block;margin-bottom:3px' }, labelText));
+    wrap.appendChild(inputEl);
+    return wrap;
+  }
+
+  function renderBodyweight(page) {
+    try {
+      var progress = Store.getBodyweightProgress();
+      var header = el('div', { style:'font-size:13px;font-weight:900;color:var(--fg);margin-bottom:12px;text-transform:uppercase;letter-spacing:.07em' }, '💪 Progressions Poids du Corps');
+      page.appendChild(header);
+
+      Object.keys(D.BODYWEIGHT_PROGRESSIONS).forEach(function(key) {
+        try {
+          var bp = D.BODYWEIGHT_PROGRESSIONS[key];
+          var prog = progress[key] || { level:0, best:0, lastTestDate:null, notes:'' };
+          var card = el('div', { class:'bw-card' });
+
+          var headerRow = el('div', { class:'bw-movement-header' });
+          headerRow.appendChild(el('span', { class:'bw-movement-icon' }, bp.icon));
+          headerRow.appendChild(el('span', { class:'bw-movement-label' }, bp.label));
+          headerRow.appendChild(el('span', { class:'bw-level-badge' }, 'Niv.' + prog.level));
+          card.appendChild(headerRow);
+
+          var currentVar = bp.levels[prog.level] || '—';
+          var nextVar = prog.level < bp.levels.length - 1 ? bp.levels[prog.level + 1] : 'MAX';
+          card.appendChild(el('div', { class:'bw-current-var' }, '▸ ' + currentVar));
+          card.appendChild(el('div', { class:'bw-next-var' }, 'Prochain: ' + nextVar));
+
+          if (prog.lastTestDate) {
+            card.appendChild(el('div', { style:'font-size:11px;color:var(--muted)' }, 'Dernier test: ' + prog.lastTestDate));
+          }
+
+          /* Best + save */
+          var bestRow = el('div', { style:'display:flex;align-items:center;gap:8px;margin-top:4px' });
+          bestRow.appendChild(el('label', { style:'font-size:11px;color:var(--muted);white-space:nowrap' }, 'Meilleur:'));
+          var bestInp = el('input', { type:'number', min:'0', value: prog.best || '', placeholder:'0', style:'width:70px;background:var(--panel4);border:1px solid var(--border2);border-radius:6px;padding:5px 8px;font-size:13px;color:var(--fg)' });
+          bestRow.appendChild(bestInp);
+          var saveBestBtn = el('button', { type:'button', class:'btn btn-secondary btn-sm' }, 'Sauv.');
+          saveBestBtn.addEventListener('click', (function(k, inp) {
+            return function() {
+              var p = Store.getBodyweightProgress();
+              p[k] = Object.assign({}, p[k] || {}, { best: parseInt(inp.value)||0, lastTestDate: Store.today() });
+              Store.setBodyweightProgress(p);
+              toast('Meilleur sauvegardé ✓');
+              renderSport();
+            };
+          })(key, bestInp));
+          bestRow.appendChild(saveBestBtn);
+          card.appendChild(bestRow);
+
+          /* Level buttons */
+          var lvlBtns = el('div', { class:'bw-level-btns' });
+          var downBtn = el('button', { type:'button', class:'bw-level-btn' }, '▼ Rétrograder');
+          downBtn.disabled = prog.level <= 0;
+          if (prog.level <= 0) downBtn.style.opacity = '.4';
+          downBtn.addEventListener('click', (function(k) {
+            return function() {
+              var p = Store.getBodyweightProgress();
+              p[k] = Object.assign({}, p[k] || {}, { level: Math.max(0, (p[k].level||0) - 1) });
+              Store.setBodyweightProgress(p);
+              renderSport();
+            };
+          })(key));
+          var upBtn = el('button', { type:'button', class:'bw-level-btn', style:'background:rgba(16,185,129,.15);color:var(--green2);border-color:rgba(16,185,129,.3)' }, '▲ Progresser');
+          upBtn.disabled = prog.level >= bp.levels.length - 1;
+          if (prog.level >= bp.levels.length - 1) upBtn.style.opacity = '.4';
+          upBtn.addEventListener('click', (function(k, maxLvl) {
+            return function() {
+              var p = Store.getBodyweightProgress();
+              p[k] = Object.assign({}, p[k] || {}, { level: Math.min(maxLvl, (p[k].level||0) + 1) });
+              Store.setBodyweightProgress(p);
+              renderSport();
+            };
+          })(key, bp.levels.length - 1));
+          lvlBtns.appendChild(downBtn);
+          lvlBtns.appendChild(upBtn);
+          card.appendChild(lvlBtns);
+
+          /* Notes */
+          var notesInp = el('input', { type:'text', placeholder:'Notes...', value: prog.notes || '', style:'width:100%;background:var(--panel4);border:1px solid var(--border2);border-radius:6px;padding:6px 8px;font-size:12px;color:var(--fg);box-sizing:border-box' });
+          notesInp.addEventListener('change', (function(k, inp) {
+            return function() {
+              var p = Store.getBodyweightProgress();
+              p[k] = Object.assign({}, p[k] || {}, { notes: inp.value });
+              Store.setBodyweightProgress(p);
+            };
+          })(key, notesInp));
+          card.appendChild(notesInp);
+          page.appendChild(card);
+        } catch(bwErr) {}
+      });
+
+      /* Monthly test button */
+      var testBtn = el('button', { class:'btn btn-violet w-full', type:'button', style:'margin-top:10px' }, '📅 Enregistrer test mensuel');
+      testBtn.addEventListener('click', function() {
+        var progress2 = Store.getBodyweightProgress();
+        var fields = Object.keys(D.BODYWEIGHT_PROGRESSIONS).map(function(k) {
+          var bp2 = D.BODYWEIGHT_PROGRESSIONS[k];
+          return { id: k + '_best', label: bp2.icon + ' ' + bp2.label + ' meilleur', type:'number', value: (progress2[k] && progress2[k].best) || '' };
+        });
+        fields.push({ id:'test_notes', label:'Notes', type:'text' });
+        Modal.form('Test mensuel poids du corps', fields, function(vals) {
+          var testData = { date: Store.today(), type: 'bodyweight' };
+          Object.keys(D.BODYWEIGHT_PROGRESSIONS).forEach(function(k) {
+            testData[k] = vals[k + '_best'];
+          });
+          testData.notes = vals.test_notes;
+          Store.addSportMonthlyTest(testData);
+          toast('Test mensuel enregistré ✓');
         });
       });
-    });
+      page.appendChild(testBtn);
+    } catch(e) {
+      page.appendChild(el('div', { class:'card' }, 'Erreur poids du corps: ' + e.message));
+    }
+  }
 
-    Object.keys(panels).forEach(function (key) {
-      var panel = panels[key];
-      var exercises = D.SPORT[key] || [];
-      var card = el('div', { class:'card' });
+  var _flexLevel = null;
+  function renderSouplesse(page, today) {
+    try {
+      var fp = Store.getFlexibilityProgress();
+      if (_flexLevel === null) _flexLevel = fp.currentLevel || 0;
+      var lvlData = D.SOUPLESSE_LEVELS[_flexLevel] || D.SOUPLESSE_LEVELS[0];
 
-      exercises.forEach(function (ex, idx) {
-        var savedKey = key + '_' + idx;
-        var saved = sportLog[savedKey] || {};
-        var row = el('div', { class:'exercise-item' });
-        var name = el('span', { class:'exercise-name' }, ex.name);
-        var inputs = el('div', { class:'exercise-inputs' });
-
-        function saveSport(data) {
-          var d2 = {}; d2[savedKey] = data;
-          Store.setSportLog(today, d2);
-        }
-
-        if (ex.type === 'kg') {
-          var sets = el('input', { type:'number', min:'0', value: saved.sets||'', placeholder:'sets' });
-          var reps = el('input', { type:'number', min:'0', value: saved.reps||'', placeholder:'reps' });
-          var kg   = el('input', { type:'number', min:'0', step:'0.5', value: saved.kg||'', placeholder:'kg' });
-          [sets, reps, kg].forEach(function (inp) {
-            inp.addEventListener('change', function () {
-              saveSport({ sets:sets.value, reps:reps.value, kg:kg.value });
-            });
-          });
-          inputs.appendChild(sets);
-          inputs.appendChild(el('span', { class:'exercise-unit' }, '×'));
-          inputs.appendChild(reps);
-          inputs.appendChild(el('span', { class:'exercise-unit' }, '@'));
-          inputs.appendChild(kg);
-          inputs.appendChild(el('span', { class:'exercise-unit' }, 'kg'));
-        } else if (ex.type === 'sec') {
-          var sec = el('input', { type:'number', min:'0', value: saved.sec||'', placeholder:'sec' });
-          sec.addEventListener('change', function () { saveSport({ sec: sec.value }); });
-          inputs.appendChild(sec);
-          inputs.appendChild(el('span', { class:'exercise-unit' }, 'sec'));
-        } else {
-          var sets2 = el('input', { type:'number', min:'0', value: saved.sets||'', placeholder:'sets' });
-          var reps2 = el('input', { type:'number', min:'0', value: saved.reps||'', placeholder:'reps' });
-          [sets2, reps2].forEach(function (inp) {
-            inp.addEventListener('change', function () {
-              saveSport({ sets:sets2.value, reps:reps2.value });
-            });
-          });
-          inputs.appendChild(sets2);
-          inputs.appendChild(el('span', { class:'exercise-unit' }, '×'));
-          inputs.appendChild(reps2);
-        }
-
-        row.appendChild(name);
-        row.appendChild(inputs);
-        card.appendChild(row);
+      /* Level tabs */
+      var tabs = el('div', { class:'flex-level-tabs' });
+      D.SOUPLESSE_LEVELS.forEach(function(lvl) {
+        var tab = el('button', { class:'flex-level-tab' + (_flexLevel === lvl.level ? ' active' : ''), type:'button' }, 'Niv.' + lvl.level + ' ' + lvl.label);
+        tab.addEventListener('click', function() {
+          _flexLevel = lvl.level;
+          renderSport();
+        });
+        tabs.appendChild(tab);
       });
+      page.appendChild(tabs);
 
-      panel.appendChild(card);
-      page.appendChild(panel);
-    });
+      /* Set current level */
+      if (_flexLevel !== fp.currentLevel) {
+        var setLvlBtn = el('button', { type:'button', class:'btn btn-violet', style:'margin-bottom:10px' }, 'Définir Niv.' + _flexLevel + ' comme niveau actuel');
+        setLvlBtn.addEventListener('click', function() {
+          Store.setFlexibilityProgress(Object.assign({}, fp, { currentLevel: _flexLevel }));
+          toast('Niveau souplesse mis à jour ✓');
+          renderSport();
+        });
+        page.appendChild(setLvlBtn);
+      }
+
+      /* PNF warning */
+      if (_flexLevel < 2) {
+        page.appendChild(el('div', { class:'c7-warning', style:'margin-bottom:10px' },
+          el('div', { class:'c7-warning-body' }, '⚠️ PNF déverrouillé au niveau 2 uniquement')));
+      }
+
+      /* Milestones */
+      var milCard = el('div', { class:'card', style:'margin-bottom:12px' });
+      milCard.appendChild(el('div', { style:'font-size:12px;font-weight:900;color:var(--green2);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px' }, '🎯 Jalons — ' + lvlData.label + ' (' + lvlData.duration + ')'));
+      lvlData.milestones.forEach(function(m) {
+        var row = el('div', { class:'flex-milestone' });
+        row.appendChild(el('span', { class:'flex-milestone-check' }, '○'));
+        row.appendChild(el('span', { style:'font-size:12px;color:var(--dim)' }, m));
+        milCard.appendChild(row);
+      });
+      page.appendChild(milCard);
+
+      /* Routine */
+      var routCard = el('div', { class:'card', style:'margin-bottom:12px' });
+      routCard.appendChild(el('div', { style:'font-size:12px;font-weight:900;color:var(--cyan2);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px' }, '📋 Routine ' + lvlData.routineMin + ' min'));
+      lvlData.routine.forEach(function(r) {
+        var row = el('div', { style:'padding:5px 0;border-bottom:1px solid var(--border);font-size:12px;color:var(--dim)' }, '▸ ' + r);
+        routCard.appendChild(row);
+      });
+      page.appendChild(routCard);
+
+      /* Daily check */
+      var dayCheck = fp.dailyChecks && fp.dailyChecks[today] ? fp.dailyChecks[today] : {};
+      var checkCard = el('div', { class:'card', style:'margin-bottom:12px' });
+      checkCard.appendChild(el('div', { style:'font-size:12px;font-weight:900;color:var(--amber2);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px' }, '✅ Check quotidien'));
+
+      var doneRow = el('div', { style:'display:flex;align-items:center;gap:8px;margin-bottom:8px' });
+      var doneChk = el('input', { type:'checkbox', id:'flex_done_today' });
+      doneChk.checked = dayCheck.done || false;
+      doneRow.appendChild(doneChk);
+      doneRow.appendChild(el('label', { 'for':'flex_done_today', style:'font-size:13px;color:var(--dim);cursor:pointer' }, 'Routine faite aujourd\'hui'));
+      checkCard.appendChild(doneRow);
+
+      var ckGrid = el('div', { style:'display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px' });
+      var durationInp = el('input', { type:'number', min:'0', placeholder:'min', value: dayCheck.duration || '' });
+      var ckPainInp = el('input', { type:'number', min:'0', max:'10', placeholder:'0-10', value: dayCheck.pain || '' });
+      ckGrid.appendChild(wrapLogField('Durée (min)', durationInp));
+      ckGrid.appendChild(wrapLogField('Douleur (0-10)', ckPainInp));
+      checkCard.appendChild(ckGrid);
+
+      var ckNotesInp = el('input', { type:'text', placeholder:'Observations...', value: dayCheck.notes || '', style:'width:100%;background:var(--panel4);border:1px solid var(--border2);border-radius:6px;padding:6px 8px;font-size:12px;color:var(--fg);box-sizing:border-box;margin-bottom:8px' });
+      checkCard.appendChild(ckNotesInp);
+
+      var saveDayBtn = el('button', { type:'button', class:'btn btn-green w-full' }, '💾 Enregistrer check');
+      saveDayBtn.addEventListener('click', function() {
+        var fp2 = Store.getFlexibilityProgress();
+        fp2.dailyChecks = fp2.dailyChecks || {};
+        fp2.dailyChecks[today] = { done: doneChk.checked, duration: durationInp.value, pain: ckPainInp.value, notes: ckNotesInp.value };
+        Store.setFlexibilityProgress(fp2);
+        toast('Check souplesse enregistré ✓');
+      });
+      checkCard.appendChild(saveDayBtn);
+      page.appendChild(checkCard);
+
+      /* Monthly measurements */
+      var measCard = el('div', { class:'card', style:'margin-bottom:12px' });
+      measCard.appendChild(el('div', { style:'font-size:12px;font-weight:900;color:var(--violet2);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px' }, '📏 Mesures mensuelles'));
+
+      var measGrid = el('div', { class:'flex-measure-grid' });
+      var measFields = [
+        { id:'foldCm', label:'Flexion avant (cm)' },
+        { id:'pikeCm', label:'Pike (cm)' },
+        { id:'straddleDeg', label:'Straddle (°)' },
+        { id:'frontSplitR', label:'Split avant D (cm)' },
+        { id:'frontSplitL', label:'Split avant G (cm)' },
+        { id:'middleSplit', label:'Split milieu (cm)' },
+        { id:'deepSquatSec', label:'Deep squat (s)' },
+        { id:'bridgeScore', label:'Pont (1-5)' }
+      ];
+      var measInputs = {};
+      measFields.forEach(function(mf) {
+        var inp = el('input', { type:'number', placeholder:'—', style:'width:100%;background:var(--panel4);border:1px solid var(--border2);border-radius:6px;padding:6px 8px;font-size:13px;color:var(--fg);box-sizing:border-box' });
+        measInputs[mf.id] = inp;
+        measGrid.appendChild(wrapLogField(mf.label, inp));
+      });
+      measCard.appendChild(measGrid);
+
+      var measNotesInp = el('input', { type:'text', placeholder:'Notes mesures...', style:'width:100%;background:var(--panel4);border:1px solid var(--border2);border-radius:6px;padding:6px 8px;font-size:12px;color:var(--fg);box-sizing:border-box;margin-top:8px;margin-bottom:8px' });
+      measCard.appendChild(measNotesInp);
+
+      var saveMeasBtn = el('button', { type:'button', class:'btn btn-violet w-full' }, '💾 Enregistrer mesures');
+      saveMeasBtn.addEventListener('click', function() {
+        var fp3 = Store.getFlexibilityProgress();
+        var entry = { date: Store.today(), level: _flexLevel, notes: measNotesInp.value };
+        measFields.forEach(function(mf) { entry[mf.id] = measInputs[mf.id].value; });
+        fp3.measurements = fp3.measurements || [];
+        fp3.measurements.push(entry);
+        Store.setFlexibilityProgress(fp3);
+        toast('Mesures enregistrées ✓');
+        renderSport();
+      });
+      measCard.appendChild(saveMeasBtn);
+      page.appendChild(measCard);
+
+      /* Last 4 measurements trend */
+      var measurements = fp.measurements || [];
+      if (measurements.length > 0) {
+        var last4 = measurements.slice(-4);
+        var trendCard = el('div', { class:'card' });
+        trendCard.appendChild(el('div', { style:'font-size:11px;font-weight:800;color:var(--muted);margin-bottom:8px' }, 'HISTORIQUE MESURES'));
+        var tbl = el('table', { class:'flex-trend-table' });
+        var thead = el('thead', {});
+        var headRow = el('tr', {});
+        ['Date','Flexion','Pike','Straddle','Notes'].forEach(function(h) {
+          headRow.appendChild(el('th', {}, h));
+        });
+        thead.appendChild(headRow);
+        tbl.appendChild(thead);
+        var tbody = el('tbody', {});
+        last4.forEach(function(m) {
+          var tr = el('tr', {});
+          tr.appendChild(el('td', {}, m.date || '—'));
+          tr.appendChild(el('td', {}, m.foldCm ? m.foldCm + 'cm' : '—'));
+          tr.appendChild(el('td', {}, m.pikeCm ? m.pikeCm + 'cm' : '—'));
+          tr.appendChild(el('td', {}, m.straddleDeg ? m.straddleDeg + '°' : '—'));
+          tr.appendChild(el('td', {}, m.notes || ''));
+          tbody.appendChild(tr);
+        });
+        tbl.appendChild(tbody);
+        trendCard.appendChild(tbl);
+        page.appendChild(trendCard);
+      }
+    } catch(e) {
+      page.appendChild(el('div', { class:'card' }, 'Erreur souplesse: ' + e.message));
+    }
+  }
+
+  function renderSportHistory(page) {
+    try {
+      var sessions = Store.getSportSessions();
+      var last14 = sessions.slice(-14).reverse();
+
+      page.appendChild(el('div', { style:'font-size:13px;font-weight:900;color:var(--fg);margin-bottom:12px;text-transform:uppercase;letter-spacing:.07em' }, '📅 Historique séances'));
+
+      if (!last14.length) {
+        page.appendChild(el('div', { class:'card', style:'text-align:center;color:var(--muted);padding:30px' }, 'Aucune séance enregistrée.\nDémarrez votre première séance !'));
+        return;
+      }
+
+      last14.forEach(function(s) {
+        try {
+          var status = s.status || 'started';
+          var cardClass = 'history-session-card';
+          if (status === 'completed') cardClass += ' completed';
+          else if (status === 'pain_stop') cardClass += ' pain_stop';
+          else if (status === 'skipped') cardClass += ' skipped';
+          var card = el('div', { class:cardClass });
+
+          var topRow = el('div', { style:'display:flex;align-items:center;gap:8px;margin-bottom:4px' });
+          topRow.appendChild(el('span', { class:'history-session-date' }, s.date || '—'));
+          if (s.sessionType && D.SPORT_PROGRAM[s.sessionType]) {
+            topRow.appendChild(el('span', { style:'font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;background:rgba(124,58,237,.15);color:var(--violet2)' }, D.SPORT_PROGRAM[s.sessionType].label));
+          }
+          topRow.appendChild(el('span', { class:'session-status-badge status-' + status }, status));
+          if (s.durationMin) topRow.appendChild(el('span', { style:'font-size:11px;color:var(--muted)' }, s.durationMin + ' min'));
+          card.appendChild(topRow);
+
+          if (s.exercises && s.exercises.length) {
+            var exSummary = s.exercises.filter(function(ex) { return ex.sets || ex.reps || ex.kg; }).map(function(ex) {
+              var txt = ex.exerciseId ? ex.exerciseId.split('_').slice(1).join(' ') : 'exo';
+              if (ex.kg) txt += ' ' + ex.sets + 'x' + ex.reps + '@' + ex.kg + 'kg';
+              else if (ex.reps) txt += ' ' + ex.sets + 'x' + ex.reps;
+              return txt;
+            }).slice(0, 4).join(' · ');
+            if (exSummary) card.appendChild(el('div', { class:'history-session-exercises' }, exSummary));
+          }
+
+          if (s.globalPain) {
+            var painColor = parseInt(s.globalPain) >= 7 ? 'var(--red2)' : 'var(--muted)';
+            card.appendChild(el('div', { style:'font-size:11px;color:' + painColor }, 'Douleur: ' + s.globalPain + '/10'));
+          }
+          if (s.notes) card.appendChild(el('div', { style:'font-size:11px;color:var(--muted);margin-top:2px' }, s.notes));
+
+          page.appendChild(card);
+        } catch(sErr) {}
+      });
+    } catch(e) {
+      page.appendChild(el('div', { class:'card' }, 'Erreur historique: ' + e.message));
+    }
+  }
+
+  function renderSportTests(page, today) {
+    try {
+      page.appendChild(el('div', { style:'font-size:13px;font-weight:900;color:var(--fg);margin-bottom:12px;text-transform:uppercase;letter-spacing:.07em' }, '🏆 Tests mensuels'));
+
+      /* Test form */
+      var formCard = el('div', { class:'card', style:'margin-bottom:14px' });
+      formCard.appendChild(el('div', { style:'font-size:12px;font-weight:800;color:var(--dim);margin-bottom:10px' }, 'Nouveau test'));
+      var testGrid = el('div', { style:'display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px' });
+      var pushupsInp = el('input', { type:'number', min:'0', placeholder:'0' });
+      var plankInp = el('input', { type:'number', min:'0', placeholder:'sec' });
+      var deadHangInp = el('input', { type:'number', min:'0', placeholder:'sec' });
+      var squatHoldInp = el('input', { type:'number', min:'0', placeholder:'sec' });
+      var pullupLvlInp = el('input', { type:'number', min:'0', max:'5', placeholder:'0-5' });
+      testGrid.appendChild(wrapLogField('Pompes max', pushupsInp));
+      testGrid.appendChild(wrapLogField('Planche (sec)', plankInp));
+      testGrid.appendChild(wrapLogField('Dead hang (sec)', deadHangInp));
+      testGrid.appendChild(wrapLogField('Deep squat hold (sec)', squatHoldInp));
+      testGrid.appendChild(wrapLogField('Niveau traction (0-5)', pullupLvlInp));
+      formCard.appendChild(testGrid);
+      var testNotesInp = el('input', { type:'text', placeholder:'Notes...', style:'width:100%;background:var(--panel4);border:1px solid var(--border2);border-radius:6px;padding:6px 8px;font-size:12px;color:var(--fg);box-sizing:border-box;margin-bottom:8px' });
+      formCard.appendChild(testNotesInp);
+      var saveTestBtn = el('button', { type:'button', class:'btn btn-green w-full' }, '💾 Enregistrer test');
+      saveTestBtn.addEventListener('click', function() {
+        Store.addSportMonthlyTest({
+          date: today,
+          pushupsMax: pushupsInp.value,
+          plankSec: plankInp.value,
+          deadHangSec: deadHangInp.value,
+          squatHoldSec: squatHoldInp.value,
+          pullupLevel: pullupLvlInp.value,
+          notes: testNotesInp.value
+        });
+        toast('Test enregistré ✓');
+        renderSport();
+      });
+      formCard.appendChild(saveTestBtn);
+      page.appendChild(formCard);
+
+      /* Last 6 tests */
+      var tests = Store.getSportMonthlyTests();
+      if (tests.length) {
+        var last6 = tests.slice(-6).reverse();
+        var testsCard = el('div', { class:'card', style:'margin-bottom:14px' });
+        testsCard.appendChild(el('div', { style:'font-size:11px;font-weight:800;color:var(--muted);margin-bottom:8px' }, 'DERNIERS TESTS'));
+        last6.forEach(function(t) {
+          var row = el('div', { style:'display:flex;gap:12px;flex-wrap:wrap;padding:6px 0;border-bottom:1px solid var(--border);font-size:11px;color:var(--dim)' });
+          row.appendChild(el('span', { style:'color:var(--fg);font-weight:700' }, t.date));
+          if (t.pushupsMax) row.appendChild(el('span', {}, 'Pompes: ' + t.pushupsMax));
+          if (t.plankSec) row.appendChild(el('span', {}, 'Planche: ' + t.plankSec + 's'));
+          if (t.deadHangSec) row.appendChild(el('span', {}, 'Hang: ' + t.deadHangSec + 's'));
+          if (t.pullupLevel) row.appendChild(el('span', {}, 'Traction Niv.' + t.pullupLevel));
+          if (t.notes) row.appendChild(el('span', { style:'color:var(--muted)' }, t.notes));
+          testsCard.appendChild(row);
+        });
+        page.appendChild(testsCard);
+      }
+
+      /* 30-day consistency */
+      var sessions = Store.getSportSessions();
+      var now = Date.now();
+      var last30days = sessions.filter(function(s) {
+        var ts = s.createdAt ? new Date(s.createdAt).getTime() : 0;
+        return (now - ts) <= 30 * 86400000;
+      });
+      var consistCard = el('div', { class:'card' });
+      consistCard.appendChild(el('div', { style:'font-size:11px;font-weight:800;color:var(--muted);margin-bottom:8px' }, 'CONSISTANCE 30 JOURS'));
+      consistCard.appendChild(el('div', { style:'font-size:22px;font-weight:900;color:var(--green2)' }, last30days.length + ' séances'));
+
+      /* By type */
+      var byType = {};
+      last30days.forEach(function(s) {
+        var t = s.sessionType || 'unknown';
+        byType[t] = (byType[t] || 0) + 1;
+      });
+      var typeRow = el('div', { style:'display:flex;gap:6px;flex-wrap:wrap;margin-top:6px' });
+      Object.keys(byType).forEach(function(t) {
+        var label = D.SPORT_PROGRAM[t] ? D.SPORT_PROGRAM[t].label : t;
+        typeRow.appendChild(el('span', { style:'font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;background:rgba(124,58,237,.15);color:var(--violet2)' }, label + ': ' + byType[t]));
+      });
+      consistCard.appendChild(typeRow);
+
+      /* Consistency warning — check last 14 days */
+      var last14sessions = sessions.filter(function(s) {
+        var ts = s.createdAt ? new Date(s.createdAt).getTime() : 0;
+        return (now - ts) <= 14 * 86400000;
+      });
+      if (last14sessions.length < 4) {
+        var warnEl = el('div', { style:'margin-top:8px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.35);border-radius:8px;padding:8px;font-size:12px;color:var(--amber2);font-weight:700' },
+          '⚠️ Consistance faible — moins de 4 séances dans les 14 derniers jours');
+        consistCard.appendChild(warnEl);
+      }
+      page.appendChild(consistCard);
+    } catch(e) {
+      page.appendChild(el('div', { class:'card' }, 'Erreur tests: ' + e.message));
+    }
   }
 
   /* ═══════════════════════════════════════════

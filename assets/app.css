@@ -3364,3 +3364,70 @@ select option { background: var(--panel3); }
 
 .day-template-pill:hover { border-color: rgba(124,58,237,.4); background: rgba(124,58,237,.08); }
 .day-template-pill.active { border-color: rgba(124,58,237,.6); background: rgba(124,58,237,.18); color: var(--violet3); }
+
+/* ── Sport Command Center ─────────────────────────── */
+.sport-subnav { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px; }
+.sport-subnav-btn { padding:6px 14px; border-radius:20px; font-size:11px; font-weight:800; letter-spacing:.07em; text-transform:uppercase; cursor:pointer; border:1px solid var(--border2); background:var(--panel3); color:var(--dim); transition:all .15s; }
+.sport-subnav-btn.active { background:rgba(124,58,237,.22); border-color:rgba(124,58,237,.5); color:var(--violet2); }
+
+.c7-warning { border:1px solid rgba(245,158,11,.4); background:rgba(245,158,11,.07); border-radius:10px; padding:12px 14px; margin-bottom:12px; }
+.c7-warning-title { font-size:11px; font-weight:900; color:var(--amber2); letter-spacing:.08em; margin-bottom:4px; }
+.c7-warning-body { font-size:12px; color:var(--dim); line-height:1.5; }
+
+.session-type-card { border:1px solid rgba(124,58,237,.35); background:rgba(124,58,237,.08); border-radius:12px; padding:14px; margin-bottom:12px; }
+.session-type-label { font-size:18px; font-weight:900; color:var(--violet2); }
+.session-type-focus { font-size:12px; color:var(--dim); margin-top:2px; }
+.session-status-badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:10px; font-weight:800; }
+.status-completed { background:rgba(16,185,129,.2); color:var(--green2); }
+.status-started   { background:rgba(245,158,11,.2);  color:var(--amber2); }
+.status-skipped   { background:rgba(100,116,139,.2); color:var(--muted); }
+.status-pain_stop { background:rgba(239,68,68,.2);   color:var(--red2);  }
+.status-deload    { background:rgba(6,182,212,.2);   color:var(--cyan2); }
+
+.cycle-reset-row { display:flex; gap:6px; flex-wrap:wrap; margin-top:10px; }
+.cycle-pill { padding:5px 12px; border-radius:20px; font-size:10px; font-weight:800; cursor:pointer; border:1px solid var(--border2); background:var(--panel3); color:var(--muted); text-transform:uppercase; transition:all .15s; }
+.cycle-pill.today { background:rgba(124,58,237,.2); border-color:rgba(124,58,237,.5); color:var(--violet2); }
+
+.exercise-card { border:1px solid var(--border2); background:var(--panel3); border-radius:10px; padding:12px; margin-bottom:10px; }
+.exercise-name { font-size:14px; font-weight:800; color:var(--fg); }
+.exercise-meta { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin:4px 0 8px; }
+.c7-badge-low    { background:rgba(16,185,129,.15);  color:var(--green2);  padding:2px 8px; border-radius:8px; font-size:10px; font-weight:800; }
+.c7-badge-medium { background:rgba(245,158,11,.15);  color:var(--amber2);  padding:2px 8px; border-radius:8px; font-size:10px; font-weight:800; }
+.c7-badge-high   { background:rgba(239,68,68,.15);   color:var(--red2);    padding:2px 8px; border-radius:8px; font-size:10px; font-weight:800; }
+.exercise-prev-best { font-size:11px; color:var(--muted); margin-bottom:6px; }
+.exercise-log-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(90px,1fr)); gap:6px; margin-top:6px; }
+.exercise-log-grid input { background:var(--panel4); border:1px solid var(--border2); border-radius:6px; padding:6px 8px; font-size:13px; color:var(--fg); width:100%; box-sizing:border-box; }
+.pain-warning { background:rgba(239,68,68,.12); border:1px solid rgba(239,68,68,.3); border-radius:8px; padding:8px 12px; margin-top:6px; font-size:12px; color:var(--red2); display:none; }
+.pain-warning.visible { display:block; }
+
+.bw-card { border:1px solid var(--border2); background:var(--panel3); border-radius:10px; padding:12px; margin-bottom:10px; display:flex; flex-direction:column; gap:6px; }
+.bw-movement-header { display:flex; align-items:center; gap:8px; }
+.bw-movement-icon { font-size:20px; }
+.bw-movement-label { font-size:14px; font-weight:800; }
+.bw-level-badge { padding:3px 10px; background:rgba(124,58,237,.2); border-radius:20px; font-size:10px; font-weight:800; color:var(--violet2); }
+.bw-current-var { font-size:13px; color:var(--cyan2); font-weight:700; }
+.bw-next-var { font-size:11px; color:var(--muted); }
+.bw-level-btns { display:flex; gap:6px; }
+.bw-level-btn { padding:5px 12px; border-radius:8px; font-size:11px; font-weight:800; cursor:pointer; border:1px solid var(--border2); background:var(--panel4); color:var(--dim); }
+
+.flex-level-tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
+.flex-level-tab { padding:5px 12px; border-radius:20px; font-size:10px; font-weight:800; cursor:pointer; border:1px solid var(--border2); background:var(--panel3); color:var(--muted); }
+.flex-level-tab.active { background:rgba(16,185,129,.2); border-color:rgba(16,185,129,.5); color:var(--green2); }
+.flex-milestone { display:flex; align-items:flex-start; gap:8px; padding:6px 0; border-bottom:1px solid var(--border); }
+.flex-milestone-check { font-size:14px; cursor:pointer; }
+.flex-measure-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px; }
+.flex-measure-grid .log-field label { font-size:10px; color:var(--muted); font-weight:800; text-transform:uppercase; }
+.flex-trend-table { width:100%; border-collapse:collapse; font-size:11px; margin-top:8px; }
+.flex-trend-table th { color:var(--muted); font-weight:700; text-align:left; padding:4px 6px; border-bottom:1px solid var(--border2); }
+.flex-trend-table td { padding:4px 6px; border-bottom:1px solid var(--border); color:var(--dim); }
+
+.history-session-card { border:1px solid var(--border2); border-radius:10px; padding:12px; margin-bottom:8px; background:var(--panel3); }
+.history-session-card.completed { border-left:3px solid var(--green); }
+.history-session-card.pain_stop { border-left:3px solid var(--red); }
+.history-session-card.skipped   { border-left:3px solid var(--muted); opacity:.7; }
+.history-session-date { font-size:11px; color:var(--muted); }
+.history-session-exercises { font-size:11px; color:var(--dim); margin-top:4px; }
+
+.deload-banner { background:rgba(245,158,11,.1); border:1px solid rgba(245,158,11,.35); border-radius:8px; padding:8px 12px; margin-bottom:10px; font-size:12px; color:var(--amber2); font-weight:700; }
+
+.btn-violet { background:rgba(124,58,237,.25); border:1px solid rgba(124,58,237,.5); color:var(--violet2); font-weight:800; }

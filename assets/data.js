@@ -374,6 +374,133 @@ window.D = (function () {
       lower.indexOf('stretch') >= 0;
   }
 
+  /* ── SPORT PROGRAM (v5) ── */
+  var SPORT_PROGRAM = {
+    push1: {
+      label: 'Push 1',
+      focus: 'Poitrine · épaules · triceps',
+      warmup: ['Rotations articulaires 2 min','Band pull-aparts 2x15','Pompes faciles 2x10','1 série légère du premier exercice'],
+      exercises: [
+        { id:'push1_pushups_warmup', name:'Pompes échauffement', category:'bodyweight', type:'reps', sets:2, reps:'10-15', restSec:45, targetRPE:6, equipment:'bodyweight', c7Risk:'low', safeAlternative:'Pompes inclinées', progressionRule:'Add reps until 2x20, then harder variation.' },
+        { id:'push1_incline_db_press', name:'Développé haltères incliné', category:'chest', type:'kg', sets:4, reps:'8-12', restSec:90, targetRPE:7, equipment:'dumbbells', c7Risk:'medium', safeAlternative:'Développé machine assis', progressionRule:'When all sets hit 12 reps, add 1-2 kg.' },
+        { id:'push1_machine_press', name:'Développé machine assis', category:'chest', type:'kg', sets:3, reps:'8-12', restSec:90, targetRPE:7, equipment:'machine', c7Risk:'low', safeAlternative:'Pompes inclinées', progressionRule:'Controlled tempo, no neck tension.' },
+        { id:'push1_lateral_raise', name:'Élévations latérales', category:'shoulders', type:'kg', sets:4, reps:'12-20', restSec:60, targetRPE:8, equipment:'dumbbells', c7Risk:'low', safeAlternative:'Élévations latérales poulie légère', progressionRule:'Add reps before weight.' },
+        { id:'push1_assisted_dips', name:'Dips assistés ou bench dips', category:'triceps', type:'reps', sets:3, reps:'max propre', restSec:90, targetRPE:8, equipment:'bodyweight', c7Risk:'medium', safeAlternative:'Extension triceps corde', progressionRule:'No shoulder pain. Add reps slowly.' },
+        { id:'push1_triceps_rope', name:'Extension triceps corde', category:'triceps', type:'kg', sets:3, reps:'10-15', restSec:60, targetRPE:7, equipment:'cable', c7Risk:'low', safeAlternative:'Extension élastique', progressionRule:'Strict elbows, add reps then kg.' },
+        { id:'push1_plank', name:'Planche', category:'core', type:'sec', sets:3, reps:'30-60 sec', restSec:45, targetRPE:7, equipment:'bodyweight', c7Risk:'low', safeAlternative:'Dead bug', progressionRule:'Add 5 sec per week.' }
+      ]
+    },
+    pull1: {
+      label: 'Pull 1',
+      focus: 'Dos · biceps · arrière épaules',
+      warmup: ['Rotations épaules 2 min','Scapular pulls légers 2x8','Band pull-aparts 2x15','1 série légère tirage vertical'],
+      exercises: [
+        { id:'pull1_assisted_pullup', name:'Tractions assistées ou tirage vertical', category:'back', type:'kg_or_reps', sets:4, reps:'6-10', restSec:90, targetRPE:7, equipment:'machine/bodyweight', c7Risk:'medium', safeAlternative:'Tirage vertical machine prise neutre', progressionRule:'Reduce assistance or add reps.' },
+        { id:'pull1_chest_supported_row', name:'Rowing machine poitrine appuyée', category:'back', type:'kg', sets:4, reps:'8-12', restSec:90, targetRPE:7, equipment:'machine', c7Risk:'low', safeAlternative:'Rowing poulie basse prise neutre', progressionRule:'Prefer chest-supported to protect neck/lower back.' },
+        { id:'pull1_facepull', name:'Face pulls', category:'rear_delts', type:'kg', sets:3, reps:'15-20', restSec:60, targetRPE:7, equipment:'cable', c7Risk:'low', safeAlternative:'Band face pulls', progressionRule:'Slow control, squeeze rear delts.' },
+        { id:'pull1_biceps_curl', name:'Curl biceps', category:'biceps', type:'kg', sets:3, reps:'10-12', restSec:60, targetRPE:8, equipment:'dumbbells', c7Risk:'low', safeAlternative:'Curl câble', progressionRule:'No swinging.' },
+        { id:'pull1_dead_hang', name:'Dead hang assisté', category:'grip', type:'sec', sets:3, reps:'10-30 sec', restSec:60, targetRPE:6, equipment:'bar', c7Risk:'medium', safeAlternative:'Farmer hold léger sans tension cervicale', progressionRule:'Stop if nerve symptoms or neck tension.' }
+      ]
+    },
+    legs1: {
+      label: 'Legs 1',
+      focus: 'Quads · fessiers · gainage',
+      warmup: ['Mobilité hanches 2 min','Squat poids du corps 2x10','Fentes arrière 1x8/jambe','1 série légère leg press'],
+      exercises: [
+        { id:'legs1_leg_press', name:'Leg press', category:'quads', type:'kg', sets:4, reps:'10-15', restSec:90, targetRPE:7, equipment:'machine', c7Risk:'low', safeAlternative:'Goblet squat léger', progressionRule:'Add reps then weight.' },
+        { id:'legs1_split_squat', name:'Split squat', category:'legs', type:'reps_or_kg', sets:3, reps:'8-12/jambe', restSec:75, targetRPE:7, equipment:'bodyweight/dumbbells', c7Risk:'low', safeAlternative:'Fentes arrière', progressionRule:'Bodyweight first, then dumbbells.' },
+        { id:'legs1_leg_curl', name:'Leg curl', category:'hamstrings', type:'kg', sets:3, reps:'10-15', restSec:75, targetRPE:7, equipment:'machine', c7Risk:'low', safeAlternative:'Hip bridge', progressionRule:'Controlled eccentric.' },
+        { id:'legs1_calves', name:'Mollets', category:'calves', type:'kg_or_reps', sets:4, reps:'15-25', restSec:45, targetRPE:8, equipment:'machine/bodyweight', c7Risk:'low', safeAlternative:'Mollets debout poids du corps', progressionRule:'Pause at top and bottom.' }
+      ]
+    },
+    push2: {
+      label: 'Push 2',
+      focus: 'Épaules safe · pecs · triceps · poids du corps',
+      warmup: ['Rotations épaules','Band external rotation 2x15','Pompes inclinées 2x10'],
+      exercises: [
+        { id:'push2_strict_pushups', name:'Pompes strictes', category:'bodyweight', type:'reps', sets:4, reps:'max propre', restSec:75, targetRPE:8, equipment:'bodyweight', c7Risk:'low', safeAlternative:'Pompes inclinées', progressionRule:'Progress to decline push-ups after 4x20.' },
+        { id:'push2_seated_press', name:'Développé machine ou haltères assis', category:'shoulders', type:'kg', sets:3, reps:'8-12', restSec:90, targetRPE:7, equipment:'machine/dumbbells', c7Risk:'medium', safeAlternative:'Machine convergente ou landmine press léger', progressionRule:'No overhead barbell press.' },
+        { id:'push2_diamond_or_rope', name:'Pompes diamant ou triceps pushdown', category:'triceps', type:'reps_or_kg', sets:3, reps:'8-15', restSec:75, targetRPE:8, equipment:'bodyweight/cable', c7Risk:'low', safeAlternative:'Extension triceps corde', progressionRule:'Use cable if wrists/shoulders complain.' },
+        { id:'push2_lateral_raise', name:'Élévations latérales', category:'shoulders', type:'kg', sets:4, reps:'15-20', restSec:60, targetRPE:8, equipment:'dumbbells', c7Risk:'low', safeAlternative:'Poulie basse unilatérale', progressionRule:'Strict form.' }
+      ]
+    },
+    pull2: {
+      label: 'Pull 2',
+      focus: 'Dos · biceps · posture',
+      warmup: ['Scapular activation','Band pull-aparts','Tirage léger 1 série'],
+      exercises: [
+        { id:'pull2_chinups', name:'Chin-ups assistés ou tirage supination', category:'back', type:'kg_or_reps', sets:4, reps:'6-10', restSec:90, targetRPE:7, equipment:'machine/bodyweight', c7Risk:'medium', safeAlternative:'Tirage supination machine', progressionRule:'Reduce assistance slowly.' },
+        { id:'pull2_low_row', name:'Rowing poulie basse', category:'back', type:'kg', sets:4, reps:'8-12', restSec:90, targetRPE:7, equipment:'cable', c7Risk:'low', safeAlternative:'Rowing machine poitrine appuyée', progressionRule:'Neutral neck.' },
+        { id:'pull2_reverse_pecdeck', name:'Oiseau ou reverse pec deck', category:'rear_delts', type:'kg', sets:3, reps:'12-20', restSec:60, targetRPE:7, equipment:'machine/dumbbells', c7Risk:'low', safeAlternative:'Band pull-aparts', progressionRule:'Posture work.' },
+        { id:'pull2_hammer_curl', name:'Curl marteau', category:'biceps', type:'kg', sets:3, reps:'10-12', restSec:60, targetRPE:8, equipment:'dumbbells', c7Risk:'low', safeAlternative:'Curl câble corde', progressionRule:'No swinging.' }
+      ]
+    },
+    legs2: {
+      label: 'Legs 2',
+      focus: 'Posterior chain · fessiers · mobilité',
+      warmup: ['Hip circles','Glute bridge 2x12','Good morning poids du corps 1x12'],
+      exercises: [
+        { id:'legs2_hip_thrust', name:'Hip thrust machine ou haltère', category:'glutes', type:'kg', sets:4, reps:'8-12', restSec:90, targetRPE:7, equipment:'machine/dumbbell', c7Risk:'low', safeAlternative:'Glute bridge au sol', progressionRule:'Add reps then kg.' },
+        { id:'legs2_rdl_light', name:'Romanian deadlift haltères léger', category:'hamstrings', type:'kg', sets:3, reps:'8-12', restSec:90, targetRPE:6, equipment:'dumbbells', c7Risk:'medium', safeAlternative:'Leg curl machine', progressionRule:'Only if neutral spine and no nerve symptoms.' },
+        { id:'legs2_stepups', name:'Step-ups', category:'legs', type:'reps_or_kg', sets:3, reps:'10/jambe', restSec:75, targetRPE:7, equipment:'bodyweight/dumbbells', c7Risk:'low', safeAlternative:'Fentes arrière', progressionRule:'Control knee tracking.' },
+        { id:'legs2_pallof', name:'Pallof press anti-rotation', category:'core', type:'kg', sets:3, reps:'10-15/côté', restSec:45, targetRPE:7, equipment:'cable/band', c7Risk:'low', safeAlternative:'Side plank', progressionRule:'Core stability.' }
+      ]
+    },
+    rest: {
+      label: 'Repos actif',
+      focus: 'Marche · mobilité · récupération',
+      warmup: [],
+      exercises: [
+        { id:'rest_walk', name:'Marche ou vélo doux', category:'recovery', type:'min', sets:1, reps:'20-40 min', restSec:0, targetRPE:3, equipment:'none', c7Risk:'low', safeAlternative:'Marche courte 10 min', progressionRule:'Recovery only.' },
+        { id:'rest_flex_short', name:'Souplesse courte', category:'mobility', type:'min', sets:1, reps:'15-25 min', restSec:0, targetRPE:4, equipment:'none', c7Risk:'low', safeAlternative:'Respiration + mobilité douce', progressionRule:'Use flexibility module.' }
+      ]
+    }
+  };
+
+  var BODYWEIGHT_PROGRESSIONS = {
+    pushups:  { label:'Pompes',    icon:'🤸', levels:['Incline push-up','Knee push-up','Strict push-up','Decline push-up','Diamond push-up','Archer push-up'] },
+    pullups:  { label:'Tractions', icon:'🏋️', levels:['Dead hang','Scapular pull','Negative pull-up','Assisted pull-up','Strict pull-up','Chin-up / weighted later'] },
+    dips:     { label:'Dips',      icon:'💪', levels:['Bench dip assisted','Bench dip strict','Parallel dip negative','Assisted dip','Strict dip','Weighted dip later'] },
+    legs:     { label:'Jambes',    icon:'🦵', levels:['Box squat','Bodyweight squat','Split squat','Bulgarian split squat','Pistol squat assisté','Pistol squat'] },
+    core:     { label:'Gainage',   icon:'⚡', levels:['Dead bug','Plank 30s','Plank 60s','Side plank 45s','Hollow hold','Hanging knee raise'] },
+    mobility: { label:'Mobilité',  icon:'🧘', levels:['Daily 5 min mobility','Deep squat 60s','Deep squat 3 min','Forward fold floor touch','Pike advanced','Split progression'] }
+  };
+
+  var SOUPLESSE_LEVELS = [
+    { level:0, label:'Déverrouiller le corps', duration:'6 semaines', routineMin:15,
+      milestones:['Forward fold proche chevilles','Deep squat 60s avec support','Papillon mieux ouvert','Fente basse 45s sans douleur','Child pose confortable'],
+      routine:['Forward fold debout 45s','Fente basse droite 45s','Fente basse gauche 45s','Pigeon droit 45s','Pigeon gauche 45s','Papillon assis 60s','Deep squat hold 60s','Calf stretch 30s par jambe','Doorway chest stretch 30s x2','Cat-Cow 10 reps','Hip circles 10 x2']
+    },
+    { level:1, label:'Fondations', duration:'mois 2-3', routineMin:20,
+      milestones:['Doigts touchent le sol','Deep squat 3 min','Straddle 110°+','Half split 60s chaque jambe','Papillon genoux à 15 cm du sol'],
+      routine:['Half split droit 60s','Half split gauche 60s','Lizard lunge droit 45s','Lizard lunge gauche 45s','Straddle assis 60s','Pike assis 60s','Frog stretch 60s','Thread the needle 30s par côté']
+    },
+    { level:2, label:'Intermédiaire PNF', duration:'mois 4-6', routineMin:25,
+      milestones:['Paumes au sol','Pike avancé','Front split à 20-25 cm','Middle split à 30 cm','Pigeon complet'],
+      routine:['PNF hamstring 3 cycles par jambe','PNF hip flexor 3 cycles par jambe','Pancake progression 90s','Frog stretch 90s','Front split supported 60s par côté','Middle split supported 60s'],
+      pnfLocked:false
+    },
+    { level:3, label:'Avancé', duration:'mois 7-12', routineMin:30,
+      milestones:['Front split proche sol','Pancake avancé','Middle split profond','Pont partiel contrôlé'],
+      routine:['Front split progression 90s par côté','Middle split progression 90s','Pancake deep 120s','Bridge prep 60s','PNF adductors','Active flexibility lifts']
+    },
+    { level:4, label:'Élite', duration:'12-24 mois', routineMin:35,
+      milestones:['Grand écart contrôlé','Middle split avancé','Pont propre','Mobilité complète utilisable'],
+      routine:['Full split work','Middle split work','Bridge work','Active loaded mobility','Maintenance routine']
+    }
+  ];
+
+  function computeSportSessionType(anchorDate, anchorType, targetDate) {
+    var cyclePattern = ['push1','pull1','rest','legs1','push2','rest','pull2','legs2','rest'];
+    var anchorIdx = cyclePattern.indexOf(anchorType);
+    if (anchorIdx < 0) anchorIdx = 0;
+    var a = new Date(anchorDate); a.setHours(0,0,0,0);
+    var t = new Date(targetDate); t.setHours(0,0,0,0);
+    var diffDays = Math.round((t - a) / 86400000);
+    var rawIdx = ((anchorIdx + diffDays) % 9 + 9) % 9;
+    return cyclePattern[rawIdx];
+  }
+
   /* ── CERTIFICATION SEED DATA ── */
   var CERTIFICATION_SEED = [
     /* PC/IT */
@@ -564,6 +691,10 @@ window.D = (function () {
     DAILY_PRACTICE: DAILY_PRACTICE,
     CERTIFICATION_SEED: CERTIFICATION_SEED,
     CERT_TRACKS: CERT_TRACKS,
-    CERT_STATUSES: CERT_STATUSES
+    CERT_STATUSES: CERT_STATUSES,
+    SPORT_PROGRAM: SPORT_PROGRAM,
+    BODYWEIGHT_PROGRESSIONS: BODYWEIGHT_PROGRESSIONS,
+    SOUPLESSE_LEVELS: SOUPLESSE_LEVELS,
+    computeSportSessionType: computeSportSessionType
   };
 })();
