@@ -4421,7 +4421,7 @@
   ═══════════════════════════════════════════ */
   /* Override renderAujourdhui to add v4 features at top */
   var _origRenderAujourdhui = renderAujourdhui;
-  function renderAujourdhui() {
+  renderAujourdhui = function() {
     _origRenderAujourdhui();
     var page = qs('#page-aujourdhui');
     if (!page) return;
@@ -4449,7 +4449,7 @@
 
   /* Override renderRoutine to add day template selector at top */
   var _origRenderRoutine = renderRoutine;
-  function renderRoutine() {
+  renderRoutine = function() {
     _origRenderRoutine();
     var page = qs('#page-routine');
     if (!page) return;
@@ -4464,7 +4464,7 @@
 
   /* Override renderEtude to add certifications + proofs sub-panels */
   var _origRenderEtude = renderEtude;
-  function renderEtude() {
+  renderEtude = function() {
     _origRenderEtude();
     var page = qs('#page-etude');
     if (!page) return;
@@ -4520,7 +4520,7 @@
 
   /* Override renderArgent to add Vinted v2 + cashflow panels */
   var _origRenderArgent = renderArgent;
-  function renderArgent() {
+  renderArgent = function() {
     _origRenderArgent();
     var page = qs('#page-argent');
     if (!page) return;
@@ -4559,7 +4559,7 @@
 
   /* Override renderStats to add task history + weekly review + perf trend */
   var _origRenderStats = renderStats;
-  function renderStats() {
+  renderStats = function() {
     _origRenderStats();
     var page = qs('#page-stats');
     if (!page) return;
