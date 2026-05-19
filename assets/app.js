@@ -171,6 +171,20 @@
     return { alert: alert, confirm: confirm, destroy: destroy, form: form, close: close, open: open };
   })();
 
+  /* ─── SimpleModal shim (adapts plain-string options to Modal.form) ─── */
+  var SimpleModal = {
+    show: function (opts) {
+      var fields = (opts.fields || []).map(function (f) {
+        if (f.type === 'select' && Array.isArray(f.options) && typeof f.options[0] === 'string') {
+          return Object.assign({}, f, { options: f.options.map(function (o) { return { value: o, label: o }; }) });
+        }
+        return f;
+      });
+      Modal.form(opts.title || '', fields, opts.onSave || function () {});
+    },
+    confirm: function (msg, cb) { Modal.confirm(msg, cb); }
+  };
+
   /* ─── Header date ─── */
   function initHeader() {
     var d = qs('#header-date');
