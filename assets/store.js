@@ -469,6 +469,53 @@ window.Store = (function () {
 
   pruneOldKeys();
 
+  /* ── Priorité par bloc (persistante, pas par jour) ── */
+  function getBlockPriority(blockId) { return get('blkprio_' + blockId, null); }
+  function setBlockPriority(blockId, priority) {
+    if (!priority) { remove('blkprio_' + blockId); }
+    else { set('blkprio_' + blockId, priority); }
+  }
+  function cyclePriority(blockId) {
+    var cur = getBlockPriority(blockId);
+    var next = cur === null ? 'A' : cur === 'A' ? 'B' : cur === 'B' ? 'C' : null;
+    setBlockPriority(blockId, next);
+    return next;
+  }
+
+  /* ── Pratique quotidienne (IA/Coding/Réparation/Échecs) ── */
+  function getDailyPractice(date) { return get('daily_' + (date || today()), {}); }
+  function toggleDailyPractice(id, date) {
+    var d = getDailyPractice(date);
+    d[id] = !d[id];
+    set('daily_' + (date || today()), d);
+    return d;
+  }
+  function getDailyWeekStats(id) {
+    /* Compte combien de fois dans les 7 derniers jours ce bloc a été fait */
+    var count = 0;
+    for (var i = 0; i < 7; i++) {
+      var dd = new Date(); dd.setDate(dd.getDate() - i);
+      var dk = dd.getFullYear() + '-' + String(dd.getMonth()+1).padStart(2,'0') + '-' + String(dd.getDate()).padStart(2,'0');
+      var dp = getDailyPractice(dk);
+      if (dp[id]) count++;
+    }
+    return count;
+  }
+
+  /* ── Note + temps passé par bloc+jour ── */
+  function getDailyNote(key) { return get('dnote_' + key, ''); }
+  function setDailyNote(key, text) { set('dnote_' + key, text); }
+  function getBlockTimeSpent(key) { return get('btime_' + key, 0); }
+  function setBlockTimeSpent(key, minutes) { set('btime_' + key, parseInt(minutes)||0); }
+  function addBlockTimeSpent(key, minutes) {
+    var cur = getBlockTimeSpent(key);
+    set('btime_' + key, cur + (parseInt(minutes)||0));
+  }
+
+  /* ── Difficulté/évaluation après bloc (1-5) ── */
+  function getBlockRating(key) { return get('brating_' + key, 0); }
+  function setBlockRating(key, stars) { set('brating_' + key, parseInt(stars)||0); }
+
   return {
     get: get, set: set, remove: remove, today: today, currentMonth: currentMonth,
     getBookmarks: getBookmarks, setBookmark: setBookmark,
@@ -497,6 +544,11 @@ window.Store = (function () {
     computeDayScore: computeDayScore, getScoreTier: getScoreTier,
     getStreaks: getStreaks, updateStreak: updateStreak,
     getObjectives: getObjectives, setObjectives: setObjectives,
+    getBlockPriority: getBlockPriority, setBlockPriority: setBlockPriority, cyclePriority: cyclePriority,
+    getDailyPractice: getDailyPractice, toggleDailyPractice: toggleDailyPractice, getDailyWeekStats: getDailyWeekStats,
+    getDailyNote: getDailyNote, setDailyNote: setDailyNote,
+    getBlockTimeSpent: getBlockTimeSpent, setBlockTimeSpent: setBlockTimeSpent, addBlockTimeSpent: addBlockTimeSpent,
+    getBlockRating: getBlockRating, setBlockRating: setBlockRating,
     exportAll: exportAll, importAll: importAll, clearAll: clearAll
   };
 })();

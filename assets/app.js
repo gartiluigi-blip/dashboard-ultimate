@@ -458,6 +458,54 @@
   /* ═══════════════════════════════════════════
      PAGE : ROUTINE
   ═══════════════════════════════════════════ */
+  /* Lance le focus timer sur un domaine donné depuis la routine */
+  function launchTimer(domain) {
+    Router.navigate('aujourdhui');
+    setTimeout(function () {
+      qsa('.focus-btn').forEach(function (b) {
+        if (b.textContent.trim().toUpperCase() === domain.toUpperCase()) b.click();
+      });
+    }, 160);
+  }
+
+  /* Badge de priorité (A/B/C/null) avec cycle au tap */
+  function makePrioBadge(blockId, onUpdate) {
+    var cur = Store.getBlockPriority(blockId);
+    var labels = { null: '—', 'A': 'A', 'B': 'B', 'C': 'C' };
+    var classes = { null: 'prio-none', 'A': 'prio-a', 'B': 'prio-b', 'C': 'prio-c' };
+    var badge = el('span', { class:'prio-badge ' + (classes[cur] || 'prio-none'), title:'Priorité (appuyer pour changer)' },
+      labels[cur] || '—');
+    badge.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var next = Store.cyclePriority(blockId);
+      badge.className = 'prio-badge ' + (classes[next] || 'prio-none');
+      badge.textContent = labels[next] || '—';
+      if (onUpdate) onUpdate(next);
+    });
+    return badge;
+  }
+
+  /* Étoiles de difficulté */
+  function makeStarRating(key) {
+    var wrap = el('div', { class:'star-rating' });
+    wrap.appendChild(el('span', { class:'star-rating-label' }, 'Difficulté :'));
+    var cur = Store.getBlockRating(key);
+    for (var s = 1; s <= 5; s++) {
+      (function (star) {
+        var starEl = el('span', { class:'star' + (cur >= star ? ' active' : '') }, '⭐');
+        starEl.addEventListener('click', function () {
+          var same = Store.getBlockRating(key) === star;
+          Store.setBlockRating(key, same ? 0 : star);
+          wrap.querySelectorAll('.star').forEach(function (se, i) {
+            se.classList.toggle('active', !same && i < star);
+          });
+        });
+        wrap.appendChild(starEl);
+      })(s);
+    }
+    return wrap;
+  }
+
   function renderRoutine() {
     var page = qs('#page-routine');
     if (!page) return;
@@ -466,11 +514,15 @@
     var today = Store.today();
     var rotation = D.todayRotation();
     var checks   = Store.getRoutineChecks(today);
-    var doneCount = Object.values(checks).filter(Boolean).length;
-    var total     = rotation.tasks.length;
-    var pctDone   = pct(doneCount, total || 1);
+    var dailyPractice = Store.getDailyPractice(today);
 
-    /* ── Jour + anneau de complétion ── */
+    /* Total blocs = rotation + daily practice */
+    var doneCount = Object.values(checks).filter(Boolean).length
+      + D.DAILY_PRACTICE.filter(function(dp){ return dailyPractice[dp.id]; }).length;
+    var total = rotation.tasks.length + D.DAILY_PRACTICE.length;
+    var pctDone = pct(doneCount, total || 1);
+
+    /* ═══════════════ ANNEAU DE COMPLÉTION ═══════════════ */
     var topRow = el('div', { class:'completion-ring-row' });
 
     /* SVG ring */
@@ -502,7 +554,7 @@
     topRow.appendChild(ringInfo);
     page.appendChild(topRow);
 
-    /* ── Travail / Shift ── */
+    /* ═══════════════ TRAVAIL / SHIFT ═══════════════ */
     var rtData = Store.get('routine_work_' + today, {});
     var workCard = el('div', { class:'card card-l-orange' });
     var shiftOpts = ['','Matin','Après-midi','Soir','Pas de travail'];
@@ -534,10 +586,193 @@
       }
     }, 0);
 
-    /* ── Blocs de la rotation ── */
+    /* ═══════════════ PRATIQUE QUOTIDIENNE ═══════════════ */
+    page.appendChild(el('div', { class:'section-title' }, '⚡ Pratique quotidienne'));
+
+    D.DAILY_PRACTICE.forEach(function (dp) {
+      var isDone = !!dailyPractice[dp.id];
+      var blockId = 'daily_' + dp.id;
+      var prio    = Store.getBlockPriority(blockId) || dp.defaultPriority;
+      var weekCount = Store.getDailyWeekStats(dp.id);
+      var timeKey = blockId + '_' + today;
+      var noteKey = blockId + '_' + today;
+      var savedNote = Store.getDailyNote(noteKey);
+      var subtaskKey = 'dsub_' + dp.id + '_' + today;
+      var subtaskData = Store.get(subtaskKey, {});
+
+      var block = el('div', { class:'daily-block rcat-' + dp.cat + (isDone ? ' done' : '') + (prio === 'A' ? ' has-prio-a' : prio === 'B' ? ' has-prio-b' : prio === 'C' ? ' has-prio-c' : '') });
+
+      /* Main row */
+      var mainRow = el('div', { class:'daily-block-main' });
+      mainRow.appendChild(el('div', { class:'daily-block-icon' }, dp.icon));
+
+      var infoEl = el('div', { class:'daily-block-info' });
+      infoEl.appendChild(el('div', { class:'daily-block-title' }, dp.label));
+
+      var metaRow = el('div', { class:'daily-block-meta' });
+      metaRow.appendChild(el('span', { class:'cat-chip cat-' + dp.cat }, dp.cat));
+      metaRow.appendChild(el('span', { class:'time-est' }, '⏱ ' + dp.min + ' min'));
+
+      /* Week dots */
+      var dotsRow = el('div', { class:'week-dots' });
+      var todayDow = new Date().getDay();
+      for (var wd = 0; wd < 7; wd++) {
+        var ddot = new Date(); ddot.setDate(ddot.getDate() - ((todayDow - wd + 7) % 7));
+        var ddk = ddot.getFullYear() + '-' + String(ddot.getMonth()+1).padStart(2,'0') + '-' + String(ddot.getDate()).padStart(2,'0');
+        var dotDone = !!Store.getDailyPractice(ddk)[dp.id];
+        var isToday2 = ddk === today;
+        var dot = el('div', { class:'week-dot' + (dotDone ? ' done' : '') + (isToday2 ? ' today' : ''), title: ['D','L','M','Me','J','V','S'][wd] });
+        dotsRow.appendChild(dot);
+      }
+      metaRow.appendChild(dotsRow);
+
+      if (weekCount > 0) {
+        metaRow.appendChild(el('span', { class:'time-est', style:'color:var(--violet3)' }, weekCount + '/7 cette semaine'));
+      }
+
+      infoEl.appendChild(metaRow);
+      if (savedNote) infoEl.appendChild(el('div', { class:'routine-block-note' }, '→ ' + savedNote));
+      mainRow.appendChild(infoEl);
+
+      /* Actions */
+      var actions = el('div', { class:'daily-block-actions' });
+
+      /* Priority badge */
+      var prioBadge = makePrioBadge(blockId, function (next) {
+        var pClass = next === 'A' ? ' has-prio-a' : next === 'B' ? ' has-prio-b' : next === 'C' ? ' has-prio-c' : '';
+        block.className = 'daily-block rcat-' + dp.cat + (isDone ? ' done' : '') + pClass;
+      });
+      actions.appendChild(prioBadge);
+
+      /* Expand button */
+      var expandBtn = el('button', { class:'routine-expand-btn', type:'button' }, '▾');
+      actions.appendChild(expandBtn);
+
+      /* Check button */
+      var chkBtn = el('button', {
+        class: 'btn-icon',
+        type: 'button',
+        style: isDone ? 'color:var(--green2);border-color:rgba(16,185,129,.5)' : ''
+      }, isDone ? '✓' : '○');
+      chkBtn.addEventListener('click', function () {
+        Store.toggleDailyPractice(dp.id, today);
+        if (!isDone) Store.updateStreak(dp.id);
+        renderRoutine();
+      });
+      actions.appendChild(chkBtn);
+      mainRow.appendChild(actions);
+      block.appendChild(mainRow);
+
+      /* ── Expand panel ── */
+      var expandPanel = el('div', { class:'daily-block-expand' });
+
+      /* Hint */
+      var hint = el('div', { class:'routine-hint' });
+      hint.appendChild(el('span', { class:'routine-hint-icon' }, '💡'));
+      hint.appendChild(el('span', {}, dp.hint));
+      expandPanel.appendChild(hint);
+
+      /* Timer launch */
+      var timerRow = el('div', { style:'display:flex;gap:8px;margin-bottom:10px;align-items:center' });
+      var timerBtn = el('button', { class:'btn-timer', type:'button' }, '⏱ Démarrer timer');
+      timerBtn.addEventListener('click', function () {
+        launchTimer(dp.id.toUpperCase() === 'CHESS' ? 'AUTRE' : dp.id.toUpperCase());
+        toast('Timer lancé → ' + dp.label);
+      });
+      timerRow.appendChild(timerBtn);
+      var spentVal = Store.getBlockTimeSpent(timeKey);
+      if (spentVal > 0) timerRow.appendChild(el('span', { class:'time-est', style:'color:var(--green2)' }, '✓ ' + spentVal + ' min loggées'));
+      expandPanel.appendChild(timerRow);
+
+      /* Sous-tâches */
+      if (dp.subtasks && dp.subtasks.length) {
+        var stDiv = el('div', { class:'daily-subtasks' });
+        stDiv.appendChild(el('div', { class:'daily-subtask-title' }, 'Checklist'));
+        dp.subtasks.forEach(function (stLabel, si) {
+          var stDone = !!(subtaskData[si]);
+          var stEl = el('div', { class:'daily-subtask' + (stDone ? ' checked' : '') });
+          stEl.appendChild(el('span', { style:'font-size:14px' }, stDone ? '✅' : '⬜'));
+          stEl.appendChild(el('span', {}, stLabel));
+          stEl.addEventListener('click', function () {
+            subtaskData[si] = !subtaskData[si];
+            Store.set(subtaskKey, subtaskData);
+            stEl.classList.toggle('checked', !!subtaskData[si]);
+            stEl.querySelector('span').textContent = subtaskData[si] ? '✅' : '⬜';
+          });
+          stDiv.appendChild(stEl);
+        });
+        expandPanel.appendChild(stDiv);
+      }
+
+      /* Temps passé log */
+      var tRow = el('div', { class:'daily-time-row' });
+      tRow.appendChild(el('span', { class:'unit-label' }, 'Temps réel :'));
+      var tInp = el('input', { type:'number', min:'0', max:'360', placeholder:'0' });
+      tInp.value = spentVal || '';
+      tRow.appendChild(tInp);
+      tRow.appendChild(el('span', { class:'unit-label' }, 'min'));
+      expandPanel.appendChild(tRow);
+
+      /* Note libre */
+      var noteWrap = el('div', { class:'routine-note-field' });
+      noteWrap.appendChild(el('label', {}, 'Où j\'en suis / reprendre à...'));
+      var noteTA = el('textarea', { placeholder:'Ex: page 42, exercice 3, niveau ELO…' });
+      noteTA.value = savedNote || '';
+      noteWrap.appendChild(noteTA);
+      expandPanel.appendChild(noteWrap);
+
+      /* Étoiles difficulté */
+      expandPanel.appendChild(makeStarRating(timeKey));
+
+      /* Bouton Sauvegarder */
+      var saveRow = el('div', { style:'display:flex;gap:8px;margin-top:8px;flex-wrap:wrap' });
+      var saveBtn = el('button', { class:'btn btn-primary btn-sm', type:'button' }, '💾 Sauvegarder');
+      saveBtn.addEventListener('click', function () {
+        var mins = parseInt(tInp.value)||0;
+        if (mins > 0) Store.setBlockTimeSpent(timeKey, mins);
+        Store.setDailyNote(noteKey, noteTA.value.trim());
+        Store.toggleDailyPractice(dp.id, today); /* marque fait */
+        Store.updateStreak(dp.id);
+        if (dp.studyMat && mins > 0) {
+          Store.logStudyProgress(dp.studyMat, mins);
+        }
+        toast(dp.label + ' — sauvegardé ✓');
+        renderRoutine();
+      });
+      saveRow.appendChild(saveBtn);
+
+      var doneBtn = el('button', { class:'btn btn-secondary btn-sm', type:'button' }, '✓ Terminé');
+      doneBtn.addEventListener('click', function () {
+        Store.getDailyPractice(today)[dp.id] || Store.toggleDailyPractice(dp.id, today);
+        renderRoutine();
+      });
+      saveRow.appendChild(doneBtn);
+      expandPanel.appendChild(saveRow);
+
+      block.appendChild(expandPanel);
+      page.appendChild(block);
+
+      expandBtn.addEventListener('click', function () {
+        var isOpen = expandPanel.classList.contains('open');
+        expandPanel.classList.toggle('open', !isOpen);
+        expandBtn.classList.toggle('open', !isOpen);
+      });
+    });
+
+    /* ═══════════════ ROTATION DU JOUR ═══════════════ */
     page.appendChild(el('div', { class:'section-title' }, 'Blocs du jour'));
 
-    rotation.tasks.forEach(function (task, idx) {
+    /* Sort rotation by priority (A first, then B, C, none) */
+    var prioOrder = { 'A':0, 'B':1, 'C':2, null:3 };
+    var rotIndexed = rotation.tasks.map(function(t, i){ return { task:t, idx:i }; });
+    rotIndexed.sort(function(a, b) {
+      var pa = Store.getBlockPriority('rot_' + today + '_' + a.idx);
+      var pb = Store.getBlockPriority('rot_' + today + '_' + b.idx);
+      return (prioOrder[pa] || 3) - (prioOrder[pb] || 3);
+    });
+
+    rotIndexed.forEach(function (item) {
+      var task = item.task; var idx = item.idx;
       var done       = !!checks[idx];
       var dateIndex  = today + '_' + idx;
       var savedNote  = Store.getRoutineNote(dateIndex);
@@ -546,8 +781,12 @@
       var isSport    = D.taskIsSport(task);
       var isRepair   = D.isRepairTask(task);
       var cat        = meta.cat || 'autre';
+      var blockId    = 'rot_' + today + '_' + idx;
+      var prio       = Store.getBlockPriority(blockId);
+      var prioClass  = prio === 'A' ? ' has-prio-a' : prio === 'B' ? ' has-prio-b' : prio === 'C' ? ' has-prio-c' : '';
+      var timeSpent  = Store.getBlockTimeSpent(blockId + '_time');
 
-      var block = el('div', { class:'routine-block rcat-' + cat + (done ? ' done' : '') });
+      var block = el('div', { class:'routine-block rcat-' + cat + (done ? ' done' : '') + prioClass });
 
       /* ── Main row ── */
       var mainRow = el('div', { class:'routine-block-main' });
@@ -585,6 +824,13 @@
       /* Actions */
       var actions = el('div', { class:'routine-block-actions' });
 
+      /* Priority badge */
+      var prioBadgeRot = makePrioBadge(blockId, function (next) {
+        var pClass2 = next === 'A' ? ' has-prio-a' : next === 'B' ? ' has-prio-b' : next === 'C' ? ' has-prio-c' : '';
+        block.className = 'routine-block rcat-' + cat + (done ? ' done' : '') + pClass2;
+      });
+      actions.appendChild(prioBadgeRot);
+
       var expandBtn = el('button', { class:'routine-expand-btn', type:'button' }, '▾');
       actions.appendChild(expandBtn);
 
@@ -607,11 +853,32 @@
 
       /* Hint banner */
       if (meta.hint) {
-        var hint = el('div', { class:'routine-hint' });
-        hint.appendChild(el('span', { class:'routine-hint-icon' }, '💡'));
-        hint.appendChild(el('span', {}, meta.hint));
-        expandPanel.appendChild(hint);
+        var hintEl = el('div', { class:'routine-hint' });
+        hintEl.appendChild(el('span', { class:'routine-hint-icon' }, '💡'));
+        hintEl.appendChild(el('span', {}, meta.hint));
+        expandPanel.appendChild(hintEl);
       }
+
+      /* Timer shortcut row */
+      var timerRowRot = el('div', { style:'display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap' });
+      var timerBtnRot = el('button', { class:'btn-timer', type:'button' }, '⏱ Démarrer timer');
+      timerBtnRot.addEventListener('click', function () {
+        var domain = cat === 'study' ? 'EPFC' : cat === 'code' ? 'CODE' : cat === 'repair' ? 'RÉPARATION' : cat === 'tech' ? 'IA' : cat === 'loisir' ? 'AUTRE' : 'AUTRE';
+        launchTimer(domain);
+        toast('Timer lancé → ' + task);
+      });
+      timerRowRot.appendChild(timerBtnRot);
+      if (timeSpent > 0) timerRowRot.appendChild(el('span', { class:'time-est', style:'color:var(--green2)' }, '✓ ' + timeSpent + ' min'));
+      expandPanel.appendChild(timerRowRot);
+
+      /* Temps réel passé */
+      var tRowRot = el('div', { class:'daily-time-row' });
+      tRowRot.appendChild(el('span', { class:'unit-label' }, 'Temps réel :'));
+      var tInpRot = el('input', { type:'number', min:'0', max:'360', placeholder:'0' });
+      tInpRot.value = timeSpent || '';
+      tRowRot.appendChild(tInpRot);
+      tRowRot.appendChild(el('span', { class:'unit-label' }, 'min'));
+      expandPanel.appendChild(tRowRot);
 
       /* Réparation : champs spécifiques + checklist étapes */
       if (isRepair) {
@@ -725,6 +992,9 @@
         saveBtn.addEventListener('click', function () {
           var noteVal = noteTA.value.trim();
           Store.setRoutineNote(dateIndex, noteVal);
+          /* Save time spent */
+          var tMin = parseInt(tInpRot ? tInpRot.value : '0', 10);
+          if (tMin > 0) Store.setBlockTimeSpent(blockId + '_time', tMin);
           if (studyMat && studyInp) {
             var addAmt = parseInt(studyInp.value || '0', 10);
             if (addAmt > 0) {
@@ -744,6 +1014,9 @@
           renderRoutine();
         });
         saveRow.appendChild(saveBtn);
+
+        /* Étoiles difficulté */
+        expandPanel.appendChild(makeStarRating(blockId + '_rate'));
 
         /* Quick "Terminé sans note" */
         var doneBtn = el('button', { class:'btn btn-secondary btn-sm', type:'button' }, '✓ Terminé');

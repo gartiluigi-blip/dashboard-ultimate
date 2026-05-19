@@ -282,6 +282,54 @@ window.D = (function () {
     'planning':               { cat:'admin',  min:30,  hint:'Remplir calendrier + to-do semaine à venir', icon:'📅' }
   };
 
+  /* ── Blocs de pratique quotidienne — présents TOUS les jours ── */
+  var DAILY_PRACTICE = [
+    {
+      id: 'ia',
+      label: 'IA / Machine Learning',
+      icon: '🤖',
+      cat: 'tech',
+      min: 30,
+      defaultPriority: 'A',
+      hint: 'Fast.ai, Hands-On ML, AI Engineering — 30 min minimum par jour',
+      studyMat: 'ia',
+      subtasks: ['Lire 1 chapitre / suivre 1 leçon', 'Implémenter un concept vu', 'Prendre des notes Anki']
+    },
+    {
+      id: 'coding',
+      label: 'Coding Practice',
+      icon: '💻',
+      cat: 'code',
+      min: 30,
+      defaultPriority: 'A',
+      hint: 'LeetCode Easy/Medium · CodingBat · 1 exercice minimum par jour',
+      studyMat: 'coding',
+      subtasks: ['Lire l\'énoncé sans regarder la solution', 'Coder de tête d\'abord', 'Optimiser + noter complexité']
+    },
+    {
+      id: 'repair',
+      label: 'Réparation électronique',
+      icon: '🔧',
+      cat: 'repair',
+      min: 60,
+      defaultPriority: 'B',
+      hint: 'Avancer sur le projet en cours · How to Diagnose + multimètre',
+      studyMat: 'repair',
+      subtasks: ['Diagnostic / mesure', 'Tester composants', 'Réparer / souder', 'Documenter avancement']
+    },
+    {
+      id: 'chess',
+      label: 'Échecs',
+      icon: '♟️',
+      cat: 'loisir',
+      min: 20,
+      defaultPriority: 'B',
+      hint: 'Chessable puzzles + 1 partie Lichess + analyser ses erreurs',
+      studyMat: null,
+      subtasks: ['10 puzzles Chessable', '1 partie lente (15+10)', 'Analyser erreurs avec stockfish']
+    }
+  ];
+
   /* Steps for Réparation tracking */
   var REPAIR_STEPS = [
     '🔍 Diagnostic initial',
@@ -347,6 +395,7 @@ window.D = (function () {
     getRoutineMeta: getRoutineMeta,
     isRepairTask: isRepairTask,
     ROUTINE_META: ROUTINE_META,
-    REPAIR_STEPS: REPAIR_STEPS
+    REPAIR_STEPS: REPAIR_STEPS,
+    DAILY_PRACTICE: DAILY_PRACTICE
   };
 })();
