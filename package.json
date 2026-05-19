@@ -10,6 +10,8 @@
     "check": "node scripts/check.js",
     "check:syntax": "for f in assets/*.js; do node --check \"$f\" && echo \"OK: $f\"; done",
     "check:no-trading": "! grep -r 'Trading\\|trading' --include='*.js' --include='*.html' --include='*.css' assets/ index.html",
-    "check:no-native-prompts": "! grep -n 'prompt(\\|alert(\\|confirm(' assets/app.js | grep -v 'function\\|Modal\\.\\|//'"
+    "check:no-native-prompts": "! grep -n 'prompt(\\|alert(\\|confirm(' assets/app.js | grep -v 'function\\|Modal\\.\\|//'",
+    "check:sport": "node scripts/check-sport.js",
+    "check:features": "node scripts/check-features.js"
   }
 }

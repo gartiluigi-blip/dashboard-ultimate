@@ -51,6 +51,12 @@ run(
   'bash -c \'! grep -n "prompt(\\|alert(\\|confirm(" assets/app.js | grep -v "function\\s\\+\\(alert\\|confirm\\|prompt\\)\\|Modal\\.\\(alert\\|confirm\\|destroy\\)\\|//"\''
 );
 
+// 4. Sport library integrity
+run('Sport library integrity', 'node scripts/check-sport.js');
+
+// 5. Feature registry integrity
+run('Feature registry integrity', 'node scripts/check-features.js');
+
 console.log('\n── Result: ' + (allPassed ? 'ALL PASS ✓' : 'SOME CHECKS FAILED ✗') + ' ──\n');
 
 if (!allPassed) process.exit(1);

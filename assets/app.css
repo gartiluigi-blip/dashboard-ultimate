@@ -3431,3 +3431,113 @@ select option { background: var(--panel3); }
 .deload-banner { background:rgba(245,158,11,.1); border:1px solid rgba(245,158,11,.35); border-radius:8px; padding:8px 12px; margin-bottom:10px; font-size:12px; color:var(--amber2); font-weight:700; }
 
 .btn-violet { background:rgba(124,58,237,.25); border:1px solid rgba(124,58,237,.5); color:var(--violet2); font-weight:800; }
+
+/* ═══ MODULES V5 ═══ */
+
+/* Nutrition */
+.card-l-orange { border-left:3px solid #f97316; }
+.nutrition-macro-bar { display:flex; height:8px; border-radius:4px; overflow:hidden; margin:8px 0; background:var(--panel3); }
+.nutrition-macro-fill { height:100%; transition:width .3s; }
+.nutrition-macro-fill.prot { background:#f97316; }
+.nutrition-macro-fill.carb { background:#06b6d4; }
+.nutrition-macro-fill.fat  { background:#f59e0b; }
+.nutrition-log-row { display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid var(--border); font-size:12px; }
+.nutrition-log-row:last-child { border-bottom:none; }
+.nutrition-log-name { flex:1; color:var(--dim); }
+.nutrition-log-macros { display:flex; gap:8px; font-size:10px; font-weight:800; }
+.nutrition-log-macros .p { color:#f97316; }
+.nutrition-log-macros .c { color:#06b6d4; }
+.nutrition-log-macros .f { color:#f59e0b; }
+
+/* Coding Arena */
+.coding-sub-nav { display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap; }
+.coding-sub-tab { padding:5px 12px; border-radius:20px; font-size:10px; font-weight:800; cursor:pointer; border:1px solid var(--border2); background:var(--panel3); color:var(--muted); }
+.coding-sub-tab.active { background:rgba(6,182,212,.2); border-color:rgba(6,182,212,.5); color:var(--cyan); }
+.coding-exercise-row { display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid var(--border); }
+.coding-exercise-row:last-child { border-bottom:none; }
+.coding-ex-icon { width:28px; height:28px; border-radius:8px; background:rgba(6,182,212,.15); display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0; }
+.coding-ex-title { font-size:13px; font-weight:700; color:var(--fg); }
+.coding-ex-meta { font-size:10px; color:var(--muted); }
+.coding-project-row { padding:10px 0; border-bottom:1px solid var(--border); }
+.coding-project-row:last-child { border-bottom:none; }
+.coding-project-name { font-size:13px; font-weight:700; color:var(--fg); margin-bottom:3px; }
+.coding-project-meta { font-size:10px; color:var(--muted); display:flex; gap:10px; }
+
+/* Repair / IoT Lab */
+.repair-log-row { display:flex; align-items:flex-start; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); }
+.repair-log-row:last-child { border-bottom:none; }
+.repair-log-icon { width:32px; height:32px; border-radius:10px; background:rgba(245,158,11,.15); display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+.repair-log-title { font-size:13px; font-weight:700; color:var(--fg); }
+.repair-log-meta { font-size:10px; color:var(--muted); margin-top:2px; display:flex; gap:8px; flex-wrap:wrap; }
+.repair-status-badge { padding:2px 7px; border-radius:10px; font-size:9px; font-weight:800; text-transform:uppercase; }
+.repair-status-badge.done   { background:rgba(16,185,129,.2); color:var(--green2); }
+.repair-status-badge.wip    { background:rgba(245,158,11,.2); color:var(--amber2); }
+.repair-status-badge.todo   { background:rgba(124,58,237,.2); color:var(--violet2); }
+.iot-lab-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:8px; margin-top:8px; }
+.iot-lab-card { border:1px solid var(--border2); border-radius:10px; padding:10px; text-align:center; background:var(--panel3); }
+.iot-lab-card-icon { font-size:22px; margin-bottom:4px; }
+.iot-lab-card-name { font-size:11px; font-weight:800; color:var(--dim); }
+.iot-lab-card-status { font-size:9px; color:var(--muted); margin-top:2px; }
+
+/* Dutch Command */
+.dutch-sub-nav { display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap; }
+.dutch-sub-tab { padding:5px 12px; border-radius:20px; font-size:10px; font-weight:800; cursor:pointer; border:1px solid var(--border2); background:var(--panel3); color:var(--muted); }
+.dutch-sub-tab.active { background:rgba(124,58,237,.2); border-color:rgba(124,58,237,.5); color:var(--violet2); }
+.dutch-word-card { border:1px solid var(--border2); border-radius:10px; padding:14px; text-align:center; margin-bottom:10px; background:var(--panel3); }
+.dutch-word-nl { font-size:22px; font-weight:900; color:var(--fg); }
+.dutch-word-fr { font-size:14px; color:var(--muted); margin-top:4px; }
+.dutch-word-cat { font-size:10px; font-weight:800; color:var(--violet2); margin-top:6px; text-transform:uppercase; }
+.dutch-log-row { display:flex; align-items:center; gap:8px; padding:7px 0; border-bottom:1px solid var(--border); font-size:12px; }
+.dutch-log-row:last-child { border-bottom:none; }
+.dutch-log-score { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:900; flex-shrink:0; }
+.dutch-log-score.pass { background:rgba(16,185,129,.2); color:var(--green2); }
+.dutch-log-score.fail { background:rgba(239,68,68,.2); color:#f87171; }
+
+/* Stats extras — radar, feature heatmap */
+.stats-radar-wrap { display:flex; justify-content:center; margin:12px 0; }
+.feature-heatmap { display:grid; grid-template-columns:repeat(auto-fill,minmax(90px,1fr)); gap:6px; margin-top:10px; }
+.feature-heatmap-cell { border-radius:8px; padding:8px 6px; text-align:center; font-size:10px; font-weight:800; border:1px solid var(--border2); background:var(--panel3); color:var(--dim); }
+.feature-heatmap-cell .fhc-val { font-size:16px; font-weight:900; color:var(--fg); display:block; }
+
+/* ETF Simulator */
+.etf-result-box { background:rgba(16,185,129,.08); border:1px solid rgba(16,185,129,.3); border-radius:10px; padding:12px; margin-top:10px; }
+.etf-result-value { font-size:24px; font-weight:900; color:var(--green2); }
+.etf-result-label { font-size:10px; color:var(--muted); font-weight:700; text-transform:uppercase; }
+
+/* Net Worth */
+.networth-total { font-size:28px; font-weight:900; color:var(--fg); }
+.networth-row { display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border); font-size:13px; }
+.networth-row:last-child { border-bottom:none; }
+.networth-row-label { color:var(--dim); }
+.networth-row-value { font-weight:800; }
+.networth-row-value.pos { color:var(--green2); }
+.networth-row-value.neg { color:#f87171; }
+
+/* Mode Lite/Full */
+.mode-btn-row { display:flex; gap:8px; margin-top:10px; }
+.mode-btn { padding:8px 18px; border-radius:8px; font-size:12px; font-weight:800; cursor:pointer; border:1px solid var(--border2); background:var(--panel3); color:var(--muted); transition:all .15s; }
+.mode-btn.active { background:rgba(124,58,237,.25); border-color:rgba(124,58,237,.5); color:var(--violet2); }
+
+/* Regression Guard */
+.feature-guard-row { display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid var(--border); font-size:12px; }
+.feature-guard-row:last-child { border-bottom:none; }
+.feature-guard-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.feature-guard-dot.ok { background:var(--green); }
+.feature-guard-dot.missing { background:#f87171; }
+.feature-guard-name { flex:1; color:var(--dim); }
+.feature-guard-status { font-size:10px; font-weight:800; }
+
+/* Sport Bibliothèque */
+.biblio-filters { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
+.biblio-filter-btn { padding:4px 10px; border-radius:16px; font-size:10px; font-weight:800; cursor:pointer; border:1px solid var(--border2); background:var(--panel3); color:var(--muted); }
+.biblio-filter-btn.active { background:rgba(245,158,11,.2); border-color:rgba(245,158,11,.5); color:var(--amber2); }
+.biblio-exercise-card { border:1px solid var(--border2); border-radius:10px; padding:10px 12px; margin-bottom:6px; background:var(--panel3); cursor:pointer; transition:border-color .15s; }
+.biblio-exercise-card:hover { border-color:var(--violet); }
+.biblio-ex-name { font-size:13px; font-weight:800; color:var(--fg); }
+.biblio-ex-tags { display:flex; gap:4px; flex-wrap:wrap; margin-top:4px; }
+.biblio-ex-tag { padding:2px 6px; border-radius:8px; font-size:9px; font-weight:800; background:rgba(6,182,212,.15); color:var(--cyan); }
+.biblio-ex-tag.diff-easy   { background:rgba(16,185,129,.15); color:var(--green2); }
+.biblio-ex-tag.diff-medium { background:rgba(245,158,11,.15); color:var(--amber2); }
+.biblio-ex-tag.diff-hard   { background:rgba(239,68,68,.15); color:#f87171; }
+.biblio-search { width:100%; padding:8px 12px; border-radius:8px; border:1px solid var(--border2); background:var(--panel3); color:var(--fg); font-size:13px; margin-bottom:10px; }
+.biblio-count-badge { font-size:10px; font-weight:800; color:var(--muted); margin-bottom:8px; }

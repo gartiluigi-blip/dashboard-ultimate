@@ -516,6 +516,64 @@ window.Store = (function () {
   function getBlockRating(key) { return get('brating_' + key, 0); }
   function setBlockRating(key, stars) { set('brating_' + key, parseInt(stars)||0); }
 
+  /* ── Nutrition ── */
+  function getNutritionLog(date) { return get('nutrition_' + (date||today()), { protein:0, water:0, creatine:false, cleanMeals:0, totalMeals:0, notes:'', bodyweight:null }); }
+  function setNutritionLog(date, data) { set('nutrition_' + (date||today()), data); }
+  function getNutritionGoals() { return get('nutrition_goals', { proteinG:150, waterL:2.5, cleanMealsPerDay:3 }); }
+  function setNutritionGoals(data) { set('nutrition_goals', data); }
+
+  /* ── Coding Arena ── */
+  function getCodingArena() { return get('coding_arena', { exercises:[], projects:[] }); }
+  function setCodingArena(data) { set('coding_arena', data); }
+  function addCodingExercise(ex) {
+    var d = getCodingArena();
+    ex.id = Date.now().toString(); ex.createdAt = new Date().toISOString(); ex.updatedAt = ex.createdAt;
+    d.exercises.push(ex); setCodingArena(d); return ex;
+  }
+  function updateCodingExercise(id, patch) {
+    var d = getCodingArena();
+    d.exercises = d.exercises.map(function(e){ return e.id===id ? Object.assign({},e,patch,{updatedAt:new Date().toISOString()}) : e; });
+    setCodingArena(d);
+  }
+  function addCodingProject(proj) {
+    var d = getCodingArena();
+    proj.id = Date.now().toString(); proj.createdAt = new Date().toISOString();
+    d.projects.push(proj); setCodingArena(d); return proj;
+  }
+
+  /* ── Repair / IoT ── */
+  function getRepairLogs() { return get('repair_logs', []); }
+  function setRepairLogs(arr) { set('repair_logs', arr); }
+  function addRepairLog(log) {
+    var logs = getRepairLogs();
+    log.id = Date.now().toString(); log.createdAt = new Date().toISOString(); log.updatedAt = log.createdAt;
+    logs.push(log); setRepairLogs(logs); return log;
+  }
+  function updateRepairLog(id, patch) {
+    var logs = getRepairLogs();
+    logs = logs.map(function(l){ return l.id===id ? Object.assign({},l,patch,{updatedAt:new Date().toISOString()}) : l; });
+    setRepairLogs(logs);
+  }
+  function deleteRepairLog(id) { setRepairLogs(getRepairLogs().filter(function(l){ return l.id !== id; })); }
+  function getIoTLabs() { return get('iot_labs', { currentLevel:0, labs:[] }); }
+  function setIoTLabs(data) { set('iot_labs', data); }
+
+  /* ── Dutch ── */
+  function getDutchProgress() { return get('dutch_progress', { currentLevel:'A1', targetLevel:'B2', weeklyMinutes:0, totalSessions:0, ankiCards:0, sentences:0, errors:0, monthlyTests:[] }); }
+  function setDutchProgress(data) { set('dutch_progress', Object.assign({}, getDutchProgress(), data)); }
+  function getDutchLog(date) { return get('dutch_log_' + (date||today()), { minutes:0, anki:0, listening:false, sentences:0, newWords:0, notes:'' }); }
+  function setDutchLog(date, data) { set('dutch_log_' + (date||today()), data); }
+
+  /* ── Finance Net Worth ── */
+  function getNetWorth(month) { return get('finance_networth_' + (month||currentMonth()), { savings:0, etf:0, realestate:0, other:0, debts:0 }); }
+  function setNetWorth(month, data) { set('finance_networth_' + (month||currentMonth()), data); }
+
+  /* ── App Mode (Lite / Full) ── */
+  function getAppMode() { return get('app_mode', 'full'); }
+  function setAppMode(mode) { set('app_mode', mode); }
+  function getHiddenFeatures() { return get('hidden_features', []); }
+  function setHiddenFeatures(arr) { set('hidden_features', arr); }
+
   /* ══════════════════════════════════════════════════════════════
      CERTIFICATIONS (v4)
   ══════════════════════════════════════════════════════════════ */
@@ -979,6 +1037,20 @@ window.Store = (function () {
     getPreviousExerciseLog: getPreviousExerciseLog,
     getBodyweightProgress: getBodyweightProgress, setBodyweightProgress: setBodyweightProgress,
     getFlexibilityProgress: getFlexibilityProgress, setFlexibilityProgress: setFlexibilityProgress,
-    getSportMonthlyTests: getSportMonthlyTests, addSportMonthlyTest: addSportMonthlyTest
+    getSportMonthlyTests: getSportMonthlyTests, addSportMonthlyTest: addSportMonthlyTest,
+    /* v5 extra modules */
+    getNutritionLog: getNutritionLog, setNutritionLog: setNutritionLog,
+    getNutritionGoals: getNutritionGoals, setNutritionGoals: setNutritionGoals,
+    getCodingArena: getCodingArena, setCodingArena: setCodingArena,
+    addCodingExercise: addCodingExercise, updateCodingExercise: updateCodingExercise,
+    addCodingProject: addCodingProject,
+    getRepairLogs: getRepairLogs, setRepairLogs: setRepairLogs,
+    addRepairLog: addRepairLog, updateRepairLog: updateRepairLog, deleteRepairLog: deleteRepairLog,
+    getIoTLabs: getIoTLabs, setIoTLabs: setIoTLabs,
+    getDutchProgress: getDutchProgress, setDutchProgress: setDutchProgress,
+    getDutchLog: getDutchLog, setDutchLog: setDutchLog,
+    getNetWorth: getNetWorth, setNetWorth: setNetWorth,
+    getAppMode: getAppMode, setAppMode: setAppMode,
+    getHiddenFeatures: getHiddenFeatures, setHiddenFeatures: setHiddenFeatures
   };
 })();
