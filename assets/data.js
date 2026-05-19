@@ -251,6 +251,61 @@ window.D = (function () {
     return SPORT_DAY[day] || { type:'off', label:'OFF', emoji:'😴' };
   }
 
+  /* ── ROUTINE METADATA — catégorie, durée estimée, ressource ── */
+  var ROUTINE_META = {
+    'epfc python':            { cat:'study',  min:90,  hint:'EPFC + Think Python / Python Crash Course', icon:'🎓' },
+    'coding exercices':       { cat:'code',   min:60,  hint:'CodingBat / LeetCode Easy', icon:'💻' },
+    'coding projet':          { cat:'code',   min:90,  hint:'Projet perso ou portfolio GitHub', icon:'💻' },
+    'néerlandais':            { cat:'study',  min:45,  hint:'Taalgarage + Anki deck NL', icon:'🇳🇱' },
+    'sport pull':             { cat:'sport',  min:60,  hint:'Tractions assistées, rowing, dead hang', icon:'🏋️' },
+    'sport push':             { cat:'sport',  min:60,  hint:'Pompes inclinées, dips, développé', icon:'💪' },
+    'sport legs':             { cat:'sport',  min:60,  hint:'Split squat, fentes, leg press, mollets', icon:'🦵' },
+    'sport full body':        { cat:'sport',  min:60,  hint:'Push + Pull + Legs condensé', icon:'🔥' },
+    'core + souplesse':       { cat:'health', min:45,  hint:'Dead bug, side plank, hollow hold + 90/90', icon:'🧘' },
+    'mobilité':               { cat:'health', min:30,  hint:'90/90, frog stretch, couch stretch, PNF', icon:'🦵' },
+    'stretch':                { cat:'health', min:30,  hint:'Étirements passifs + foam roller', icon:'🧘' },
+    'epfc linux':             { cat:'study',  min:90,  hint:'EPFC + How Linux Works', icon:'🎓' },
+    'epfc architecture':      { cat:'study',  min:90,  hint:'EPFC + Computer Organization & Design', icon:'🎓' },
+    'epfc sql':               { cat:'study',  min:90,  hint:'EPFC + Learning SQL / Practical SQL', icon:'🎓' },
+    'epfc web':               { cat:'study',  min:90,  hint:'EPFC + MDN + JS Definitive Guide', icon:'🎓' },
+    'long study block':       { cat:'study',  min:180, hint:'Bloc intensif EPFC + exercices + révision', icon:'📚' },
+    'révision':               { cat:'study',  min:60,  hint:'Anki + relire notes de cours', icon:'📖' },
+    'iot lab':                { cat:'tech',   min:90,  hint:'Arduino/ESP32 + IoT in Action', icon:'🌐' },
+    'iot ou réparation':      { cat:'repair', min:90,  hint:'ESP32/Arduino OU reprise réparation en cours', icon:'🔧' },
+    'réparation électronique':{ cat:'repair', min:90,  hint:'How to Diagnose + multimètre + composants', icon:'🔧' },
+    'ia':                     { cat:'tech',   min:90,  hint:'Fast.ai / Hands-On ML / AI Engineering', icon:'🤖' },
+    'lecture':                { cat:'loisir', min:45,  hint:'Bibliothèque → onglet Lecture', icon:'📚' },
+    'échecs':                 { cat:'loisir', min:45,  hint:'Chessable puzzles + Lichess + analyse', icon:'♟️' },
+    'vinted':                 { cat:'admin',  min:45,  hint:'Lister articles, répondre messages, expédier', icon:'🛍' },
+    'famille':                { cat:'perso',  min:120, hint:'Activité famille ou récupération libre', icon:'👨‍👩‍👧' },
+    'weekly review':          { cat:'admin',  min:60,  hint:'Bilan semaine + objectifs pour lundi', icon:'📊' },
+    'planning':               { cat:'admin',  min:30,  hint:'Remplir calendrier + to-do semaine à venir', icon:'📅' }
+  };
+
+  /* Steps for Réparation tracking */
+  var REPAIR_STEPS = [
+    '🔍 Diagnostic initial',
+    '🧰 Ouvrir et inspecter',
+    '⚡ Tester composants',
+    '🔧 Réparer / remplacer',
+    '✅ Vérifier fonctionnement',
+    '📝 Documenter'
+  ];
+
+  function getRoutineMeta(taskLabel) {
+    var lower = taskLabel.toLowerCase().trim();
+    var keys = Object.keys(ROUTINE_META);
+    for (var i = 0; i < keys.length; i++) {
+      if (lower.indexOf(keys[i]) >= 0) return ROUTINE_META[keys[i]];
+    }
+    return { cat:'autre', min:null, hint:'', icon:'▸' };
+  }
+
+  function isRepairTask(taskLabel) {
+    var l = taskLabel.toLowerCase();
+    return l.indexOf('réparation') >= 0 || l.indexOf('reparation') >= 0;
+  }
+
   /* Detect study matière from routine task label */
   function taskToStudyMatiere(taskLabel) {
     var lower = taskLabel.toLowerCase().trim();
@@ -288,6 +343,10 @@ window.D = (function () {
     todayRotation: todayRotation,
     todaySportDay: todaySportDay,
     taskToStudyMatiere: taskToStudyMatiere,
-    taskIsSport: taskIsSport
+    taskIsSport: taskIsSport,
+    getRoutineMeta: getRoutineMeta,
+    isRepairTask: isRepairTask,
+    ROUTINE_META: ROUTINE_META,
+    REPAIR_STEPS: REPAIR_STEPS
   };
 })();

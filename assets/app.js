@@ -465,98 +465,134 @@
 
     var today = Store.today();
     var rotation = D.todayRotation();
-    var checks = Store.getRoutineChecks(today);
+    var checks   = Store.getRoutineChecks(today);
+    var doneCount = Object.values(checks).filter(Boolean).length;
+    var total     = rotation.tasks.length;
+    var pctDone   = pct(doneCount, total || 1);
 
-    /* Day badge */
-    var pill = el('div', { class:'day-badge' },
-      '📅 ' + rotation.day.charAt(0).toUpperCase() + rotation.day.slice(1));
-    page.appendChild(pill);
+    /* ── Jour + anneau de complétion ── */
+    var topRow = el('div', { class:'completion-ring-row' });
 
-    /* Travail block */
+    /* SVG ring */
+    var r = 26, circ = 2 * Math.PI * r;
+    var dashOffset = circ - (circ * pctDone / 100);
+    var ringColor = pctDone >= 100 ? 'var(--green2)' : pctDone >= 50 ? 'var(--violet2)' : 'var(--cyan)';
+    var svgHtml =
+      '<svg width="68" height="68" viewBox="0 0 68 68" class="completion-ring-svg">' +
+        '<circle cx="34" cy="34" r="' + r + '" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="6"/>' +
+        '<circle cx="34" cy="34" r="' + r + '" fill="none" stroke="' + ringColor + '" stroke-width="6"' +
+          ' stroke-dasharray="' + circ.toFixed(1) + '"' +
+          ' stroke-dashoffset="' + dashOffset.toFixed(1) + '"' +
+          ' stroke-linecap="round"' +
+          ' transform="rotate(-90 34 34)"' +
+          ' style="filter:drop-shadow(0 0 5px ' + ringColor + ');transition:stroke-dashoffset .5s ease"/>' +
+        '<text x="34" y="39" text-anchor="middle" font-size="13" font-weight="900" fill="' + ringColor + '">' + pctDone + '%</text>' +
+      '</svg>';
+
+    var ringWrap = el('div', {});
+    ringWrap.innerHTML = svgHtml;
+    topRow.appendChild(ringWrap);
+
+    var ringInfo = el('div', { class:'completion-ring-info' });
+    var dayName = rotation.day.charAt(0).toUpperCase() + rotation.day.slice(1);
+    ringInfo.appendChild(el('div', { class:'completion-ring-pct' }, pctDone + '%'));
+    ringInfo.appendChild(el('div', { class:'completion-ring-label' }, 'Complétion · ' + dayName));
+    ringInfo.appendChild(el('div', { class:'completion-ring-count' },
+      doneCount + ' / ' + total + ' blocs terminés'));
+    topRow.appendChild(ringInfo);
+    page.appendChild(topRow);
+
+    /* ── Travail / Shift ── */
+    var rtData = Store.get('routine_work_' + today, {});
     var workCard = el('div', { class:'card card-l-orange' });
+    var shiftOpts = ['','Matin','Après-midi','Soir','Pas de travail'];
+    var shiftSel = '<select id="rt-shift"><option value="">Shift...</option>' +
+      shiftOpts.slice(1).map(function(s){ return '<option>' + s + '</option>'; }).join('') + '</select>';
     workCard.innerHTML =
-      '<div class="card-head"><div class="card-title"><span class="card-title-icon">💼</span> Travail</div></div>' +
+      '<div class="card-head"><div class="card-title">💼 Travail du jour</div></div>' +
       '<div class="work-grid">' +
         '<div class="log-field"><label>Début</label><input type="time" id="rt-work-start"></div>' +
         '<div class="log-field"><label>Fin</label><input type="time" id="rt-work-end"></div>' +
-        '<div class="log-field" style="grid-column:span 2"><label>Fatigue (1-5)</label><input type="number" id="rt-fatigue" min="1" max="5" style="max-width:100px"></div>' +
+        '<div class="log-field"><label>Shift</label>' + shiftSel + '</div>' +
+        '<div class="log-field"><label>Énergie (1-5)</label><input type="number" id="rt-fatigue" min="1" max="5" placeholder="–"></div>' +
       '</div>';
-    var rtData = Store.get('routine_work_' + today, {});
     page.appendChild(workCard);
 
     setTimeout(function () {
-      var ws = qs('#rt-work-start'), we = qs('#rt-work-end'), fa = qs('#rt-fatigue');
+      var ws = qs('#rt-work-start'), we = qs('#rt-work-end'), fa = qs('#rt-fatigue'), sh = qs('#rt-shift');
       if (ws) { ws.value = rtData.start || ''; ws.addEventListener('change', saveRT); }
       if (we) { we.value = rtData.end || '';   we.addEventListener('change', saveRT); }
       if (fa) { fa.value = rtData.fatigue || ''; fa.addEventListener('change', saveRT); }
+      if (sh) { sh.value = rtData.shift || '';   sh.addEventListener('change', saveRT); }
       function saveRT() {
         Store.set('routine_work_' + today, {
-          start: ws ? ws.value : '', end: we ? we.value : '', fatigue: fa ? fa.value : ''
+          start: ws ? ws.value : '',
+          end:   we ? we.value : '',
+          fatigue: fa ? fa.value : '',
+          shift: sh ? sh.value : ''
         });
       }
     }, 0);
 
-    /* Rotation du jour */
-    var rotTitle = el('div', { class:'section-title' }, 'Rotation du jour');
-    page.appendChild(rotTitle);
-
-    var icons = {
-      'EPFC':'🎓','Coding':'💻','IoT':'🌐','Lecture':'📚','Réparation':'🔧','IA':'🤖',
-      'Néerlandais':'🇳🇱','Sport':'💪','Souplesse':'🧘','Vinted':'🛍','Famille':'👨‍👩‍👧','Weekly':'📊',
-      'Révision':'📖','Planning':'📅','Stretch':'🧘','Mobilité':'🦵','Échecs':'♟️','Long':'📚',
-      'Pull':'🏋️','Push':'💪','Legs':'🦵','Full':'🔥','Core':'🧘','OFF':'😴'
-    };
-
-    function getIcon(label) {
-      var keys = Object.keys(icons);
-      for (var i = 0; i < keys.length; i++) {
-        if (label.indexOf(keys[i]) >= 0) return icons[keys[i]];
-      }
-      return '▸';
-    }
+    /* ── Blocs de la rotation ── */
+    page.appendChild(el('div', { class:'section-title' }, 'Blocs du jour'));
 
     rotation.tasks.forEach(function (task, idx) {
-      var done = !!checks[idx];
-      var dateIndex = today + '_' + idx;
-      var savedNote = Store.getRoutineNote(dateIndex);
+      var done       = !!checks[idx];
+      var dateIndex  = today + '_' + idx;
+      var savedNote  = Store.getRoutineNote(dateIndex);
+      var meta       = D.getRoutineMeta(task);
+      var studyMat   = D.taskToStudyMatiere(task);
+      var isSport    = D.taskIsSport(task);
+      var isRepair   = D.isRepairTask(task);
+      var cat        = meta.cat || 'autre';
 
-      /* Detect study matière */
-      var studyMatiere = D.taskToStudyMatiere(task);
-      var isSportTask = D.taskIsSport(task);
+      var block = el('div', { class:'routine-block rcat-' + cat + (done ? ' done' : '') });
 
-      var block = el('div', { class:'routine-block' + (done ? ' done' : '') });
-
-      /* Main row */
+      /* ── Main row ── */
       var mainRow = el('div', { class:'routine-block-main' });
-      var iconEl = el('div', { class:'routine-block-icon' }, getIcon(task));
-      var infoEl = el('div', { class:'routine-block-info' });
-      var titleEl = el('div', { class:'routine-block-title' }, task);
-      infoEl.appendChild(titleEl);
-      if (savedNote) {
-        var noteEl = el('div', { class:'routine-block-note' }, savedNote);
-        infoEl.appendChild(noteEl);
+
+      var iconEl  = el('div', { class:'routine-block-icon' }, meta.icon || '▸');
+      var infoEl  = el('div', { class:'routine-block-info' });
+
+      infoEl.appendChild(el('div', { class:'routine-block-title' }, task));
+
+      /* Category chip + time estimate */
+      var metaRow = el('div', { style:'display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap' });
+      metaRow.appendChild(el('span', { class:'cat-chip cat-' + cat }, cat));
+      if (meta.min) {
+        metaRow.appendChild(el('span', { class:'time-est' }, '⏱ ' + meta.min + ' min'));
       }
-      if (studyMatiere) {
-        var sd = Store.getStudy(studyMatiere);
+      /* Study progress sub-line */
+      if (studyMat) {
+        var sd = Store.getStudy(studyMat);
         if (sd && (sd.position || sd.total)) {
-          var pctVal = pct(parseInt(sd.position)||0, parseInt(sd.total)||1);
-          var subEl = el('div', { class:'routine-block-sub' },
-            'Progression : ' + (sd.position||0) + '/' + (sd.total||'?') + ' ' + (sd.unit||'') + ' (' + pctVal + '%)');
-          infoEl.appendChild(subEl);
+          var pv = pct(parseInt(sd.position)||0, parseInt(sd.total)||1);
+          metaRow.appendChild(el('span', { class:'time-est', style:'color:var(--violet3)' },
+            '📈 ' + pv + '%'));
         }
       }
+      infoEl.appendChild(metaRow);
+
+      /* Saved note preview */
+      if (savedNote) {
+        infoEl.appendChild(el('div', { class:'routine-block-note' }, '→ ' + savedNote));
+      }
+
       mainRow.appendChild(iconEl);
       mainRow.appendChild(infoEl);
 
       /* Actions */
       var actions = el('div', { class:'routine-block-actions' });
 
-      /* Expand chevron */
-      var expandBtn = el('button', { class:'routine-expand-btn', type:'button', title:'Développer' }, '▾');
+      var expandBtn = el('button', { class:'routine-expand-btn', type:'button' }, '▾');
       actions.appendChild(expandBtn);
 
-      /* Check button */
-      var chk = el('button', { class:'btn-icon', type:'button' }, done ? '✓' : '○');
+      var chk = el('button', {
+        class: 'btn-icon',
+        type: 'button',
+        style: done ? 'color:var(--green2);border-color:rgba(16,185,129,.5)' : ''
+      }, done ? '✓' : '○');
       chk.addEventListener('click', function () {
         Store.toggleRoutineCheck(idx, today);
         renderRoutine();
@@ -566,55 +602,158 @@
       mainRow.appendChild(actions);
       block.appendChild(mainRow);
 
-      /* Expand panel */
+      /* ── Expand panel ── */
       var expandPanel = el('div', { class:'routine-block-expand' });
 
-      /* Note field */
-      var noteWrap = el('div', { class:'routine-note-field' });
-      noteWrap.appendChild(el('label', {}, 'Où j\'en suis / reprendre à...'));
-      var noteTA = el('textarea', { placeholder:'Page 42, exercice 3, continuer à...' });
-      noteTA.value = savedNote || '';
-      noteWrap.appendChild(noteTA);
-      expandPanel.appendChild(noteWrap);
-
-      /* If study matière — log progress */
-      if (studyMatiere) {
-        var sd2 = Store.getStudy(studyMatiere);
-        var studyRow = el('div', { class:'routine-study-log' });
-        studyRow.appendChild(el('span', { class:'unit-label' }, '+'));
-        var studyInp = el('input', { type:'number', min:'0', placeholder:'0' });
-        studyRow.appendChild(studyInp);
-        studyRow.appendChild(el('span', { class:'unit-label' }, sd2.unit || 'pages'));
-        expandPanel.appendChild(studyRow);
+      /* Hint banner */
+      if (meta.hint) {
+        var hint = el('div', { class:'routine-hint' });
+        hint.appendChild(el('span', { class:'routine-hint-icon' }, '💡'));
+        hint.appendChild(el('span', {}, meta.hint));
+        expandPanel.appendChild(hint);
       }
 
-      /* Save button */
-      var saveRow = el('div', { style:'display:flex;gap:8px;margin-top:6px' });
-      var saveBtn = el('button', { class:'btn btn-primary btn-sm', type:'button' }, '💾 Sauvegarder');
-      saveBtn.addEventListener('click', function () {
-        var noteVal = noteTA.value.trim();
-        Store.setRoutineNote(dateIndex, noteVal);
+      /* Réparation : champs spécifiques + checklist étapes */
+      if (isRepair) {
+        var repKey = 'repair_' + today + '_' + idx;
+        var repData = Store.get(repKey, { device:'', problem:'', parts:'', result:'', steps:{} });
 
-        if (studyMatiere) {
-          var addAmt = parseInt(studyInp ? studyInp.value : '0', 10);
-          if (addAmt > 0) {
-            Store.logStudyFromRoutine(studyMatiere, addAmt, idx, today);
-            toast('Progression +' + addAmt + ' ' + (Store.getStudy(studyMatiere).unit||'') + ' · Bloc ✓');
+        var repFields = el('div', { class:'repair-fields' });
+        var dField = el('div', { class:'repair-field' });
+        dField.appendChild(el('label', {}, '🔧 Appareil / Objet'));
+        var devInp = el('input', { type:'text', placeholder:'Ex: Ampli Sony, PS4, lampe...' });
+        devInp.value = repData.device || '';
+        dField.appendChild(devInp);
+        repFields.appendChild(dField);
+
+        var pField = el('div', { class:'repair-field' });
+        pField.appendChild(el('label', {}, '❗ Problème constaté'));
+        var probInp = el('input', { type:'text', placeholder:'Ex: pas de son, court-circuit...' });
+        probInp.value = repData.problem || '';
+        pField.appendChild(probInp);
+        repFields.appendChild(pField);
+
+        expandPanel.appendChild(repFields);
+
+        /* Steps checklist */
+        var stepsDiv = el('div', { class:'repair-steps' });
+        stepsDiv.appendChild(el('div', { style:'font-size:10px;color:var(--amber2);font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px' }, '📋 Étapes'));
+
+        D.REPAIR_STEPS.forEach(function (stepLabel, si) {
+          var stepDone = !!(repData.steps && repData.steps[si]);
+          var stepEl = el('div', { class:'repair-step' + (stepDone ? ' checked' : '') });
+          stepEl.appendChild(el('span', { class:'repair-step-icon' }, stepDone ? '✅' : '⬜'));
+          stepEl.appendChild(el('span', {}, stepLabel));
+          stepEl.addEventListener('click', function () {
+            repData.steps = repData.steps || {};
+            repData.steps[si] = !repData.steps[si];
+            Store.set(repKey, repData);
+            stepEl.classList.toggle('checked', !!repData.steps[si]);
+            stepEl.querySelector('.repair-step-icon').textContent = repData.steps[si] ? '✅' : '⬜';
+          });
+          stepsDiv.appendChild(stepEl);
+        });
+
+        expandPanel.appendChild(stepsDiv);
+
+        /* Parts + result */
+        var rep2 = el('div', { class:'repair-fields' });
+        var ptField = el('div', { class:'repair-field', style:'grid-column:span 2' });
+        ptField.appendChild(el('label', {}, '🛒 Pièces / Composants nécessaires'));
+        var partsInp = el('input', { type:'text', placeholder:'Ex: condensateur 10µF, fusible 5A...' });
+        partsInp.value = repData.parts || '';
+        ptField.appendChild(partsInp);
+        rep2.appendChild(ptField);
+
+        var rField = el('div', { class:'repair-field', style:'grid-column:span 2' });
+        rField.appendChild(el('label', {}, '✅ Résultat / Conclusion'));
+        var resInp = el('input', { type:'text', placeholder:'Réparé, en attente pièce, HS...' });
+        resInp.value = repData.result || '';
+        rField.appendChild(resInp);
+        rep2.appendChild(rField);
+        expandPanel.appendChild(rep2);
+
+        /* Note free */
+        var noteWrap2 = el('div', { class:'routine-note-field' });
+        noteWrap2.appendChild(el('label', {}, 'Notes libres / où j\'en suis'));
+        var noteTA2 = el('textarea', { placeholder:'Schéma, lien vidéo, prochaine étape...' });
+        noteTA2.value = savedNote || '';
+        noteWrap2.appendChild(noteTA2);
+        expandPanel.appendChild(noteWrap2);
+
+        /* Save */
+        var sr2 = el('div', { style:'display:flex;gap:8px;margin-top:6px' });
+        var sb2 = el('button', { class:'btn btn-primary btn-sm', type:'button' }, '💾 Sauvegarder');
+        sb2.addEventListener('click', function () {
+          repData.device  = devInp.value.trim();
+          repData.problem = probInp.value.trim();
+          repData.parts   = partsInp.value.trim();
+          repData.result  = resInp.value.trim();
+          Store.set(repKey, repData);
+          Store.setRoutineNote(dateIndex, noteTA2.value.trim());
+          Store.setRoutineCheck(idx, true, today);
+          toast('Réparation sauvegardée ✓');
+          renderRoutine();
+        });
+        sr2.appendChild(sb2);
+        expandPanel.appendChild(sr2);
+
+      } else {
+        /* ── Standard expand ── */
+        var noteWrap = el('div', { class:'routine-note-field' });
+        noteWrap.appendChild(el('label', {}, 'Où j\'en suis / reprendre à...'));
+        var noteTA = el('textarea', { placeholder:'Page 42, exercice 3, continuer sur...' });
+        noteTA.value = savedNote || '';
+        noteWrap.appendChild(noteTA);
+        expandPanel.appendChild(noteWrap);
+
+        /* Study log */
+        var studyInp = null;
+        if (studyMat) {
+          var sd2 = Store.getStudy(studyMat);
+          var studyRow = el('div', { class:'routine-study-log' });
+          studyRow.appendChild(el('span', { class:'unit-label' }, '+ Ajouter'));
+          studyInp = el('input', { type:'number', min:'0', placeholder:'0' });
+          studyRow.appendChild(studyInp);
+          studyRow.appendChild(el('span', { class:'unit-label' }, sd2.unit || 'pages'));
+          expandPanel.appendChild(studyRow);
+        }
+
+        /* Save button */
+        var saveRow = el('div', { style:'display:flex;gap:8px;margin-top:8px;flex-wrap:wrap' });
+        var saveBtn = el('button', { class:'btn btn-primary btn-sm', type:'button' }, '💾 Sauvegarder');
+        saveBtn.addEventListener('click', function () {
+          var noteVal = noteTA.value.trim();
+          Store.setRoutineNote(dateIndex, noteVal);
+          if (studyMat && studyInp) {
+            var addAmt = parseInt(studyInp.value || '0', 10);
+            if (addAmt > 0) {
+              Store.logStudyFromRoutine(studyMat, addAmt, idx, today);
+              toast('+ ' + addAmt + ' ' + (Store.getStudy(studyMat).unit||'') + ' enregistrés ✓');
+            } else {
+              Store.setRoutineCheck(idx, true, today);
+              toast('Bloc terminé ✓');
+            }
+          } else if (isSport) {
+            Store.markSportDone(today);
+            toast('Sport enregistré ✓');
           } else {
             Store.setRoutineCheck(idx, true, today);
-            toast('Note sauvegardée · Bloc ✓');
+            toast('Bloc terminé ✓');
           }
-        } else if (isSportTask) {
-          Store.markSportDone(today);
-          toast('Sport enregistré · Bloc ✓');
-        } else {
+          renderRoutine();
+        });
+        saveRow.appendChild(saveBtn);
+
+        /* Quick "Terminé sans note" */
+        var doneBtn = el('button', { class:'btn btn-secondary btn-sm', type:'button' }, '✓ Terminé');
+        doneBtn.addEventListener('click', function () {
           Store.setRoutineCheck(idx, true, today);
-          toast('Note sauvegardée · Bloc ✓');
-        }
-        renderRoutine();
-      });
-      saveRow.appendChild(saveBtn);
-      expandPanel.appendChild(saveRow);
+          renderRoutine();
+        });
+        saveRow.appendChild(doneBtn);
+        expandPanel.appendChild(saveRow);
+      }
 
       block.appendChild(expandPanel);
       page.appendChild(block);
@@ -628,20 +767,20 @@
       });
     });
 
-    /* Total productif */
+    /* ── Résumé du jour ── */
     var log = Store.getLog(today);
-    var total = (parseInt(log.epfc_min)||0)+(parseInt(log.code_min)||0)+(parseInt(log.nl_min)||0)+(parseInt(log.repair_min)||0)+(parseInt(log.iot_min)||0);
-    var doneCount = Object.values(checks).filter(Boolean).length;
+    var totalMin = (parseInt(log.epfc_min)||0)+(parseInt(log.code_min)||0)+(parseInt(log.nl_min)||0)+(parseInt(log.repair_min)||0)+(parseInt(log.iot_min)||0);
+    var sportDone = log.sport === '✓ Fait' || Store.getSportOff(today) || Store.getSportLog(today).sessionDone;
 
-    var totalCard = el('div', { class:'card card-glow-o', style:'margin-top:14px' });
-    totalCard.innerHTML =
-      '<div class="card-head"><div class="card-title"><span class="card-title-icon">⚡</span> Total productif</div></div>' +
+    var sumCard = el('div', { class:'card card-glow-o', style:'margin-top:14px' });
+    sumCard.innerHTML =
+      '<div class="card-head"><div class="card-title">📊 Résumé du jour</div></div>' +
       '<div class="stat-row">' +
-        '<div class="stat-box stat-box-o"><div class="stat-value v-orange">' + total + '</div><div class="stat-label">Min étude</div></div>' +
-        '<div class="stat-box stat-box-g"><div class="stat-value v-gold">' + doneCount + '/' + rotation.tasks.length + '</div><div class="stat-label">Blocs faits</div></div>' +
-        '<div class="stat-box stat-box-gr"><div class="stat-value v-green">' + (log.sport === '✓ Fait' ? '✓' : '–') + '</div><div class="stat-label">Sport</div></div>' +
+        '<div class="stat-box stat-box-o"><div class="stat-value v-orange">' + totalMin + '</div><div class="stat-label">Min étude</div></div>' +
+        '<div class="stat-box stat-box-g"><div class="stat-value v-gold">' + doneCount + '/' + total + '</div><div class="stat-label">Blocs</div></div>' +
+        '<div class="stat-box stat-box-gr"><div class="stat-value v-green">' + (sportDone ? '✓' : '–') + '</div><div class="stat-label">Sport</div></div>' +
       '</div>';
-    page.appendChild(totalCard);
+    page.appendChild(sumCard);
   }
 
   /* ═══════════════════════════════════════════
