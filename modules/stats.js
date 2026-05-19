@@ -2,24 +2,13 @@ import { SPORT_LIBRARY, FEATURES } from '../assets/js/data.js';
 import { BOOKS, EXERCISE_PACKS } from '../assets/js/study-catalog.js';
 import * as Store from '../assets/js/store.js';
 import { el, card } from '../assets/js/ui.js';
-
-export function renderStats(root){
-  const grid = el('div',{class:'grid'});
-  grid.append(metric('Sport library', SPORT_LIBRARY.length + ' exercices'));
-  grid.append(metric('Sport sessions', Store.sportSessions().length + ' séances'));
-  grid.append(metric('Vinted stock', Store.get('vinted_items',[]).length + ' articles'));
-  grid.append(metric('Features', FEATURES.length + ' modules'));
-  grid.append(metric('Fuel today', fuelText()));
-  grid.append(metric('Today score', todayScore()));
-  root.append(grid);
-  root.append(trackStats());
-  root.append(vintedStats());
-  root.append(activityStats());
-}
-function metric(title,value){const c=card(title,value,'span-4');c.append(el('div',{class:'metric'},String(value).split(' ')[0]));return c;}
-function fuelText(){const f=Store.get('fuel_'+Store.today(),{water:0,protein:0});return 'eau '+f.water+'/3000 · prot '+f.protein+'/150';}
-function todayScore(){const s=Store.get('home_'+Store.today(),{done:{}});const done=Object.values(s.done||{}).filter(Boolean).length;return done+'/10 blocs';}
-function trackStats(){const all=Store.get('track_state',{});const c=card('Parcours étude','Coding / IA / IoT / Réparation : progression livres + exercices.');['coding','ai','iot','repair'].forEach(k=>{const s=all[k]||{};const b=BOOKS[k]||[];const e=EXERCISE_PACKS[k]||[];c.append(el('div',{class:'exercise'},k.toUpperCase()+' · livres '+(s.bookIndex||0)+'/'+b.length+' · exercices '+(s.exerciseIndex||0)+'/'+e.length));});return c;}
-function vintedStats(){const list=Store.get('vinted_items',[]);const invested=list.reduce((a,x)=>a+(+x.buy||0)+(+x.shipping||0)+(+x.boost||0),0);const revenue=list.reduce((a,x)=>a+(+x.sold||0),0);const sold=list.filter(x=>x.status==='sold').length;return card('Vinted stats','Articles '+list.length+' · vendus '+sold+' · investi '+euro(invested)+' · ventes '+euro(revenue)+' · profit '+euro(revenue-invested));}
-function activityStats(){const a=Store.get('study_activity',[]);const c=card('Activité récente','Derniers logs enregistrés.');a.slice(-10).reverse().forEach(x=>c.append(el('div',{class:'exercise'},(x.date||'-')+' · '+(x.domain||'-')+' · '+(x.kind||x.status||'-')+' · '+(x.title||x.exercise||x.resourceId||'-'))));return c;}
-function euro(n){return (Number(n)||0).toFixed(2)+' €';}
+import { renderGameCard, dailyScore, knownDates, gameSummary } from './game.js';
+export function renderStats(root){root.append(renderGameCard());root.append(xpBoard());const grid=el('div',{class:'grid'});grid.append(metric('Sport library',SPORT_LIBRARY.length+' exercices'));grid.append(metric('Sport sessions',Store.sportSessions().length+' séances'));grid.append(metric('Vinted stock',Store.get('vinted_items',[]).length+' articles'));grid.append(metric('Features',FEATURES.length+' modules'));grid.append(metric('Fuel today',fuelText()));grid.append(metric('Today XP',gameSummary().todayXp+' XP'));root.append(grid);root.append(trackStats());root.append(vintedStats());root.append(leisureStats());root.append(activityStats())}
+function metric(title,value){const c=card(title,value,'span-4');c.append(el('div',{class:'metric'},String(value).split(' ')[0]));return c}
+function xpBoard(){const c=card('Ranking XP · historique','XP par jour basé sur blocs validés, sport, fuel, épargne, échecs.');knownDates().slice(-14).reverse().forEach(d=>{const s=dailyScore(d);c.append(el('div',{class:'exercise'},d+' · '+s.xp+' XP · '+s.items.map(x=>x.id+'+'+x.xp).join(' / ')))});return c}
+function fuelText(){const f=Store.get('fuel_'+Store.today(),{water:0,protein:0});return 'eau '+f.water+'/3000 · prot '+f.protein+'/150'}
+function trackStats(){const all=Store.get('track_state',{});const c=card('Parcours étude','Coding / IA / IoT / Réparation : progression livres + exercices.');['coding','ai','iot','repair'].forEach(k=>{const s=all[k]||{};const b=BOOKS[k]||[];const e=EXERCISE_PACKS[k]||[];c.append(el('div',{class:'exercise'},k.toUpperCase()+' · livres '+(s.bookIndex||0)+'/'+b.length+' · exercices '+(s.exerciseIndex||0)+'/'+e.length))});return c}
+function vintedStats(){const list=Store.get('vinted_items',[]);const invested=list.reduce((a,x)=>a+(+x.buy||0)+(+x.shipping||0)+(+x.boost||0),0);const revenue=list.reduce((a,x)=>a+(+x.sold||0),0);const sold=list.filter(x=>x.status==='sold').length;return card('Vinted stats','Articles '+list.length+' · vendus '+sold+' · investi '+euro(invested)+' · ventes '+euro(revenue)+' · profit '+euro(revenue-invested))}
+function leisureStats(){const chess=Store.get('chess_elo_history',[]),last=chess[chess.length-1];const reading=Store.get('reading_tracks',{});let done=0,pages=0;Object.values(reading).forEach(t=>Object.values(t.books||{}).forEach(b=>{if(b.done)done++;pages+=+b.current||0}));return card('Loisir stats','ELO '+(last?last.elo:'-')+' · logs échecs '+chess.length+' · livres terminés '+done+' · pages '+pages)}
+function activityStats(){const a=Store.get('study_activity',[]);const c=card('Activité récente','Derniers logs enregistrés.');a.slice(-12).reverse().forEach(x=>c.append(el('div',{class:'exercise'},(x.date||'-')+' · '+(x.domain||'-')+' · '+(x.kind||x.status||'-')+' · '+(x.title||x.exercise||x.resourceId||'-'))));return c}
+function euro(n){return(Number(n)||0).toFixed(2)+' €'}
