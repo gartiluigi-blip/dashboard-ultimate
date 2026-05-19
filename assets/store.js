@@ -469,6 +469,34 @@ window.Store = (function () {
 
   pruneOldKeys();
 
+  /* ── Forme du matin (humeur, sommeil, eau, intention) ── */
+  function getMorningCheck(date) { return get('morning_' + (date || today()), {}); }
+  function setMorningCheck(date, data) {
+    var cur = getMorningCheck(date);
+    set('morning_' + (date || today()), Object.assign({}, cur, data));
+  }
+
+  /* ── Tracker domaine spécifique par bloc quotidien ── */
+  function getDomainTracker(blockId, date) {
+    return get('dtrack_' + blockId + '_' + (date || today()), {});
+  }
+  function setDomainTracker(blockId, date, data) {
+    var cur = getDomainTracker(blockId, date);
+    /* Persist fields: keep 'device' and 'problem' from previous entry if not overridden */
+    set('dtrack_' + blockId + '_' + (date || today()), Object.assign({}, cur, data));
+  }
+  /* Load last persistent field value (e.g. repair device across days) */
+  function getLastDomainField(blockId, fieldId) {
+    var td = today();
+    for (var i = 0; i < 7; i++) {
+      var dd = new Date(); dd.setDate(dd.getDate() - i);
+      var dk = dd.getFullYear() + '-' + String(dd.getMonth()+1).padStart(2,'0') + '-' + String(dd.getDate()).padStart(2,'0');
+      var data = get('dtrack_' + blockId + '_' + dk, {});
+      if (data[fieldId]) return data[fieldId];
+    }
+    return '';
+  }
+
   /* ── Priorité par bloc (persistante, pas par jour) ── */
   function getBlockPriority(blockId) { return get('blkprio_' + blockId, null); }
   function setBlockPriority(blockId, priority) {
@@ -544,6 +572,8 @@ window.Store = (function () {
     computeDayScore: computeDayScore, getScoreTier: getScoreTier,
     getStreaks: getStreaks, updateStreak: updateStreak,
     getObjectives: getObjectives, setObjectives: setObjectives,
+    getMorningCheck: getMorningCheck, setMorningCheck: setMorningCheck,
+    getDomainTracker: getDomainTracker, setDomainTracker: setDomainTracker, getLastDomainField: getLastDomainField,
     getBlockPriority: getBlockPriority, setBlockPriority: setBlockPriority, cyclePriority: cyclePriority,
     getDailyPractice: getDailyPractice, toggleDailyPractice: toggleDailyPractice, getDailyWeekStats: getDailyWeekStats,
     getDailyNote: getDailyNote, setDailyNote: setDailyNote,

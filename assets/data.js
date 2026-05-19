@@ -293,7 +293,13 @@ window.D = (function () {
       defaultPriority: 'A',
       hint: 'Fast.ai, Hands-On ML, AI Engineering — 30 min minimum par jour',
       studyMat: 'ia',
-      subtasks: ['Lire 1 chapitre / suivre 1 leçon', 'Implémenter un concept vu', 'Prendre des notes Anki']
+      subtasks: ['Lire 1 chapitre / suivre 1 leçon', 'Implémenter un concept vu', 'Créer des notes Anki'],
+      trackerFields: [
+        { id:'concept', label:'Concept étudié', type:'text', placeholder:'Ex: Backpropagation, Transformers…' },
+        { id:'resource', label:'Ressource', type:'select', options:['Fast.ai','Hands-On ML','AI Engineering','Kaggle','Autre'] },
+        { id:'anki', label:'Cartes Anki créées', type:'number', placeholder:'0', unit:'cartes' },
+        { id:'coded', label:'Code implémenté ?', type:'toggle' }
+      ]
     },
     {
       id: 'coding',
@@ -304,7 +310,30 @@ window.D = (function () {
       defaultPriority: 'A',
       hint: 'LeetCode Easy/Medium · CodingBat · 1 exercice minimum par jour',
       studyMat: 'coding',
-      subtasks: ['Lire l\'énoncé sans regarder la solution', 'Coder de tête d\'abord', 'Optimiser + noter complexité']
+      subtasks: ['Lire l\'énoncé sans regarder la solution', 'Coder de tête d\'abord', 'Optimiser + noter complexité O(n)'],
+      trackerFields: [
+        { id:'problems', label:'Exercices résolus', type:'number', placeholder:'0', unit:'exercices' },
+        { id:'platform', label:'Plateforme', type:'select', options:['LeetCode','CodingBat','HackerRank','Codecademy','Projet perso','Autre'] },
+        { id:'difficulty', label:'Difficulté', type:'select', options:['Easy','Medium','Hard'] },
+        { id:'language', label:'Langage', type:'select', options:['Python','JavaScript','Java','C','Autre'] }
+      ]
+    },
+    {
+      id: 'nl',
+      label: 'Néerlandais',
+      icon: '🇳🇱',
+      cat: 'study',
+      min: 30,
+      defaultPriority: 'A',
+      hint: 'Taalgarage + Anki deck NL — minimum 30 min par jour',
+      studyMat: 'nl',
+      subtasks: ['Taalgarage : 1 leçon', 'Anki : 20 cartes minimum', 'Écrire 3 phrases avec les mots appris'],
+      trackerFields: [
+        { id:'words', label:'Nouveaux mots appris', type:'number', placeholder:'0', unit:'mots' },
+        { id:'lesson', label:'Leçon Taalgarage', type:'text', placeholder:'Ex: A1.2 leçon 4' },
+        { id:'anki', label:'Cartes Anki révisées', type:'number', placeholder:'0', unit:'cartes' },
+        { id:'topic', label:'Sujet / grammaire', type:'text', placeholder:'Ex: Verbes de modalité, vocabulaire maison…' }
+      ]
     },
     {
       id: 'repair',
@@ -315,7 +344,13 @@ window.D = (function () {
       defaultPriority: 'B',
       hint: 'Avancer sur le projet en cours · How to Diagnose + multimètre',
       studyMat: 'repair',
-      subtasks: ['Diagnostic / mesure', 'Tester composants', 'Réparer / souder', 'Documenter avancement']
+      subtasks: ['Diagnostic / mesure', 'Tester composants', 'Réparer / souder', 'Documenter avancement'],
+      trackerFields: [
+        { id:'device', label:'Appareil / Objet', type:'text', placeholder:'Ex: Ampli Sony, PS4, lampe…', persist:true },
+        { id:'problem', label:'Problème', type:'text', placeholder:'Ex: Pas de son, court-circuit…', persist:true },
+        { id:'progress', label:'Avancement (%)', type:'number', placeholder:'0', unit:'%' },
+        { id:'result', label:'Résultat du jour', type:'select', options:['En cours','Avancé','Bloqué — besoin pièce','Réparé ✓','Irrécupérable'] }
+      ]
     },
     {
       id: 'chess',
@@ -326,7 +361,13 @@ window.D = (function () {
       defaultPriority: 'B',
       hint: 'Chessable puzzles + 1 partie Lichess + analyser ses erreurs',
       studyMat: null,
-      subtasks: ['10 puzzles Chessable', '1 partie lente (15+10)', 'Analyser erreurs avec stockfish']
+      subtasks: ['10 puzzles Chessable', '1 partie lente (15+10)', 'Analyser erreurs avec Stockfish'],
+      trackerFields: [
+        { id:'elo_before', label:'ELO avant', type:'number', placeholder:'Ex: 1250' },
+        { id:'elo_after', label:'ELO après', type:'number', placeholder:'Ex: 1260' },
+        { id:'puzzles', label:'Puzzles faits', type:'number', placeholder:'0', unit:'puzzles' },
+        { id:'game_result', label:'Résultat partie', type:'select', options:['Victoire','Nul','Défaite','Pas joué'] }
+      ]
     }
   ];
 

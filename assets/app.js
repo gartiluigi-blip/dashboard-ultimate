@@ -458,6 +458,186 @@
   /* ═══════════════════════════════════════════
      PAGE : ROUTINE
   ═══════════════════════════════════════════ */
+  /* ── Carte Forme du matin ── */
+  function renderMorningCard(today) {
+    var data = Store.getMorningCheck(today);
+    var card = el('div', { class:'card card-l-blue', style:'margin-bottom:14px' });
+
+    card.innerHTML = '<div class="card-head"><div class="card-title">🌅 Forme du jour</div></div>';
+
+    /* Humeur row */
+    var moodRow = el('div', { style:'margin-bottom:12px' });
+    moodRow.appendChild(el('div', { style:'font-size:10px;color:var(--violet3);font-weight:900;letter-spacing:.09em;text-transform:uppercase;margin-bottom:6px' }, 'Humeur'));
+    var moods = [['😴','Fatigué'],['😐','Neutre'],['🙂','Bien'],['💪','Motivé'],['🔥','En feu']];
+    var moodBtns = el('div', { style:'display:flex;gap:6px;flex-wrap:wrap' });
+    moods.forEach(function(m) {
+      var b = el('button', {
+        type:'button',
+        style:'flex:1;min-width:44px;padding:8px 4px;border-radius:10px;cursor:pointer;font-size:20px;transition:all .15s;-webkit-tap-highlight-color:transparent;' +
+          (data.mood === m[0] ? 'background:rgba(124,58,237,.2);border:2px solid var(--violet2);box-shadow:0 0 10px rgba(124,58,237,.25)' :
+           'background:var(--panel3);border:1px solid var(--border2)')
+      }, m[0]);
+      b.title = m[1];
+      b.addEventListener('click', function() {
+        Store.setMorningCheck(today, { mood: m[0] });
+        renderMorningCard._rerender && renderMorningCard._rerender();
+      });
+      moodBtns.appendChild(b);
+    });
+    moodRow.appendChild(moodBtns);
+    card.appendChild(moodRow);
+
+    /* Grille énergie + sommeil + eau */
+    var grid = el('div', { style:'display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px' });
+
+    /* Énergie 1-5 */
+    var energyWrap = el('div', {});
+    energyWrap.appendChild(el('div', { style:'font-size:10px;color:var(--violet3);font-weight:900;letter-spacing:.09em;text-transform:uppercase;margin-bottom:5px' }, 'Énergie'));
+    var energyDots = el('div', { style:'display:flex;gap:4px' });
+    for (var e = 1; e <= 5; e++) {
+      (function(lvl) {
+        var d = el('div', {
+          style:'width:14px;height:14px;border-radius:50%;cursor:pointer;transition:all .15s;' +
+            (data.energy >= lvl ? 'background:var(--violet2);box-shadow:0 0 6px rgba(139,92,246,.5)' : 'background:var(--panel4);border:1px solid var(--border2)')
+        });
+        d.addEventListener('click', function() {
+          Store.setMorningCheck(today, { energy: data.energy === lvl ? 0 : lvl });
+          renderMorningCard._rerender && renderMorningCard._rerender();
+        });
+        energyDots.appendChild(d);
+      })(e);
+    }
+    energyWrap.appendChild(energyDots);
+    grid.appendChild(energyWrap);
+
+    /* Sommeil */
+    var sleepWrap = el('div', {});
+    sleepWrap.appendChild(el('div', { style:'font-size:10px;color:var(--violet3);font-weight:900;letter-spacing:.09em;text-transform:uppercase;margin-bottom:5px' }, 'Sommeil'));
+    var sleepInp = el('input', { type:'number', min:'0', max:'12', step:'0.5', placeholder:'7.5', style:'text-align:center;padding:5px 8px;font-size:13px;width:100%' });
+    sleepInp.value = data.sleep || '';
+    sleepInp.addEventListener('change', function() { Store.setMorningCheck(today, { sleep: sleepInp.value }); });
+    sleepWrap.appendChild(sleepInp);
+    sleepWrap.appendChild(el('div', { style:'font-size:9px;color:var(--dim);margin-top:2px;text-align:center' }, 'heures'));
+    grid.appendChild(sleepWrap);
+
+    /* Eau */
+    var waterWrap = el('div', {});
+    waterWrap.appendChild(el('div', { style:'font-size:10px;color:var(--violet3);font-weight:900;letter-spacing:.09em;text-transform:uppercase;margin-bottom:5px' }, 'Eau'));
+    var waterRow = el('div', { style:'display:flex;align-items:center;gap:4px' });
+    var waterMinus = el('button', { type:'button', style:'width:22px;height:22px;border-radius:50%;background:var(--panel4);border:1px solid var(--border2);color:var(--text2);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center' }, '−');
+    var waterVal = el('div', { style:'flex:1;text-align:center;font-size:15px;font-weight:900;color:var(--cyan2)' }, String(data.water || 0));
+    var waterPlus = el('button', { type:'button', style:'width:22px;height:22px;border-radius:50%;background:var(--panel4);border:1px solid var(--border2);color:var(--text2);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center' }, '+');
+    waterMinus.addEventListener('click', function() {
+      var v = Math.max(0, (data.water||0)-1);
+      Store.setMorningCheck(today, {water:v}); data.water = v; waterVal.textContent = String(v);
+    });
+    waterPlus.addEventListener('click', function() {
+      var v = (data.water||0)+1;
+      Store.setMorningCheck(today, {water:v}); data.water = v; waterVal.textContent = String(v);
+    });
+    waterRow.appendChild(waterMinus); waterRow.appendChild(waterVal); waterRow.appendChild(waterPlus);
+    waterWrap.appendChild(waterRow);
+    waterWrap.appendChild(el('div', { style:'font-size:9px;color:var(--dim);margin-top:2px;text-align:center' }, 'verres'));
+    grid.appendChild(waterWrap);
+    card.appendChild(grid);
+
+    /* Intention du jour */
+    var intentWrap = el('div', { style:'margin-bottom:10px' });
+    intentWrap.appendChild(el('div', { style:'font-size:10px;color:var(--violet3);font-weight:900;letter-spacing:.09em;text-transform:uppercase;margin-bottom:5px' }, '🎯 Intention du jour'));
+    var intentInp = el('input', { type:'text', placeholder:'Aujourd\'hui je veux accomplir…' });
+    intentInp.value = data.intention || '';
+    intentInp.addEventListener('change', function() { Store.setMorningCheck(today, { intention: intentInp.value }); });
+    intentWrap.appendChild(intentInp);
+    card.appendChild(intentWrap);
+
+    /* Victoire rapide */
+    var winWrap = el('div', {});
+    winWrap.appendChild(el('div', { style:'font-size:10px;color:var(--green2);font-weight:900;letter-spacing:.09em;text-transform:uppercase;margin-bottom:5px' }, '🏆 Victoire du jour'));
+    var winInp = el('input', { type:'text', placeholder:'Une petite victoire à noter…' });
+    winInp.value = data.win || '';
+    winInp.addEventListener('change', function() { Store.setMorningCheck(today, { win: winInp.value }); });
+    winWrap.appendChild(winInp);
+    card.appendChild(winWrap);
+
+    return card;
+  }
+
+  /* ── Tracker domaine spécifique (dans expand d'un bloc quotidien) ── */
+  function makeDomainTracker(dp, today) {
+    var blockId = 'daily_' + dp.id;
+    var saved = Store.getDomainTracker(blockId, today);
+    var wrap = el('div', { style:'margin-bottom:10px' });
+    wrap.appendChild(el('div', { style:'font-size:10px;color:var(--cyan2);font-weight:900;letter-spacing:.09em;text-transform:uppercase;margin-bottom:8px' }, '📊 Tracker'));
+
+    var fieldEls = {};
+    var grid = el('div', { style:'display:grid;grid-template-columns:1fr 1fr;gap:8px' });
+
+    dp.trackerFields.forEach(function(f) {
+      var wrap2 = el('div', { style: f.type === 'text' || f.type === 'toggle' ? 'grid-column:span 2' : '' });
+      wrap2.appendChild(el('label', { style:'font-size:10px;color:var(--muted);font-weight:800;letter-spacing:.07em;text-transform:uppercase;display:block;margin-bottom:4px' }, f.label));
+
+      var inp;
+      if (f.type === 'select') {
+        inp = el('select', {});
+        (f.options || []).forEach(function(opt) {
+          var o = el('option', { value:opt }, opt);
+          inp.appendChild(o);
+        });
+        inp.value = saved[f.id] || f.options[0];
+      } else if (f.type === 'toggle') {
+        var tog = el('div', { style:'display:flex;align-items:center;gap:10px' });
+        var togBtn = el('button', {
+          type:'button',
+          style:'padding:7px 18px;border-radius:20px;font-size:12px;font-weight:800;cursor:pointer;transition:all .15s;' +
+            (saved[f.id] ? 'background:rgba(16,185,129,.2);border:1px solid rgba(16,185,129,.5);color:var(--green2)' :
+             'background:var(--panel4);border:1px solid var(--border2);color:var(--muted)')
+        }, saved[f.id] ? '✓ Oui' : '○ Non');
+        togBtn.addEventListener('click', function() {
+          var v = !saved[f.id]; saved[f.id] = v;
+          togBtn.textContent = v ? '✓ Oui' : '○ Non';
+          togBtn.style.cssText = 'padding:7px 18px;border-radius:20px;font-size:12px;font-weight:800;cursor:pointer;transition:all .15s;' +
+            (v ? 'background:rgba(16,185,129,.2);border:1px solid rgba(16,185,129,.5);color:var(--green2)' :
+             'background:var(--panel4);border:1px solid var(--border2);color:var(--muted)');
+        });
+        tog.appendChild(togBtn);
+        wrap2.appendChild(tog);
+        fieldEls[f.id] = { getVal: function(){ return saved[f.id] || false; } };
+        grid.appendChild(wrap2);
+        return;
+      } else {
+        inp = el('input', { type: f.type || 'text', placeholder: f.placeholder || '' });
+        /* For persistent fields, load from last session if today empty */
+        inp.value = saved[f.id] || (f.persist ? Store.getLastDomainField(blockId, f.id) : '');
+      }
+
+      if (f.unit) {
+        var inpRow = el('div', { style:'display:flex;align-items:center;gap:6px' });
+        inpRow.appendChild(inp);
+        inpRow.appendChild(el('span', { style:'font-size:11px;color:var(--muted);font-weight:700;white-space:nowrap' }, f.unit));
+        wrap2.appendChild(inpRow);
+      } else {
+        wrap2.appendChild(inp);
+      }
+
+      fieldEls[f.id] = inp;
+      grid.appendChild(wrap2);
+    });
+
+    wrap.appendChild(grid);
+
+    /* Function to collect values */
+    wrap._collect = function() {
+      var out = {};
+      Object.keys(fieldEls).forEach(function(k) {
+        var fe = fieldEls[k];
+        out[k] = fe.getVal ? fe.getVal() : fe.value;
+      });
+      return out;
+    };
+
+    return wrap;
+  }
+
   /* Lance le focus timer sur un domaine donné depuis la routine */
   function launchTimer(domain) {
     Router.navigate('aujourdhui');
@@ -569,6 +749,9 @@
         '<div class="log-field"><label>Énergie (1-5)</label><input type="number" id="rt-fatigue" min="1" max="5" placeholder="–"></div>' +
       '</div>';
     page.appendChild(workCard);
+
+    /* ═══════════════ MORNING CHECK-IN ═══════════════ */
+    page.appendChild(renderMorningCard(today));
 
     setTimeout(function () {
       var ws = qs('#rt-work-start'), we = qs('#rt-work-end'), fa = qs('#rt-fatigue'), sh = qs('#rt-shift');
@@ -684,6 +867,13 @@
       if (spentVal > 0) timerRow.appendChild(el('span', { class:'time-est', style:'color:var(--green2)' }, '✓ ' + spentVal + ' min loggées'));
       expandPanel.appendChild(timerRow);
 
+      /* Domain tracker */
+      var trackerWrap = null;
+      if (dp.trackerFields && dp.trackerFields.length) {
+        trackerWrap = makeDomainTracker(dp, today);
+        expandPanel.appendChild(trackerWrap);
+      }
+
       /* Sous-tâches */
       if (dp.subtasks && dp.subtasks.length) {
         var stDiv = el('div', { class:'daily-subtasks' });
@@ -731,6 +921,15 @@
         var mins = parseInt(tInp.value)||0;
         if (mins > 0) Store.setBlockTimeSpent(timeKey, mins);
         Store.setDailyNote(noteKey, noteTA.value.trim());
+        /* Save domain tracker */
+        if (trackerWrap) {
+          var trackerData = trackerWrap._collect();
+          Store.setDomainTracker('daily_' + dp.id, today, trackerData);
+          /* Chess: propagate ELO */
+          if (dp.id === 'chess' && trackerData.elo_after) {
+            Store.set('chess_elo', parseInt(trackerData.elo_after) || 0);
+          }
+        }
         Store.toggleDailyPractice(dp.id, today); /* marque fait */
         Store.updateStreak(dp.id);
         if (dp.studyMat && mins > 0) {
