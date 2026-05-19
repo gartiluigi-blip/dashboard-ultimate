@@ -2478,3 +2478,61 @@ select option { background: var(--panel3); }
 
 .btn-timer:hover { background: rgba(6,182,212,.2); box-shadow: 0 0 12px rgba(6,182,212,.2); }
 .btn-timer:active { transform: scale(.92); }
+
+/* ── Nutrition ─────────────────── */
+.nutrition-progress { height:6px; background:var(--panel4); border-radius:3px; overflow:hidden; margin:4px 0; }
+.nutrition-progress-fill { height:100%; border-radius:3px; transition:width .3s; }
+.nutrition-water-btns { display:flex; align-items:center; gap:8px; }
+.nutrition-water-btn { width:32px; height:32px; border-radius:50%; border:1px solid var(--border2); background:var(--panel3); color:var(--fg); font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+
+/* ── Coding Arena ─────────────── */
+.coding-platform-badge { padding:2px 8px; border-radius:8px; font-size:10px; font-weight:800; background:rgba(124,58,237,.15); color:var(--violet2); }
+.coding-redo-queue { background:rgba(245,158,11,.08); border:1px solid rgba(245,158,11,.3); border-radius:10px; padding:10px 12px; margin-bottom:10px; }
+
+/* ── Repair/IoT ───────────────── */
+.repair-status-diagnostic { background:rgba(6,182,212,.15); color:var(--cyan2); padding:2px 8px; border-radius:8px; font-size:10px; font-weight:800; }
+.repair-status-in_repair   { background:rgba(245,158,11,.15); color:var(--amber2); padding:2px 8px; border-radius:8px; font-size:10px; font-weight:800; }
+.repair-status-repaired    { background:rgba(16,185,129,.15); color:var(--green2); padding:2px 8px; border-radius:8px; font-size:10px; font-weight:800; }
+.repair-status-irreparable { background:rgba(239,68,68,.15);  color:var(--red2);   padding:2px 8px; border-radius:8px; font-size:10px; font-weight:800; }
+.iot-level-badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:10px; font-weight:800; background:rgba(16,185,129,.2); color:var(--green2); }
+
+/* ── Dutch ────────────────────── */
+.dutch-level-pill { padding:5px 14px; border-radius:20px; font-size:11px; font-weight:800; cursor:pointer; border:1px solid var(--border2); background:var(--panel3); color:var(--muted); }
+.dutch-level-pill.active { background:rgba(6,182,212,.2); border-color:rgba(6,182,212,.5); color:var(--cyan2); }
+
+/* ── Stats radar ──────────────── */
+.radar-row { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+.radar-label { font-size:11px; font-weight:800; color:var(--dim); width:70px; flex-shrink:0; }
+.radar-bar-outer { flex:1; height:8px; background:var(--panel4); border-radius:4px; overflow:hidden; }
+.radar-bar-inner { height:100%; border-radius:4px; transition:width .4s; }
+.radar-score { font-size:10px; color:var(--muted); width:35px; text-align:right; flex-shrink:0; }
+
+/* ── ETF Simulator ────────────── */
+.etf-result-box { background:rgba(16,185,129,.08); border:1px solid rgba(16,185,129,.25); border-radius:10px; padding:12px; margin-top:8px; }
+.etf-result-value { font-size:22px; font-weight:900; color:var(--green2); }
+.etf-result-label { font-size:11px; color:var(--muted); }
+
+/* ── Mode Lite/Full ───────────── */
+.mode-btn { padding:12px 20px; border-radius:10px; font-size:13px; font-weight:900; cursor:pointer; border:2px solid var(--border2); background:var(--panel3); color:var(--dim); flex:1; transition:all .2s; }
+.mode-btn.active { border-color:rgba(124,58,237,.6); background:rgba(124,58,237,.12); color:var(--violet2); }
+
+/* ── Simple Modal ─────────────── */
+.simple-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:1000; display:flex; align-items:center; justify-content:center; padding:16px; }
+.simple-modal { background:var(--panel2); border:1px solid var(--border2); border-radius:var(--r-lg); padding:20px; width:100%; max-width:420px; max-height:90vh; overflow-y:auto; box-shadow:var(--shadow-lg); }
+.simple-modal-title { font-size:15px; font-weight:900; color:var(--text); margin-bottom:16px; }
+.simple-modal-field { margin-bottom:12px; }
+.simple-modal-field label { display:block; font-size:10px; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; margin-bottom:4px; }
+.simple-modal-actions { display:flex; gap:8px; margin-top:16px; }
+
+/* ── Dutch resources ──────────── */
+.dutch-resource-item { display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid var(--border); }
+.dutch-resource-item:last-child { border-bottom:none; }
+
+/* ── Coding exercise card ─────── */
+.coding-ex-card { background:var(--panel2); border:1px solid var(--border); border-radius:var(--r-md); padding:10px 12px; margin-bottom:8px; }
+.coding-ex-card.done { opacity:.6; }
+.coding-project-card { background:var(--panel2); border:1px solid var(--border); border-radius:var(--r-md); padding:10px 12px; margin-bottom:8px; }
+
+/* ── Repair log card ──────────── */
+.repair-log-card { background:var(--panel2); border:1px solid var(--border); border-radius:var(--r-md); padding:10px 12px; margin-bottom:8px; }
+.iot-lab-card { background:var(--panel2); border:1px solid var(--border); border-radius:var(--r-md); padding:10px 12px; margin-bottom:8px; }

@@ -177,6 +177,12 @@
 
     /* Streaks */
     page.appendChild(renderStreaksCard(streaks));
+
+    /* Nutrition — Mode Lite check */
+    var hiddenFeatures = Store.getHiddenFeatures ? Store.getHiddenFeatures() : [];
+    if (hiddenFeatures.indexOf('nutrition') < 0) {
+      page.appendChild(renderNutritionCard(today));
+    }
   }
 
   /* ─── Focus card ─── */
@@ -749,6 +755,54 @@
       saveRow.appendChild(doneBtn);
       expandPanel.appendChild(saveRow);
 
+      /* Dutch Command link for nl block */
+      if (dp.id === 'nl') {
+        var dutchLink = el('div', { style:'margin-top:8px' });
+        var dutchBtn = el('button', { class:'btn btn-secondary btn-sm', type:'button' }, '🇳🇱 → Voir Dutch Command');
+        dutchBtn.addEventListener('click', function () {
+          Router.navigate('etude');
+          /* After nav, activate Dutch Command tab */
+          setTimeout(function () {
+            var page2 = qs('#page-etude');
+            if (!page2) return;
+            var hiddenF = Store.getHiddenFeatures ? Store.getHiddenFeatures() : [];
+            if (hiddenF.indexOf('dutch_command') < 0) {
+              /* Create a temporary Dutch panel if needed */
+              var tmpPanel = qs('#etude-panel-dutch_command');
+              if (!tmpPanel) {
+                /* Add dutch tab dynamically */
+                var innerTabRow2 = qs('.inner-tabs', page2);
+                if (innerTabRow2) {
+                  var dt = el('div', { class:'inner-tab', 'data-etab':'dutch_command' }, '🇳🇱 Dutch');
+                  innerTabRow2.appendChild(dt);
+                  var dp2 = el('div', { class:'inner-panel', id:'etude-panel-dutch_command' });
+                  page2.appendChild(dp2);
+                  renderDutchCommand(dp2);
+                  dt.addEventListener('click', function () {
+                    qsa('.inner-tab', innerTabRow2).forEach(function (x) { x.classList.remove('active'); });
+                    dt.classList.add('active');
+                    qsa('.inner-panel', page2).forEach(function (p) {
+                      p.classList.toggle('active', p.id === 'etude-panel-dutch_command');
+                    });
+                  });
+                  dt.click();
+                }
+              } else {
+                /* Activate existing */
+                qsa('.inner-tab', qs('.inner-tabs', page2)).forEach(function (x) {
+                  x.classList.toggle('active', x.dataset.etab === 'dutch_command');
+                });
+                qsa('.inner-panel', page2).forEach(function (p) {
+                  p.classList.toggle('active', p.id === 'etude-panel-dutch_command');
+                });
+              }
+            }
+          }, 200);
+        });
+        dutchLink.appendChild(dutchBtn);
+        expandPanel.appendChild(dutchLink);
+      }
+
       block.appendChild(expandPanel);
       page.appendChild(block);
 
@@ -1165,6 +1219,22 @@
       logCard.appendChild(item);
     });
     page.appendChild(logCard);
+
+    /* Dutch stats */
+    var dutch = Store.getDutchProgress();
+    var dutchLog = Store.getDutchLog(today);
+    var dutchCard = el('div', { class:'card' });
+    dutchCard.innerHTML =
+      '<div class="card-head"><div class="card-title">🇳🇱 Dutch</div></div>' +
+      '<div class="text-xs" style="line-height:1.9">' +
+        'Niveau : <b>' + (dutch.currentLevel||'A1') + '</b> → <b>' + (dutch.targetLevel||'B2') + '</b><br>' +
+        'Sessions totales : <b>' + (dutch.totalSessions||0) + '</b><br>' +
+        'Aujourd\'hui : <b>' + (dutchLog.minutes||0) + ' min</b> · <b>' + (dutchLog.anki||0) + ' cartes Anki</b>' +
+      '</div>';
+    page.appendChild(dutchCard);
+
+    /* Enhanced stats extras */
+    renderStatsExtras(page);
   }
 
   /* ═══════════════════════════════════════════
@@ -1320,15 +1390,42 @@
     if (!page) return;
     page.innerHTML = '';
 
+    var hiddenFeatures = Store.getHiddenFeatures ? Store.getHiddenFeatures() : [];
+
     var innerTabRow = el('div', { class:'inner-tabs' });
     var panelWrap = el('div', {});
 
+    /* Standard study tabs from D.STUDY_TABS */
+    var allTabs = []; /* {id, label, panel, isStudy} */
+
     D.STUDY_TABS.forEach(function (t, idx) {
-      var tab = el('div', { class:'inner-tab' + (idx === 0 ? ' active' : ''), 'data-itab': t.id }, t.label);
+      allTabs.push({ id: t.id, label: t.label, studyTab: t, isStudy: true });
+    });
+
+    /* Extra tabs: Coding, Repair/IoT & Dutch */
+    if (hiddenFeatures.indexOf('coding') < 0) {
+      allTabs.push({ id:'coding', label:'💻 Coding', isStudy: false });
+    }
+    if (hiddenFeatures.indexOf('repair_iot') < 0) {
+      allTabs.push({ id:'repair_iot', label:'🔧 Réparation/IoT', isStudy: false });
+    }
+    if (hiddenFeatures.indexOf('dutch_command') < 0) {
+      allTabs.push({ id:'dutch_command', label:'🇳🇱 Dutch', isStudy: false });
+    }
+
+    var panels = {};
+
+    allTabs.forEach(function (t, idx) {
+      var isFirst = idx === 0;
+      var tab = el('div', { class:'inner-tab' + (isFirst ? ' active' : ''), 'data-etab': t.id }, t.label);
       innerTabRow.appendChild(tab);
 
-      var panel = el('div', { class:'inner-panel' + (idx === 0 ? ' active' : ''), id:'study-panel-' + t.id });
-      buildStudyPanel(panel, t);
+      var panel = el('div', { class:'inner-panel' + (isFirst ? ' active' : ''), id:'etude-panel-' + t.id });
+      panels[t.id] = panel;
+
+      if (t.isStudy) {
+        buildStudyPanel(panel, t.studyTab);
+      }
       panelWrap.appendChild(panel);
     });
 
@@ -1339,10 +1436,25 @@
       t.addEventListener('click', function () {
         qsa('.inner-tab', innerTabRow).forEach(function (x) { x.classList.remove('active'); });
         t.classList.add('active');
-        var tid = t.dataset.itab;
-        qsa('.inner-panel', panelWrap).forEach(function (p) {
-          p.classList.toggle('active', p.id === 'study-panel-' + tid);
+        var tid = t.dataset.etab;
+
+        Object.keys(panels).forEach(function (k) {
+          panels[k].classList.toggle('active', k === tid);
         });
+
+        /* Lazy-build extra panels */
+        if (tid === 'coding' && panels.coding && !panels.coding._built) {
+          panels.coding._built = true;
+          renderCodingArena(panels.coding);
+        }
+        if (tid === 'repair_iot' && panels.repair_iot && !panels.repair_iot._built) {
+          panels.repair_iot._built = true;
+          renderRepairIoTLab(panels.repair_iot);
+        }
+        if (tid === 'dutch_command' && panels.dutch_command && !panels.dutch_command._built) {
+          panels.dutch_command._built = true;
+          renderDutchCommand(panels.dutch_command);
+        }
       });
     });
   }
@@ -1910,6 +2022,9 @@
       dCard.appendChild(item);
     });
     panel.appendChild(dCard);
+
+    /* Net Worth + ETF Simulator */
+    renderFinanceExtras(panel);
   }
 
   function buildVintedPanel(panel) {
@@ -2099,6 +2214,9 @@
 
     page.appendChild(card);
 
+    /* AI Coach + Mode Lite/Full */
+    renderReglagesExtras(page);
+
     /* Score info */
     var scoreInfoCard = el('div', { class:'card card-l-orange' });
     scoreInfoCard.innerHTML =
@@ -2133,6 +2251,1208 @@
         'Agent : ' + navigator.userAgent.slice(0, 60) + '…' +
       '</div>';
     page.appendChild(dbgCard);
+  }
+
+  /* ═══════════════════════════════════════════
+     SIMPLE MODAL HELPER
+  ═══════════════════════════════════════════ */
+  var SimpleModal = (function () {
+    function show(opts) {
+      /* opts: { title, fields:[{id,label,type,options,placeholder,value}], onSave(data), saveLabel } */
+      var overlay = el('div', { class:'simple-modal-overlay' });
+      var modal   = el('div', { class:'simple-modal' });
+
+      modal.appendChild(el('div', { class:'simple-modal-title' }, opts.title || ''));
+
+      var inputs = {};
+      (opts.fields || []).forEach(function (f) {
+        var wrap = el('div', { class:'simple-modal-field' });
+        wrap.appendChild(el('label', {}, f.label || f.id));
+        var inp;
+        if (f.type === 'select') {
+          inp = el('select', {});
+          (f.options || []).forEach(function (o) {
+            var val = typeof o === 'object' ? o.value : o;
+            var lbl = typeof o === 'object' ? o.label : o;
+            inp.appendChild(el('option', { value:val }, lbl));
+          });
+          if (f.value !== undefined) inp.value = f.value;
+        } else if (f.type === 'textarea') {
+          inp = el('textarea', { placeholder: f.placeholder || '', style:'height:70px' });
+          inp.value = f.value || '';
+        } else {
+          inp = el('input', { type: f.type || 'text', placeholder: f.placeholder || '' });
+          inp.value = f.value || '';
+        }
+        inputs[f.id] = inp;
+        wrap.appendChild(inp);
+        modal.appendChild(wrap);
+      });
+
+      var actions = el('div', { class:'simple-modal-actions' });
+      var saveBtn = el('button', { class:'btn btn-primary', type:'button' }, opts.saveLabel || '💾 Sauvegarder');
+      var cancelBtn = el('button', { class:'btn btn-secondary', type:'button' }, 'Annuler');
+
+      saveBtn.addEventListener('click', function () {
+        var data = {};
+        (opts.fields || []).forEach(function (f) {
+          data[f.id] = inputs[f.id] ? inputs[f.id].value : '';
+        });
+        if (opts.onSave) opts.onSave(data);
+        document.body.removeChild(overlay);
+      });
+      cancelBtn.addEventListener('click', function () { document.body.removeChild(overlay); });
+
+      actions.appendChild(saveBtn);
+      actions.appendChild(cancelBtn);
+      modal.appendChild(actions);
+
+      overlay.appendChild(modal);
+      overlay.addEventListener('click', function (e) { if (e.target === overlay) document.body.removeChild(overlay); });
+      document.body.appendChild(overlay);
+    }
+
+    function confirm(msg, onConfirm) {
+      var overlay = el('div', { class:'simple-modal-overlay' });
+      var modal   = el('div', { class:'simple-modal' });
+      modal.appendChild(el('div', { class:'simple-modal-title' }, msg));
+      var actions = el('div', { class:'simple-modal-actions' });
+      var okBtn  = el('button', { class:'btn btn-primary', type:'button' }, 'Confirmer');
+      var noBtn  = el('button', { class:'btn btn-secondary', type:'button' }, 'Annuler');
+      okBtn.addEventListener('click', function () { document.body.removeChild(overlay); if (onConfirm) onConfirm(); });
+      noBtn.addEventListener('click', function () { document.body.removeChild(overlay); });
+      actions.appendChild(okBtn); actions.appendChild(noBtn);
+      modal.appendChild(actions);
+      overlay.appendChild(modal);
+      document.body.appendChild(overlay);
+    }
+
+    return { show: show, confirm: confirm };
+  })();
+
+  /* ═══════════════════════════════════════════
+     1. NUTRITION CARD
+  ═══════════════════════════════════════════ */
+  function renderNutritionCard(today) {
+    var card = el('div', { class:'card card-l-orange' });
+    var goals = Store.getNutritionGoals();
+    var log = Store.getNutritionLog(today);
+
+    /* Header */
+    var head = el('div', { class:'card-head' });
+    head.innerHTML = '<div class="card-title"><span class="card-title-icon">🥗</span> Nutrition</div>';
+    var subEl = el('div', { class:'text-xs text-muted', style:'margin-top:2px' }, 'Suivi performance — pas de régime');
+    card.appendChild(head);
+    card.appendChild(subEl);
+
+    /* Goals row */
+    var goalsDiv = el('div', { style:'display:flex;gap:12px;flex-wrap:wrap;margin:10px 0;align-items:center' });
+    goalsDiv.appendChild(el('span', { style:'font-size:10px;color:var(--muted);font-weight:800' }, 'OBJECTIFS :'));
+
+    var protGoalInp = el('input', { type:'number', style:'width:55px;text-align:center', value: goals.proteinG || 150 });
+    var protGoalWrap = el('span', { style:'display:flex;align-items:center;gap:4px;font-size:11px;color:var(--dim)' });
+    protGoalWrap.appendChild(protGoalInp);
+    protGoalWrap.appendChild(document.createTextNode('g protéines/j'));
+    goalsDiv.appendChild(protGoalWrap);
+
+    var waterGoalInp = el('input', { type:'number', step:'0.1', style:'width:50px;text-align:center', value: goals.waterL || 2.5 });
+    var waterGoalWrap = el('span', { style:'display:flex;align-items:center;gap:4px;font-size:11px;color:var(--dim)' });
+    waterGoalWrap.appendChild(waterGoalInp);
+    waterGoalWrap.appendChild(document.createTextNode('L eau/j'));
+    goalsDiv.appendChild(waterGoalWrap);
+
+    [protGoalInp, waterGoalInp].forEach(function (inp) {
+      inp.addEventListener('change', function () {
+        Store.setNutritionGoals({
+          proteinG: parseFloat(protGoalInp.value) || 150,
+          waterL: parseFloat(waterGoalInp.value) || 2.5,
+          cleanMealsPerDay: goals.cleanMealsPerDay || 3
+        });
+      });
+    });
+    card.appendChild(goalsDiv);
+
+    /* Daily inputs */
+    var grid = el('div', { class:'log-grid', style:'margin-bottom:10px' });
+
+    /* Protein */
+    var protWrap = el('div', { class:'log-field' });
+    protWrap.appendChild(el('label', {}, 'Protéines (g)'));
+    var protInp = el('input', { type:'number', min:'0', max:'500', placeholder:'0', value: log.protein || '' });
+    protWrap.appendChild(protInp);
+    grid.appendChild(protWrap);
+
+    /* Bodyweight */
+    var bwWrap = el('div', { class:'log-field' });
+    bwWrap.appendChild(el('label', {}, 'Poids (kg, optionnel)'));
+    var bwInp = el('input', { type:'number', step:'0.1', min:'30', max:'200', placeholder:'–', value: log.bodyweight || '' });
+    bwWrap.appendChild(bwInp);
+    grid.appendChild(bwWrap);
+
+    /* Clean meals */
+    var mealsWrap = el('div', { class:'log-field' });
+    mealsWrap.appendChild(el('label', {}, 'Repas propres'));
+    var mealsSel = el('select', {});
+    [0,1,2,3,4].forEach(function (n) { mealsSel.appendChild(el('option', { value:n }, n + (n === 4 ? '+' : ''))); });
+    mealsSel.value = log.cleanMeals || 0;
+    mealsWrap.appendChild(mealsSel);
+    grid.appendChild(mealsWrap);
+
+    /* Creatine toggle */
+    var creatWrap = el('div', { class:'log-field' });
+    creatWrap.appendChild(el('label', {}, 'Créatine'));
+    var creatBtn = el('button', { type:'button',
+      class:'btn btn-sm ' + (log.creatine ? 'btn-primary' : 'btn-secondary'),
+      style:'width:100%'
+    }, log.creatine ? '✓ Prise' : '— Non prise');
+    creatBtn.addEventListener('click', function () {
+      log.creatine = !log.creatine;
+      creatBtn.className = 'btn btn-sm ' + (log.creatine ? 'btn-primary' : 'btn-secondary');
+      creatBtn.textContent = log.creatine ? '✓ Prise' : '— Non prise';
+      saveNutrition();
+    });
+    creatWrap.appendChild(creatBtn);
+    grid.appendChild(creatWrap);
+
+    card.appendChild(grid);
+
+    /* Water with +/- buttons */
+    var waterRow = el('div', { class:'nutrition-water-btns', style:'margin-bottom:10px' });
+    waterRow.appendChild(el('span', { style:'font-size:11px;color:var(--muted);font-weight:800;margin-right:4px' }, 'Eau (L) :'));
+    var waterMinus = el('button', { type:'button', class:'nutrition-water-btn' }, '−');
+    var waterVal = el('span', { style:'font-size:18px;font-weight:900;color:var(--cyan2);min-width:40px;text-align:center' },
+      (parseFloat(log.water) || 0).toFixed(2));
+    var waterPlus = el('button', { type:'button', class:'nutrition-water-btn' }, '+');
+    var waterInp2 = el('input', { type:'number', step:'0.01', style:'width:60px;text-align:center', value: parseFloat(log.water || 0).toFixed(2) });
+
+    waterMinus.addEventListener('click', function () {
+      var v = Math.max(0, (parseFloat(log.water) || 0) - 0.25);
+      log.water = parseFloat(v.toFixed(2));
+      waterVal.textContent = log.water.toFixed(2);
+      waterInp2.value = log.water.toFixed(2);
+      saveNutrition(); updateBars();
+    });
+    waterPlus.addEventListener('click', function () {
+      var v = (parseFloat(log.water) || 0) + 0.25;
+      log.water = parseFloat(v.toFixed(2));
+      waterVal.textContent = log.water.toFixed(2);
+      waterInp2.value = log.water.toFixed(2);
+      saveNutrition(); updateBars();
+    });
+    waterInp2.addEventListener('change', function () {
+      log.water = parseFloat(waterInp2.value) || 0;
+      waterVal.textContent = log.water.toFixed(2);
+      saveNutrition(); updateBars();
+    });
+    waterRow.appendChild(waterMinus);
+    waterRow.appendChild(waterVal);
+    waterRow.appendChild(waterPlus);
+    waterRow.appendChild(waterInp2);
+    card.appendChild(waterRow);
+
+    /* Progress bars */
+    var protGoal = parseFloat(goals.proteinG) || 150;
+    var waterGoal = parseFloat(goals.waterL) || 2.5;
+
+    var protPct = Math.min(100, ((parseFloat(log.protein)||0) / protGoal * 100)).toFixed(0);
+    var waterPct = Math.min(100, ((parseFloat(log.water)||0) / waterGoal * 100)).toFixed(0);
+
+    var barsDiv = el('div', { style:'margin-bottom:10px' });
+
+    var protBarLabel = el('div', { style:'display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:2px' });
+    protBarLabel.innerHTML = '<span>Protéines</span><span>' + (log.protein||0) + '/' + protGoal + 'g (' + protPct + '%)</span>';
+    var protBar = el('div', { class:'nutrition-progress' });
+    var protFill = el('div', { class:'nutrition-progress-fill', style:'width:' + protPct + '%;background:var(--violet2)' });
+    protBar.appendChild(protFill);
+
+    var waterBarLabel = el('div', { style:'display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:2px;margin-top:8px' });
+    waterBarLabel.innerHTML = '<span>Eau</span><span>' + (parseFloat(log.water)||0).toFixed(2) + '/' + waterGoal + 'L (' + waterPct + '%)</span>';
+    var waterBar = el('div', { class:'nutrition-progress' });
+    var waterFill = el('div', { class:'nutrition-progress-fill', style:'width:' + waterPct + '%;background:var(--cyan2)' });
+    waterBar.appendChild(waterFill);
+
+    barsDiv.appendChild(protBarLabel);
+    barsDiv.appendChild(protBar);
+    barsDiv.appendChild(waterBarLabel);
+    barsDiv.appendChild(waterBar);
+    card.appendChild(barsDiv);
+
+    /* 7-day protein avg */
+    var protSum = 0, protDays = 0;
+    for (var i2 = 0; i2 < 7; i2++) {
+      var dd2 = new Date(); dd2.setDate(dd2.getDate() - i2);
+      var dk3 = dd2.getFullYear() + '-' + String(dd2.getMonth()+1).padStart(2,'0') + '-' + String(dd2.getDate()).padStart(2,'0');
+      var dLog = Store.getNutritionLog(dk3);
+      if (dLog.protein > 0) { protSum += parseFloat(dLog.protein)||0; protDays++; }
+    }
+    var avgProt = protDays > 0 ? (protSum / protDays).toFixed(0) : 0;
+    card.appendChild(el('div', { style:'font-size:10px;color:var(--muted);margin-bottom:10px' },
+      '📊 Moy. 7j protéines : ' + avgProt + 'g/j'));
+
+    /* Notes */
+    var notesWrap = el('div', { class:'log-field', style:'margin-bottom:10px' });
+    notesWrap.appendChild(el('label', {}, 'Notes'));
+    var notesTA = el('textarea', { placeholder:'Repas, suppléments, ressentis...', style:'height:60px' });
+    notesTA.value = log.notes || '';
+    notesWrap.appendChild(notesTA);
+    card.appendChild(notesWrap);
+
+    function saveNutrition() {
+      log.protein = parseFloat(protInp.value) || 0;
+      log.bodyweight = parseFloat(bwInp.value) || null;
+      log.cleanMeals = parseInt(mealsSel.value) || 0;
+      log.notes = notesTA.value;
+      Store.setNutritionLog(today, log);
+    }
+
+    function updateBars() {
+      var pg = parseFloat(Store.getNutritionGoals().proteinG) || 150;
+      var wg = parseFloat(Store.getNutritionGoals().waterL) || 2.5;
+      var pp = Math.min(100, ((log.protein||0) / pg * 100));
+      var wp = Math.min(100, ((log.water||0) / wg * 100));
+      protFill.style.width = pp + '%';
+      waterFill.style.width = wp + '%';
+    }
+
+    [protInp, bwInp, mealsSel, notesTA].forEach(function (inp) {
+      inp.addEventListener('change', function () { saveNutrition(); updateBars(); });
+    });
+
+    return card;
+  }
+
+  /* ═══════════════════════════════════════════
+     2. CODING ARENA
+  ═══════════════════════════════════════════ */
+  function renderCodingArena(page) {
+    page.innerHTML = '';
+    var arena = Store.getCodingArena();
+    var exercises = arena.exercises || [];
+    var projects  = arena.projects  || [];
+
+    /* Filter state */
+    var filterPlatform = 'All';
+    var filterStatus   = 'All';
+    var filterDiff     = 'All';
+
+    /* Stats bar */
+    var doneCount2 = exercises.filter(function (e) { return e.status === 'done'; }).length;
+    var redoCount  = exercises.filter(function (e) { return e.status === 'redo'; }).length;
+
+    var statsCard = el('div', { class:'card card-glow-o card-spotlight' });
+    statsCard.innerHTML =
+      '<div class="card-head"><div class="card-title">💻 Coding Arena</div></div>' +
+      '<div class="stat-row">' +
+        '<div class="stat-box stat-box-o"><div class="stat-value v-orange">' + exercises.length + '</div><div class="stat-label">Exos</div></div>' +
+        '<div class="stat-box stat-box-gr"><div class="stat-value v-green">' + doneCount2 + '</div><div class="stat-label">Réussis</div></div>' +
+        '<div class="stat-box stat-box-g"><div class="stat-value v-gold">' + redoCount + '</div><div class="stat-label">À refaire</div></div>' +
+        '<div class="stat-box stat-box-o"><div class="stat-value v-orange">' + projects.length + '</div><div class="stat-label">Projets</div></div>' +
+      '</div>';
+    page.appendChild(statsCard);
+
+    /* Redo queue */
+    var redoExs = exercises.filter(function (e) { return e.status === 'redo'; });
+    if (redoExs.length) {
+      var redoDiv = el('div', { class:'coding-redo-queue' });
+      redoDiv.innerHTML = '<div style="font-size:10px;font-weight:800;color:var(--amber2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">🔁 File de redo (' + redoExs.length + ')</div>';
+      redoExs.forEach(function (e) {
+        var item = el('div', { style:'font-size:11px;color:var(--dim);margin-bottom:2px' });
+        item.innerHTML = '• ' + e.title + (e.redoDate ? ' <span style="color:var(--amber2)">→ ' + e.redoDate + '</span>' : '');
+        redoDiv.appendChild(item);
+      });
+      page.appendChild(redoDiv);
+    }
+
+    /* Filters */
+    var platforms = ['All','CodingBat','Exercism','LeetCode','Codewars','SQLBolt','freeCodeCamp','MDN','Autre'];
+    var statuses  = ['All','todo','in_progress','done','redo'];
+    var diffs     = ['All','easy','medium','hard'];
+
+    var filterCard = el('div', { class:'card', style:'margin-bottom:10px' });
+    var filterHead = el('div', { style:'font-size:10px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px' }, 'Filtres');
+    filterCard.appendChild(filterHead);
+
+    function makeFilterChips(list, current, onSet) {
+      var row = el('div', { style:'display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px' });
+      list.forEach(function (v) {
+        var chip = el('button', { type:'button',
+          style:'padding:3px 8px;border-radius:8px;font-size:10px;font-weight:800;cursor:pointer;' +
+            'border:1px solid ' + (current() === v ? 'rgba(124,58,237,.6)' : 'var(--border2)') + ';' +
+            'background:' + (current() === v ? 'rgba(124,58,237,.15)' : 'var(--panel3)') + ';' +
+            'color:' + (current() === v ? 'var(--violet2)' : 'var(--dim)')
+        }, v);
+        chip.addEventListener('click', function () { onSet(v); rebuildList(); rebuildFilters(); });
+        row.appendChild(chip);
+      });
+      return row;
+    }
+
+    var filtersWrap = el('div', {});
+    filterCard.appendChild(filtersWrap);
+    page.appendChild(filterCard);
+
+    /* Exercises list container */
+    var listContainer = el('div', {});
+    page.appendChild(listContainer);
+
+    function statusCycle(cur) {
+      var order = ['todo','in_progress','done','redo'];
+      var idx2 = order.indexOf(cur);
+      return order[(idx2 + 1) % order.length];
+    }
+
+    function diffColor(d) {
+      return d === 'easy' ? 'var(--green2)' : d === 'medium' ? 'var(--amber2)' : d === 'hard' ? 'var(--red2)' : 'var(--dim)';
+    }
+
+    function statusColor(s) {
+      return s === 'done' ? 'var(--green2)' : s === 'in_progress' ? 'var(--cyan2)' : s === 'redo' ? 'var(--amber2)' : 'var(--dim)';
+    }
+
+    function rebuildFilters() {
+      filtersWrap.innerHTML = '';
+      filtersWrap.appendChild(makeFilterChips(platforms, function(){return filterPlatform;}, function(v){filterPlatform=v;}));
+      filtersWrap.appendChild(makeFilterChips(statuses,  function(){return filterStatus;},   function(v){filterStatus=v;}));
+      filtersWrap.appendChild(makeFilterChips(diffs,     function(){return filterDiff;},     function(v){filterDiff=v;}));
+    }
+
+    function rebuildList() {
+      listContainer.innerHTML = '';
+      var filtered = exercises.filter(function (e) {
+        return (filterPlatform === 'All' || e.platform === filterPlatform) &&
+               (filterStatus   === 'All' || e.status   === filterStatus) &&
+               (filterDiff     === 'All' || e.difficulty === filterDiff);
+      });
+
+      if (!filtered.length) {
+        listContainer.appendChild(el('div', { class:'empty-state' },
+          el('div', { class:'empty-state-text text-muted' }, 'Aucun exercice correspondant')));
+      }
+
+      filtered.forEach(function (ex) {
+        var exCard = el('div', { class:'coding-ex-card' + (ex.status === 'done' ? ' done' : '') });
+        var topRow = el('div', { style:'display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px' });
+
+        var titleEl = el('span', { style:'font-weight:800;font-size:13px;flex:1;color:var(--text)' }, ex.title);
+        topRow.appendChild(titleEl);
+
+        if (ex.platform) topRow.appendChild(el('span', { class:'coding-platform-badge' }, ex.platform));
+
+        if (ex.difficulty) {
+          topRow.appendChild(el('span', { style:'font-size:10px;font-weight:800;padding:2px 7px;border-radius:8px;background:rgba(255,255,255,.06);color:' + diffColor(ex.difficulty) }, ex.difficulty));
+        }
+
+        /* Status badge — tappable cycle */
+        var stBadge = el('span', { style:'font-size:10px;font-weight:800;padding:2px 8px;border-radius:8px;cursor:pointer;background:rgba(255,255,255,.05);color:' + statusColor(ex.status) }, ex.status || 'todo');
+        stBadge.addEventListener('click', function () {
+          var ns = statusCycle(ex.status || 'todo');
+          Store.updateCodingExercise(ex.id, { status: ns });
+          ex.status = ns;
+          stBadge.textContent = ns;
+          stBadge.style.color = statusColor(ns);
+          exCard.classList.toggle('done', ns === 'done');
+        });
+        topRow.appendChild(stBadge);
+        exCard.appendChild(topRow);
+
+        if (ex.language) exCard.appendChild(el('div', { style:'font-size:10px;color:var(--muted)' }, '🔤 ' + ex.language));
+        if (ex.errorType) exCard.appendChild(el('div', { style:'font-size:10px;color:var(--dim);margin-top:2px' }, '⚠️ ' + ex.errorType));
+        if (ex.solutionNotes) exCard.appendChild(el('div', { style:'font-size:10px;color:var(--muted);margin-top:2px' }, '📝 ' + ex.solutionNotes));
+        if (ex.status === 'redo' && ex.redoDate) {
+          exCard.appendChild(el('div', { style:'font-size:10px;color:var(--amber2);margin-top:2px' }, '🔁 Refaire le ' + ex.redoDate));
+        }
+
+        listContainer.appendChild(exCard);
+      });
+
+      /* Add exercise button */
+      var addExBtn = el('button', { class:'btn btn-primary', type:'button', style:'width:100%;margin-top:8px' }, '➕ Ajouter exercice');
+      addExBtn.addEventListener('click', function () {
+        SimpleModal.show({
+          title: '➕ Nouvel exercice',
+          fields: [
+            { id:'title',      label:'Titre',      type:'text',   placeholder:'Ex: Two Sum' },
+            { id:'platform',   label:'Plateforme', type:'select', options:['CodingBat','Exercism','LeetCode','Codewars','SQLBolt','freeCodeCamp','MDN','Autre'] },
+            { id:'difficulty', label:'Difficulté', type:'select', options:['easy','medium','hard'] },
+            { id:'language',   label:'Langage',    type:'text',   placeholder:'JavaScript, Python...' },
+            { id:'status',     label:'Statut',     type:'select', options:['todo','in_progress','done','redo'] },
+            { id:'errorType',  label:'Type d\'erreur', type:'text', placeholder:'Logique, syntaxe...' },
+            { id:'solutionNotes', label:'Notes solution', type:'textarea', placeholder:'...' }
+          ],
+          onSave: function (data) {
+            if (!data.title) { toast('Titre requis'); return; }
+            Store.addCodingExercise(data);
+            toast('Exercice ajouté ✓');
+            renderCodingArena(page);
+          }
+        });
+      });
+      listContainer.appendChild(addExBtn);
+    }
+
+    rebuildFilters();
+    rebuildList();
+
+    /* Projects section */
+    var projSection = el('div', { style:'margin-top:16px' });
+    projSection.appendChild(el('div', { class:'section-title' }, '🗂 Projets Portfolio'));
+
+    projects.forEach(function (proj) {
+      var pCard = el('div', { class:'coding-project-card' });
+      var pTop = el('div', { style:'display:flex;align-items:center;gap:8px;margin-bottom:4px' });
+      pTop.appendChild(el('span', { style:'font-weight:800;font-size:13px;flex:1' }, proj.name));
+      var pStatus = el('span', { style:'font-size:10px;font-weight:800;color:' + (proj.status==='done'?'var(--green2)':proj.status==='in_progress'?'var(--cyan2)':'var(--dim)') }, proj.status || 'planned');
+      pTop.appendChild(pStatus);
+      pCard.appendChild(pTop);
+      if (proj.stack) pCard.appendChild(el('div', { style:'font-size:10px;color:var(--muted)' }, '🔧 ' + proj.stack));
+      if (proj.description) pCard.appendChild(el('div', { style:'font-size:11px;color:var(--dim);margin-top:2px' }, proj.description));
+      if (proj.githubUrl) {
+        var gh = el('a', { href: proj.githubUrl, target:'_blank', style:'font-size:10px;color:var(--cyan2)' }, '🔗 GitHub');
+        pCard.appendChild(gh);
+      }
+      projSection.appendChild(pCard);
+    });
+
+    var addProjBtn = el('button', { class:'btn btn-secondary', type:'button', style:'width:100%;margin-top:8px' }, '➕ Nouveau projet');
+    addProjBtn.addEventListener('click', function () {
+      SimpleModal.show({
+        title: '➕ Nouveau projet',
+        fields: [
+          { id:'name',      label:'Nom',         type:'text',   placeholder:'Mon projet' },
+          { id:'stack',     label:'Stack',        type:'text',   placeholder:'HTML/CSS/JS, React...' },
+          { id:'description', label:'Description', type:'textarea', placeholder:'Description...' },
+          { id:'githubUrl', label:'GitHub URL',   type:'text',   placeholder:'https://github.com/...' },
+          { id:'status',    label:'Statut',       type:'select', options:['planned','in_progress','done','paused'] }
+        ],
+        onSave: function (data) {
+          if (!data.name) { toast('Nom requis'); return; }
+          Store.addCodingProject(data);
+          toast('Projet ajouté ✓');
+          renderCodingArena(page);
+        }
+      });
+    });
+    projSection.appendChild(addProjBtn);
+    page.appendChild(projSection);
+  }
+
+  /* ═══════════════════════════════════════════
+     3. REPAIR & IoT LAB
+  ═══════════════════════════════════════════ */
+  var IOT_LEVEL_LABELS = ['ESP32 basics','Capteurs + MQTT','HTTP API + dashboard','Automatisation','Sécurité réseau','Projet complet'];
+
+  function renderRepairIoTLab(page) {
+    page.innerHTML = '';
+
+    /* ── Réparation section ── */
+    page.appendChild(el('div', { class:'section-title' }, '🔧 Atelier Réparation'));
+
+    var logs = Store.getRepairLogs();
+    var repaired = logs.filter(function (l) { return l.status === 'repaired'; }).length;
+    var inRepair = logs.filter(function (l) { return l.status === 'in_repair'; }).length;
+    var costTotal = logs.reduce(function (a, l) { return a + (parseFloat(l.cost)||0); }, 0);
+
+    var repStats = el('div', { class:'card card-glow-o card-spotlight' });
+    repStats.innerHTML =
+      '<div class="card-head"><div class="card-title">🔧 Stats Réparation</div></div>' +
+      '<div class="stat-row">' +
+        '<div class="stat-box stat-box-o"><div class="stat-value v-orange">' + logs.length + '</div><div class="stat-label">Total</div></div>' +
+        '<div class="stat-box stat-box-gr"><div class="stat-value v-green">' + repaired + '</div><div class="stat-label">Réparés</div></div>' +
+        '<div class="stat-box stat-box-g"><div class="stat-value v-gold">' + inRepair + '</div><div class="stat-label">En cours</div></div>' +
+        '<div class="stat-box stat-box-o"><div class="stat-value v-orange">' + costTotal.toFixed(0) + '€</div><div class="stat-label">Coût total</div></div>' +
+      '</div>';
+    page.appendChild(repStats);
+
+    /* Status filter */
+    var repFilterState = { status: 'All' };
+    var repStatuses = ['All','diagnostic','in_repair','repaired','irreparable','paused'];
+
+    var repFilterRow = el('div', { style:'display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px' });
+    repStatuses.forEach(function (s) {
+      var chip = el('button', { type:'button',
+        style:'padding:3px 8px;border-radius:8px;font-size:10px;font-weight:800;cursor:pointer;' +
+          'border:1px solid ' + (repFilterState.status === s ? 'rgba(124,58,237,.6)' : 'var(--border2)') + ';' +
+          'background:' + (repFilterState.status === s ? 'rgba(124,58,237,.15)' : 'var(--panel3)') + ';' +
+          'color:' + (repFilterState.status === s ? 'var(--violet2)' : 'var(--dim)')
+      }, s);
+      chip.addEventListener('click', function () {
+        repFilterState.status = s;
+        renderRepairIoTLab(page);
+      });
+      repFilterRow.appendChild(chip);
+    });
+    page.appendChild(repFilterRow);
+
+    /* Repair log cards */
+    var filteredLogs = repFilterState.status === 'All' ? logs : logs.filter(function (l) { return l.status === repFilterState.status; });
+
+    if (!filteredLogs.length) {
+      page.appendChild(el('div', { class:'empty-state' },
+        el('div', { class:'empty-state-text text-muted' }, 'Aucun diagnostic')));
+    }
+
+    var repStatusCycle = { diagnostic:'in_repair', in_repair:'repaired', repaired:'paused', paused:'irreparable', irreparable:'diagnostic' };
+
+    filteredLogs.forEach(function (log) {
+      var card = el('div', { class:'repair-log-card' });
+      var topRow = el('div', { style:'display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px' });
+
+      var deviceEl = el('span', { style:'font-weight:800;font-size:13px;flex:1' }, log.device + (log.brand ? ' (' + log.brand + ')' : ''));
+      topRow.appendChild(deviceEl);
+
+      var stClass = 'repair-status-' + (log.status || 'diagnostic');
+      var stBadge = el('span', { class:stClass, style:'cursor:pointer' }, log.status || 'diagnostic');
+      stBadge.addEventListener('click', function () {
+        var ns = repStatusCycle[log.status] || 'diagnostic';
+        Store.updateRepairLog(log.id, { status: ns });
+        log.status = ns;
+        stBadge.className = 'repair-status-' + ns;
+        stBadge.textContent = ns;
+      });
+      topRow.appendChild(stBadge);
+
+      if (log.cost) topRow.appendChild(el('span', { style:'font-size:10px;color:var(--amber2)' }, log.cost + '€'));
+      card.appendChild(topRow);
+
+      if (log.symptoms) card.appendChild(el('div', { style:'font-size:11px;color:var(--dim);margin-bottom:2px' }, '🔍 ' + log.symptoms));
+      if (log.fault) card.appendChild(el('div', { style:'font-size:10px;color:var(--muted)' }, '⚡ Panne : ' + log.fault));
+      if (log.partsNeeded) card.appendChild(el('div', { style:'font-size:10px;color:var(--muted)' }, '🛒 Pièces : ' + log.partsNeeded));
+
+      var lastUpd = el('div', { style:'font-size:9px;color:var(--dim);margin-top:4px' },
+        'Mis à jour : ' + (log.updatedAt ? log.updatedAt.slice(0,10) : '—'));
+      card.appendChild(lastUpd);
+
+      var delBtn = el('button', { class:'btn-icon', type:'button', style:'float:right;margin-top:-18px' }, '×');
+      delBtn.addEventListener('click', function () {
+        SimpleModal.confirm('Supprimer "' + log.device + '" ?', function () {
+          Store.deleteRepairLog(log.id);
+          toast('Supprimé ✓');
+          renderRepairIoTLab(page);
+        });
+      });
+      card.appendChild(delBtn);
+
+      page.appendChild(card);
+    });
+
+    /* Add repair btn */
+    var addRepBtn = el('button', { class:'btn btn-primary', type:'button', style:'width:100%;margin-top:8px;margin-bottom:20px' }, '➕ Nouveau diagnostic');
+    addRepBtn.addEventListener('click', function () {
+      SimpleModal.show({
+        title: '🔧 Nouveau diagnostic',
+        fields: [
+          { id:'device',           label:'Appareil',         type:'text',     placeholder:'PS4, Ampli, Lampe...' },
+          { id:'brand',            label:'Marque',           type:'text',     placeholder:'Sony, Philips...' },
+          { id:'symptoms',         label:'Symptômes',        type:'textarea', placeholder:'Pas de son, surchauffe...' },
+          { id:'fault',            label:'Panne identifiée', type:'text',     placeholder:'Court-circuit, condo claqué...' },
+          { id:'measurements',     label:'Mesures',          type:'text',     placeholder:'12V, 0.5A...' },
+          { id:'componentsTested', label:'Composants testés',type:'text',     placeholder:'Fusible, transistor...' },
+          { id:'partsNeeded',      label:'Pièces nécessaires',type:'text',    placeholder:'Condensateur 10µF...' },
+          { id:'cost',             label:'Coût estimé (€)',  type:'number',   placeholder:'0' },
+          { id:'status',           label:'Statut',           type:'select',   options:['diagnostic','in_repair','repaired','irreparable','paused'] },
+          { id:'evidenceUrl',      label:'Preuve (URL)',      type:'text',     placeholder:'https://...' },
+          { id:'notes',            label:'Notes',            type:'textarea', placeholder:'Observations...' }
+        ],
+        onSave: function (data) {
+          if (!data.device) { toast('Appareil requis'); return; }
+          Store.addRepairLog(data);
+          toast('Diagnostic ajouté ✓');
+          renderRepairIoTLab(page);
+        }
+      });
+    });
+    page.appendChild(addRepBtn);
+
+    /* ── IoT Labs section ── */
+    page.appendChild(el('div', { class:'section-title' }, '⚡ Labs IoT'));
+
+    var iotData = Store.getIoTLabs();
+    var iotLabs = iotData.labs || [];
+    var curLevel = iotData.currentLevel || 0;
+
+    /* Level indicator */
+    var levelCard = el('div', { class:'card card-glow-o', style:'margin-bottom:10px' });
+    var levelRow = el('div', { style:'display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px' });
+    IOT_LEVEL_LABELS.forEach(function (lbl, li) {
+      var pill = el('div', {
+        class: 'iot-level-badge',
+        style: li <= curLevel ? '' : 'opacity:.4',
+        title: lbl
+      }, 'L' + li);
+      levelRow.appendChild(pill);
+    });
+    levelCard.appendChild(el('div', { style:'font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px' }, 'Niveau IoT'));
+    levelCard.appendChild(levelRow);
+    levelCard.appendChild(el('div', { style:'font-size:12px;color:var(--cyan2);font-weight:700' }, 'L' + curLevel + ' : ' + (IOT_LEVEL_LABELS[curLevel] || '')));
+    page.appendChild(levelCard);
+
+    /* IoT labs */
+    iotLabs.forEach(function (lab) {
+      var lCard = el('div', { class:'iot-lab-card' });
+      var lTop = el('div', { style:'display:flex;align-items:center;gap:8px;margin-bottom:4px' });
+      lTop.appendChild(el('span', { style:'font-weight:800;flex:1' }, lab.title));
+      lTop.appendChild(el('span', { class:'iot-level-badge' }, 'L' + (lab.level || 0)));
+      lTop.appendChild(el('span', { style:'font-size:10px;font-weight:800;color:' + (lab.status==='done'?'var(--green2)':lab.status==='in_progress'?'var(--cyan2)':'var(--dim)') }, lab.status || 'planned'));
+      lCard.appendChild(lTop);
+      if (lab.description) lCard.appendChild(el('div', { style:'font-size:11px;color:var(--dim);margin-top:2px' }, lab.description));
+      if (lab.components) lCard.appendChild(el('div', { style:'font-size:10px;color:var(--muted)' }, '🔌 ' + lab.components));
+      if (lab.githubUrl) lCard.appendChild(el('a', { href:lab.githubUrl, target:'_blank', style:'font-size:10px;color:var(--cyan2)' }, '🔗 GitHub'));
+      page.appendChild(lCard);
+    });
+
+    var addLabBtn = el('button', { class:'btn btn-secondary', type:'button', style:'width:100%;margin-top:8px' }, '➕ Nouveau lab IoT');
+    addLabBtn.addEventListener('click', function () {
+      SimpleModal.show({
+        title: '⚡ Nouveau lab IoT',
+        fields: [
+          { id:'title',       label:'Titre',       type:'text',   placeholder:'Mon lab ESP32' },
+          { id:'level',       label:'Niveau (0-5)', type:'select', options:['0','1','2','3','4','5'] },
+          { id:'description', label:'Description',  type:'textarea', placeholder:'...' },
+          { id:'components',  label:'Composants',   type:'text',   placeholder:'ESP32, capteur DHT22...' },
+          { id:'githubUrl',   label:'GitHub URL',   type:'text',   placeholder:'https://github.com/...' },
+          { id:'status',      label:'Statut',       type:'select', options:['planned','in_progress','done'] }
+        ],
+        onSave: function (data) {
+          if (!data.title) { toast('Titre requis'); return; }
+          var d = Store.getIoTLabs();
+          data.id = Date.now().toString(); data.createdAt = new Date().toISOString();
+          d.labs = d.labs || [];
+          d.labs.push(data);
+          Store.setIoTLabs(d);
+          toast('Lab ajouté ✓');
+          renderRepairIoTLab(page);
+        }
+      });
+    });
+    page.appendChild(addLabBtn);
+  }
+
+  /* ═══════════════════════════════════════════
+     4. DUTCH COMMAND
+  ═══════════════════════════════════════════ */
+  function renderDutchCommand(page) {
+    page.innerHTML = '';
+    var today = Store.today();
+    var progress = Store.getDutchProgress();
+    var dayLog = Store.getDutchLog(today);
+
+    /* Header */
+    var headerCard = el('div', { class:'card card-glow-o card-spotlight' });
+    var hTop = el('div', { style:'display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px' });
+    hTop.appendChild(el('div', { style:'font-size:18px;font-weight:900;color:var(--text)' }, '🇳🇱 Dutch Command'));
+    hTop.appendChild(el('span', { style:'padding:3px 10px;border-radius:20px;font-size:11px;font-weight:800;background:rgba(6,182,212,.2);border:1px solid rgba(6,182,212,.4);color:var(--cyan2)' }, progress.currentLevel || 'A1'));
+    hTop.appendChild(el('span', { style:'font-size:10px;color:var(--muted)' }, '→ ' + (progress.targetLevel || 'B2')));
+    headerCard.appendChild(hTop);
+
+    /* Level selector */
+    var levels = ['A1','A2','B1','B2','C1'];
+    var levelRow = el('div', { style:'display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px' });
+    levels.forEach(function (lv) {
+      var pill = el('button', { type:'button',
+        class:'dutch-level-pill' + (progress.currentLevel === lv ? ' active' : '')
+      }, lv);
+      pill.addEventListener('click', function () {
+        Store.setDutchProgress({ currentLevel: lv });
+        progress.currentLevel = lv;
+        qsa('.dutch-level-pill', headerCard).forEach(function (p) { p.classList.remove('active'); });
+        pill.classList.add('active');
+        hTop.querySelector('span').textContent = lv;
+        toast('Niveau mis à jour : ' + lv);
+      });
+      levelRow.appendChild(pill);
+    });
+    headerCard.appendChild(levelRow);
+    page.appendChild(headerCard);
+
+    /* Today's log */
+    var logCard = el('div', { class:'card card-l-orange' });
+    logCard.innerHTML = '<div class="card-head"><div class="card-title">📅 Log du jour</div></div>';
+
+    var logGrid = el('div', { class:'log-grid' });
+
+    var minWrap = el('div', { class:'log-field' });
+    minWrap.appendChild(el('label', {}, 'Minutes pratiquées'));
+    var minInp = el('input', { type:'number', min:'0', placeholder:'0', value: dayLog.minutes || '' });
+    minWrap.appendChild(minInp);
+    logGrid.appendChild(minWrap);
+
+    var ankiWrap = el('div', { class:'log-field' });
+    ankiWrap.appendChild(el('label', {}, 'Cartes Anki'));
+    var ankiInp = el('input', { type:'number', min:'0', placeholder:'0', value: dayLog.anki || '' });
+    ankiWrap.appendChild(ankiInp);
+    logGrid.appendChild(ankiWrap);
+
+    var sentWrap = el('div', { class:'log-field' });
+    sentWrap.appendChild(el('label', {}, 'Phrases produites'));
+    var sentInp = el('input', { type:'number', min:'0', placeholder:'0', value: dayLog.sentences || '' });
+    sentWrap.appendChild(sentInp);
+    logGrid.appendChild(sentWrap);
+
+    var wordsWrap = el('div', { class:'log-field' });
+    wordsWrap.appendChild(el('label', {}, 'Nouveaux mots'));
+    var wordsInp = el('input', { type:'number', min:'0', placeholder:'0', value: dayLog.newWords || '' });
+    wordsWrap.appendChild(wordsInp);
+    logGrid.appendChild(wordsWrap);
+
+    logCard.appendChild(logGrid);
+
+    /* Listening toggle */
+    var listenBtn = el('button', { type:'button',
+      class:'btn btn-sm ' + (dayLog.listening ? 'btn-primary' : 'btn-secondary'),
+      style:'width:100%;margin-bottom:10px'
+    }, dayLog.listening ? '🎧 Écoute active ✓' : '🎧 Écoute passive — Non');
+    listenBtn.addEventListener('click', function () {
+      dayLog.listening = !dayLog.listening;
+      listenBtn.className = 'btn btn-sm ' + (dayLog.listening ? 'btn-primary' : 'btn-secondary');
+      listenBtn.textContent = dayLog.listening ? '🎧 Écoute active ✓' : '🎧 Écoute passive — Non';
+      saveDutchLog();
+    });
+    logCard.appendChild(listenBtn);
+
+    /* Notes */
+    var notesWrap = el('div', { class:'log-field', style:'margin-bottom:10px' });
+    notesWrap.appendChild(el('label', {}, 'Notes'));
+    var notesTA = el('textarea', { placeholder:'Vocabulaire, expressions, difficultés...', style:'height:60px' });
+    notesTA.value = dayLog.notes || '';
+    notesWrap.appendChild(notesTA);
+    logCard.appendChild(notesWrap);
+
+    function saveDutchLog() {
+      dayLog.minutes  = parseInt(minInp.value)  || 0;
+      dayLog.anki     = parseInt(ankiInp.value)  || 0;
+      dayLog.sentences = parseInt(sentInp.value) || 0;
+      dayLog.newWords = parseInt(wordsInp.value) || 0;
+      dayLog.notes    = notesTA.value;
+      Store.setDutchLog(today, dayLog);
+      /* update progress totals */
+      Store.setDutchProgress({ totalSessions: (progress.totalSessions || 0) + (dayLog.minutes > 0 ? 1 : 0) });
+    }
+
+    [minInp, ankiInp, sentInp, wordsInp, notesTA].forEach(function (inp) {
+      inp.addEventListener('change', saveDutchLog);
+    });
+
+    page.appendChild(logCard);
+
+    /* Progress stats */
+    var statsCard = el('div', { class:'card' });
+    statsCard.innerHTML = '<div class="card-head"><div class="card-title">📊 Progression</div></div>';
+
+    /* weekly avg */
+    var weekMins = 0;
+    for (var wi = 0; wi < 7; wi++) {
+      var wd2 = new Date(); wd2.setDate(wd2.getDate() - wi);
+      var wk = wd2.getFullYear() + '-' + String(wd2.getMonth()+1).padStart(2,'0') + '-' + String(wd2.getDate()).padStart(2,'0');
+      weekMins += Store.getDutchLog(wk).minutes || 0;
+    }
+    var weekAvg = (weekMins / 7).toFixed(0);
+
+    statsCard.innerHTML +=
+      '<div class="stat-row">' +
+        '<div class="stat-box stat-box-o"><div class="stat-value v-orange">' + (progress.totalSessions||0) + '</div><div class="stat-label">Sessions</div></div>' +
+        '<div class="stat-box stat-box-g"><div class="stat-value v-gold">' + weekAvg + '</div><div class="stat-label">Min/j moy</div></div>' +
+        '<div class="stat-box stat-box-gr"><div class="stat-value v-green">' + weekMins + '</div><div class="stat-label">Min cette sem</div></div>' +
+      '</div>';
+    page.appendChild(statsCard);
+
+    /* Monthly test */
+    var testCard = el('div', { class:'card' });
+    testCard.innerHTML = '<div class="card-head"><div class="card-title">📝 Test mensuel</div></div>';
+
+    var testGrid = el('div', { class:'log-grid' });
+    var testFields = [
+      { id:'testDate',    label:'Date',           type:'text',   placeholder: today },
+      { id:'vocabScore',  label:'Vocabulaire /50', type:'number', placeholder:'0' },
+      { id:'gramScore',   label:'Grammaire /50',   type:'number', placeholder:'0' },
+      { id:'listeningScore', label:'Écoute /50',   type:'number', placeholder:'0' },
+      { id:'speakingComfort', label:'Aisance orale (1-5)', type:'number', placeholder:'1' }
+    ];
+    var testInputs = {};
+    testFields.forEach(function (f) {
+      var wrap = el('div', { class:'log-field' });
+      wrap.appendChild(el('label', {}, f.label));
+      var inp = el('input', { type: f.type, placeholder: f.placeholder });
+      testInputs[f.id] = inp;
+      wrap.appendChild(inp);
+      testGrid.appendChild(wrap);
+    });
+    testCard.appendChild(testGrid);
+
+    var testNotesWrap = el('div', { class:'log-field', style:'margin-bottom:10px' });
+    testNotesWrap.appendChild(el('label', {}, 'Notes'));
+    var testNotesTA = el('textarea', { placeholder:'Observations...', style:'height:50px' });
+    testNotesWrap.appendChild(testNotesTA);
+    testCard.appendChild(testNotesWrap);
+
+    var saveTestBtn = el('button', { class:'btn btn-primary btn-sm', type:'button' }, '💾 Enregistrer test');
+    saveTestBtn.addEventListener('click', function () {
+      var testData = { date: testInputs.testDate.value || today };
+      testFields.slice(1).forEach(function (f) { testData[f.id] = parseFloat(testInputs[f.id].value)||0; });
+      testData.notes = testNotesTA.value;
+      var p2 = Store.getDutchProgress();
+      p2.monthlyTests = p2.monthlyTests || [];
+      p2.monthlyTests.push(testData);
+      Store.setDutchProgress({ monthlyTests: p2.monthlyTests });
+      toast('Test enregistré ✓');
+      renderDutchCommand(page);
+    });
+    testCard.appendChild(saveTestBtn);
+    page.appendChild(testCard);
+
+    /* Last 4 tests table */
+    var tests = (Store.getDutchProgress().monthlyTests || []).slice(-4).reverse();
+    if (tests.length) {
+      var tblCard = el('div', { class:'card' });
+      tblCard.innerHTML = '<div class="card-head"><div class="card-title">📈 Derniers tests</div></div>';
+      tests.forEach(function (t) {
+        var row = el('div', { class:'finance-item' });
+        var total = ((t.vocabScore||0)+(t.gramScore||0)+(t.listeningScore||0));
+        row.innerHTML =
+          '<span>' + (t.date || '—') + '</span>' +
+          '<span class="font-bold" style="color:var(--cyan2)">' + total + '/150 · aisance ' + (t.speakingComfort||0) + '/5</span>';
+        tblCard.appendChild(row);
+      });
+      page.appendChild(tblCard);
+    }
+
+    /* Resources */
+    var resCard = el('div', { class:'card' });
+    resCard.innerHTML = '<div class="card-head"><div class="card-title">📚 Ressources</div></div>';
+    var resources = [
+      { name:'Taalgarage', desc:'Podcasts néerlandais naturels' },
+      { name:'Anki NL deck', desc:'Deck 1000 mots les plus courants' },
+      { name:'Language Transfer Dutch', desc:'Méthode structurée gratuite' },
+      { name:'Dutchpod101', desc:'Leçons audio/vidéo progressives' },
+      { name:'Netflix NL subtitles', desc:'Immersion avec sous-titres' }
+    ];
+    resources.forEach(function (r) {
+      var item = el('div', { class:'dutch-resource-item' });
+      item.innerHTML = '<span style="font-weight:800;font-size:12px">' + r.name + '</span><span style="font-size:10px;color:var(--muted)">' + r.desc + '</span>';
+      resCard.appendChild(item);
+    });
+    page.appendChild(resCard);
+  }
+
+  /* ═══════════════════════════════════════════
+     5. ENHANCED STATS — RADAR + EXTRA SECTIONS
+  ═══════════════════════════════════════════ */
+  function renderStatsExtras(page) {
+    /* a) 7/30/90 day range selector */
+    var rangeState = Store.get('stats_range', 30);
+    var rangeCard = el('div', { class:'card', style:'margin-bottom:10px' });
+    var rangeRow = el('div', { style:'display:flex;gap:6px' });
+    [7, 30, 90].forEach(function (r) {
+      var chip = el('button', { type:'button',
+        style:'padding:4px 14px;border-radius:8px;font-size:11px;font-weight:800;cursor:pointer;' +
+          'border:1px solid ' + (rangeState === r ? 'rgba(124,58,237,.6)' : 'var(--border2)') + ';' +
+          'background:' + (rangeState === r ? 'rgba(124,58,237,.15)' : 'var(--panel3)') + ';' +
+          'color:' + (rangeState === r ? 'var(--violet2)' : 'var(--dim)')
+      }, r + 'j');
+      chip.addEventListener('click', function () {
+        Store.set('stats_range', r);
+        renderStats();
+      });
+      rangeRow.appendChild(chip);
+    });
+    rangeCard.appendChild(el('div', { style:'font-size:10px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px' }, 'Période d\'analyse'));
+    rangeCard.appendChild(rangeRow);
+    page.appendChild(rangeCard);
+
+    /* b) Radar / domain scores */
+    var radarCard = el('div', { class:'card card-glow-o card-spotlight' });
+    radarCard.innerHTML = '<div class="card-head"><div class="card-title">🎯 Radar Multi-Domaines</div></div>';
+
+    /* Compute scores */
+    var sessions = Store.getFocusSessions();
+    var cutoff2 = new Date(); cutoff2.setDate(cutoff2.getDate() - 30);
+
+    /* Étude: sessions EPFC/CODE in last 30d */
+    var etudeMin = sessions.filter(function (s) { return new Date(s.date) >= cutoff2 && (s.domain === 'EPFC' || s.domain === 'CODE'); })
+                           .reduce(function (a, s) { return a + s.seconds/60; }, 0);
+    var etudeScore = Math.min(100, Math.round(etudeMin / 300 * 100)); /* 300 min = 100% */
+
+    /* Sport: sessions done in last 30d */
+    var sportDaysCount = 0;
+    for (var si = 0; si < 30; si++) {
+      var sd2 = new Date(); sd2.setDate(sd2.getDate() - si);
+      var sdk = sd2.getFullYear() + '-' + String(sd2.getMonth()+1).padStart(2,'0') + '-' + String(sd2.getDate()).padStart(2,'0');
+      if (Store.getSportLog(sdk).sessionDone || Store.getSportOff(sdk)) sportDaysCount++;
+    }
+    var sportScore = Math.min(100, Math.round(sportDaysCount / 20 * 100));
+
+    /* Finance: based on budget vs charges */
+    var fin = Store.getFinanceMonth();
+    var salary3 = parseFloat(fin.salary)||0;
+    var charges3 = (fin.charges||[]).reduce(function(a,c){return a+(parseFloat(c.amount)||0);}, 0);
+    var financeScore = salary3 > 0 ? Math.min(100, Math.round(((salary3 - charges3) / salary3) * 100)) : 50;
+
+    /* Langue: Dutch weekly minutes */
+    var dutchWeekMin = 0;
+    for (var dw = 0; dw < 7; dw++) {
+      var dwd = new Date(); dwd.setDate(dwd.getDate() - dw);
+      var dwk = dwd.getFullYear() + '-' + String(dwd.getMonth()+1).padStart(2,'0') + '-' + String(dwd.getDate()).padStart(2,'0');
+      dutchWeekMin += Store.getDutchLog(dwk).minutes || 0;
+    }
+    var langueScore = Math.min(100, Math.round(dutchWeekMin / 60 * 100));
+
+    /* Projets: coding done / total */
+    var arena2 = Store.getCodingArena();
+    var totalEx = (arena2.exercises||[]).length;
+    var doneEx  = (arena2.exercises||[]).filter(function(e){return e.status==='done';}).length;
+    var projetsScore = totalEx > 0 ? Math.min(100, Math.round(doneEx / totalEx * 100)) : 0;
+
+    /* Santé: avg energy last 7 days */
+    var energySum = 0, energyDays = 0;
+    for (var ei = 0; ei < 7; ei++) {
+      var ed = new Date(); ed.setDate(ed.getDate() - ei);
+      var edk = ed.getFullYear() + '-' + String(ed.getMonth()+1).padStart(2,'0') + '-' + String(ed.getDate()).padStart(2,'0');
+      var rtWork = Store.get('routine_work_' + edk, {});
+      if (rtWork.fatigue) { energySum += parseFloat(rtWork.fatigue)||0; energyDays++; }
+    }
+    var avgEnergy = energyDays > 0 ? energySum / energyDays : 0;
+    var santeScore = Math.min(100, Math.round(avgEnergy / 5 * 100));
+
+    var radarDomains = [
+      { label:'Étude',    score: etudeScore,   color:'var(--violet2)' },
+      { label:'Sport',    score: sportScore,   color:'var(--green2)' },
+      { label:'Finance',  score: financeScore, color:'var(--amber2)' },
+      { label:'Langue',   score: langueScore,  color:'var(--cyan2)' },
+      { label:'Projets',  score: projetsScore, color:'var(--orange2)' },
+      { label:'Santé',    score: santeScore,   color:'var(--pink)' }
+    ];
+
+    radarDomains.forEach(function (d) {
+      var row = el('div', { class:'radar-row' });
+      row.appendChild(el('div', { class:'radar-label' }, d.label));
+      var barOuter = el('div', { class:'radar-bar-outer' });
+      var barInner = el('div', { class:'radar-bar-inner', style:'width:' + d.score + '%;background:' + d.color });
+      barOuter.appendChild(barInner);
+      row.appendChild(barOuter);
+      row.appendChild(el('div', { class:'radar-score' }, d.score + '%'));
+      radarCard.appendChild(row);
+    });
+    page.appendChild(radarCard);
+
+    /* c) Vinted performance */
+    var vStats = Store.getVintedStats();
+    var vintedItems = Store.getVinted().items || [];
+    var soldCount = vintedItems.filter(function (i) { return i.status === 'Vendu'; }).length;
+    var staleCount = vintedItems.filter(function (i) { return i.status === 'En vente'; }).length;
+    var avgROI = soldCount > 0 ?
+      (vintedItems.filter(function(i){return i.status==='Vendu';}).reduce(function(a,i){
+        var roi = (parseFloat(i.buyPrice)||0) > 0 ? ((parseFloat(i.sellPrice)||0)-(parseFloat(i.buyPrice)||0))/(parseFloat(i.buyPrice)||0)*100 : 0;
+        return a + roi;
+      }, 0) / soldCount).toFixed(0) + '%' : '–';
+
+    var vintedStatsCard = el('div', { class:'card' });
+    vintedStatsCard.innerHTML =
+      '<div class="card-head"><div class="card-title">🛍 Performance Vinted</div></div>' +
+      '<div class="stat-row">' +
+        '<div class="stat-box stat-box-o"><div class="stat-value v-orange">' + vintedItems.length + '</div><div class="stat-label">Articles</div></div>' +
+        '<div class="stat-box stat-box-gr"><div class="stat-value v-green">' + soldCount + '</div><div class="stat-label">Vendus</div></div>' +
+        '<div class="stat-box stat-box-g"><div class="stat-value v-gold">' + fmtEur(vStats.profit) + '</div><div class="stat-label">Profit</div></div>' +
+      '</div>' +
+      '<div class="text-xs text-muted" style="margin-top:8px">ROI moyen : <b>' + avgROI + '</b> · En vente : <b>' + staleCount + '</b></div>';
+    page.appendChild(vintedStatsCard);
+
+    /* d) Markdown export */
+    var exportCard = el('div', { class:'card', style:'margin-top:10px' });
+    exportCard.innerHTML = '<div class="card-head"><div class="card-title">📤 Export Stats</div></div>';
+    var mdBtn = el('button', { class:'btn btn-secondary', type:'button', style:'width:100%' }, '📥 Exporter stats en .md');
+    mdBtn.addEventListener('click', function () {
+      var today3 = Store.today();
+      var md = [
+        '# Stats Dashboard — ' + today3,
+        '',
+        '## Radar Scores',
+      ];
+      radarDomains.forEach(function (d) { md.push('- **' + d.label + '** : ' + d.score + '%'); });
+      md.push('', '## Vinted');
+      md.push('- Articles : ' + vintedItems.length);
+      md.push('- Vendus : ' + soldCount);
+      md.push('- Profit total : ' + fmtEur(vStats.profit));
+      md.push('', '## Dutch');
+      var dutch2 = Store.getDutchProgress();
+      md.push('- Niveau : ' + (dutch2.currentLevel || 'A1') + ' → ' + (dutch2.targetLevel || 'B2'));
+      md.push('- Minutes cette semaine : ' + dutchWeekMin);
+      md.push('', '## Coding');
+      md.push('- Exercices : ' + totalEx + ' (' + doneEx + ' réussis)');
+      md.push('- Projets : ' + (arena2.projects||[]).length);
+      md.push('', '## Sport');
+      md.push('- Séances ce mois : ' + sportDaysCount + '/30');
+      md.push('', '_Généré par Dashboard Ultimate_');
+
+      var blob = new Blob([md.join('\n')], { type:'text/markdown' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url; a.download = 'stats-' + today3 + '.md';
+      a.click(); URL.revokeObjectURL(url);
+      toast('Export .md ✓');
+    });
+    exportCard.appendChild(mdBtn);
+    page.appendChild(exportCard);
+  }
+
+  /* ═══════════════════════════════════════════
+     6–7. RÉGLAGES ADDITIONS (AI Coach + Mode Lite/Full)
+  ═══════════════════════════════════════════ */
+  function renderReglagesExtras(page) {
+    /* AI Coach stub */
+    var aiCard = el('div', { class:'card card-l-orange' });
+    aiCard.innerHTML =
+      '<div class="card-head"><div class="card-title">🤖 AI Coach</div>' +
+        '<span style="padding:2px 8px;border-radius:8px;font-size:10px;font-weight:800;background:rgba(245,158,11,.15);color:var(--amber2)">Non configuré</span>' +
+      '</div>' +
+      '<div class="text-xs text-muted" style="line-height:1.8;margin-bottom:10px">' +
+        'AI Coach — disponible via Netlify Functions<br>' +
+        'Pour activer le coach IA, une Netlify Function est requise.<br>' +
+        'Les appels locaux ne sont pas supportés.<br><br>' +
+        '💰 Quota journalier : <b>5 appels</b> · Cache : <b>6h</b>' +
+      '</div>';
+    var docBtn = el('button', { class:'btn btn-secondary btn-sm', type:'button', disabled:true, style:'opacity:.5;cursor:not-allowed' }, '📖 Documentation');
+    aiCard.appendChild(docBtn);
+    page.appendChild(aiCard);
+
+    /* Mode Lite / Full */
+    var mode = Store.getAppMode();
+    var modeCard = el('div', { class:'card' });
+    modeCard.innerHTML = '<div class="card-head"><div class="card-title">⚡ Mode d\'affichage</div></div>';
+
+    var modeRow = el('div', { style:'display:flex;gap:8px;margin-bottom:14px' });
+    var liteBtn = el('button', { type:'button', class:'mode-btn' + (mode === 'lite' ? ' active' : '') },
+      'LITE — modules essentiels');
+    var fullBtn = el('button', { type:'button', class:'mode-btn' + (mode === 'full' ? ' active' : '') },
+      'FULL — tout afficher');
+
+    liteBtn.addEventListener('click', function () {
+      Store.setAppMode('lite');
+      Store.setHiddenFeatures(['nutrition','coding','repair_iot','dutch_command']);
+      liteBtn.classList.add('active'); fullBtn.classList.remove('active');
+      toast('Mode Lite activé — rechargement...');
+      setTimeout(function () { location.reload(); }, 1000);
+    });
+    fullBtn.addEventListener('click', function () {
+      Store.setAppMode('full');
+      Store.setHiddenFeatures([]);
+      fullBtn.classList.add('active'); liteBtn.classList.remove('active');
+      toast('Mode Full activé — rechargement...');
+      setTimeout(function () { location.reload(); }, 1000);
+    });
+
+    modeRow.appendChild(liteBtn);
+    modeRow.appendChild(fullBtn);
+    modeCard.appendChild(modeRow);
+
+    if (mode === 'lite') {
+      var hidden = Store.getHiddenFeatures();
+      if (hidden.length) {
+        var hiddenList = el('div', { class:'text-xs text-muted' });
+        hiddenList.innerHTML = 'Modules masqués : <b>' + hidden.join(', ') + '</b>';
+        modeCard.appendChild(hiddenList);
+      }
+    }
+
+    page.appendChild(modeCard);
+  }
+
+  /* ═══════════════════════════════════════════
+     8. FINANCE EXTRAS (Net Worth + ETF Simulator)
+  ═══════════════════════════════════════════ */
+  function renderFinanceExtras(panel) {
+    /* Net Worth Tracker */
+    var month = Store.currentMonth();
+    var nw = Store.getNetWorth(month);
+
+    var nwCard = el('div', { class:'card card-glow-g card-spotlight', style:'margin-top:12px' });
+    nwCard.innerHTML = '<div class="card-head"><div class="card-title">💎 Patrimoine Net — ' + month + '</div></div>';
+
+    var nwGrid = el('div', { class:'log-grid' });
+    var nwFields = [
+      { id:'savings',    label:'Épargne actuelle (€)',    ph:'5000' },
+      { id:'etf',        label:'Valeur ETF (€)',           ph:'0' },
+      { id:'realestate', label:'Immobilier estimé (€)',    ph:'0' },
+      { id:'other',      label:'Autres actifs (€)',        ph:'0' },
+      { id:'debts',      label:'Dettes totales (€)',       ph:'0' }
+    ];
+    var nwInputs = {};
+    nwFields.forEach(function (f) {
+      var wrap = el('div', { class:'log-field' });
+      wrap.appendChild(el('label', {}, f.label));
+      var inp = el('input', { type:'number', min:'0', placeholder:f.ph, value: nw[f.id] || '' });
+      nwInputs[f.id] = inp;
+      wrap.appendChild(inp);
+      nwGrid.appendChild(wrap);
+    });
+    nwCard.appendChild(nwGrid);
+
+    var nwTotal = el('div', { style:'margin:10px 0;padding:10px;background:var(--panel3);border-radius:var(--r-sm)' });
+    function updateNW() {
+      var assets = (parseFloat(nwInputs.savings.value)||0) + (parseFloat(nwInputs.etf.value)||0) +
+                   (parseFloat(nwInputs.realestate.value)||0) + (parseFloat(nwInputs.other.value)||0);
+      var debts = parseFloat(nwInputs.debts.value)||0;
+      var net = assets - debts;
+      nwTotal.innerHTML = '<div style="font-size:11px;color:var(--muted);margin-bottom:4px">Patrimoine net</div>' +
+        '<div style="font-size:22px;font-weight:900;color:' + (net >= 0 ? 'var(--green2)' : 'var(--red2)') + '">' +
+        (net >= 0 ? '+' : '') + net.toFixed(0) + ' €</div>';
+    }
+    Object.keys(nwInputs).forEach(function (k) { nwInputs[k].addEventListener('input', updateNW); });
+    updateNW();
+    nwCard.appendChild(nwTotal);
+
+    var nwSaveBtn = el('button', { class:'btn btn-primary btn-sm', type:'button' }, '💾 Sauvegarder');
+    nwSaveBtn.addEventListener('click', function () {
+      var data = {};
+      nwFields.forEach(function (f) { data[f.id] = parseFloat(nwInputs[f.id].value)||0; });
+      Store.setNetWorth(month, data);
+      toast('Patrimoine sauvegardé ✓');
+    });
+    nwCard.appendChild(nwSaveBtn);
+    panel.appendChild(nwCard);
+
+    /* ETF Simulator */
+    var etfCard = el('div', { class:'card', style:'margin-top:12px' });
+    etfCard.innerHTML = '<div class="card-head"><div class="card-title">📈 Simulateur ETF</div></div>';
+
+    var etfGrid = el('div', { class:'log-grid' });
+    var etfFields = [
+      { id:'monthly', label:'Investissement mensuel (€)', ph:'200',  type:'number', step:'1',    default:'200' },
+      { id:'rate',    label:'Rendement annuel (%)',        ph:'7',    type:'number', step:'0.1',  default:'7' },
+      { id:'years',   label:'Durée (années)',              ph:'10',   type:'number', step:'1',    default:'10' }
+    ];
+    var etfInputs = {};
+    etfFields.forEach(function (f) {
+      var wrap = el('div', { class:'log-field' });
+      wrap.appendChild(el('label', {}, f.label));
+      var inp = el('input', { type:f.type || 'number', step:f.step || '1', placeholder:f.ph });
+      inp.value = f.default;
+      etfInputs[f.id] = inp;
+      wrap.appendChild(inp);
+      etfGrid.appendChild(wrap);
+    });
+    etfCard.appendChild(etfGrid);
+
+    var etfResult = el('div', { class:'etf-result-box' });
+    function calcETF() {
+      var pmt = parseFloat(etfInputs.monthly.value) || 0;
+      var r   = (parseFloat(etfInputs.rate.value) || 7) / 100;
+      var yrs = parseFloat(etfInputs.years.value) || 10;
+      var months = yrs * 12;
+      var rm = r / 12;
+      var fv = rm > 0 ? pmt * ((Math.pow(1 + rm, months) - 1) / rm) : pmt * months;
+      var invested = pmt * months;
+      var gain = fv - invested;
+      etfResult.innerHTML =
+        '<div class="etf-result-value">' + Math.round(fv).toLocaleString('fr-FR') + ' €</div>' +
+        '<div class="etf-result-label">Valeur finale projetée</div>' +
+        '<div style="margin-top:8px;display:flex;gap:16px;flex-wrap:wrap">' +
+          '<div><div class="etf-result-label">Investi</div><div style="font-size:14px;font-weight:800;color:var(--dim)">' + Math.round(invested).toLocaleString('fr-FR') + ' €</div></div>' +
+          '<div><div class="etf-result-label">Gain</div><div style="font-size:14px;font-weight:800;color:var(--green2)">+' + Math.round(gain).toLocaleString('fr-FR') + ' €</div></div>' +
+        '</div>';
+    }
+    Object.keys(etfInputs).forEach(function (k) { etfInputs[k].addEventListener('input', calcETF); });
+    calcETF();
+    etfCard.appendChild(etfResult);
+    panel.appendChild(etfCard);
   }
 
   /* ═══════════════════════════════════════════
