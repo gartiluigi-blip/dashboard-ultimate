@@ -837,7 +837,7 @@
             subtaskData[si] = !subtaskData[si];
             Store.set(subtaskKey, subtaskData);
             stEl.classList.toggle('checked', !!subtaskData[si]);
-            stEl.querySelector('span').textContent = subtaskData[si] ? '✅' : '⬜';
+            var stSpan = stEl.querySelector('span'); if (stSpan) stSpan.textContent = subtaskData[si] ? '✅' : '⬜';
           });
           stDiv.appendChild(stEl);
         });
@@ -1056,7 +1056,7 @@
             repData.steps[si] = !repData.steps[si];
             Store.set(repKey, repData);
             stepEl.classList.toggle('checked', !!repData.steps[si]);
-            stepEl.querySelector('.repair-step-icon').textContent = repData.steps[si] ? '✅' : '⬜';
+            var rsi = stepEl.querySelector('.repair-step-icon'); if (rsi) rsi.textContent = repData.steps[si] ? '✅' : '⬜';
           });
           stepsDiv.appendChild(stepEl);
         });
@@ -3057,7 +3057,7 @@
       btn.addEventListener('click', function () {
         Store.set('cert_track_filter', tr.id);
         var cp = qs('#cert-panel-inner');
-        if (cp) cp.parentElement.replaceChild(renderCertifications(), cp.parentElement.querySelector('.cert-panel'));
+        var certsC = qs('#etude-certs-panel'); if (certsC) { certsC.innerHTML = ''; certsC.appendChild(renderCertifications()); }
       });
       filterRow.appendChild(btn);
     });
@@ -3095,7 +3095,7 @@
     tlHead.addEventListener('click', function () {
       var open = tlBody.style.display !== 'none';
       tlBody.style.display = open ? 'none' : 'block';
-      tlHead.querySelector('.cert-expand-btn').textContent = open ? '▾' : '▴';
+      var ceb = tlHead.querySelector('.cert-expand-btn'); if (ceb) ceb.textContent = open ? '▾' : '▴';
     });
     timelineCard.appendChild(tlHead);
     timelineCard.appendChild(tlBody);
@@ -4530,6 +4530,42 @@
       proofsContainer.appendChild(renderProofs());
       proofsBtn.classList.add('active');
     }
+
+    /* ── V5 tabs: Coding Arena, Repair/IoT Lab, Dutch Command ── */
+    var v5Tabs = [
+      { id:'coding',  label:'💻 Coding',   fn: renderCodingArena },
+      { id:'repair',  label:'🔧 Réparation', fn: renderRepairIoTLab },
+      { id:'dutch',   label:'🇳🇱 Néerlandais', fn: renderDutchCommand }
+    ];
+    v5Tabs.forEach(function (tab) {
+      var btn = el('button', { class:'cert-track-btn', type:'button' }, tab.label);
+      var container = el('div', { id:'etude-v5-' + tab.id, style:'display:none' });
+      btnRow.appendChild(btn);
+      page.appendChild(container);
+
+      btn.addEventListener('click', function () {
+        var isOpen = container.style.display !== 'none';
+        /* Close all v5 panels */
+        v5Tabs.forEach(function (t) {
+          var c = qs('#etude-v5-' + t.id);
+          if (c) c.style.display = 'none';
+          /* reset button state — can't close over btn here, do it by class */
+        });
+        /* Also close certs/proofs panels */
+        certsContainer.style.display = 'none';
+        proofsContainer.style.display = 'none';
+        certsBtn.classList.remove('active');
+        proofsBtn.classList.remove('active');
+        /* Reset all v5 btn states */
+        qsa('.cert-track-btn', btnRow).forEach(function (b) { b.classList.remove('active'); });
+
+        if (!isOpen) {
+          container.style.display = 'block';
+          btn.classList.add('active');
+          if (!container.children.length) tab.fn(container);
+        }
+      });
+    });
   }
 
   /* Override renderArgent to add Vinted v2 + cashflow panels */
@@ -5218,7 +5254,7 @@
         progress.currentLevel = lv;
         qsa('.dutch-level-pill', headerCard).forEach(function (p) { p.classList.remove('active'); });
         pill.classList.add('active');
-        hTop.querySelector('span').textContent = lv;
+        var hSpan = hTop.querySelector('span'); if (hSpan) hSpan.textContent = lv;
         toast('Niveau mis à jour : ' + lv);
       });
       levelRow.appendChild(pill);
