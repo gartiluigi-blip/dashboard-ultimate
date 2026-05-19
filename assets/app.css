@@ -3557,3 +3557,51 @@ select option { background: var(--panel3); }
 /* Coding */
 .coding-redo-queue { background:rgba(245,158,11,.07); border:1px solid rgba(245,158,11,.2); border-radius:10px; padding:10px 12px; margin-bottom:10px; }
 .coding-project-card { border:1px solid var(--border2); border-radius:10px; padding:10px 12px; margin-bottom:8px; background:var(--panel3); }
+
+/* ─── Missing classes (auto-audit) ─── */
+
+/* Completion ring (aujourd'hui) */
+.completion-ring-row { display:flex; align-items:center; gap:14px; padding:8px 0; }
+.completion-ring-info { flex:1; }
+.completion-ring-label { font-size:12px; font-weight:800; color:var(--dim); }
+.completion-ring-pct { font-size:22px; font-weight:900; color:var(--fg); }
+.completion-ring-count { font-size:11px; color:var(--muted); }
+
+/* Nutrition */
+.nutrition-progress { height:8px; background:var(--panel3); border-radius:4px; overflow:hidden; margin:4px 0 8px; }
+.nutrition-progress-fill { height:100%; background:var(--green); border-radius:4px; transition:width .3s; }
+.nutrition-water-btns { display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; }
+.nutrition-water-btn { padding:5px 10px; border-radius:8px; font-size:11px; font-weight:800; cursor:pointer; border:1px solid var(--border2); background:rgba(6,182,212,.15); color:var(--cyan2); }
+
+/* Dutch */
+.dutch-level-pill { padding:4px 10px; border-radius:16px; font-size:10px; font-weight:800; cursor:pointer; border:1px solid var(--border2); background:var(--panel3); color:var(--muted); }
+.dutch-level-pill.active { background:rgba(124,58,237,.2); border-color:rgba(124,58,237,.5); color:var(--violet2); }
+.dutch-resource-item { display:flex; align-items:center; gap:8px; padding:7px 0; border-bottom:1px solid var(--border); font-size:12px; color:var(--dim); }
+.dutch-resource-item:last-child { border-bottom:none; }
+
+/* Coding */
+.coding-ex-card { border:1px solid var(--border2); border-radius:10px; padding:10px 12px; margin-bottom:6px; background:var(--panel3); }
+.coding-platform-badge { padding:2px 7px; border-radius:8px; font-size:9px; font-weight:800; background:rgba(6,182,212,.15); color:var(--cyan2); }
+
+/* Repair */
+.repair-log-card { border:1px solid var(--border2); border-radius:10px; padding:10px 12px; margin-bottom:8px; background:var(--panel3); }
+.repair-fields { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px; }
+.repair-field { display:flex; flex-direction:column; gap:3px; }
+.repair-field label { font-size:10px; color:var(--muted); font-weight:800; text-transform:uppercase; }
+.repair-steps { margin-top:8px; }
+.repair-step { display:flex; align-items:center; gap:8px; padding:5px 0; border-bottom:1px solid var(--border); cursor:pointer; font-size:12px; }
+.repair-step:last-child { border-bottom:none; }
+.repair-step-icon { font-size:14px; flex-shrink:0; }
+
+/* Certifications */
+.cert-progress-fill { height:100%; background:var(--violet); border-radius:3px; transition:width .4s; }
+
+/* Routine */
+.routine-hint { display:flex; align-items:flex-start; gap:8px; padding:8px; background:rgba(6,182,212,.07); border-radius:8px; margin-bottom:8px; font-size:12px; color:var(--dim); }
+.routine-hint-icon { font-size:16px; flex-shrink:0; }
+
+/* Task history */
+.task-history-card { border:1px solid var(--border2); border-radius:10px; padding:10px 12px; margin-bottom:6px; background:var(--panel3); }
+
+/* Vinted v2 panel */
+.vinted-v2-panel { padding:0; }
