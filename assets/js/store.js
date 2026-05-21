@@ -6,7 +6,8 @@ export function get(k,d=null){try{return j.parse(db.getItem(P+k))??d}catch{retur
 export function set(k,v){db.setItem(P+k,j.stringify(v));return v}
 export function push(k,item){const a=get(k,[]);a.push({...item,id:item.id||crypto.randomUUID(),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()});set(k,a);return a}
 export function updateList(k,id,patch){const a=get(k,[]);const n=a.map(x=>x.id===id?{...x,...patch,updatedAt:new Date().toISOString()}:x);set(k,n);return n}
-export function all(){return{}}
+function keys(){return Array.from({length:db.length},(_,i)=>db.key(i)).filter(k=>k&&k.startsWith(P))}
+export function all(){return keys().reduce((out,k)=>{try{out[k]=j.parse(db.getItem(k))}catch{out[k]={invalidJson:true}}return out},{})}
 export function sportCycle(){return get('sport_cycle',{anchorDate:today(),anchorType:'push1'})}
 export function setSportCycle(v){return set('sport_cycle',v)}
 export function sportSessions(){return get('sport_sessions',[])}
