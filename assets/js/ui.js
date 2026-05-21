@@ -13,25 +13,16 @@ export function el(tag,attrs={},children=[]){
   (Array.isArray(children)?children:[children]).filter(x=>x!==null&&x!==undefined).forEach(c=>n.append(c?.nodeType?c:document.createTextNode(c)));
   return n;
 }
-export function toast(msg){
-  const t=$('#toast');
-  if(!t)return;
-  t.textContent=msg;
-  t.classList.add('show');
-  clearTimeout(window.__toastTimer);
-  window.__toastTimer=setTimeout(()=>t.classList.remove('show'),1900);
-}
-export function card(title,body='',cls=''){
-  const c=el('section',{class:'card '+cls});
-  c.append(el('div',{class:'card-head'},el('h2',{},title)));
-  if(body)c.append(el('div',{class:'muted'},body));
-  return c;
-}
-export function subTabs(items,active,onClick){
-  const w=el('div',{class:'subtabs'});
-  items.forEach(it=>w.append(el('button',{class:'subtab '+(it.id===active?'active':''),onclick:()=>onClick(it.id)},it.label)));
-  return w;
-}
+export function toast(msg){const t=$('#toast');if(!t)return;t.textContent=msg;t.classList.add('show');clearTimeout(window.__toastTimer);window.__toastTimer=setTimeout(()=>t.classList.remove('show'),1900)}
+export function card(title,body='',cls=''){const c=el('section',{class:'card '+cls});c.append(el('div',{class:'card-head'},el('h2',{},title)));if(body)c.append(el('div',{class:'muted'},body));return c}
+export function subTabs(items,active,onClick){const w=el('div',{class:'subtabs',role:'tablist'});items.forEach(it=>w.append(el('button',{class:'subtab '+(it.id===active?'active':''),role:'tab','aria-selected':it.id===active?'true':'false',onclick:()=>onClick(it.id)},it.label)));return w}
 export function pill(text,cls=''){return el('span',{class:'pill '+cls},text)}
 export function button(label,onClick,cls=''){return el('button',{class:'btn '+cls,onclick:onClick},label)}
 export function progress(value,max=100){const pct=max?Math.min(100,Math.round((+value||0)/(+max||1)*100)):0;return el('div',{class:'progress'},el('div',{class:'bar',style:'width:'+pct+'%'}))}
+export function hero(title,subtitle='',actions=[]){const h=card(title,subtitle,'module-hero');if(actions.length)h.append(el('div',{class:'row'},actions));return h}
+export function kpi(title,value,caption='',state=''){const c=card(title,caption,'span-4 compact-card '+state);c.append(el('div',{class:'metric'},value));return c}
+export function actionRow({label='',meta='',status='',priority='',onDone=null,done=false,extra=[]}={}){const r=el('div',{class:'action-row '+(done?'ok':'')});r.append(el('div',{class:'action-main'},[el('div',{class:'row'},[priority?pill(priority):null,el('b',{},label),status?pill(status):null]),meta?el('div',{class:'small'},meta):null]));const acts=el('div',{class:'action-actions'});extra.forEach(x=>acts.append(x));if(onDone)acts.append(button(done?'Validé':'Valider',onDone,done?'green':''));r.append(acts);return r}
+export function compactTable(headers,rows=[]){const t=el('table',{class:'table compact-table'});t.append(el('thead',{},el('tr',{},headers.map(h=>el('th',{},h)))));t.append(el('tbody',{},rows.map(row=>el('tr',{},row.map(cell=>el('td',{},cell))))));return t}
+export function emptyState(title,body=''){return el('div',{class:'empty-state'},[el('b',{},title),body?el('div',{class:'small'},body):null])}
+export function field(label,node){return el('label',{class:'field'},[el('span',{},label),node])}
+export function detailsBlock(title,children=[]){const d=el('details',{class:'details-block'});d.append(el('summary',{},title));(Array.isArray(children)?children:[children]).forEach(x=>d.append(x));return d}
