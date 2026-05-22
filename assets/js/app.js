@@ -1,17 +1,17 @@
-import{ $,el,modeBar,setUiMode }from'./ui.js?v=20260520-onyx-mode-1';
-import{ renderHome as A }from'../../modules/home.js?v=20260520-onyx-mode-1';
-import{ renderRoutine as B }from'../../modules/routine.js?v=20260520-onyx-mode-1';
-import{ renderStats as C }from'../../modules/stats.js?v=20260520-onyx-mode-1';
-import{ renderSport as D }from'../../modules/sport.js?v=20260520-onyx-mode-1';
-import{ renderStudy as E }from'../../modules/study.js?v=20260520-onyx-mode-1';
-import{ renderMoney as F }from'../../modules/money.js?v=20260520-onyx-mode-1';
-import{ renderLeisure as G }from'../../modules/leisure.js?v=20260520-onyx-mode-1';
-import{ renderSettings as H }from'../../modules/settings.js?v=20260520-onyx-mode-1';
-import{ renderFuelFab as I }from'../../modules/fuel.js?v=20260520-onyx-mode-1';
+import{ $,el,modeBar,setUiMode }from'./ui.js?v=20260520-onyx-labels-1';
+import{ renderHome as A }from'../../modules/home.js?v=20260520-onyx-labels-1';
+import{ renderRoutine as B }from'../../modules/routine.js?v=20260520-onyx-labels-1';
+import{ renderStats as C }from'../../modules/stats.js?v=20260520-onyx-labels-1';
+import{ renderSport as D }from'../../modules/sport.js?v=20260520-onyx-labels-1';
+import{ renderStudy as E }from'../../modules/study.js?v=20260520-onyx-labels-1';
+import{ renderMoney as F }from'../../modules/money.js?v=20260520-onyx-labels-1';
+import{ renderLeisure as G }from'../../modules/leisure.js?v=20260520-onyx-labels-1';
+import{ renderSettings as H }from'../../modules/settings.js?v=20260520-onyx-labels-1';
+import{ renderFuelFab as I }from'../../modules/fuel.js?v=20260520-onyx-labels-1';
 let r='home';
-const names={home:'Today',routine:'Routine',stats:'Stats',sport:'Sport',study:'Study',money:'Money',leisure:'Life',settings:'System'};
+const names={home:'Aujourd\'hui',routine:'Routine',stats:'Stats',sport:'Sport',study:'Étude',money:'Argent',leisure:'Loisir',settings:'Système'};
 const fns={home:A,routine:B,stats:C,sport:D,study:E,money:F,leisure:G,settings:H};
-const gs=[['cockpit','Cockpit',['home','routine','stats']],['training','Training',['sport']],['study','Study',['study']],['money','Money',['money']],['life','Life',['leisure']],['settings','Settings',['settings']]];
+const gs=[['cockpit','Cockpit',['home','routine','stats']],['training','Entraînement',['sport']],['study','Étude',['study']],['money','Argent',['money']],['life','Vie',['leisure']],['settings','Système',['settings']]];
 function grp(){return gs.find(x=>x[2].includes(r))||gs[0]}
 function nav(){const n=$('#tabs');n.innerHTML='';gs.forEach(x=>n.append(el('button',{class:'tab '+(grp()[0]===x[0]?'active':''),'data-route':x[2][0]},x[1])))}
 function sub(a){const x=grp();if(x[2].length<2)return;const s=el('div',{class:'subtabs'});x[2].forEach(id=>s.append(el('button',{class:'subtab '+(r===id?'active':''),'data-route':id},names[id])));a.append(s)}
