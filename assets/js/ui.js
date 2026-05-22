@@ -1,18 +1,10 @@
 export const $=(s,r=document)=>r.querySelector(s);
 export const $$=(s,r=document)=>[...r.querySelectorAll(s)];
-export function el(tag,attrs={},children=[]){
-  const n=document.createElement(tag);
-  Object.entries(attrs||{}).forEach(([k,v])=>{
-    if(v===false||v===null||v===undefined)return;
-    if(k==='class')n.className=v;
-    else if(k==='html')n.innerHTML=v;
-    else if(k==='style')n.setAttribute('style',v);
-    else if(k.startsWith('on')&&typeof v==='function')n.addEventListener(k.slice(2),v);
-    else n.setAttribute(k,v===true?'':v);
-  });
-  (Array.isArray(children)?children:[children]).filter(x=>x!==null&&x!==undefined).forEach(c=>n.append(c?.nodeType?c:document.createTextNode(c)));
-  return n;
-}
+export function el(tag,attrs={},children=[]){const n=document.createElement(tag);Object.entries(attrs||{}).forEach(([k,v])=>{if(v===false||v===null||v===undefined)return;if(k==='class')n.className=v;else if(k==='html')n.innerHTML=v;else if(k==='style')n.setAttribute('style',v);else if(k.startsWith('on')&&typeof v==='function')n.addEventListener(k.slice(2),v);else n.setAttribute(k,v===true?'':v)});(Array.isArray(children)?children:[children]).filter(x=>x!==null&&x!==undefined).forEach(c=>n.append(c?.nodeType?c:document.createTextNode(c)));return n}
+export function uiMode(){return localStorage.getItem('ud5_ui_mode')||'simple'}
+export function isSimple(){return uiMode()!=='expert'}
+export function setUiMode(v){const m=v==='expert'?'expert':'simple';localStorage.setItem('ud5_ui_mode',m);document.documentElement.dataset.mode=m;return m}
+export function modeBar(refresh){setUiMode(uiMode());const m=uiMode();return el('div',{class:'modebar'},[el('div',{class:'mode-label'},m==='expert'?'MODE EXPERT':'MODE SIMPLE'),el('div',{class:'mode-actions'},[el('button',{class:'btn '+(m==='simple'?'green':''),onclick:()=>{setUiMode('simple');refresh()}},'Simple'),el('button',{class:'btn '+(m==='expert'?'green':''),onclick:()=>{setUiMode('expert');refresh()}},'Expert')])])}
 export function toast(msg){const t=$('#toast');if(!t)return;t.textContent=msg;t.classList.add('show');clearTimeout(window.__toastTimer);window.__toastTimer=setTimeout(()=>t.classList.remove('show'),1900)}
 export function card(title,body='',cls=''){const c=el('section',{class:'card '+cls});c.append(el('div',{class:'card-head'},el('h2',{},title)));if(body)c.append(el('div',{class:'muted'},body));return c}
 export function subTabs(items,active,onClick){const w=el('div',{class:'subtabs',role:'tablist'});items.forEach(it=>w.append(el('button',{class:'subtab '+(it.id===active?'active':''),role:'tab','aria-selected':it.id===active?'true':'false',onclick:()=>onClick(it.id)},it.label)));return w}
