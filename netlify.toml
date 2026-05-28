@@ -19,6 +19,11 @@
     Cache-Control = "no-store, no-cache, must-revalidate, max-age=0"
 
 [[headers]]
+  for = "/assets/css/*"
+  [headers.values]
+    Cache-Control = "no-store, no-cache, must-revalidate, max-age=0"
+
+[[headers]]
   for = "/modules/*"
   [headers.values]
     Cache-Control = "no-store, no-cache, must-revalidate, max-age=0"
