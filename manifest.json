@@ -1,0 +1,11 @@
+{
+  "name": "Ultimate Dashboard",
+  "short_name": "UD5",
+  "description": "Personal command dashboard for mission, routine, sport, study and money.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#08090d",
+  "theme_color": "#ff6b2c",
+  "lang": "fr-BE",
+  "icons": []
+}
