@@ -1,1 +1,6 @@
-export const WEEKLY_MEAL_PLAN={};
+export const WEEKLY_MEAL_PLAN={
+4:{name:'Jeudi',focus:'Concentration',fattyFish:true,lunch:{protein:50,items:['Poulet 200 g cru','Boulgour 70 g cru','Brocoli 200 g','Carottes 150 g','Huile d’olive 10 g']},dinner:{protein:41,items:['Sardines 120 g égouttées','Pommes de terre 300 g cuites','Tomates + concombre 300 g','Avocat 70 g']}},
+5:{name:'Vendredi',focus:'Endurance',fattyFish:false,lunch:{protein:50,items:['Dinde 200 g crue','Pâtes complètes 80 g crues','Sauce tomate sans sucre 150 g','Courgettes 250 g','Huile d’olive 5 g']},dinner:{protein:48,items:['Bœuf haché 5 % 140 g cru','Haricots rouges 150 g cuits','Riz basmati 120 g cuit','Tomates 200 g','Poivrons 150 g']}},
+6:{name:'Samedi',focus:'Récupération',fattyFish:true,lunch:{protein:50,items:['Poulet 200 g cru','Pommes de terre 350 g cuites','Légumes variés 350 g','Huile d’olive 10 g']},dinner:{protein:49,items:['Saumon ou truite 150 g cru','Pois chiches 150 g cuits','Épinards 250 g','Huile d’olive 5 g']}},
+0:{name:'Dimanche',focus:'Préparation',fattyFish:false,lunch:{protein:50,items:['Poulet 200 g cru','Riz basmati 70 g cru','Brocoli ou chou-fleur 300 g','Huile d’olive 10 g']},dinner:{protein:49,items:['Œufs 3','Skyr 200 g','Pain complet 80 g','Salade + tomates + concombre 300 g','Noix 15 g']}}
+};
