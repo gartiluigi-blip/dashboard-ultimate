@@ -21,9 +21,9 @@ const modules={
   },
   study:{load:()=>import('../../modules/study.js?v=20260601-godmode-1'),fn:'renderStudy'},
   money:{load:()=>import('../../modules/money.js?v=20260520-soul-1'),fn:'renderMoney'},
-  stats:{load:()=>import('../../modules/stats.js?v=202601-godmode-1'),fn:'renderStats'},
+  stats:{load:()=>import('../../modules/stats.js?v=20260601-godmode-1'),fn:'renderStats'},
   leisure:{load:()=>import('../../modules/leisure.js?v=20260520-soul-1'),fn:'renderLeisure'},
-  settings:{load:()=>import('../../modules/settings.js?v=202601-godmode-1'),fn:'renderSettings'}
+  settings:{load:()=>import('../../modules/settings.js?v=20260601-godmode-1'),fn:'renderSettings'}
 };
 const groups=[['nutrition','Nutrition',['nutrition']],['mission','Mission',['home','routine']],['training','Sport',['sport']],['study','Étude',['study']],['money','Argent',['money']],['intel','Stats',['stats']],['life','Loisir',['leisure']],['system','Système',['settings']]];
 let route=valid(localStorage.getItem('ud5_route')||'home'),token=0;
