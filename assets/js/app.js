@@ -1,11 +1,30 @@
 import{ $,el,modeBar,setUiMode,toast }from'./ui.js?v=20260601-godmode-1';
 import{ renderFuelFab }from'../../modules/fuel.js?v=20260520-soul-1';
 
-export const APP_VERSION='5.3.0-hybrid-ppl';
+export const APP_VERSION='5.3.1-sport-recovery';
 window.UD5_VERSION=APP_VERSION;
 
 const names={nutrition:'Nutrition',home:'Mission',routine:'Jour',stats:'Commandement',sport:'Sport',study:'Étude',money:'Argent',leisure:'Loisir',settings:'Système'};
-const modules={nutrition:{load:()=>import('../../modules/nutrition.js?v=20260626-nutrition-1'),fn:'renderNutrition'},home:{load:()=>import('../../modules/home.js?v=20260601-godmode-1'),fn:'renderHome'},routine:{load:()=>import('../../modules/routine.js?v=20260520-soul-1'),fn:'renderRoutine'},sport:{load:()=>import('../../modules/hybrid-sport.js?v=20260626-hybrid-ppl-1'),fn:'renderSport'},study:{load:()=>import('../../modules/study.js?v=20260601-godmode-1'),fn:'renderStudy'},money:{load:()=>import('../../modules/money.js?v=20260520-soul-1'),fn:'renderMoney'},stats:{load:()=>import('../../modules/stats.js?v=20260601-godmode-1'),fn:'renderStats'},leisure:{load:()=>import('../../modules/leisure.js?v=20260520-soul-1'),fn:'renderLeisure'},settings:{load:()=>import('../../modules/settings.js?v=20260601-godmode-1'),fn:'renderSettings'}};
+const modules={
+  nutrition:{load:()=>import('../../modules/nutrition.js?v=20260626-nutrition-1'),fn:'renderNutrition'},
+  home:{load:()=>import('../../modules/home.js?v=20260601-godmode-1'),fn:'renderHome'},
+  routine:{load:()=>import('../../modules/routine.js?v=20260520-soul-1'),fn:'renderRoutine'},
+  sport:{
+    load:async()=>{
+      try{return await import('../../modules/hybrid-sport.js?v=20260629-hybrid-ppl-2')}
+      catch(primaryError){
+        console.error('Primary sport module failed. Loading recovery module.',primaryError);
+        return import('../../modules/sport-recovery.js?v=20260629-sport-recovery-1');
+      }
+    },
+    fn:'renderSport'
+  },
+  study:{load:()=>import('../../modules/study.js?v=20260601-godmode-1'),fn:'renderStudy'},
+  money:{load:()=>import('../../modules/money.js?v=20260520-soul-1'),fn:'renderMoney'},
+  stats:{load:()=>import('../../modules/stats.js?v=202601-godmode-1'),fn:'renderStats'},
+  leisure:{load:()=>import('../../modules/leisure.js?v=20260520-soul-1'),fn:'renderLeisure'},
+  settings:{load:()=>import('../../modules/settings.js?v=202601-godmode-1'),fn:'renderSettings'}
+};
 const groups=[['nutrition','Nutrition',['nutrition']],['mission','Mission',['home','routine']],['training','Sport',['sport']],['study','Étude',['study']],['money','Argent',['money']],['intel','Stats',['stats']],['life','Loisir',['leisure']],['system','Système',['settings']]];
 let route=valid(localStorage.getItem('ud5_route')||'home'),token=0;
 function valid(x){return modules[x]?x:'home'}
