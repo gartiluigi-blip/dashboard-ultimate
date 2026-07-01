@@ -1,12 +1,11 @@
 {
   "name": "dashboard-ultimate-v5",
   "private": true,
-  "version": "5.0.0",
+  "version": "5.4.0",
   "type": "module",
-  "description": "Ultimate Dashboard v5 clean rebuild.",
+  "description": "Ultimate Dashboard clean rebuild.",
   "scripts": {
     "check": "node scripts/check.js",
-    "check:sport": "node scripts/check-sport.js",
     "check:features": "node scripts/check-features.js"
   },
   "engines": { "node": ">=18" }
