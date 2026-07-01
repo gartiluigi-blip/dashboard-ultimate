@@ -1,7 +1,7 @@
 const P='ud5_';
 const db=globalThis['local'+'Storage'];
 const j=JSON;
-export const APP_VERSION='5.1.1-hotfix';
+export const APP_VERSION='5.2.0-sport-clean';
 export const SCHEMA_VERSION=6;
 const META_KEY='__meta';
 
@@ -35,21 +35,12 @@ export function importJson(raw,{allowAll=false}={}){const obj=typeof raw==='stri
 export function purgeAll(){keys().forEach(k=>db.removeItem(k))}
 export function repairNulls(){let n=0;keys().forEach(k=>{const v=safeParse(db.getItem(k),undefined);if(v===null){db.removeItem(k);n++}});return n}
 
-export function sportCycle(){return get('sport_cycle',{anchorDate:today(),anchorType:'push1'})}
-export function setSportCycle(v){return set('sport_cycle',v)}
-export function sportSessions(){return validateList('sport_sessions')}
-export function addSportSession(s){return push('sport_sessions',s)}
-export function sportDraft(date=today()){return get('sport_draft_'+date,{})}
-export function setSportDraft(date,data){return set('sport_draft_'+date,{...sportDraft(date),...data})}
-export function bodyweight(){return get('bodyweight_progress',{})}
-export function setBodyweight(v){return set('bodyweight_progress',v)}
-export function addBodyweightTest(test){return push('bodyweight_tests',test)}
-export function bodyweightTests(){return validateList('bodyweight_tests')}
-export function flexibility(){return get('flexibility_progress',{currentLevel:0,measurements:[],dailyChecks:{}})}
-export function setFlexibility(v){return set('flexibility_progress',v)}
-export function addFlexMeasurement(m){const f=flexibility();f.measurements=f.measurements||[];f.measurements.push({...m,id:crypto.randomUUID(),createdAt:now()});return setFlexibility(f)}
-export function addSportMonthlyTest(test){return push('sport_monthly_tests',test)}
-export function sportMonthlyTests(){return validateList('sport_monthly_tests')}
+export function sportCycle(){
+  const clean=safeParse(db.getItem('ud5_sport_clean_v1'),{});
+  const anchorDate=typeof clean?.anchorDate==='string'?clean.anchorDate:today();
+  const anchorType=['Push A','Pull A','Legs A','Rest A','Push B','Pull B','Legs B','Rest B'].includes(clean?.anchorType)?clean.anchorType:'Push A';
+  return{anchorDate,anchorType};
+}
 export function logDay(date=today()){return get('log_'+date,{})}
 export function saveLog(date,data){return set('log_'+date,{...logDay(date),...data})}
 export function tasks(date=today()){return validateList('tasks_'+date)}
