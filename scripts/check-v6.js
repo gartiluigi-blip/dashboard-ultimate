@@ -4,7 +4,7 @@ import { execFileSync } from 'node:child_process';
 import { ATHLETE_CYCLE, ATHLETE_QUALITIES, CULTURE_SHELVES, PROP_FIRM_PRESETS, TRADING_CURRICULUM } from '../v6/content.js';
 import { athleteCoverage, nutritionTargets, propFirmStats, tradingReadiness } from '../v6/rules.js';
 
-const files = ['index.html', 'v6/app.js', 'v6/app.css', 'v6/content.js', 'v6/rules.js', 'v6/store.js'];
+const files = ['index.html', 'sw.js', 'v6/app.js', 'v6/app.css', 'v6/content.js', 'v6/rules.js', 'v6/store.js'];
 for (const file of files) {
   if (file.endsWith('.js')) execFileSync(process.execPath, ['--check', file], { stdio: 'pipe' });
 }
@@ -45,6 +45,9 @@ const app = readFileSync('v6/app.js', 'utf8');
 for (const token of ['renderAthlete', 'renderTrading', 'renderLibrary', 'Gate challenge', 'Aucune validation sans production réelle']) {
   if (!app.includes(token)) throw new Error(`V6.1 contract missing: ${token}`);
 }
+if (!app.includes("serviceWorker.register('/sw.js')")) throw new Error('Service worker is not registered');
+const sw = readFileSync('sw.js', 'utf8');
+if (!sw.includes('ultimate-dashboard-v6.1.0') || !sw.includes("caches.delete")) throw new Error('Versioned service worker contract missing');
 const css = readFileSync('v6/app.css', 'utf8');
 if (!css.includes('min-height: 46px') || !css.includes(':focus-visible')) throw new Error('Mobile accessibility contract missing');
 
@@ -69,5 +72,6 @@ console.log('V6.1 Godmode check OK', {
   athleteSessions: ATHLETE_CYCLE.length,
   tradingModules: TRADING_CURRICULUM.length,
   libraryShelves: Object.keys(CULTURE_SHELVES).length,
-  totalPnl: stats.totalPnl
+  totalPnl: stats.totalPnl,
+  offlineShell: true
 });
