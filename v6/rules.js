@@ -1,10 +1,23 @@
-import { DAY_MODES, SPORT_PROGRAM, STUDY_TRACKS } from './content.js';
+import {
+  ATHLETE_CYCLE,
+  ATHLETE_QUALITIES,
+  CULTURE_SHELVES,
+  DAY_MODES,
+  PROP_FIRM_PRESETS,
+  STUDY_TRACKS,
+  TRADING_CURRICULUM
+} from './content.js';
 import { localDate } from './store.js';
 
-const completedSport = session => ['completed', 'deload'].includes(session.status);
-const daysBetween = (a, b) => Math.floor((new Date(`${a}T12:00:00`) - new Date(`${b}T12:00:00`)) / 86400000);
+const completedSession = session => ['completed', 'deload'].includes(session.status);
+const dayMs = 86400000;
 
-export function nutritionTargets(profile) {
+export function daysBetween(a, b) {
+  if (!a || !b) return 999;
+  return Math.floor((new Date(`${a}T12:00:00`) - new Date(`${b}T12:00:00`)) / dayMs);
+}
+
+export function nutritionTargets(profile = {}) {
   const weight = Math.max(45, Number(profile.weightKg || 75));
   const proteinPerKg = Math.min(2.2, Math.max(1.2, Number(profile.proteinPerKg || 1.8)));
   return {
@@ -25,136 +38,261 @@ export function effectiveDayMode(state, date = localDate()) {
   return 'normal';
 }
 
-export function nextWorkout(state) {
-  const completed = state.sport.sessions.filter(completedSport).length;
-  const index = completed % SPORT_PROGRAM.length;
-  return { ...SPORT_PROGRAM[index], index };
+function advancesAthleteCycle(state, session) {
+  if (!completedSession(session)) return false;
+  if (session.advancesCycle === false) return false;
+  if (session.advancesCycle === true) return true;
+  const recovery = session.type === 'Récupération active' || (session.qualities || []).includes('recovery');
+  if (!recovery) return true;
+  const context = state.days?.[session.date] || {};
+  return !(Number(context.pain || 0) >= 5 || Number(context.energy || 3) <= 1);
 }
 
-export function sportProgression(previous, exercise) {
-  const sets = previous?.exercises?.[exercise.id]?.sets || [];
-  if (!sets.length) return 'Première référence : charge légère et technique propre.';
-  const pain = Math.max(...sets.map(set => Number(set.pain || 0)), Number(previous.pain || 0));
-  const rir = sets.map(set => Number(set.rir)).filter(Number.isFinite);
-  const reps = sets.map(set => Number(set.reps || 0));
-  const targetTop = Number(String(exercise.target).match(/(\d+)(?!.*\d)/)?.[1] || 0);
-  const allTop = targetTop > 0 && reps.length >= exercise.sets && reps.every(value => value >= targetTop);
-  const controlled = !rir.length || rir.every(value => value >= 1 && value <= 3);
-  if (pain >= 7) return 'Arrêt : douleur élevée. Pas de progression.';
-  if (pain >= 4) return 'Réduire charge ou amplitude de 10 à 20 %.';
-  if (allTop && controlled) return 'Progression proposée : +1 à 2 kg ou variante légèrement plus dure.';
-  return 'Maintenir la charge et gagner des répétitions propres.';
+export function nextAthleteSession(state, date = localDate()) {
+  const day = state.days[date] || {};
+  const completed = (state.sport.sessions || []).filter(session => advancesAthleteCycle(state, session)).length;
+  const baseIndex = completed % ATHLETE_CYCLE.length;
+  if (Number(day.pain || 0) >= 5 || Number(day.energy || 3) <= 1) {
+    const recoveryIndex = ATHLETE_CYCLE.findIndex(session => session.recovery);
+    return { ...ATHLETE_CYCLE[recoveryIndex], index: recoveryIndex, forcedRecovery: true };
+  }
+  return { ...ATHLETE_CYCLE[baseIndex], index: baseIndex, forcedRecovery: false };
 }
 
-export function vintedCost(item) {
-  return (item.transactions || [])
-    .filter(transaction => ['purchase', 'shipping', 'boost', 'packaging', 'fee'].includes(transaction.type))
-    .reduce((sum, transaction) => sum + Number(transaction.amount || 0), 0);
+export function athleteCoverage(state, window = 14) {
+  const since = new Date();
+  since.setDate(since.getDate() - window + 1);
+  const counts = Object.fromEntries(ATHLETE_QUALITIES.map(([id]) => [id, 0]));
+  (state.sport.sessions || [])
+    .filter(completedSession)
+    .filter(session => new Date(`${session.date}T12:00:00`) >= since)
+    .forEach(session => (session.qualities || []).forEach(id => { if (id in counts) counts[id] += 1; }));
+  return ATHLETE_QUALITIES.map(([id, label]) => ({ id, label, count: counts[id], target: id === 'recovery' ? 2 : 1 }));
 }
 
-export function vintedRevenue(item) {
-  return (item.transactions || [])
-    .filter(transaction => transaction.type === 'sale')
-    .reduce((sum, transaction) => sum + Number(transaction.amount || 0), 0);
+export function sportProgression(previous, drill) {
+  const entry = previous?.exercises?.[drill.id] || {};
+  if (!entry.actual) return 'Construis une première référence propre.';
+  const pain = Math.max(Number(entry.pain || 0), Number(previous?.pain || 0));
+  if (pain >= 7) return 'Arrêt et avis médical : aucune progression.';
+  if (pain >= 4) return 'Réduis charge, amplitude ou durée de 10 à 20 %.';
+  if (Number(entry.rpe || previous?.rpe || 0) <= 8) return 'Progression prudente : +1 répétition, +2 à 5 % ou +2 minutes.';
+  return 'Maintiens le niveau jusqu’à exécution propre à RPE ≤ 8.';
 }
 
-export function vintedResult(item) {
-  return vintedRevenue(item) - vintedCost(item);
+export function selectedPropPlan(state) {
+  const id = state.trading.planId || 'flex50';
+  const preset = PROP_FIRM_PRESETS[id] || PROP_FIRM_PRESETS.custom;
+  return id === 'custom'
+    ? { ...PROP_FIRM_PRESETS.custom, ...(state.trading.customPlan || {}), id }
+    : { ...preset, id };
 }
 
-export function vintedDecision(item, today = localDate()) {
-  if (item.status === 'sold') return { label: vintedResult(item) >= 0 ? 'PROFIT' : 'PERTE', priority: vintedResult(item) >= 0 ? 0 : 100, reason: 'Vente clôturée' };
-  if (item.status === 'abandoned') return { label: 'ARCHIVÉ', priority: 0, reason: 'Sorti du stock actif' };
-  const cost = vintedCost(item);
-  const asking = Number(item.asking || 0);
-  const age = Math.max(0, daysBetween(today, item.listedAt || today));
-  const margin = asking ? (asking - cost) / asking : -1;
-  if (!asking) return { label: 'COMPLÉTER', priority: 100, reason: 'Prix manquant' };
-  if (asking < cost) return { label: 'CORRIGER', priority: 95, reason: 'Prix sous le coût réel' };
-  if (age >= 60) return { label: 'SORTIR', priority: 90, reason: 'Stock immobilisé depuis 60 jours' };
-  if (age >= 30 && margin < 0.25) return { label: 'SORTIR', priority: 85, reason: 'Marge faible après 30 jours' };
-  if (age >= 30) return { label: 'BAISSER', priority: 75, reason: 'Aucune vente après 30 jours' };
-  if (age >= 14) return { label: 'TESTER PRIX', priority: 55, reason: 'Annonce active depuis 14 jours' };
-  return { label: 'GARDER', priority: 10, reason: 'Annonce encore saine' };
+export function propFirmStats(state) {
+  const plan = selectedPropPlan(state);
+  const trades = [...(state.trading.trades || [])].sort((a, b) => `${a.date}${a.createdAt || ''}`.localeCompare(`${b.date}${b.createdAt || ''}`));
+  const byDay = new Map();
+  let equity = Number(plan.account || 0);
+  let peak = equity;
+  let intradayMaxDrawdown = 0;
+  let grossWin = 0;
+  let grossLoss = 0;
+  let wins = 0;
+
+  trades.forEach(trade => {
+    const pnl = Number(trade.pnl || 0);
+    equity += pnl;
+    peak = Math.max(peak, equity);
+    intradayMaxDrawdown = Math.max(intradayMaxDrawdown, peak - equity);
+    byDay.set(trade.date, Number(byDay.get(trade.date) || 0) + pnl);
+    if (pnl > 0) { grossWin += pnl; wins += 1; }
+    if (pnl < 0) grossLoss += Math.abs(pnl);
+  });
+
+  let eodEquity = Number(plan.account || 0);
+  let eodPeak = eodEquity;
+  let eodMaxDrawdown = 0;
+  for (const pnl of byDay.values()) {
+    eodEquity += pnl;
+    eodPeak = Math.max(eodPeak, eodEquity);
+    eodMaxDrawdown = Math.max(eodMaxDrawdown, eodPeak - eodEquity);
+  }
+
+  const totalPnl = trades.reduce((sum, trade) => sum + Number(trade.pnl || 0), 0);
+  const positiveDays = [...byDay.values()].filter(value => value > 0);
+  const bestDay = positiveDays.length ? Math.max(...positiveDays) : 0;
+  const consistency = totalPnl > 0 ? (bestDay / totalPnl) * 100 : 0;
+  const avgWin = wins ? grossWin / wins : 0;
+  const losses = trades.filter(trade => Number(trade.pnl || 0) < 0).length;
+  const avgLoss = losses ? grossLoss / losses : 0;
+  const expectancy = trades.length ? (wins / trades.length) * avgWin - (losses / trades.length) * avgLoss : 0;
+  const breaches = trades.filter(trade => trade.breach).length;
+  const riskR = trades.filter(trade => Number(trade.risk || 0) > 0).map(trade => Number(trade.pnl || 0) / Number(trade.risk));
+  const averageR = riskR.length ? riskR.reduce((a, b) => a + b, 0) / riskR.length : 0;
+  const maxDrawdown = plan.drawdown === 'EOD' ? eodMaxDrawdown : intradayMaxDrawdown;
+  const personalDailyStop = Number(state.trading.risk?.dailyStop || 0);
+  const personalStopBreaches = personalDailyStop > 0
+    ? [...byDay.values()].filter(pnl => pnl < -personalDailyStop).length
+    : 0;
+
+  return {
+    plan,
+    trades: trades.length,
+    tradingDays: byDay.size,
+    totalPnl,
+    remainingTarget: Math.max(0, Number(plan.profitTarget || 0) - totalPnl),
+    bestDay,
+    consistency,
+    maxDrawdown,
+    eodMaxDrawdown,
+    intradayMaxDrawdown,
+    drawdownRemaining: Math.max(0, Number(plan.maxLoss || 0) - maxDrawdown),
+    winRate: trades.length ? (wins / trades.length) * 100 : 0,
+    profitFactor: grossLoss ? grossWin / grossLoss : grossWin > 0 ? Infinity : 0,
+    expectancy,
+    averageR,
+    breaches,
+    personalStopBreaches
+  };
+}
+
+export function tradingReadiness(state) {
+  const stats = propFirmStats(state);
+  const sessions = state.trading.sessions || [];
+  const backtestSamples = sessions.reduce((sum, item) => sum + Number(item.samples || 0), 0);
+  const cleanExecutionSessions = sessions.filter(item => item.kind === 'execution' && !item.breach).length;
+  const mockChallenges = Number(state.trading.mockChallenges || 0);
+  const playbookReady = Boolean((state.trading.setup?.name || '').trim() && (state.trading.setup?.rules || '').trim().length >= 40);
+  const drawdownBuffer = Number(stats.plan.maxLoss || 0) > 0 && stats.maxDrawdown <= Number(stats.plan.maxLoss) * 0.6;
+  const consistencyOk = stats.totalPnl > 0 && stats.tradingDays >= 2 && stats.consistency <= Number(stats.plan.consistencyPct || 100);
+  const criteria = [
+    { id: 'setup', label: 'Un setup écrit et testable', ok: playbookReady },
+    { id: 'sample', label: '100 occurrences backtestées', ok: backtestSamples >= 100, value: `${backtestSamples}/100` },
+    { id: 'trades', label: '30 trades simulés journalisés', ok: stats.trades >= 30, value: `${stats.trades}/30` },
+    { id: 'expectancy', label: 'Expectancy positive', ok: stats.expectancy > 0, value: stats.expectancy.toFixed(2) },
+    { id: 'profit-factor', label: 'Profit factor ≥ 1,20', ok: stats.profitFactor >= 1.2, value: Number.isFinite(stats.profitFactor) ? stats.profitFactor.toFixed(2) : '∞' },
+    { id: 'drawdown', label: 'Drawdown ≤ 60 % de la limite', ok: drawdownBuffer, value: `${Math.round(stats.maxDrawdown)}/${stats.plan.maxLoss}` },
+    { id: 'consistency', label: 'Cohérence conforme au plan', ok: consistencyOk, value: `${stats.consistency.toFixed(1)} %` },
+    { id: 'execution', label: '10 séances propres en replay/sim', ok: cleanExecutionSessions >= 10, value: `${cleanExecutionSessions}/10` },
+    { id: 'mock', label: '2 mock challenges sans breach', ok: mockChallenges >= 2, value: `${mockChallenges}/2` },
+    { id: 'rules', label: 'Aucune violation enregistrée', ok: stats.breaches === 0 && stats.personalStopBreaches === 0, value: `${stats.breaches + stats.personalStopBreaches}` }
+  ];
+  return {
+    criteria,
+    score: Math.round(criteria.filter(item => item.ok).length / criteria.length * 100),
+    ready: criteria.every(item => item.ok),
+    backtestSamples,
+    cleanExecutionSessions
+  };
+}
+
+export function activeTradingModule(state) {
+  const index = Math.min(Math.max(0, Number(state.trading.curriculumIndex || 0)), TRADING_CURRICULUM.length - 1);
+  return { ...TRADING_CURRICULUM[index], index };
+}
+
+export function activeStudyResource(state) {
+  const trackId = state.study.activeTrack || 'epfc';
+  const track = STUDY_TRACKS[trackId] || STUDY_TRACKS.epfc;
+  const progress = state.study.tracks[trackId] || {};
+  const index = Math.min(Math.max(0, Number(progress.index || 0)), track.resources.length - 1);
+  return { trackId, track, resource: track.resources[index], index };
+}
+
+export function activeReadingBook(state) {
+  const shelfId = state.reading.activeShelf || 'core';
+  const shelf = CULTURE_SHELVES[shelfId] || CULTURE_SHELVES.core;
+  const progress = state.reading.shelves[shelfId] || {};
+  const index = Math.min(Math.max(0, Number(progress.index || 0)), shelf.books.length - 1);
+  return { shelfId, shelf, book: shelf.books[index], index };
 }
 
 export function cashForecast(state, days = 30) {
-  const settings = state.money.settings;
-  const now = new Date();
-  const end = new Date(now);
-  end.setDate(end.getDate() + days);
-  let balance = Number(settings.openingBalance || 0);
-  balance += Number(settings.income || 0) * (days / 30);
-  const recurring = state.money.recurring.reduce((sum, row) => sum + Number(row.amount || 0), 0) * (days / 30);
-  balance -= recurring;
-  const recent = state.money.transactions
-    .filter(transaction => {
-      const date = new Date(`${transaction.date || localDate()}T12:00:00`);
-      return date >= now && date <= end;
-    })
-    .reduce((sum, transaction) => sum + (transaction.type === 'income' ? Number(transaction.amount || 0) : -Number(transaction.amount || 0)), 0);
-  return Math.round((balance + recent) * 100) / 100;
+  const horizon = Math.max(0, Number(days || 30)) / 30;
+  const settings = state.money.settings || {};
+  const recurring = state.money.recurring || [];
+  const recurringTotal = recurring.reduce((sum, row) => sum + Number(row.amount || 0), 0);
+  const recurringLabels = new Set(recurring.map(row => String(row.label || '').trim().toLowerCase()).filter(Boolean));
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 30);
+  const variableExpenses = (state.money.transactions || [])
+    .filter(transaction => transaction.type === 'expense')
+    .filter(transaction => new Date(`${transaction.date || localDate()}T12:00:00`) >= cutoff)
+    .filter(transaction => !recurringLabels.has(String(transaction.category || '').trim().toLowerCase()))
+    .reduce((sum, transaction) => sum + Number(transaction.amount || 0), 0);
+
+  const balance = Number(settings.openingBalance || 0)
+    + Number(settings.income || 0) * horizon
+    - recurringTotal * horizon
+    - variableExpenses * horizon
+    - Number(settings.savingsTarget || 0) * horizon;
+  return Math.round(balance * 100) / 100;
 }
 
-function lastStudyDays(state, days = 14) {
-  const today = localDate();
-  return new Set(state.study.sessions.filter(session => session.date && daysBetween(today, session.date) >= 0 && daysBetween(today, session.date) < days).map(session => session.date)).size;
-}
-
-function lastSportDate(state) {
-  return state.sport.sessions.filter(completedSport).map(session => session.date).filter(Boolean).sort().at(-1) || '';
-}
-
-function activeVintedActions(state) {
-  return state.money.vinted
-    .filter(item => !['sold', 'abandoned'].includes(item.status))
-    .map(item => ({ item, decision: vintedDecision(item) }))
-    .filter(row => row.decision.priority >= 55)
-    .sort((a, b) => b.decision.priority - a.decision.priority);
-}
-
-function studyOrder(state, short = false) {
-  const trackId = state.study.activeTrack || 'epfc';
-  const track = STUDY_TRACKS[trackId] || STUDY_TRACKS.epfc;
-  const trackState = state.study.tracks[trackId] || {};
-  const index = Math.min(Number(trackState.index || trackState.bookIndex || 0), track.resources.length - 1);
-  const resource = track.resources[Math.max(0, index)];
-  return {
-    id: 'study',
-    domain: 'study',
-    route: 'study',
-    minutes: short ? 10 : 30,
-    title: `${track.label} · ${resource[0]}`,
-    detail: `${resource[1]} · preuve attendue : ${resource[2]}`
-  };
+function lastDate(items, predicate = () => true) {
+  return items.filter(predicate).map(item => item.date).filter(Boolean).sort().at(-1) || '';
 }
 
 function healthOrder(state, targets) {
   const day = state.days[localDate()] || {};
   if (Number(day.waterMl || 0) < targets.waterMl * 0.5) {
-    return { id: 'water', domain: 'nutrition', route: 'nutrition', minutes: 2, title: 'Boire 500 ml', detail: `${day.waterMl || 0}/${targets.waterMl} ml enregistrés` };
+    return { id: 'health', domain: 'Santé', route: 'nutrition', minutes: 3, title: 'Hydratation', detail: `Boire 500 ml · ${day.waterMl || 0}/${targets.waterMl} ml` };
   }
   if (Number(day.proteinG || 0) < targets.proteinG * 0.55) {
-    return { id: 'protein', domain: 'nutrition', route: 'nutrition', minutes: 10, title: 'Préparer une source de protéines', detail: `${day.proteinG || 0}/${targets.proteinG} g enregistrés` };
+    return { id: 'health', domain: 'Santé', route: 'nutrition', minutes: 10, title: 'Sécuriser les protéines', detail: `${day.proteinG || 0}/${targets.proteinG} g enregistrés` };
   }
-  return { id: 'nutrition', domain: 'nutrition', route: 'nutrition', minutes: 5, title: 'Sécuriser le prochain repas', detail: 'Choisir le repas ou une substitution rapide.' };
+  return { id: 'health', domain: 'Santé', route: 'nutrition', minutes: 5, title: 'Préparer le prochain repas', detail: 'Choisis le menu ou une substitution simple.' };
 }
 
-function sportOrder(state, mode) {
-  const workout = nextWorkout(state);
-  const last = lastSportDate(state);
-  const delay = last ? daysBetween(localDate(), last) : 99;
-  if (workout.recovery || mode === 'recovery') {
-    return { id: 'sport', domain: 'sport', route: 'sport', minutes: 15, title: 'Récupération active', detail: 'Marche ou vélo facile, sans provoquer de douleur.' };
-  }
-  return { id: 'sport', domain: 'sport', route: 'sport', minutes: mode === 'fatigue' ? 20 : 50, title: `Sport · ${workout.name}`, detail: `${workout.focus}${delay >= 4 ? ` · dernière séance il y a ${delay} jours` : ''}` };
+function athleteOrder(state, mode) {
+  const next = nextAthleteSession(state);
+  const last = lastDate(state.sport.sessions || [], completedSession);
+  const delay = daysBetween(localDate(), last);
+  return {
+    id: 'athlete',
+    domain: 'Athlète',
+    route: 'athlete',
+    minutes: mode === 'fatigue' ? Math.min(25, next.duration) : next.duration,
+    title: next.name,
+    detail: `${next.qualities.length} qualités travaillées${delay >= 3 ? ` · dernière séance il y a ${delay} jours` : ''}`
+  };
 }
 
-function moneyOrder(state) {
-  const urgent = activeVintedActions(state)[0];
-  if (urgent) return { id: 'money', domain: 'money', route: 'money', minutes: 10, title: `Vinted · ${urgent.decision.label}`, detail: `${urgent.item.name} · ${urgent.decision.reason}` };
-  const forecast = cashForecast(state, 30);
-  return { id: 'money', domain: 'money', route: 'money', minutes: 5, title: 'Contrôle cash', detail: `Prévision 30 jours : ${forecast.toFixed(2)} €` };
+function tradingOrder(state, mode) {
+  const active = activeTradingModule(state);
+  const readiness = tradingReadiness(state);
+  return {
+    id: 'trading',
+    domain: 'Trading',
+    route: 'trading',
+    minutes: mode === 'fatigue' ? 15 : 45,
+    title: `Semaine ${active.week} · ${active.title}`,
+    detail: `${readiness.score}% prêt pour challenge · preuve : ${active.proof}`
+  };
+}
+
+function studyOrder(state, mode) {
+  const { track, resource } = activeStudyResource(state);
+  return {
+    id: 'study',
+    domain: 'Études',
+    route: 'study',
+    minutes: mode === 'fatigue' ? 15 : 35,
+    title: `${track.label} · ${resource[0]}`,
+    detail: `${resource[1]} · preuve : ${resource[2]}`
+  };
+}
+
+function readingOrder(state, mode) {
+  const { shelf, book } = activeReadingBook(state);
+  return {
+    id: 'reading',
+    domain: 'Lecture',
+    route: 'library',
+    minutes: mode === 'fatigue' ? 10 : 25,
+    title: book.title,
+    detail: `${book.author} · ${shelf.label}`
+  };
 }
 
 export function todayOrders(state) {
@@ -163,24 +301,23 @@ export function todayOrders(state) {
   const completed = new Set(day.completed || []);
   const mode = effectiveDayMode(state, date);
   const targets = nutritionTargets(state.profile);
-  const study = studyOrder(state, mode === 'fatigue' || mode === 'recovery');
-  const health = healthOrder(state, targets);
-  const sport = sportOrder(state, mode);
-  const money = moneyOrder(state);
-  const studyDays = lastStudyDays(state);
-  const sportDelay = lastSportDate(state) ? daysBetween(date, lastSportDate(state)) : 99;
-  const vintedUrgent = activeVintedActions(state).length;
+  const readiness = tradingReadiness(state);
+  const lastAthlete = lastDate(state.sport.sessions || [], completedSession);
+  const lastTradeStudy = lastDate(state.trading.sessions || []);
+  const lastStudy = lastDate(state.study.sessions || []);
+  const lastRead = lastDate(state.reading.sessions || []);
 
   let candidates = [
-    { ...study, score: studyDays < 3 ? 85 : 55 },
-    { ...health, score: Number(day.waterMl || 0) < targets.waterMl * 0.5 ? 90 : 60 },
-    { ...sport, score: sportDelay >= 4 ? 88 : 50 },
-    { ...money, score: vintedUrgent ? 82 : 40 }
+    { ...healthOrder(state, targets), score: Number(day.waterMl || 0) < targets.waterMl * 0.5 ? 95 : 62 },
+    { ...athleteOrder(state, mode), score: daysBetween(date, lastAthlete) >= 2 ? 90 : 58 },
+    { ...tradingOrder(state, mode), score: readiness.ready ? 55 : daysBetween(date, lastTradeStudy) >= 1 ? 88 : 68 },
+    { ...studyOrder(state, mode), score: daysBetween(date, lastStudy) >= 2 ? 82 : 54 },
+    { ...readingOrder(state, mode), score: daysBetween(date, lastRead) >= 2 ? 66 : 42 }
   ];
 
-  if (mode === 'recovery') candidates = candidates.filter(item => ['nutrition', 'study', 'sport'].includes(item.domain));
-  if (mode === 'fatigue') candidates = candidates.map(item => ({ ...item, minutes: Math.min(item.minutes, 15), score: item.domain === 'nutrition' ? item.score + 15 : item.score }));
-  if (mode === 'execution') candidates = candidates.map(item => ({ ...item, score: item.domain === 'study' ? item.score + 20 : item.score }));
+  if (mode === 'recovery') candidates = candidates.filter(item => ['Santé', 'Lecture', 'Études', 'Athlète'].includes(item.domain));
+  if (mode === 'fatigue') candidates = candidates.map(item => ({ ...item, minutes: Math.min(15, item.minutes), score: item.domain === 'Santé' ? item.score + 10 : item.score }));
+  if (mode === 'execution') candidates = candidates.map(item => ({ ...item, score: ['Trading', 'Études'].includes(item.domain) ? item.score + 12 : item.score }));
 
   const orders = candidates
     .filter(item => !completed.has(item.id))

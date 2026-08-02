@@ -1,9 +1,10 @@
-export const APP_VERSION = '6.0.0-alpha.1';
-export const SCHEMA_VERSION = 1;
+export const APP_VERSION = '6.1.0-godmode';
+export const SCHEMA_VERSION = 2;
 
 const STATE_KEY = 'ud6_state';
 const BACKUP_KEY = 'ud6_backups';
 const LEGACY_PREFIX = 'ud5_';
+const REMOVED_DOMAIN_PATTERN = /vinted/i;
 const listeners = new Set();
 
 const now = () => new Date().toISOString();
@@ -13,21 +14,12 @@ export const localDate = (date = new Date()) => {
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 };
-
-const uid = (prefix = 'id') =>
-  `${prefix}_${globalThis.crypto?.randomUUID?.() || `${Date.now()}_${Math.random().toString(16).slice(2)}`}`;
+const uid = (prefix = 'id') => `${prefix}_${globalThis.crypto?.randomUUID?.() || `${Date.now()}_${Math.random().toString(16).slice(2)}`}`;
 
 function parse(raw, fallback) {
-  try {
-    return raw == null ? fallback : JSON.parse(raw);
-  } catch {
-    return fallback;
-  }
+  try { return raw == null ? fallback : JSON.parse(raw); } catch { return fallback; }
 }
-
-function legacy(key, fallback = null) {
-  return parse(localStorage.getItem(`${LEGACY_PREFIX}${key}`), fallback);
-}
+function legacy(key, fallback = null) { return parse(localStorage.getItem(`${LEGACY_PREFIX}${key}`), fallback); }
 
 function baseState() {
   return {
@@ -38,58 +30,67 @@ function baseState() {
       updatedAt: now(),
       legacyImportedAt: '',
       legacyKeysFound: 0,
+      removedDomainsAt: '',
       deviceId: globalThis.crypto?.randomUUID?.() || String(Date.now())
     },
     profile: {
       weightKg: 82,
       heightCm: 168,
-      goal: 'recomposition',
+      goal: 'athlete',
       proteinPerKg: 1.8,
       waterMl: 2500,
       mealsPerDay: 4,
       weeklyFoodBudget: 90,
-      equipment: ['haltères', 'machines', 'poulies'],
-      trainingDays: 4
+      equipment: ['haltères', 'machines', 'poulies', 'vélo ou rameur'],
+      trainingDays: 6
     },
     focus: {
-      primary: ['Santé et énergie', 'Études informatique', 'Argent'],
-      parking: ['Échecs', 'Lecture avancée', 'IoT avancé']
+      primary: ['Santé et athlétisme', 'Trading discipliné', 'Études informatique'],
+      parking: ['Projets secondaires']
     },
     days: {},
-    nutrition: {
-      entries: [],
-      weightHistory: [],
-      templates: {},
-      pantry: []
-    },
+    nutrition: { entries: [], weightHistory: [], templates: {}, pantry: [] },
     sport: {
-      cycleIndex: 0,
       sessions: [],
       draft: {},
-      restrictions: ['Adapter selon douleur cervicale et avis médical']
+      benchmarks: {},
+      weeklyTarget: 6,
+      restrictions: [
+        'Douleur cervicale : nuque neutre, pas de charge directe sur le cou',
+        'Stop si faiblesse, engourdissement progressif ou douleur irradiée',
+        'Toute reprise intense doit rester compatible avec l’avis médical'
+      ]
     },
-    study: {
-      activeTrack: 'epfc',
-      tracks: {},
+    trading: {
+      planId: 'flex50',
+      customPlan: {},
+      curriculumIndex: 0,
       sessions: [],
-      reviews: [],
-      library: []
-    },
-    money: {
-      settings: {
-        income: 1800,
-        openingBalance: 0,
-        emergencyTarget: 5400,
-        savingsTarget: 200
+      trades: [],
+      mockChallenges: 0,
+      setup: {
+        market: 'MNQ',
+        session: 'New York AM',
+        platform: 'TradingView + plateforme d’exécution',
+        name: '',
+        rules: ''
       },
-      recurring: [],
-      transactions: [],
-      vinted: []
+      risk: {
+        riskPerTrade: 100,
+        dailyStop: 250,
+        maxTrades: 3,
+        maxConsecutiveLosses: 2,
+        stopAfterTarget: true
+      }
     },
-    ui: {
-      route: 'today',
-      compact: true
-    }
+    study: { activeTrack: 'epfc', tracks: {}, sessions: [], reviews: [], library: [] },
+    reading: { activeShelf: 'core', shelves: {}, sessions: [], notes: [] },
+    money: {
+      settings: { income: 1800, openingBalance: 0, emergencyTarget: 5400, savingsTarget: 200 },
+      recurring: [],
+      transactions: []
+    },
+    ui: { route: 'today', compact: false }
   };
 }
 
@@ -105,49 +106,48 @@ function normalizeSession(session = {}) {
   return {
     id: session.id || uid('sport'),
     date: session.date || localDate(),
-    type: session.type || 'Séance',
+    type: session.type || 'Séance importée',
     status: session.status || 'completed',
-    pain: Number(session.globalPain ?? session.globalPainLevel ?? 0),
+    pain: Number(session.globalPain ?? session.globalPainLevel ?? session.pain ?? 0),
     energy: Number(session.energy ?? 3),
+    rpe: Number(session.rpe ?? 0),
     durationMin: Number(session.durationMin ?? 0),
     notes: session.notes || '',
+    qualities: Array.isArray(session.qualities) ? session.qualities : ['strength'],
     exercises: session.exercises || {},
     imported: true
   };
 }
 
-function normalizeVinted(item = {}) {
-  const transactions = [];
-  if (Number(item.buy) > 0) transactions.push({ id: uid('cost'), type: 'purchase', amount: Number(item.buy), date: item.listedAt || localDate() });
-  if (Number(item.shipping) > 0) transactions.push({ id: uid('cost'), type: 'shipping', amount: Number(item.shipping), date: item.listedAt || localDate() });
-  const legacyBoosts = Array.isArray(item.boosts) && item.boosts.length
-    ? item.boosts
-    : Number(item.boost) > 0
-      ? [{ amount: Number(item.boost), date: item.listedAt || localDate() }]
-      : [];
-  legacyBoosts.forEach(boost => transactions.push({ id: uid('cost'), type: 'boost', amount: Number(boost.amount || 0), date: boost.date || localDate() }));
-  if (item.status === 'sold' && Number(item.sold) > 0) transactions.push({ id: uid('sale'), type: 'sale', amount: Number(item.sold), date: item.soldAt || localDate() });
-  return {
-    id: item.id || uid('vinted'),
-    name: item.name || 'Article',
-    brand: item.brand || '',
-    category: item.category || '',
-    condition: item.condition || 'bon',
-    listedAt: item.listedAt || localDate(),
-    asking: Number(item.asking || 0),
-    floor: Number(item.floor || 0),
-    targetRoi: Number(item.targetRoi || 50),
-    status: item.status || 'listed',
-    transactions,
-    priceHistory: Array.isArray(item.priceDrops) ? item.priceDrops : [],
-    imported: true
-  };
+function removeDeletedDomainData(value) {
+  if (!value || typeof value !== 'object') return value;
+  const clone = structuredClone(value);
+  if (clone.money && typeof clone.money === 'object') {
+    for (const key of Object.keys(clone.money)) {
+      if (REMOVED_DOMAIN_PATTERN.test(key)) delete clone.money[key];
+    }
+  }
+  return clone;
+}
+
+function purgeDeletedDomainStorage() {
+  const keys = [];
+  for (let index = 0; index < localStorage.length; index += 1) {
+    const key = localStorage.key(index) || '';
+    if (REMOVED_DOMAIN_PATTERN.test(key)) keys.push(key);
+  }
+  keys.forEach(key => localStorage.removeItem(key));
+
+  const backups = parse(localStorage.getItem(BACKUP_KEY), []);
+  if (Array.isArray(backups) && backups.length) {
+    const clean = backups.map(item => ({ ...item, state: removeDeletedDomainData(item.state) }));
+    localStorage.setItem(BACKUP_KEY, JSON.stringify(clean.slice(-3)));
+  }
 }
 
 function importLegacy(state) {
   const legacyCount = countLegacyKeys();
   if (!legacyCount || state.meta.legacyImportedAt) return state;
-
   const next = structuredClone(state);
   next.meta.legacyImportedAt = now();
   next.meta.legacyKeysFound = legacyCount;
@@ -159,7 +159,8 @@ function importLegacy(state) {
   if (finance) {
     next.money.settings.income = Number(finance.income || next.money.settings.income);
     const labels = {
-      rent: 'Loyer', energy: 'Énergie', internet: 'Internet', phone: 'Téléphone', gym: 'Sport', insurance: 'Assurance', contribution: 'Contribution alimentaire', other: 'Autres charges'
+      rent: 'Loyer', energy: 'Énergie', internet: 'Internet', phone: 'Téléphone',
+      gym: 'Sport', insurance: 'Assurance', contribution: 'Contribution alimentaire', other: 'Autres charges'
     };
     Object.entries(labels).forEach(([key, label]) => {
       const amount = Number(finance[key] || 0);
@@ -167,8 +168,7 @@ function importLegacy(state) {
     });
   }
 
-  const savings = legacy('savings_history', []);
-  savings.forEach(item => next.money.transactions.push({
+  legacy('savings_history', []).forEach(item => next.money.transactions.push({
     id: item.id || uid('tx'),
     date: item.date || `${item.month || localDate().slice(0, 7)}-01`,
     type: 'saving',
@@ -178,15 +178,10 @@ function importLegacy(state) {
     source: 'legacy'
   }));
 
-  const vinted = legacy('vinted_items', []);
-  next.money.vinted = vinted.map(normalizeVinted);
-
   const sport = parse(localStorage.getItem('ud5_sport_clean_v1'), {});
   next.sport.sessions = (sport.sessions || []).map(normalizeSession);
-  next.sport.cycleIndex = Math.max(0, ['Push A', 'Pull A', 'Legs A', 'Rest A', 'Push B', 'Pull B', 'Legs B', 'Rest B'].indexOf(sport.anchorType));
 
-  const trackState = legacy('track_state', {});
-  next.study.tracks = trackState;
+  next.study.tracks = legacy('track_state', {});
   next.study.sessions = legacy('study_activity', []).map(item => ({ ...item, id: item.id || uid('study'), imported: true }));
   next.study.reviews = legacy('error_bank', []).map(item => ({ ...item, id: item.id || uid('review'), imported: true }));
   next.study.library = legacy('study_materials', []).map(item => ({ ...item, id: item.id || uid('book'), imported: true }));
@@ -203,50 +198,66 @@ function importLegacy(state) {
       completed: [],
       blocked: [],
       note: '',
+      availableMin: 60,
       energy: 3,
-      pain: 0
+      pain: 0,
+      mode: 'auto'
     };
   }
-
   return next;
 }
 
 function sanitize(state) {
   const fallback = baseState();
+  const source = removeDeletedDomainData(state || {});
+  const cleanMoney = source.money || {};
   return {
     ...fallback,
-    ...state,
-    meta: { ...fallback.meta, ...(state?.meta || {}), schemaVersion: SCHEMA_VERSION, appVersion: APP_VERSION },
-    profile: { ...fallback.profile, ...(state?.profile || {}) },
-    focus: { ...fallback.focus, ...(state?.focus || {}) },
-    nutrition: { ...fallback.nutrition, ...(state?.nutrition || {}) },
-    sport: { ...fallback.sport, ...(state?.sport || {}) },
-    study: { ...fallback.study, ...(state?.study || {}) },
-    money: { ...fallback.money, ...(state?.money || {}), settings: { ...fallback.money.settings, ...(state?.money?.settings || {}) } },
-    ui: { ...fallback.ui, ...(state?.ui || {}) },
-    days: state?.days && typeof state.days === 'object' ? state.days : {}
+    ...source,
+    meta: { ...fallback.meta, ...(source.meta || {}), schemaVersion: SCHEMA_VERSION, appVersion: APP_VERSION },
+    profile: { ...fallback.profile, ...(source.profile || {}) },
+    focus: { ...fallback.focus, ...(source.focus || {}) },
+    nutrition: { ...fallback.nutrition, ...(source.nutrition || {}) },
+    sport: { ...fallback.sport, ...(source.sport || {}) },
+    trading: {
+      ...fallback.trading,
+      ...(source.trading || {}),
+      setup: { ...fallback.trading.setup, ...(source.trading?.setup || {}) },
+      risk: { ...fallback.trading.risk, ...(source.trading?.risk || {}) }
+    },
+    study: { ...fallback.study, ...(source.study || {}) },
+    reading: { ...fallback.reading, ...(source.reading || {}) },
+    money: {
+      ...fallback.money,
+      ...cleanMoney,
+      settings: { ...fallback.money.settings, ...(cleanMoney.settings || {}) },
+      recurring: Array.isArray(cleanMoney.recurring) ? cleanMoney.recurring : [],
+      transactions: Array.isArray(cleanMoney.transactions) ? cleanMoney.transactions : []
+    },
+    ui: { ...fallback.ui, ...(source.ui || {}) },
+    days: source.days && typeof source.days === 'object' ? source.days : {}
   };
 }
 
 function persist(state, emit = true) {
   const clean = sanitize(state);
   clean.meta.updatedAt = now();
+  if (!clean.meta.removedDomainsAt) clean.meta.removedDomainsAt = now();
   localStorage.setItem(STATE_KEY, JSON.stringify(clean));
   if (emit) listeners.forEach(listener => listener(clean));
   return clean;
 }
 
 export function load() {
+  purgeDeletedDomainStorage();
   let state = sanitize(parse(localStorage.getItem(STATE_KEY), baseState()));
   state = importLegacy(state);
   return persist(state, false);
 }
 
 export function update(mutator) {
-  const state = load();
-  const draft = structuredClone(state);
-  const result = mutator(draft) || draft;
-  return persist(result);
+  const draft = structuredClone(load());
+  return persist(mutator(draft) || draft);
 }
 
 export function subscribe(listener) {
@@ -256,25 +267,13 @@ export function subscribe(listener) {
 
 export function day(state = load(), date = localDate()) {
   if (!state.days[date]) {
-    state.days[date] = { energy: 3, pain: 0, availableMin: 60, waterMl: 0, proteinG: 0, completed: [], blocked: [], note: '' };
+    state.days[date] = { energy: 3, pain: 0, availableMin: 60, waterMl: 0, proteinG: 0, completed: [], blocked: [], note: '', mode: 'auto' };
   }
   return state.days[date];
 }
 
-export function addEvent(domain, payload = {}) {
-  return update(state => {
-    const current = day(state);
-    const event = { id: uid(domain), date: localDate(), createdAt: now(), domain, ...payload };
-    if (domain === 'nutrition') state.nutrition.entries.push(event);
-    if (domain === 'sport') state.sport.sessions.push(event);
-    if (domain === 'study') state.study.sessions.push(event);
-    if (domain === 'money') state.money.transactions.push(event);
-    current.completed = Array.from(new Set([...(current.completed || []), payload.actionId || domain]));
-  });
-}
-
 export function createBackup(reason = 'manual') {
-  const state = load();
+  const state = sanitize(load());
   const backups = parse(localStorage.getItem(BACKUP_KEY), []);
   backups.push({ id: uid('backup'), createdAt: now(), reason, state });
   localStorage.setItem(BACKUP_KEY, JSON.stringify(backups.slice(-3)));
@@ -282,8 +281,7 @@ export function createBackup(reason = 'manual') {
 }
 
 export function exportData() {
-  const state = load();
-  return JSON.stringify({ format: 'ultimate-dashboard-v6', exportedAt: now(), state }, null, 2);
+  return JSON.stringify({ format: 'ultimate-dashboard-v6', exportedAt: now(), state: sanitize(load()) }, null, 2);
 }
 
 export function importData(raw) {
@@ -296,6 +294,7 @@ export function importData(raw) {
 export function resetV6() {
   localStorage.removeItem(STATE_KEY);
   localStorage.removeItem(BACKUP_KEY);
+  purgeDeletedDomainStorage();
   listeners.forEach(listener => listener(baseState()));
 }
 
