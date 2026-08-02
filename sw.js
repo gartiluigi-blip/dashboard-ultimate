@@ -1,10 +1,10 @@
-const CACHE = 'ultimate-dashboard-v6.1.0';
+const CACHE = 'ultimate-dashboard-v6.2.0';
 const APP_SHELL = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/v6/app.css?v=6.1.0',
-  '/v6/app.js?v=6.1.0',
+  '/v6/app.css?v=6.2.0',
+  '/v6/app.js?v=6.2.0',
   '/v6/content.js',
   '/v6/rules.js',
   '/v6/store.js',
@@ -24,33 +24,47 @@ self.addEventListener('activate', event => {
   );
 });
 
+async function networkFirst(request, fallback) {
+  try {
+    const response = await fetch(request);
+    if (response.ok) {
+      const cache = await caches.open(CACHE);
+      cache.put(request, response.clone());
+    }
+    return response;
+  } catch {
+    return caches.match(request) || caches.match(fallback);
+  }
+}
+
+async function staleWhileRevalidate(request) {
+  const cached = await caches.match(request);
+  const network = fetch(request)
+    .then(async response => {
+      if (response.ok) {
+        const cache = await caches.open(CACHE);
+        cache.put(request, response.clone());
+      }
+      return response;
+    })
+    .catch(() => null);
+  return cached || network || Response.error();
+}
+
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
 
   if (event.request.mode === 'navigate') {
-    event.respondWith(
-      fetch(event.request)
-        .then(response => {
-          const copy = response.clone();
-          caches.open(CACHE).then(cache => cache.put('/index.html', copy));
-          return response;
-        })
-        .catch(() => caches.match('/index.html'))
-    );
+    event.respondWith(networkFirst(event.request, '/index.html'));
     return;
   }
 
-  event.respondWith(
-    caches.match(event.request).then(cached => {
-      const network = fetch(event.request)
-        .then(response => {
-          if (response.ok) caches.open(CACHE).then(cache => cache.put(event.request, response.clone()));
-          return response;
-        })
-        .catch(() => cached);
-      return cached || network;
-    })
-  );
+  if (['script', 'style', 'worker'].includes(event.request.destination)) {
+    event.respondWith(staleWhileRevalidate(event.request));
+    return;
+  }
+
+  event.respondWith(caches.match(event.request).then(cached => cached || fetch(event.request)));
 });
