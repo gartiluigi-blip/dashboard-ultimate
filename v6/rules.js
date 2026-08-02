@@ -38,9 +38,19 @@ export function effectiveDayMode(state, date = localDate()) {
   return 'normal';
 }
 
+function advancesAthleteCycle(state, session) {
+  if (!completedSession(session)) return false;
+  if (session.advancesCycle === false) return false;
+  if (session.advancesCycle === true) return true;
+  const recovery = session.type === 'Récupération active' || (session.qualities || []).includes('recovery');
+  if (!recovery) return true;
+  const context = state.days?.[session.date] || {};
+  return !(Number(context.pain || 0) >= 5 || Number(context.energy || 3) <= 1);
+}
+
 export function nextAthleteSession(state, date = localDate()) {
   const day = state.days[date] || {};
-  const completed = (state.sport.sessions || []).filter(completedSession).length;
+  const completed = (state.sport.sessions || []).filter(session => advancesAthleteCycle(state, session)).length;
   const baseIndex = completed % ATHLETE_CYCLE.length;
   if (Number(day.pain || 0) >= 5 || Number(day.energy || 3) <= 1) {
     const recoveryIndex = ATHLETE_CYCLE.findIndex(session => session.recovery);
@@ -73,7 +83,9 @@ export function sportProgression(previous, drill) {
 export function selectedPropPlan(state) {
   const id = state.trading.planId || 'flex50';
   const preset = PROP_FIRM_PRESETS[id] || PROP_FIRM_PRESETS.custom;
-  return { ...preset, ...(state.trading.customPlan || {}), id };
+  return id === 'custom'
+    ? { ...PROP_FIRM_PRESETS.custom, ...(state.trading.customPlan || {}), id }
+    : { ...preset, id };
 }
 
 export function propFirmStats(state) {
@@ -82,7 +94,7 @@ export function propFirmStats(state) {
   const byDay = new Map();
   let equity = Number(plan.account || 0);
   let peak = equity;
-  let maxDrawdown = 0;
+  let intradayMaxDrawdown = 0;
   let grossWin = 0;
   let grossLoss = 0;
   let wins = 0;
@@ -91,11 +103,20 @@ export function propFirmStats(state) {
     const pnl = Number(trade.pnl || 0);
     equity += pnl;
     peak = Math.max(peak, equity);
-    maxDrawdown = Math.max(maxDrawdown, peak - equity);
+    intradayMaxDrawdown = Math.max(intradayMaxDrawdown, peak - equity);
     byDay.set(trade.date, Number(byDay.get(trade.date) || 0) + pnl);
     if (pnl > 0) { grossWin += pnl; wins += 1; }
     if (pnl < 0) grossLoss += Math.abs(pnl);
   });
+
+  let eodEquity = Number(plan.account || 0);
+  let eodPeak = eodEquity;
+  let eodMaxDrawdown = 0;
+  for (const pnl of byDay.values()) {
+    eodEquity += pnl;
+    eodPeak = Math.max(eodPeak, eodEquity);
+    eodMaxDrawdown = Math.max(eodMaxDrawdown, eodPeak - eodEquity);
+  }
 
   const totalPnl = trades.reduce((sum, trade) => sum + Number(trade.pnl || 0), 0);
   const positiveDays = [...byDay.values()].filter(value => value > 0);
@@ -108,6 +129,11 @@ export function propFirmStats(state) {
   const breaches = trades.filter(trade => trade.breach).length;
   const riskR = trades.filter(trade => Number(trade.risk || 0) > 0).map(trade => Number(trade.pnl || 0) / Number(trade.risk));
   const averageR = riskR.length ? riskR.reduce((a, b) => a + b, 0) / riskR.length : 0;
+  const maxDrawdown = plan.drawdown === 'EOD' ? eodMaxDrawdown : intradayMaxDrawdown;
+  const personalDailyStop = Number(state.trading.risk?.dailyStop || 0);
+  const personalStopBreaches = personalDailyStop > 0
+    ? [...byDay.values()].filter(pnl => pnl < -personalDailyStop).length
+    : 0;
 
   return {
     plan,
@@ -118,12 +144,15 @@ export function propFirmStats(state) {
     bestDay,
     consistency,
     maxDrawdown,
+    eodMaxDrawdown,
+    intradayMaxDrawdown,
     drawdownRemaining: Math.max(0, Number(plan.maxLoss || 0) - maxDrawdown),
     winRate: trades.length ? (wins / trades.length) * 100 : 0,
     profitFactor: grossLoss ? grossWin / grossLoss : grossWin > 0 ? Infinity : 0,
     expectancy,
     averageR,
-    breaches
+    breaches,
+    personalStopBreaches
   };
 }
 
@@ -133,16 +162,28 @@ export function tradingReadiness(state) {
   const backtestSamples = sessions.reduce((sum, item) => sum + Number(item.samples || 0), 0);
   const cleanExecutionSessions = sessions.filter(item => item.kind === 'execution' && !item.breach).length;
   const mockChallenges = Number(state.trading.mockChallenges || 0);
-  const playbookReady = Boolean((state.trading.setup?.name || '').trim() && (state.trading.setup?.rules || '').trim());
+  const playbookReady = Boolean((state.trading.setup?.name || '').trim() && (state.trading.setup?.rules || '').trim().length >= 40);
+  const drawdownBuffer = Number(stats.plan.maxLoss || 0) > 0 && stats.maxDrawdown <= Number(stats.plan.maxLoss) * 0.6;
+  const consistencyOk = stats.totalPnl > 0 && stats.tradingDays >= 2 && stats.consistency <= Number(stats.plan.consistencyPct || 100);
   const criteria = [
     { id: 'setup', label: 'Un setup écrit et testable', ok: playbookReady },
     { id: 'sample', label: '100 occurrences backtestées', ok: backtestSamples >= 100, value: `${backtestSamples}/100` },
+    { id: 'trades', label: '30 trades simulés journalisés', ok: stats.trades >= 30, value: `${stats.trades}/30` },
     { id: 'expectancy', label: 'Expectancy positive', ok: stats.expectancy > 0, value: stats.expectancy.toFixed(2) },
+    { id: 'profit-factor', label: 'Profit factor ≥ 1,20', ok: stats.profitFactor >= 1.2, value: Number.isFinite(stats.profitFactor) ? stats.profitFactor.toFixed(2) : '∞' },
+    { id: 'drawdown', label: 'Drawdown ≤ 60 % de la limite', ok: drawdownBuffer, value: `${Math.round(stats.maxDrawdown)}/${stats.plan.maxLoss}` },
+    { id: 'consistency', label: 'Cohérence conforme au plan', ok: consistencyOk, value: `${stats.consistency.toFixed(1)} %` },
     { id: 'execution', label: '10 séances propres en replay/sim', ok: cleanExecutionSessions >= 10, value: `${cleanExecutionSessions}/10` },
     { id: 'mock', label: '2 mock challenges sans breach', ok: mockChallenges >= 2, value: `${mockChallenges}/2` },
-    { id: 'rules', label: 'Aucune violation enregistrée', ok: stats.breaches === 0, value: `${stats.breaches}` }
+    { id: 'rules', label: 'Aucune violation enregistrée', ok: stats.breaches === 0 && stats.personalStopBreaches === 0, value: `${stats.breaches + stats.personalStopBreaches}` }
   ];
-  return { criteria, score: Math.round(criteria.filter(item => item.ok).length / criteria.length * 100), ready: criteria.every(item => item.ok), backtestSamples, cleanExecutionSessions };
+  return {
+    criteria,
+    score: Math.round(criteria.filter(item => item.ok).length / criteria.length * 100),
+    ready: criteria.every(item => item.ok),
+    backtestSamples,
+    cleanExecutionSessions
+  };
 }
 
 export function activeTradingModule(state) {
@@ -167,14 +208,24 @@ export function activeReadingBook(state) {
 }
 
 export function cashForecast(state, days = 30) {
-  const settings = state.money.settings;
-  let balance = Number(settings.openingBalance || 0) + Number(settings.income || 0) * (days / 30);
-  balance -= (state.money.recurring || []).reduce((sum, row) => sum + Number(row.amount || 0), 0) * (days / 30);
+  const horizon = Math.max(0, Number(days || 30)) / 30;
+  const settings = state.money.settings || {};
+  const recurring = state.money.recurring || [];
+  const recurringTotal = recurring.reduce((sum, row) => sum + Number(row.amount || 0), 0);
+  const recurringLabels = new Set(recurring.map(row => String(row.label || '').trim().toLowerCase()).filter(Boolean));
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - 30);
-  balance += (state.money.transactions || [])
+  const variableExpenses = (state.money.transactions || [])
+    .filter(transaction => transaction.type === 'expense')
     .filter(transaction => new Date(`${transaction.date || localDate()}T12:00:00`) >= cutoff)
-    .reduce((sum, transaction) => sum + (transaction.type === 'income' ? Number(transaction.amount || 0) : -Number(transaction.amount || 0)), 0);
+    .filter(transaction => !recurringLabels.has(String(transaction.category || '').trim().toLowerCase()))
+    .reduce((sum, transaction) => sum + Number(transaction.amount || 0), 0);
+
+  const balance = Number(settings.openingBalance || 0)
+    + Number(settings.income || 0) * horizon
+    - recurringTotal * horizon
+    - variableExpenses * horizon
+    - Number(settings.savingsTarget || 0) * horizon;
   return Math.round(balance * 100) / 100;
 }
 
