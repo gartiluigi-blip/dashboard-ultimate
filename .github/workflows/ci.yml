@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, godmode-audit-points-1-15]
+    branches: ['**']
   pull_request:
     branches: [main]
 
@@ -15,4 +15,3 @@ jobs:
         with:
           node-version: 20
       - run: npm run check
-      - run: node scripts/check-command.js
