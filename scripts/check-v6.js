@@ -29,10 +29,7 @@ if (index.includes('command-link.js') || index.includes('assets/js/app.js')) thr
 const targets = nutritionTargets({ weightKg: 82, proteinPerKg: 1.8, waterMl: 2500, sleepTargetHours: 7.5, stepsTarget: 7000 });
 if (targets.proteinG !== 148 || targets.waterMl !== 2500 || targets.sleepHours !== 7.5) throw new Error('Health targets regression');
 
-const recovery = recoveryScore({
-  profile: { sleepTargetHours: 8, stepsTarget: 7000 },
-  days: { '2026-08-03': { sleepHours: 8, sleepQuality: 5, energy: 5, pain: 0, steps: 7000 } }
-}, '2026-08-03');
+const recovery = recoveryScore({ profile: { sleepTargetHours: 8, stepsTarget: 7000 }, days: { '2026-08-03': { sleepHours: 8, sleepQuality: 5, energy: 5, pain: 0, steps: 7000 } } }, '2026-08-03');
 if (recovery < 95) throw new Error(`Recovery score regression: ${recovery}`);
 
 if (ATHLETE_CYCLE.length < 8 || ATHLETE_QUALITIES.length < 8) throw new Error('Athlete coverage incomplete');
@@ -41,10 +38,7 @@ if (!coverage.find(item => item.id === 'strength')?.count) throw new Error('Athl
 
 const forcedRecoveryState = {
   profile: { sleepTargetHours: 7.5, stepsTarget: 7000 },
-  days: {
-    '2026-08-01': { pain: 6, energy: 3, sleepHours: 7, sleepQuality: 3 },
-    '2026-08-02': { pain: 0, energy: 3, sleepHours: 7, sleepQuality: 3 }
-  },
+  days: { '2026-08-01': { pain: 6, energy: 3, sleepHours: 7, sleepQuality: 3 }, '2026-08-02': { pain: 0, energy: 3, sleepHours: 7, sleepQuality: 3 } },
   sport: { sessions: [{ date: '2026-08-01', type: 'Récupération active', status: 'completed', qualities: ['recovery'], advancesCycle: false }] }
 };
 if (nextAthleteSession(forcedRecoveryState, '2026-08-02').index !== 0) throw new Error('Forced recovery advanced cycle');
@@ -53,27 +47,18 @@ const trades = Array.from({ length: 30 }, (_, index) => ({
   id: `trade_${index}`,
   date: `2026-07-${String((index % 10) + 1).padStart(2, '0')}`,
   createdAt: `2026-07-${String((index % 10) + 1).padStart(2, '0')}T${String(index % 24).padStart(2, '0')}:00:00Z`,
-  market: 'MNQ',
-  setup: 'Setup A',
-  contracts: 1,
+  market: 'MNQ', setup: 'Setup A', contracts: 1,
   pnl: index % 3 === 0 ? -50 : 100,
-  risk: 100,
-  breach: false,
-  violations: [],
-  note: 'Contexte et exécution documentés.'
+  risk: 100, breach: false, violations: [], note: 'Contexte et exécution documentés.'
 }));
 const sample = {
   trading: {
-    planId: 'flex50',
-    customPlan: { account: 1, maxLoss: 1 },
+    planId: 'flex50', customPlan: { account: 1, maxLoss: 1 },
     ruleSnapshot: { verifiedAt: new Date().toISOString().slice(0, 10) },
     risk: { riskPerTrade: 100, dailyStop: 500, maxTrades: 10, maxConsecutiveLosses: 4 },
     trades,
     sessions: [{ kind: 'backtest', samples: 100 }, ...Array.from({ length: 10 }, () => ({ kind: 'execution', breach: false }))],
-    mockChallenges: [
-      { status: 'completed', passed: true },
-      { status: 'completed', passed: true }
-    ],
+    mockChallenges: [{ status: 'completed', passed: true }, { status: 'completed', passed: true }],
     setup: { name: 'Setup A', rules: 'Contexte précis, déclencheur, invalidation, objectif, gestion, filtre horaire et conditions de non-trade documentées.' }
   }
 };
@@ -86,39 +71,16 @@ if (!tradingReadiness(sample).ready) throw new Error('Readiness gate failed');
 const violation = tradeCompliance(sample, { date: '2026-07-11', market: 'MNQ', setup: '', contracts: 40, risk: 500, pnl: 0, note: '' });
 if (violation.ok || violation.violations.length < 3) throw new Error('Trade compliance failed');
 
-const forecast = cashForecast({
-  money: {
-    settings: { openingBalance: 1000, income: 2000, savingsTarget: 200 },
-    recurring: [{ label: 'Loyer', amount: 600 }],
-    transactions: [
-      { date: new Date().toISOString().slice(0, 10), type: 'expense', category: 'Courses', amount: 300 },
-      { date: new Date().toISOString().slice(0, 10), type: 'expense', category: 'Loyer', amount: 600 }
-    ]
-  }
-});
+const forecast = cashForecast({ money: { settings: { openingBalance: 1000, income: 2000, savingsTarget: 200 }, recurring: [{ label: 'Loyer', amount: 600 }], transactions: [{ date: new Date().toISOString().slice(0, 10), type: 'expense', category: 'Courses', amount: 300 }, { date: new Date().toISOString().slice(0, 10), type: 'expense', category: 'Loyer', amount: 600 }] } });
 if (forecast !== 2100) throw new Error(`Cash forecast regression: ${forecast}`);
 
-const money = monthlyMoneySummary({
-  money: {
-    budgets: { Courses: 200 },
-    transactions: [{ date: new Date().toISOString().slice(0, 10), type: 'expense', category: 'Courses', amount: 300 }]
-  }
-});
+const money = monthlyMoneySummary({ money: { budgets: { Courses: 200 }, transactions: [{ date: new Date().toISOString().slice(0, 10), type: 'expense', category: 'Courses', amount: 300 }] } });
 if (money.alerts.length !== 1) throw new Error('Budget alert failed');
 
 const reviews = dueReviews({ study: { reviews: [{ dueDate: '2026-08-01', status: 'due' }] } }, '2026-08-03');
 if (reviews.length !== 1) throw new Error('Spaced review due calculation failed');
 
-const review = weeklyReview({
-  profile: { sleepTargetHours: 7.5, stepsTarget: 7000, weightKg: 82, proteinPerKg: 1.8, waterMl: 2500 },
-  days: {},
-  sport: { sessions: [], weeklyTarget: 6 },
-  trading: sample.trading,
-  study: { sessions: [], reviews: [] },
-  reading: { sessions: [] },
-  nutrition: { entries: [] },
-  money: { transactions: [], budgets: {}, settings: {}, recurring: [] }
-});
+const review = weeklyReview({ profile: { sleepTargetHours: 7.5, stepsTarget: 7000, weightKg: 82, proteinPerKg: 1.8, waterMl: 2500 }, days: {}, sport: { sessions: [], weeklyTarget: 6 }, trading: sample.trading, study: { sessions: [], reviews: [] }, reading: { sessions: [] }, nutrition: { entries: [] }, money: { transactions: [], budgets: {}, settings: {}, recurring: [] } });
 if (!Number.isFinite(review.overall)) throw new Error('Weekly review failed');
 
 if (TRADING_CURRICULUM.length !== 12 || !PROP_FIRM_PRESETS.flex25 || !PROP_FIRM_PRESETS.flex50) throw new Error('Trading content missing');
@@ -133,7 +95,7 @@ if (app.includes("action === 'complete-order'")) throw new Error('Fake completio
 const sw = readFileSync('sw.js', 'utf8');
 if (!sw.includes('ultimate-dashboard-v6.2.0') || !sw.includes('staleWhileRevalidate')) throw new Error('V6.2 service worker missing');
 const css = readFileSync('v6/app.css', 'utf8');
-if (!css.includes('min-height: 48px') || !css.includes(':focus-visible') || !css.includes('prefers-reduced-motion')) throw new Error('Accessibility contract missing');
+if (!/min-height:\s*48px/.test(css) || !css.includes(':focus-visible') || !css.includes('prefers-reduced-motion')) throw new Error('Accessibility contract missing');
 
 const forbidden = 'vin' + 'ted';
 const allowed = new Set(['v6/store.js']);
@@ -144,17 +106,10 @@ function walk(dir) {
     if (name === '.git' || name === 'node_modules') continue;
     const path = join(dir, name);
     if (statSync(path).isDirectory()) walk(path);
-    else if (extensions.test(name) && !allowed.has(path.replace(/^\.\//, ''))) {
-      if (readFileSync(path, 'utf8').toLowerCase().includes(forbidden)) hits.push(path);
-    }
+    else if (extensions.test(name) && !allowed.has(path.replace(/^\.\//, '')) && readFileSync(path, 'utf8').toLowerCase().includes(forbidden)) hits.push(path);
   }
 }
 walk('.');
 if (hits.length) throw new Error(`Removed domain remains: ${hits.join(', ')}`);
 
-console.log('V6.2 Autopilot check OK', {
-  athleteSessions: ATHLETE_CYCLE.length,
-  tradingModules: TRADING_CURRICULUM.length,
-  weeklyReview: review.overall,
-  totalPnl: stats.totalPnl
-});
+console.log('V6.2 Autopilot check OK', { athleteSessions: ATHLETE_CYCLE.length, tradingModules: TRADING_CURRICULUM.length, weeklyReview: review.overall, totalPnl: stats.totalPnl });
