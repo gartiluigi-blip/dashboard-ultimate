@@ -2,7 +2,15 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { ATHLETE_CYCLE, ATHLETE_QUALITIES, CULTURE_SHELVES, PROP_FIRM_PRESETS, TRADING_CURRICULUM } from '../v6/content.js';
-import { athleteCoverage, nutritionTargets, propFirmStats, tradingReadiness } from '../v6/rules.js';
+import {
+  athleteCoverage,
+  cashForecast,
+  nextAthleteSession,
+  nutritionTargets,
+  propFirmStats,
+  selectedPropPlan,
+  tradingReadiness
+} from '../v6/rules.js';
 
 const files = ['index.html', 'sw.js', 'v6/app.js', 'v6/app.css', 'v6/content.js', 'v6/rules.js', 'v6/store.js'];
 for (const file of files) {
@@ -20,26 +28,55 @@ if (ATHLETE_CYCLE.length < 8 || ATHLETE_QUALITIES.length < 8) throw new Error('A
 const coverage = athleteCoverage({ sport: { sessions: [{ date: new Date().toISOString().slice(0, 10), status: 'completed', qualities: ['strength', 'aerobic'] }] } });
 if (!coverage.find(item => item.id === 'strength')?.count) throw new Error('Athlete coverage calculation failed');
 
+const forcedRecoveryState = {
+  days: {
+    '2026-08-01': { pain: 6, energy: 3 },
+    '2026-08-02': { pain: 0, energy: 3 }
+  },
+  sport: {
+    sessions: [{ date: '2026-08-01', type: 'Récupération active', status: 'completed', qualities: ['recovery'] }]
+  }
+};
+if (nextAthleteSession(forcedRecoveryState, '2026-08-02').index !== 0) throw new Error('Forced recovery advanced athlete cycle');
+
+const trades = Array.from({ length: 30 }, (_, index) => ({
+  date: `2026-07-${String((index % 10) + 1).padStart(2, '0')}`,
+  createdAt: `2026-07-${String((index % 10) + 1).padStart(2, '0')}T${String(index).padStart(2, '0')}:00:00Z`,
+  pnl: index % 3 === 0 ? -50 : 100,
+  risk: 100,
+  breach: false
+}));
 const sample = {
   trading: {
     planId: 'flex50',
-    customPlan: {},
-    trades: [
-      { date: '2026-08-01', pnl: 300, risk: 100, breach: false },
-      { date: '2026-08-02', pnl: -100, risk: 100, breach: false },
-      { date: '2026-08-03', pnl: 200, risk: 100, breach: false }
-    ],
+    customPlan: { account: 1, maxLoss: 1 },
+    risk: { dailyStop: 250 },
+    trades,
     sessions: [{ kind: 'backtest', samples: 100 }, ...Array.from({ length: 10 }, () => ({ kind: 'execution', breach: false }))],
     mockChallenges: 2,
-    setup: { name: 'Setup A', rules: 'Contexte, déclencheur, invalidation, objectif.' }
+    setup: { name: 'Setup A', rules: 'Contexte précis, déclencheur, invalidation, objectif et conditions de non-trade.' }
   }
 };
+const plan = selectedPropPlan(sample);
+if (plan.account !== 50000 || plan.maxLoss !== 2000) throw new Error('Official preset was overwritten by custom values');
 const stats = propFirmStats(sample);
-if (stats.totalPnl !== 400 || stats.maxDrawdown !== 100 || stats.trades !== 3) throw new Error('Prop firm calculations failed');
+if (stats.totalPnl !== 1500 || stats.trades !== 30 || stats.profitFactor < 1.2) throw new Error('Prop firm calculations failed');
 if (!tradingReadiness(sample).ready) throw new Error('Trading readiness gate failed');
 if (TRADING_CURRICULUM.length !== 12) throw new Error('Trading curriculum must have 12 modules');
 if (!PROP_FIRM_PRESETS.flex25 || !PROP_FIRM_PRESETS.flex50) throw new Error('Verified prop presets missing');
 if (Object.keys(CULTURE_SHELVES).length < 3) throw new Error('Culture library incomplete');
+
+const forecast = cashForecast({
+  money: {
+    settings: { openingBalance: 1000, income: 2000, savingsTarget: 200 },
+    recurring: [{ label: 'Loyer', amount: 600 }],
+    transactions: [
+      { date: new Date().toISOString().slice(0, 10), type: 'expense', category: 'Courses', amount: 300 },
+      { date: new Date().toISOString().slice(0, 10), type: 'expense', category: 'Loyer', amount: 600 }
+    ]
+  }
+});
+if (forecast !== 1900) throw new Error(`Cash forecast double-count regression: ${forecast}`);
 
 const app = readFileSync('v6/app.js', 'utf8');
 for (const token of ['renderAthlete', 'renderTrading', 'renderLibrary', 'Gate challenge', 'Aucune validation sans production réelle']) {
@@ -47,7 +84,7 @@ for (const token of ['renderAthlete', 'renderTrading', 'renderLibrary', 'Gate ch
 }
 if (!app.includes("serviceWorker.register('/sw.js')")) throw new Error('Service worker is not registered');
 const sw = readFileSync('sw.js', 'utf8');
-if (!sw.includes('ultimate-dashboard-v6.1.0') || !sw.includes("caches.delete")) throw new Error('Versioned service worker contract missing');
+if (!sw.includes('ultimate-dashboard-v6.1.0') || !sw.includes('caches.delete')) throw new Error('Versioned service worker contract missing');
 const css = readFileSync('v6/app.css', 'utf8');
 if (!css.includes('min-height: 46px') || !css.includes(':focus-visible')) throw new Error('Mobile accessibility contract missing');
 
