@@ -1,11 +1,22 @@
 {
-  "name": "Ultimate Dashboard",
-  "short_name": "UD5",
-  "description": "Personal command dashboard for mission, routine, sport, study and money.",
+  "name": "Ultimate Dashboard V6",
+  "short_name": "UD6",
+  "description": "Centre de commandement personnel pour nutrition, sport, études et argent.",
+  "id": "/",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait-primary",
   "background_color": "#08090d",
   "theme_color": "#ff6b2c",
   "lang": "fr-BE",
-  "icons": []
+  "categories": ["productivity", "health", "finance", "education"],
+  "icons": [
+    {
+      "src": "/v6/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
 }
