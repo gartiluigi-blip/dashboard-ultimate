@@ -1,9 +1,9 @@
 {
   "name": "dashboard-ultimate-v6",
   "private": true,
-  "version": "6.1.0",
+  "version": "6.2.0",
   "type": "module",
-  "description": "Ultimate Dashboard Godmode: athlete, trading, learning, culture, health and money.",
+  "description": "Ultimate Dashboard Autopilot: evidence-based personal command center.",
   "scripts": {
     "check": "node scripts/check.js && node scripts/check-command.js && node scripts/check-v6.js",
     "check:v6": "node scripts/check-v6.js"
