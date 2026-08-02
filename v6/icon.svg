@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Ultimate Dashboard V6">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffb066"/>
+      <stop offset="0.52" stop-color="#ff6b2c"/>
+      <stop offset="1" stop-color="#8f2f17"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="#08090d"/>
+  <rect x="34" y="34" width="444" height="444" rx="100" fill="url(#g)"/>
+  <path d="M148 154h64v142c0 40 17 60 49 60s49-20 49-60V154h64v147c0 77-42 117-113 117s-113-40-113-117V154Z" fill="#170904"/>
+  <path d="M321 158h44c42 0 67 21 67 57 0 21-10 38-29 47 26 9 39 29 39 57 0 42-29 67-78 67h-43v-52h38c15 0 23-7 23-20 0-12-8-19-23-19h-38v-49h31c14 0 21-6 21-18 0-11-7-17-21-17h-31v-53Z" fill="#170904" opacity=".92"/>
+  <text x="256" y="470" text-anchor="middle" font-family="system-ui,sans-serif" font-size="34" font-weight="800" fill="#f7f3eb">V6</text>
+</svg>
