@@ -40,7 +40,7 @@ for (const token of ['legacyImportedAt', 'createBackup', 'exportData', 'normaliz
 if (store.includes('localStorage.removeItem(`${LEGACY_PREFIX}')) throw new Error('Legacy deletion must remain blocked');
 
 const app = readFileSync('v6/app.js', 'utf8');
-for (const token of ['todayOrders', 'Preuve réelle obligatoire', 'V6 intacte', 'Opération Vinted ajoutée une seule fois']) {
+for (const token of ['todayOrders', 'Preuve réelle obligatoire', 'V5 intacte', 'Opération Vinted ajoutée une seule fois']) {
   if (!app.includes(token)) throw new Error(`V6 app contract missing: ${token}`);
 }
 
