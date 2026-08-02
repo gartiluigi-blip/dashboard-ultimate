@@ -1,12 +1,13 @@
 {
-  "name": "dashboard-ultimate-v5",
+  "name": "dashboard-ultimate-v6",
   "private": true,
-  "version": "5.4.0",
+  "version": "6.0.0-alpha.1",
   "type": "module",
-  "description": "Ultimate Dashboard clean rebuild.",
+  "description": "Ultimate Dashboard V6 unified command center.",
   "scripts": {
-    "check": "node scripts/check.js",
+    "check": "node scripts/check.js && node scripts/check-command.js && node scripts/check-v6.js",
+    "check:v6": "node scripts/check-v6.js",
     "check:features": "node scripts/check-features.js"
   },
-  "engines": { "node": ">=18" }
+  "engines": { "node": ">=20" }
 }

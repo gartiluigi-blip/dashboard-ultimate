@@ -1,25 +1,29 @@
 <!doctype html>
-<html lang="fr">
+<html lang="fr-BE">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#ff6b2c">
-  <title>Ultimate Dashboard</title>
+  <meta name="description" content="Ultimate Dashboard V6 · nutrition, sport, études et argent dans un centre de commandement unique.">
+  <title>Ultimate Dashboard V6</title>
   <link rel="manifest" href="/manifest.json">
-  <link rel="stylesheet" href="assets/css/app.css?v=20260701-command-1">
+  <link rel="stylesheet" href="/v6/app.css">
 </head>
 <body>
   <header class="topbar">
     <div class="brand">
-      <div class="brand-mark" aria-hidden="true"><span>UD</span></div>
-      <div><div class="kicker">Mission · exécution · preuves</div><h1>Ultimate Dashboard</h1></div>
+      <div class="brand-mark" aria-hidden="true">UD6</div>
+      <div>
+        <div class="kicker">Un moteur · trois ordres · données réelles</div>
+        <h1>Ultimate Dashboard</h1>
+        <div class="version">V<span id="version">6</span></div>
+      </div>
     </div>
-    <div class="clock" id="clock">--:--</div>
+    <div class="clock" id="clock" aria-label="Heure actuelle">--:--</div>
   </header>
-  <nav class="tabs" id="tabs"></nav>
+  <nav class="tabs" id="tabs" aria-label="Navigation principale"></nav>
   <main id="app" class="app"></main>
-  <div id="toast" class="toast"></div>
-  <script type="module" src="assets/js/command-link.js?v=20260701-command-1"></script>
-  <script type="module" src="assets/js/app.js?v=20260701-command-1"></script>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="/v6/app.js"></script>
 </body>
 </html>
