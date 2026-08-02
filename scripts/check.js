@@ -1,8 +1,10 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { join } from 'node:path';
 
 const required = [
   'index.html',
   'manifest.json',
+  'sw.js',
   'v6/app.js',
   'v6/app.css',
   'v6/content.js',
@@ -18,8 +20,21 @@ if (!index.includes('/v6/app.js') || !index.includes('/v6/app.css')) {
   throw new Error('Root shell does not load the V6 runtime');
 }
 
-for (const legacy of ['assets/js/app.js', 'assets/js/command-link.js', 'modules/today.js']) {
-  if (existsSync(legacy)) throw new Error(`Legacy runtime must be removed: ${legacy}`);
+function legacyJavaScript(root) {
+  if (!existsSync(root)) return [];
+  const found = [];
+  const walk = directory => {
+    for (const name of readdirSync(directory)) {
+      const path = join(directory, name);
+      if (statSync(path).isDirectory()) walk(path);
+      else if (path.endsWith('.js')) found.push(path);
+    }
+  };
+  walk(root);
+  return found;
 }
+
+const legacy = [...legacyJavaScript('assets/js'), ...legacyJavaScript('modules')];
+if (legacy.length) throw new Error(`Legacy JavaScript remains: ${legacy.join(', ')}`);
 
 console.log('Repository structure check OK');
