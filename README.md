@@ -1,60 +1,153 @@
-# Ultimate Dashboard V6.2 Autopilot
+# Ultimate Dashboard V6.3 Godmode
 
-Cockpit personnel mobile pour piloter santé, athlétisme, trading discipliné, études, lecture, nutrition et finances avec des preuves réelles.
+Cockpit personnel mobile pour exécuter, mesurer et revoir les domaines qui construisent une vie solide : santé globale, énergie, athlétisme, apprentissage, culture générale, études, trading discipliné, nutrition et finances.
 
-## Ce que corrige V6.2
+## Audit V6.3
 
-- Suppression de la validation générique « terminé » : un domaine avance uniquement lorsqu’une donnée réelle est enregistrée dans son module.
-- Store schéma 3 mis en cache : lire l’état ne réécrit plus systématiquement `localStorage`.
-- Annulation des dernières modifications et restauration de cinq sauvegardes locales.
-- Suppression contrôlée des séances, trades, sessions d’étude, lectures, aliments et transactions.
-- Imports limités à 2 Mo, nettoyage des clés dangereuses et export avec checksum.
-- Revue hebdomadaire automatique avec score par domaine, alertes et priorité de la semaine.
-- Navigation desktop latérale et navigation Android en bas de l’écran.
-- Thèmes Graphite, OLED et Clair, plus densité compacte.
+La V6.2 suivait correctement les preuves d’exécution, mais présentait encore quatre lacunes majeures :
 
-## Santé et athlétisme
+1. La santé était surtout réduite à la récupération sportive, sans vue globale cœur, cerveau, foie, métabolisme, digestion et prévention.
+2. La fatigue ne disposait pas d’un protocole quotidien clair ni d’un journal suffisamment complet.
+3. La lecture et les études ne formaient pas encore un système explicite pour apprendre à apprendre, retenir et transférer.
+4. La culture générale n’avait pas de carte de progression couvrant les grands domaines du savoir.
 
-Le cockpit calcule désormais une récupération quotidienne à partir du sommeil, de sa qualité, de l’énergie, de la douleur et des pas.
+V6.3 ajoute une couche non destructive au moteur Autopilot existant. Les données restent locales et les modules V6.2, notamment le trading guidé, restent disponibles.
 
-Le cycle athlète conserve huit séances couvrant force, masse utile, endurance aérobie, intensité, poids du corps, mobilité, équilibre/tronc et récupération. Une séance non-récupération ne peut pas être validée sans au moins un résultat réel. Des benchmarks permettent de suivre les capacités physiques à intervalle régulier.
+## Santé 360
 
-Le programme ne remplace pas un avis médical. Les symptômes cervicaux, irradiations, faiblesses ou engourdissements doivent primer sur la progression sportive.
+Le nouvel onglet **Santé** calcule un score d’habitudes à partir de huit piliers :
 
-## Trading et prop firm
+- sommeil ;
+- mouvement ;
+- nutrition ;
+- cœur et métabolisme ;
+- cerveau et mémoire ;
+- stress et récupération ;
+- prévention ;
+- substances et sécurité.
 
-- Parcours de douze modules avec preuves.
-- Checklist pré-trade obligatoire.
-- Détection automatique des dépassements de risque, contrats, nombre de trades, stop journalier et série de pertes.
-- Statistiques P&L, drawdown EOD/intraday, expectancy, profit factor, cohérence et résultat en R.
-- Mock challenges calculés à partir de vrais trades simulés, sans bouton permettant d’incrémenter artificiellement le compteur.
-- Gate strict avant achat d’un challenge.
+Le score ne prétend jamais mesurer directement le fonctionnement d’un organe. Il transforme uniquement les données saisies en priorités comportementales.
 
-Les presets MyFundedFutures Flex 25K et 50K ont été vérifiés le **3 août 2026**. Les règles d’une firme peuvent changer : elles doivent être revérifiées sur sa documentation officielle avant chaque achat.
+### Systèmes suivis
 
-## Études et lecture
+- **Énergie** : sommeil, hydratation, douleur, stress, activité et apports.
+- **Cœur** : tension, activité, sommeil, nutrition et nicotine.
+- **Cerveau** : sommeil, activité, apprentissage, humeur et liens sociaux.
+- **Foie** : alcool, boissons sucrées, activité, poids et sécurité médicamenteuse.
+- **Métabolisme** : tour de taille, poids, activité, fibres et sommeil.
+- **Digestion** : fibres, diversité végétale, hydratation et symptômes.
 
-Une session d’étude programme automatiquement des rappels à J+1, J+3, J+7, J+14 et J+30. Une révision exige un rappel produit sans notes.
+### Fonctions santé
 
-La lecture reste séparée des études techniques et suit trois bibliothèques : culture générale, romans et pensée critique. Chaque journal exige pages, durée et idée retenue.
+- journal quotidien sommeil, énergie, douleur, pas, activité, eau, fibres, végétaux, stress, humeur, lumière, récupération, alcool et boissons sucrées ;
+- calcul d’une dette de sommeil sur sept jours ;
+- protocole énergie du réveil au coucher ;
+- journal de tension, fréquence au repos, tour de taille et poids ;
+- checklist prévention adaptable avec le médecin ;
+- journal de symptômes destiné à préparer une consultation ;
+- gate compléments exigeant objectif, niveau de preuve, interactions et décision ;
+- rappels explicites des signaux qui ne doivent pas être « optimisés » sans soins.
 
-## Nutrition et argent
+### Fondations scientifiques
 
-- Menus journaliers et repas personnalisés avec calories, protéines et fibres.
-- Tendance de poids.
-- Objectifs de sommeil, pas, eau et protéines.
-- Budgets mensuels par catégorie.
-- Prévision de trésorerie intégrant charges fixes, épargne cible et moyenne des dépenses variables sur 90 jours.
+Le système s’appuie sur des recommandations publiques reconnues :
 
-## Données
+- OMS : 150–300 minutes d’activité modérée par semaine ou 75–150 minutes vigoureuses, plus renforcement au moins deux jours par semaine ;
+- OMS : alimentation diversifiée, au moins 400 g de fruits et légumes et au moins 25 g de fibres par jour chez l’adulte ;
+- American Heart Association : sommeil, activité, nutrition, nicotine, poids, lipides, glycémie et tension comme dimensions majeures de santé cardiovasculaire ;
+- National Institute on Aging : activité, sommeil, apprentissage de nouvelles compétences, gestion des facteurs cardiovasculaires et liens sociaux pour soutenir la santé cognitive ;
+- NIDDK : poids sain, activité, qualité alimentaire, limitation des boissons très sucrées et de l’alcool pour réduire les facteurs de risque de stéatose hépatique.
 
-- État actif : `ud6_state`.
-- Sauvegardes : `ud6_backups`, cinq maximum.
-- Historique d’annulation : `ud6_undo`, huit maximum.
-- Schéma actif : 3.
-- Format d’export : `ultimate-dashboard-v6`.
+Sources de référence :
 
-Les données restent locales et non chiffrées. Ne pas enregistrer de mot de passe, clé API, numéro de carte ou document médical complet.
+- https://www.who.int/europe/news-room/fact-sheets/item/everyday-actions-for-better-health-who-recommendations
+- https://www.who.int/news-room/fact-sheets/detail/healthy-diet
+- https://www.heart.org/en/healthy-living/healthy-lifestyle/lifes-essential-8
+- https://www.nia.nih.gov/health/cognitive-health-and-older-adults
+- https://www.niddk.nih.gov/health-information/liver-disease/nafld-nash/eating-diet-nutrition
+
+## Savoir OS
+
+L’ancien onglet Lecture devient un centre d’apprentissage et de culture sans supprimer les données existantes.
+
+### Apprendre à apprendre
+
+Le parcours contient huit étapes :
+
+1. attention et environnement ;
+2. rappel actif ;
+3. espacement ;
+4. entrelacement ;
+5. élaboration et explication Feynman ;
+6. pratique délibérée et feedback ;
+7. notes atomiques reliées ;
+8. transfert par projet.
+
+Chaque étape exige une production réelle. Le module inclut une minuterie de concentration de 25 minutes, des cartes de rappel espacées et une évaluation de la qualité du rappel.
+
+Le rappel actif et l’espacement sont soutenus par une littérature expérimentale robuste, notamment :
+
+- Roediger & Karpicke, 2006, *Test-Enhanced Learning* ;
+- Cepeda et al., 2006, méta-analyse de la pratique distribuée.
+
+### Bibliothèque méthodologique
+
+Ordre proposé :
+
+1. *Make It Stick* ;
+2. *Understanding How We Learn* ;
+3. *Peak* ;
+4. *A Mind for Numbers* ;
+5. *How to Take Smart Notes* ;
+6. *Ultralearning* ;
+7. *The Scout Mindset* ;
+8. *Thinking in Bets*.
+
+Chaque lecture exige pages, durée et idée reformulée.
+
+### Carte de culture générale
+
+Quatorze domaines sont suivis :
+
+- histoire mondiale ;
+- géographie et géopolitique ;
+- économie ;
+- politique, institutions et droit ;
+- philosophie et éthique ;
+- physique et univers ;
+- biologie et médecine ;
+- climat et planète ;
+- technologie et informatique ;
+- psychologie et société ;
+- littérature et langues ;
+- arts, musique et architecture ;
+- religions et idées ;
+- médias et esprit critique.
+
+Chaque domaine exige une synthèse, une explication, une carte mentale ou une autre production vérifiable. Une question quotidienne entraîne le rappel actif.
+
+## Design
+
+- nouveau langage visuel cyan, bleu, violet et or ;
+- priorité active mise en avant dans chaque nouveau module ;
+- cartes santé et culture adaptatives ;
+- intégration au cockpit Aujourd’hui et à la Revue ;
+- onglet Santé injecté sans casser la navigation existante ;
+- onglet Lecture renommé Savoir ;
+- responsive Android ;
+- support des thèmes Graphite, OLED et Clair ;
+- respect de `prefers-reduced-motion` ;
+- assets V6.3 disponibles hors ligne via le service worker.
+
+## Données et sécurité
+
+- état actif : `ud6_state` ;
+- sauvegardes : `ud6_backups` ;
+- annulations : `ud6_undo` ;
+- les nouvelles clés `health` et `knowledge` sont conservées dans le même export local ;
+- les données médicales restent non chiffrées dans le navigateur.
+
+Ne pas enregistrer de document médical complet, mot de passe, clé API, numéro de carte ou secret. Les scores santé ne remplacent pas les examens, analyses ou conseils d’un professionnel.
 
 ## Validation
 
@@ -63,20 +156,22 @@ npm run check
 npm run check:v6
 ```
 
-La CI vérifie la structure, la syntaxe, la migration, le moteur de récupération, le cycle sportif, le gate prop firm, les violations automatiques, les révisions espacées, les budgets, la PWA et l’accessibilité mobile.
+La CI valide désormais, en plus des contrats V6.2 :
 
-## Roadmap proposée
+- les huit piliers santé ;
+- les systèmes corporels et la prévention ;
+- les huit étapes d’apprentissage ;
+- les quatorze domaines de culture ;
+- la bibliothèque apprendre à apprendre ;
+- les routes et actions Santé/Savoir ;
+- le design responsive ;
+- le cache PWA V6.3.
 
-1. Synchronisation chiffrée multi-appareils.
-2. Import CSV des trades et rapprochement automatique.
-3. Planning relié au calendrier.
-4. Import sommeil/pas/fréquence cardiaque depuis une montre ou Health Connect.
-5. Rappels locaux intelligents.
-6. Scan de repas assisté.
+## Roadmap
 
-## Limites
-
-- Pas encore de synchronisation cloud.
-- Pas de chiffrement local.
-- Pas encore de tests navigateur end-to-end.
-- Les règles des prop firms et les informations financières doivent être revérifiées avant toute décision réelle.
+1. Health Connect pour importer sommeil, pas et fréquence cardiaque avec consentement.
+2. Courbes locales des mesures santé et export destiné au médecin.
+3. Synchronisation chiffrée multi-appareils.
+4. Générateur de quiz à partir des notes de l’utilisateur.
+5. Planning automatique relié au calendrier.
+6. Tests navigateur end-to-end et audit visuel automatisé.
