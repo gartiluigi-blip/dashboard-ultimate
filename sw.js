@@ -1,4 +1,4 @@
-const CACHE = 'ultimate-dashboard-v6.2.1-trading-guide';
+const CACHE = 'ultimate-dashboard-v6.2.0-trading-guide-1';
 const APP_SHELL = [
   '/',
   '/index.html',
