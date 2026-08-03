@@ -1,10 +1,12 @@
-const CACHE = 'ultimate-dashboard-v6.2.0';
+const CACHE = 'ultimate-dashboard-v6.2.1-trading-guide';
 const APP_SHELL = [
   '/',
   '/index.html',
   '/manifest.json',
   '/v6/app.css?v=6.2.0',
   '/v6/app.js?v=6.2.0',
+  '/v6/trading-guide.css?v=1',
+  '/v6/trading-guide.js?v=1',
   '/v6/content.js',
   '/v6/rules.js',
   '/v6/store.js',
