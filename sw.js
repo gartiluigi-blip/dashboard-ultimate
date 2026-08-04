@@ -1,17 +1,25 @@
-const CACHE = 'ultimate-dashboard-v6.3.0-godmode';
+const CACHE = 'ultimate-dashboard-v7.0.0-nexus';
 const APP_SHELL = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/v6/app.css?v=6.2.0',
-  '/v6/app.js?v=6.2.0',
-  '/v6/trading-guide.css?v=1',
-  '/v6/trading-guide.js?v=1',
-  '/v6/godmode.css?v=6.3.0',
-  '/v6/godmode.js?v=6.3.0',
-  '/v6/godmode-content.js',
-  '/v6/content.js',
-  '/v6/rules.js',
+  '/v7/app.css?v=7.0.0',
+  '/v7/app.js?v=7.0.0',
+  '/v7/content.js',
+  '/v7/engine.js',
+  '/v7/ui.js',
+  '/v7/views.js',
+  '/v7/views/shared.js',
+  '/v7/views/overlays.js',
+  '/v7/views/today.js',
+  '/v7/views/health.js',
+  '/v7/views/learn.js',
+  '/v7/views/culture.js',
+  '/v7/views/body.js',
+  '/v7/views/money.js',
+  '/v7/views/trading.js',
+  '/v7/views/review.js',
+  '/v7/views/settings.js',
   '/v6/store.js',
   '/v6/icon.svg'
 ];
@@ -60,16 +68,13 @@ self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
-
   if (event.request.mode === 'navigate') {
     event.respondWith(networkFirst(event.request, '/index.html'));
     return;
   }
-
   if (['script', 'style', 'worker'].includes(event.request.destination)) {
     event.respondWith(staleWhileRevalidate(event.request));
     return;
   }
-
   event.respondWith(caches.match(event.request).then(cached => cached || fetch(event.request)));
 });
