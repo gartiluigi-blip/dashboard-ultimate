@@ -1,12 +1,13 @@
 {
-  "name": "dashboard-ultimate-v6",
+  "name": "ultimate-dashboard-nexus",
   "private": true,
-  "version": "6.3.0",
+  "version": "7.0.0",
   "type": "module",
-  "description": "Ultimate Dashboard Godmode: health, energy, learning, culture and evidence-based execution.",
+  "description": "Ultimate Dashboard V7 Nexus: one integrated runtime for health, learning, culture, body, money and trading.",
   "scripts": {
-    "check": "node scripts/check.js && node scripts/check-command.js && node scripts/check-v6.js && node scripts/check-godmode.js",
-    "check:v6": "node scripts/check-v6.js && node scripts/check-godmode.js"
+    "check": "node scripts/check-v7.js",
+    "check:v7": "node scripts/check-v7.js",
+    "check:legacy": "node scripts/check.js && node scripts/check-command.js && node scripts/check-v6.js && node scripts/check-godmode.js"
   },
-  "engines": { "node": ">=20" }
+  "engines": { "node": ">=24" }
 }
