@@ -1,4 +1,4 @@
-const CACHE = 'ultimate-dashboard-v6.2.0-trading-guide-1';
+const CACHE = 'ultimate-dashboard-v6.3.0-godmode';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -7,6 +7,9 @@ const APP_SHELL = [
   '/v6/app.js?v=6.2.0',
   '/v6/trading-guide.css?v=1',
   '/v6/trading-guide.js?v=1',
+  '/v6/godmode.css?v=6.3.0',
+  '/v6/godmode.js?v=6.3.0',
+  '/v6/godmode-content.js',
   '/v6/content.js',
   '/v6/rules.js',
   '/v6/store.js',

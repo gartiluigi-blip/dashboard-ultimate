@@ -1,14 +1,14 @@
 {
-  "name": "Ultimate Dashboard Autopilot",
-  "short_name": "UD6.2",
-  "description": "Cockpit personnel avec revue hebdomadaire, athlétisme, trading, études, lecture, nutrition et argent.",
+  "name": "Ultimate Dashboard Godmode",
+  "short_name": "UD6.3",
+  "description": "Cockpit personnel pour santé globale, énergie, athlétisme, apprentissage, culture, études, trading discipliné, nutrition et argent.",
   "id": "/",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#090c11",
-  "theme_color": "#6be7c8",
+  "theme_color": "#71e6cf",
   "lang": "fr-BE",
   "categories": ["productivity", "health", "finance", "education"],
   "icons": [

@@ -23,7 +23,7 @@ for (const file of files) {
 }
 
 const index = readFileSync('index.html', 'utf8');
-if (!index.includes('/v6/app.js?v=6.2.0') || !index.includes('/v6/app.css?v=6.2.0')) throw new Error('V6.2 root assets missing');
+if (!index.includes('/v6/app.js?v=6.2.0') || !index.includes('/v6/app.css?v=6.2.0')) throw new Error('V6.2 core assets missing');
 if (index.includes('command-link.js') || index.includes('assets/js/app.js')) throw new Error('Legacy runtime still loaded');
 
 const targets = nutritionTargets({ weightKg: 82, proteinPerKg: 1.8, waterMl: 2500, sleepTargetHours: 7.5, stepsTarget: 7000 });
@@ -93,7 +93,7 @@ for (const token of ['renderReview', 'Checklist pré-trade', 'Révisions dues', 
 if (app.includes("action === 'complete-order'")) throw new Error('Fake completion contract returned');
 
 const sw = readFileSync('sw.js', 'utf8');
-if (!sw.includes('ultimate-dashboard-v6.2.0') || !sw.includes('staleWhileRevalidate')) throw new Error('V6.2 service worker missing');
+if (!/ultimate-dashboard-v6\.[23]\.0/.test(sw) || !sw.includes('staleWhileRevalidate')) throw new Error('Versioned service worker missing');
 const css = readFileSync('v6/app.css', 'utf8');
 if (!/min-height:\s*48px/.test(css) || !css.includes(':focus-visible') || !css.includes('prefers-reduced-motion')) throw new Error('Accessibility contract missing');
 
@@ -112,4 +112,4 @@ function walk(dir) {
 walk('.');
 if (hits.length) throw new Error(`Removed domain remains: ${hits.join(', ')}`);
 
-console.log('V6.2 Autopilot check OK', { athleteSessions: ATHLETE_CYCLE.length, tradingModules: TRADING_CURRICULUM.length, weeklyReview: review.overall, totalPnl: stats.totalPnl });
+console.log('V6.2 core check OK', { athleteSessions: ATHLETE_CYCLE.length, tradingModules: TRADING_CURRICULUM.length, weeklyReview: review.overall, totalPnl: stats.totalPnl });
